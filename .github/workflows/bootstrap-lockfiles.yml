@@ -1,0 +1,61 @@
+name: Bootstrap reproducible lockfiles
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: contains(github.event.head_commit.message, '[bootstrap-lockfiles]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.8.14'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Enable pinned pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          pnpm --version
+
+      - name: Generate lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv lock
+          pnpm install --lockfile-only
+          test -s uv.lock
+          test -s pnpm-lock.yaml
+
+      - name: Commit lockfiles and remove bootstrap workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name 'OpenAI'
+          git config user.email 'noreply@openai.com'
+          git add uv.lock pnpm-lock.yaml
+          git rm .github/workflows/bootstrap-lockfiles.yml
+          git commit -m "chore: add reproducible dependency lockfiles
+
+          Signed-off-by: OpenAI <noreply@openai.com>"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin HEAD:main
