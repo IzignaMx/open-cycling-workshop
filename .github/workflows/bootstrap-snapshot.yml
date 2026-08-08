@@ -1,0 +1,140 @@
+name: Bootstrap exact V0.1 snapshot
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: contains(github.event.head_commit.message, '[bootstrap-exact-snapshot]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reassemble archive from content-addressed Git blobs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, json, os, urllib.request
+
+          repository = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          shas = [
+            '7e5628f5fe9fe41b066cdd5bab908087140b69b4',
+            '83982fc60eee957dee621ce9a8b9bd00290b2d20',
+            'e3b1c220a62af0a9aecd0a60f585eb5a5bc90319',
+            '27736fa2b9c5aebe33137807458e775dc1c1350a',
+            'c468d2b777bf1bd6f8a3bfc746a710a40ec63837',
+            '499c934318ca6fa776fa21e3a6160c69208b8ae8',
+            '92c59065ea7ccd8e9909fefd31fbaafa2ad176ae',
+            '093488cb856e2049c8dbfbe63fb3a2a02adbc05b',
+            'a02c797b81c935baab8122f326ef3506efca210e',
+            'ba821ef15f9d335e122c394b5f2928e51b327539',
+            'c6df121133e536217acbcfabd77bd9e1062f6d0d',
+            'bf1744715121ba5873c897db0e8d8b42d9a89162',
+            '6d85cfc3715452414fad847567e8f2c1b4458881',
+            'fdc2e9f6deb357d26162a92d5878dfc5a2e60fdd',
+            'bdeea91250c38aff350061a475315f10d73b96e2',
+            '74ccdc5a2855a2c6fba3db4cef3aaf2c75da5a98',
+            'f6d38b47ca04a09523d082fd188739e70bf4bd50',
+            '00792befcbfd13748c22a857fae9ebf1264e409a',
+            'd6b5db7427f2b4c16e99cc1e26dd7990e0d35397',
+            'e91fed406cb63f2be30642c9aa9b869e9a35e9be',
+            '163feeb0ab96815dd89cee1667302d69af45470a',
+            '9df689d015857eef9ca20da26eeb75711f0ee637',
+            'b8d6d277ea59990e568e61a89aee102b86620ade',
+            '1c0ff032186f0d929ee97e57b30f15db4a9aa493',
+            'e1a34a55d1dc485c9ace3c6b55fa91c88eb96a42',
+            'ccb7fe98f8159fa244fbf271fdf5cb607c9e75c3',
+            'f343bda77cccfc6ba430ccd7bfe875e3e3e8a460',
+            '83c44b3d0db3d6a01e9c5eb136c34f30a193d0a5',
+            '87d0b96a6eda2c949d314337aff678cb42a78a1b',
+            '36615b6fef8489560d6373dca578f904c85caf45',
+            '6a354185272c6b53b7f266ee4604c9279c554cc3',
+            '5045de2fff68464207333c151762c616bf1aa289',
+            '3d795ae33cadf07e9189ecb7b50e4b3f36d7da7e',
+            'a266d688fc1bda7c88bcd6d790d91374e81f5207',
+            '3329c6d67a371bf4c87b7f2c5edb477e108dfc7c',
+            '2f6f651729992479d4d5cd412975f77682030cea',
+            '452d676d52068280cc80a7e59d3d99dedc819e16',
+            '6845aaecc9c2982e3f067a623183ca174043f85f',
+            'dd1ecad427a4a2996731e66020bc4f060a0423f3',
+            'bb3fe9c522d9d835251a3f9fec14afd5092c5e58',
+            '8db2a280b8b44397d9346262f3776accd887ddf3',
+            'd006ac1291147191397832df617d50cc790bbe44',
+            'bca6efbd3e63c12e9c330671cf4020d08703b9f2',
+            '5db11d89d72929a1a98a8452e0ccbca2a884e5ea',
+            'e60c3bfa306179612bbc8a8a23a285bc6f671fed',
+            'f7387a93c7911db50176b8c9616580abc6fab9dd',
+            'ef4d8b95044c4ef220b6ffaee66d72c429b7d0c0',
+            'fe30149963acba23f973acf0777c6863c49129a7',
+            'd8fbd38907e5383a5b39b35236059aa4a7638036',
+            'a9fb70e65ad9b09e8fd60b6553c41d0d41784fa6',
+            'e87f4c3ba5e90695a4ecfc6e109dabe91bce570f',
+            '98dbbed855a94e00dd21c1d8da1586bfcfed65e2',
+            '89a54d7a7bd09fa2c49fb3d5f3776cc1009e521b',
+            'c198f59bb93d6b993148a0acf5ada43720225de9',
+            'ff64f0834d03de6f687d4e8d8cc89f67d57f8047',
+            'd8885cdaba05f991ad713aa4cf1971266003cf6f',
+            'f920329b8ab1d1863c484410d709e4966a9456f6',
+            '8de8b5cf31de43a8a3ecfa88a17988ba1bcf375b',
+            '8fa35f7162a1fefee3e83b799e31f29eff9763d3',
+            'cb17ba5e18f54e1aa12fa5273c0393d92dbc75c7',
+            '11fc4749c7962569448a9e7b90dba24b79638fe3',
+            'd66fefedc03f5e1eac9b7eb46b734f9cf6ae69b6',
+            'd75b107308488fe3803389ada54bbffd23351495',
+            'e340ce30510483e35358502e4f56feef932354b1',
+          ]
+          with open('/tmp/h-tree.tar.xz', 'wb') as out:
+              for sha in shas:
+                  req = urllib.request.Request(
+                      f'https://api.github.com/repos/{repository}/git/blobs/{sha}',
+                      headers={
+                          'Authorization': f'Bearer {token}',
+                          'Accept': 'application/vnd.github+json',
+                          'X-GitHub-Api-Version': '2022-11-28',
+                      },
+                  )
+                  with urllib.request.urlopen(req) as response:
+                      payload = json.load(response)
+                  out.write(base64.b64decode(payload['content']))
+          PY
+          echo "fb839bcba18d25b599c42599019de4b88e17b21bd1b7df3c94b94564df127276  /tmp/h-tree.tar.xz" | sha256sum -c -
+
+      - name: Rebuild and verify exact Git tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/h-tree /tmp/h-repo
+          mkdir -p /tmp/h-tree /tmp/h-repo
+          tar -xJf /tmp/h-tree.tar.xz -C /tmp/h-tree
+          cd /tmp/h-repo
+          git init
+          git checkout -b main
+          cp -a /tmp/h-tree/. .
+          git config user.name "OpenAI"
+          git config user.email "noreply@openai.com"
+          git add -f -A
+          actual_tree="$(git write-tree)"
+          expected_tree="4f390d812b5aa094bd943e4112a558e5adae61b8"
+          printf 'actual tree:   %s\nexpected tree: %s\n' "$actual_tree" "$expected_tree"
+          test "$actual_tree" = "$expected_tree"
+          git commit -m "feat: import Open Cycling Workshop Platform V0.1 foundations
+
+          Signed-off-by: OpenAI <noreply@openai.com>"
+
+      - name: Publish verified snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd /tmp/h-repo
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/main
+          git push --force origin HEAD:refs/heads/bootstrap/v0.1
