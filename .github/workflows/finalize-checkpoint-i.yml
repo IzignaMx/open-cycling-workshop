@@ -1,0 +1,125 @@
+name: Finalize Checkpoint I evidence
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  finalize:
+    if: contains(github.event.head_commit.message, '[finalize-checkpoint-i]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify hosted checks and write evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, re, urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+
+          def api(path):
+              req = urllib.request.Request(
+                  f'https://api.github.com/repos/{repo}{path}',
+                  headers={
+                      'Authorization': f'Bearer {token}',
+                      'Accept': 'application/vnd.github+json',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                  },
+              )
+              with urllib.request.urlopen(req) as response:
+                  return json.load(response)
+
+          def latest_success(workflow):
+              payload = api(f'/actions/workflows/{workflow}/runs?branch=main&per_page=10')
+              runs = [r for r in payload['workflow_runs'] if r['status'] == 'completed']
+              if not runs:
+                  raise SystemExit(f'No completed runs for {workflow}')
+              run = runs[0]
+              if run['conclusion'] != 'success':
+                  raise SystemExit(f'{workflow} latest completed conclusion={run["conclusion"]}')
+              return {
+                  'id': run['id'],
+                  'head_sha': run['head_sha'],
+                  'event': run['event'],
+                  'created_at': run['created_at'],
+                  'updated_at': run['updated_at'],
+                  'html_url': run['html_url'],
+                  'conclusion': run['conclusion'],
+              }
+
+          ci = latest_success('ci.yml')
+          security = latest_success('security.yml')
+
+          def file_sha256(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          evidence = {
+              'schema': 1,
+              'checkpoint': 'I',
+              'generated_at': datetime.now(timezone.utc).isoformat(),
+              'repository': repo,
+              'baseline_checkpoint_h_tree': '4f390d812b5aa094bd943e4112a558e5adae61b8',
+              'lockfiles': {
+                  'uv.lock': file_sha256('uv.lock'),
+                  'pnpm-lock.yaml': file_sha256('pnpm-lock.yaml'),
+              },
+              'hosted_qualification': {
+                  'ci': ci,
+                  'security': security,
+              },
+              'remaining_manual_qualification': [
+                  'Windows Tier-1 physical qualification',
+                  'Android tablet Tier-1 physical qualification',
+              ],
+          }
+          out = Path('docs/06-quality/evidence/v0.1-checkpoint-i-github-qualification.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(evidence, indent=2) + '\n')
+
+          readme = Path('README.md')
+          text = readme.read_text()
+          text = re.sub(
+              r'> Status: \*\*V0\.1 Foundations / implementation checkpoint [^*]+\*\*\. This repository is not yet a production release\.',
+              '> Status: **V0.1 Foundations / implementation checkpoint I (hosted qualification baseline)**. This repository is not yet a production release.',
+              text,
+              count=1,
+          )
+          text = re.sub(
+              r'## Current blockers\n\n[\s\S]*\Z',
+              '## Current blockers\n\nHosted dependency resolution, lockfiles, PostgreSQL qualification, static analysis, production PWA build, browser E2E/axe and security workflows are now evidenced on GitHub. V0.1 remains open for Tier-1 physical qualification on Windows and Android tablet hardware, plus any release-gate evidence explicitly requiring those devices.\n',
+              text,
+              count=1,
+          )
+          readme.write_text(text)
+          PY
+
+      - name: Commit evidence and remove temporary workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name 'OpenAI'
+          git config user.email 'noreply@openai.com'
+          git add README.md docs/06-quality/evidence/v0.1-checkpoint-i-github-qualification.json
+          git rm .github/workflows/finalize-checkpoint-i.yml
+          git commit -m "docs: record Checkpoint I hosted qualification
+
+          Signed-off-by: OpenAI <noreply@openai.com>"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin HEAD:main
