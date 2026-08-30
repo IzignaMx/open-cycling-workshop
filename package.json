@@ -1,0 +1,27 @@
+{
+  "name": "open-cycling-workshop-platform",
+  "private": true,
+  "version": "0.1.0-dev.0",
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=22.16 <25"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @ocwp/web dev",
+    "lint": "eslint . && uv run ruff check services/platform/src services/platform/tests tests scripts",
+    "typecheck": "pnpm -r typecheck && uv run mypy services/platform/src",
+    "test": "pnpm -r test && uv run pytest -q",
+    "test:e2e": "pnpm --filter @ocwp/web test:e2e",
+    "contracts:check": "uv run python scripts/contracts/export_openapi.py --check && uv run python scripts/contracts/generate_ts_client.py --check",
+    "verify:repo": "uv run python scripts/ci/verify_repository.py",
+    "format:check": "prettier --check \"**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}\" && uv run ruff format --check services/platform/src services/platform/tests tests scripts"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.9.6",
+    "typescript-eslint": "8.65.0"
+  }
+}

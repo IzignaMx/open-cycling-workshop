@@ -1,0 +1,19 @@
+[project]
+name = "open-cycling-workshop-platform-workspace"
+version = "0.1.0.dev0"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0,<10",
+  "ruff>=0.12,<1",
+  "mypy>=1.17,<2",
+]
+
+[tool.uv.workspace]
+members = ["services/platform"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "services/platform/tests"]
+addopts = "-ra"

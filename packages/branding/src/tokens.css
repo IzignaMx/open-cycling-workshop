@@ -1,0 +1,14 @@
+:root {
+  --ocwp-color-canvas: oklch(0.98 0.006 175);
+  --ocwp-color-surface: oklch(1 0 0);
+  --ocwp-color-ink: oklch(0.24 0.02 185);
+  --ocwp-color-muted: oklch(0.5 0.02 185);
+  --ocwp-color-border: oklch(0.88 0.012 180);
+  --ocwp-color-accent: oklch(0.46 0.09 178);
+  --ocwp-color-accent-strong: oklch(0.37 0.08 178);
+  --ocwp-color-danger: oklch(0.52 0.18 28);
+  --ocwp-radius-sm: 0.5rem;
+  --ocwp-radius-md: 0.875rem;
+  --ocwp-space-touch: 2.75rem;
+  --ocwp-space-workshop-touch: 3.5rem;
+}

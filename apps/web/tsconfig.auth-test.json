@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "outDir": ".tmp-auth",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/auth/session.ts",
+    "src/auth/login-model.ts",
+    "src/auth/session-policy.ts",
+    "src/auth/capabilities.ts"
+  ]
+}

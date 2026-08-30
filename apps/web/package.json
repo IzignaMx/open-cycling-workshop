@@ -1,0 +1,37 @@
+{
+  "name": "@ocwp/web",
+  "private": true,
+  "version": "0.1.0-dev.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "typecheck:offline": "tsc -p tsconfig.offline-check.json",
+    "test": "node tools/run-core-tests.mjs",
+    "test:e2e": "playwright test",
+    "test:core": "node tools/run-core-tests.mjs"
+  },
+  "dependencies": {
+    "@ocwp/branding": "workspace:*",
+    "@ocwp/ui": "workspace:*",
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-table": "8.21.3",
+    "dexie": "4.4.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@ocwp/api-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.0.4",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.8.3",
+    "vite": "8.1.5",
+    "vite-plugin-pwa": "1.3.0",
+    "@playwright/test": "1.62.0",
+    "@axe-core/playwright": "4.12.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}

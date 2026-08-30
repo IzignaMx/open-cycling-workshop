@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "organization": {
+    "id": "00000000-0000-7000-8000-000000000001",
+    "name": "Taller Demo"
+  },
+  "location": {
+    "id": "00000000-0000-7000-8000-000000000002",
+    "organization_id": "00000000-0000-7000-8000-000000000001",
+    "name": "Principal"
+  },
+  "customers": []
+}

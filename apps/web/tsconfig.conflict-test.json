@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "outDir": ".tmp-conflict",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/features/sync/conflict-center-model.ts",
+    "src/local/types.ts",
+    "src/sync/types.ts",
+    "src/features/sync/status-model.ts"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "vite.config.ts",
+    "tools/static-shims.d.ts",
+    "../../packages/ui/src",
+    "../../packages/branding/src",
+    "tools/dexie-shim.d.ts",
+    "../../packages/api-client/src"
+  ]
+}

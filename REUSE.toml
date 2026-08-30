@@ -1,0 +1,31 @@
+version = 1
+
+[[annotations]]
+path = [
+  ".github/**",
+  "apps/**",
+  "docs/**",
+  "fixtures/**",
+  "infra/**",
+  "packages/**",
+  "scripts/**",
+  "services/**",
+  "tests/**",
+  "*.md",
+  "*.toml",
+  "*.json",
+  "*.yml",
+  "*.yaml",
+  "*.ini",
+  "*.mjs",
+  ".editorconfig",
+  ".gitattributes",
+  ".gitignore",
+  ".nvmrc",
+  ".python-version",
+  ".prettierignore",
+  ".prettierrc.json"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Open Cycling Workshop Platform contributors"
+SPDX-License-Identifier = "AGPL-3.0-only"

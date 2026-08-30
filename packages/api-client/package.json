@@ -1,0 +1,14 @@
+{
+  "name": "@ocwp/api-client",
+  "version": "0.1.0-dev.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi.json": "./openapi.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:core": "node tools/run-core-tests.mjs"
+  }
+}

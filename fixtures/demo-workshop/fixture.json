@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "organization": {
+    "id": "00000000-0000-7000-8000-000000000001",
+    "name": "Taller Demo"
+  },
+  "location": {
+    "id": "00000000-0000-7000-8000-000000000002",
+    "organization_id": "00000000-0000-7000-8000-000000000001",
+    "name": "Principal"
+  },
+  "customers": [
+    {
+      "customer_id": "00000000-0000-7000-8000-000000000101",
+      "display_name": "Ana Rivera",
+      "email": "ana@example.test",
+      "phone": null,
+      "organization_id": "00000000-0000-7000-8000-000000000001",
+      "location_id": "00000000-0000-7000-8000-000000000002"
+    },
+    {
+      "customer_id": "00000000-0000-7000-8000-000000000102",
+      "display_name": "Luis Vega",
+      "email": null,
+      "phone": "5512345678",
+      "organization_id": "00000000-0000-7000-8000-000000000001",
+      "location_id": "00000000-0000-7000-8000-000000000002"
+    },
+    {
+      "customer_id": "00000000-0000-7000-8000-000000000103",
+      "display_name": "Mar Pérez",
+      "email": "mar@example.test",
+      "phone": "5587654321",
+      "organization_id": "00000000-0000-7000-8000-000000000001",
+      "location_id": "00000000-0000-7000-8000-000000000002"
+    }
+  ]
+}

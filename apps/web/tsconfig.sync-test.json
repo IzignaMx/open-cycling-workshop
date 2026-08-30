@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "outDir": ".tmp-sync",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/sync/coordinator.ts",
+    "src/sync/types.ts",
+    "src/shared/ids.ts",
+    "src/sync/scope.ts",
+    "src/sync/dexie-store.ts",
+    "src/local/types.ts",
+    "tools/dexie-shim.d.ts",
+    "src/sync/http-transport.ts"
+  ]
+}

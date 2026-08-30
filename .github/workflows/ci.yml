@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.4-trixie
+        env:
+          POSTGRES_USER: ocwp
+          POSTGRES_PASSWORD: ocwp-test
+          POSTGRES_DB: ocwp_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ocwp -d ocwp_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+      OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+      OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+      OCWP_AUTH_SECRET: ci-e2e-secret-0000000000000000000000000000000000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.15'
+          enable-cache: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.17.0'
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Generate missing lockfiles
+        shell: bash
+        run: |
+          if [[ ! -f uv.lock ]]; then
+            uv lock
+          fi
+          if [[ ! -f pnpm-lock.yaml ]]; then
+            pnpm install --lockfile-only --no-frozen-lockfile
+          fi
+      - name: Upload generated lockfiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: v0.1-lockfiles
+          path: |
+            uv.lock
+            pnpm-lock.yaml
+          if-no-files-found: error
+
+      - name: Install Python workspace
+        run: uv sync --all-packages --group dev --locked
+      - name: Install TypeScript workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify repository contract
+        run: uv run python scripts/ci/verify_repository.py
+      - name: Run Python lint
+        run: uv run ruff check services/platform/src services/platform/tests tests scripts
+      - name: Run Python format check
+        run: uv run ruff format --check services/platform/src services/platform/tests tests scripts
+      - name: Run Python typecheck
+        run: uv run mypy services/platform/src
+      - name: Run frontend lint
+        run: pnpm exec eslint .
+      - name: Run formatting check
+        run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
+      - name: Run Python tests
+        run: uv run pytest -q
+      - name: Run real HTTP runtime smoke
+        run: uv run python scripts/ci/runtime_http_smoke.py
+      - name: Run frontend core tests
+        run: pnpm --filter @ocwp/web test:core
+      - name: Run API client core tests
+        run: pnpm --filter @ocwp/api-client test:core
+      - name: Run frontend real typecheck
+        run: pnpm --filter @ocwp/web typecheck
+      - name: Build PWA
+        run: pnpm --filter @ocwp/web build
+      - name: Install Playwright Chromium
+        run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
+      - name: Prepare browser E2E database
+        run: uv run python scripts/e2e/prepare_e2e_database.py
+      - name: Run browser E2E
+        run: pnpm --filter @ocwp/web test:e2e
+      - name: Run offline fallback typecheck
+        run: pnpm --filter @ocwp/web typecheck:offline
+      - name: Verify OpenAPI contract
+        run: uv run python scripts/contracts/export_openapi.py --check
+      - name: Verify generated TypeScript API types
+        run: uv run python scripts/contracts/generate_ts_client.py --check
+      - name: Typecheck generated API client
+        run: pnpm --filter @ocwp/api-client typecheck
+      - name: Run V0.1 qualification verifier
+        if: always()
+        run: uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+      - name: Upload V0.1 qualification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v0.1-qualification
+          path: artifacts/v0.1-qualification.json
+          if-no-files-found: error

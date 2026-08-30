@@ -1,0 +1,237 @@
+schema: 1
+project: open-cycling-workshop-platform
+active_release: V0.1
+active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
+branch: bootstrap/v0.1
+status: repository_consolidation_partial_manual_runtime_gates
+last_checkpoint: repository-consolidation-and-agent-handoff
+
+locally_verified_tasks:
+  - R01-T001
+  - R01-T003
+  - R01-T004
+  - R01-T009
+  - R01-T013
+  - R01-T016
+  - R01-T017
+  - R01-T018
+  - R01-T019
+  - R01-T022
+  - R01-T023
+  - R01-T024
+  - R01-T025
+  - R01-T026
+  - R01-T027
+  - R01-T028
+  - R01-T029
+  - R01-T031
+
+implemented_evidence_pending:
+  R01-T002: AGPL-3.0-only, SPDX and REUSE.toml are versioned and hosted `reuse lint` is mandatory, but REUSE tooling cannot execute locally
+  R01-T005: pnpm workspace and runtime are pinned, but pnpm-lock generation is blocked because Corepack cannot reach registry.npmjs.org
+  R01-T006: uv workspace and Python runtime are pinned, but uv.lock generation is blocked because required packages are absent from the offline uv cache
+  R01-T007: CI covers PostgreSQL 18.4, full static analysis, production PWA preview E2E and now emits an auditable V0.1 qualification artifact, but GitHub-hosted execution has not run in this container
+  R01-T008: Ruff, mypy, ESLint, Prettier and strict TypeScript gates are versioned, but Ruff/mypy/npm tooling cannot execute locally
+  R01-T010: React/Vite/PWA surface, same-origin API wiring and offline TypeScript verification pass; hosted E2E now runs against the production Vite preview, but the real build still requires pnpm dependencies
+  R01-T011: accessible UI baseline, semantic sync state and hosted axe gate exist, but browser accessibility evidence is pending
+  R01-T012: Tailwind 4 and semantic branding tokens are configured, but real Vite/Tailwind build is pending
+  R01-T014: PostgreSQL 18.4 Compose and CI service are versioned; canonical Alembic 0001→0004 DDL was applied and smoke-tested on an isolated PostgreSQL 18.4 qualification branch, while local Docker execution remains unavailable
+  R01-T015: Dexie schema v2 and scoped repository abstraction pass TypeScript/core tests, but real IndexedDB runtime evidence is pending
+  R01-T020: scoped pull/merge/cursor behavior and coordinator tests pass; hosted Playwright now specifies two-browser convergence, but it has not executed
+  R01-T021: conflicts persist by scope and visible Conflict Center/status UI exists; hosted browser evidence is pending
+  R01-T030: Customer slice passes real Uvicorn HTTP smoke; hosted PostgreSQL+IndexedDB Playwright golden slice now requires Service Worker readiness, offline reload persistence, reconnect and second-browser convergence, but remains unexecuted
+  R01-T032: Compose, ocwpctl doctor/status and password-file bootstrap admin exist, but fresh-install smoke is blocked by Docker
+  R01-T033: backup command construction and structural verification are tested, but actual pg_dump/restore execution is blocked by PostgreSQL tools
+  R01-T034: REUSE, dependency, secret and container security workflows are versioned, but hosted scanners have not executed here
+  R01-T036: deterministic duplicate/reorder chaos and service-level two-device convergence pass, while browser/device chaos remains pending for qualification
+
+blocked_tasks:
+  R01-T035: requires real IndexedDB 100k+ benchmark plus Android and Windows storage qualification
+
+known_environment_constraints:
+  - npm_registry_unreachable_eai_again_registry_npmjs_org
+  - pnpm_command_unavailable_in_checkpoint_d_runtime
+  - uv_offline_cache_missing_alembic_and_cannot_generate_uv_lock
+  - docker_cli_unavailable
+  - postgresql_server_and_client_unavailable
+  - ruff_unavailable
+  - mypy_unavailable
+  - psycopg_v3_module_unavailable_in_execution_container
+  - browser_navigation_blocked_by_execution_environment_policy
+  - chromium_managed_urlblocklist_blocks_all_navigations
+  - chromium_cdp_runtime_starts_but_navigation_returns_err_blocked_by_administrator
+
+verification:
+  python_tests: 95_passed_1_skipped_local_postgresql_integration
+  runtime_http_smoke: passed_real_uvicorn_sqlite_surrogate_with_persisted_login_and_readiness
+  frontend_core_tests: 19_passed
+  api_client_core_tests: 1_passed
+  frontend_offline_typecheck: passed
+  openapi_contract: passed
+  typescript_api_generation: passed
+  typescript_api_typecheck: passed
+  repository_contract: passed_after_versioning_plugin_sdk_workspace
+  pwa_build: hosted_production_preview_gate_hardened_but_locally_blocked_by_unexecutable_pnpm_corepack_registry_access
+  browser_e2e: production_pwa_preview_service_worker_offline_reload_and_two_browser_gate_versioned_but_unexecuted_locally
+  postgresql_integration: partial_remote_postgresql_18_4_schema_smoke_passed_plain_provider_uri_regression_fixed_local_engine_test_blocked_by_missing_psycopg_module
+  indexeddb_device_qualification: blocked_by_managed_urlblocklist_and_missing_android_windows_target_devices
+
+checkpoint_h_evidence:
+  github_publication:
+    repository: IzignaMx/open-cycling-workshop
+    target_default_branch: main
+    implementation_branch: bootstrap/v0.1
+    publication_authorized_by_owner: true
+  hosted_lockfile_bootstrap:
+    workflow_dispatch: enabled
+    generated_when_missing: [uv.lock, pnpm-lock.yaml]
+    artifact: v0.1-lockfiles
+    install_after_generation: frozen_locked_modes_only
+  hosted_security_dispatch:
+    workflow_dispatch: enabled
+  documentation_alignment:
+    readme_status: checkpoint_h_github_qualification
+  local_verification_pending_refresh: false
+  local_verification:
+    python_tests: 95_passed_1_skipped
+    frontend_core_tests: 19_passed
+    api_client_core_tests: 1_passed
+    runtime_http_smoke: passed
+    openapi_and_typescript_contracts: passed
+    verifier: partial_zero_failures
+
+checkpoint_g_evidence:
+  database_url_compatibility:
+    discovered_by: isolated_postgresql_18_4_connection_attempt
+    root_cause: plain_postgresql_uri_selected_sqlalchemy_psycopg2_dialect_while_project_standard_is_psycopg_v3
+    canonical_fix: normalize_postgresql_and_legacy_postgres_uri_schemes_to_postgresql_plus_psycopg
+    coverage: [application_engine, postgresql_integration_test, browser_e2e_database_setup]
+    red_green_tests: passed
+  qualification_verifier:
+    python_psycopg_gate: explicit_pass_or_blocked
+    postgresql_integration_gate: explicit_pass_or_blocked
+    local_result: blocked_because_psycopg_v3_module_and_OCWP_TEST_DATABASE_URL_are_absent
+  local_verification:
+    python_tests: 93_passed_1_skipped
+    frontend_core_tests: 19_passed
+    api_client_core_tests: 1_passed
+    runtime_http_smoke: passed
+    openapi_and_typescript_contracts: passed
+    verifier: partial_zero_failures
+
+checkpoint_f_evidence:
+  hosted_qualification:
+    report_schema: 2
+    metadata: [git_sha, python, node, platform, ci]
+    artifact: artifacts/v0.1-qualification.json
+    upload_action: actions/upload-artifact@v4
+    blocker_policy: allow_blocked_but_actual_failures_remain_blocking
+  static_analysis_verifier:
+    python: [ruff_check, ruff_format_check, mypy]
+    frontend: [eslint, prettier]
+    local_result: blocked_only_because_toolchains_are_unavailable
+  pwa_golden_slice:
+    hosted_server: vite_preview_of_production_build
+    service_worker_ready_required: true
+    offline_reload_required: true
+    indexeddb_customer_persistence_after_reload: required
+    pending_mutation_persistence_after_reload: required
+    reconnect_and_second_browser_convergence: required
+  local_verification:
+    python_tests: 87_passed_1_skipped
+    frontend_core_tests: 19_passed
+    api_client_core_tests: 1_passed
+    runtime_http_smoke: passed
+    openapi_and_typescript_contracts: passed
+    verifier: partial_zero_failures
+
+checkpoint_e_evidence:
+  checkpoint_packaging:
+    result: passed_red_green_tdd
+    source_zip: generated_from_git_archive_exact_head_only
+    git_bundle: explicit_head_plus_bootstrap_v0_1_ref_and_direct_clone_verification
+    regression_addressed: checkpoint_d_bundle_required_manual_ref_checkout_because_bundle_head_was_not_exported
+  browser_root_cause:
+    chromium_version: 144.0.7559.96
+    cdp_runtime: starts_and_exposes_protocol_1_3
+    managed_policy: /etc/chromium/policies/managed/000_policy_merge.json
+    url_blocklist: ['*']
+    navigation_result: net_err_blocked_by_administrator
+    indexeddb_100k: blocked_before_origin_navigation
+  verifier:
+    indexeddb_runtime_check: versioned_and_reports_pass_fail_or_blocked
+    current_result: blocked_with_exact_managed_policy_evidence
+
+checkpoint_d_evidence:
+  repository_contract_regression:
+    result: passed_after_red_green_tdd
+    change: packages/plugin-sdk is now a versioned private workspace with a public entrypoint and no invented V0.1 runtime API
+  postgresql_18_4_qualification:
+    provider: temporary_isolated_neon_project_and_branch
+    server_version: 18.4
+    alembic_head: '0004'
+    tables_verified: [organizations, locations, customers, sync_mutation_receipts, sync_changes, outbox_events, background_jobs, users]
+    synthetic_tenant_fk_smoke: passed
+    cleanup: qualification_branch_and_project_deleted_after_evidence
+    parent_application_tables_after_branch_cleanup: 0
+  dependency_and_browser_reprobe:
+    pnpm: blocked_command_not_found
+    uv_lock_offline: blocked_alembic_missing_from_cache
+    indexeddb_100k: blocked_chromium_headless_preflight_timeout
+    verify_v01: partial_with_zero_fail_checks_and_explicit_indexeddb_policy_blocker
+
+verification_policy:
+  do_not_mark_environment_dependent_gates_complete: true
+  preserve_intended_postgresql_browser_and_device_gates: true
+  exact_commit_verification_required_before_checkpoint_artifacts: true
+
+next_focus:
+  - run hosted CI with registry access to generate and commit pnpm-lock.yaml and uv.lock
+  - rerun native IndexedDB 100k benchmark in a browser environment without managed URLBlocklist restrictions
+  - execute the automated SQLAlchemy/Alembic PostgreSQL 18.4 integration test in CI with psycopg v3 installed; plain provider URIs are now normalized canonically
+  - execute real Vite/PWA build and Playwright Chromium golden slice
+  - demonstrate offline IndexedDB mutation persistence and two-browser convergence
+  - execute axe Critical/Serious accessibility gate
+  - execute REUSE, Ruff, mypy, ESLint, Prettier and security scanners
+  - execute Android and Windows storage benchmark before closing R01-T035
+
+repository_consolidation_evidence:
+  purpose: make_github_canonical_without_losing_authoritative_files
+  authoritative_inputs:
+    - checkpoint_h_bundle_commit_2e1df1283b7ea6f19731efb982d8ea29e8ae1be0
+    - repository_contract_plus_manual_actions_and_master_agent_loop_v02
+  required_remote_invariants:
+    - main_and_bootstrap_v01_resolve_to_same_complete_consolidated_commit
+    - manual_actions_checklist_is_versioned
+    - master_agent_loop_v02_is_versioned
+    - agents_md_points_to_v02_loop
+    - ci_and_security_workflows_are_versioned
+    - license_and_normative_docs_are_complete
+  completion_evidence_required:
+    - git_bundle_sha256_verified_by_github_actions
+    - git_bundle_verify_passes_in_github_actions
+    - representative_remote_files_are_fetchable_after_restore
+    - hosted_ci_status_is_recorded
+  note: V0.1 remains partial until manual/runtime gates in MANUAL-ACTIONS-CHECKLIST.md are proven.
+
+repository_consolidation_local_verification:
+  python_tests: 98_passed_1_skipped_postgresql_external_database_only
+  frontend_core_tests: 19_passed
+  api_client_core_tests: 1_passed
+  runtime_http_smoke: passed
+  openapi_contract: passed
+  typescript_generation_and_typecheck: passed
+  repository_contract: passed_including_restore_script_checklist_agents_and_master_loop
+  authoritative_restore_script:
+    path: scripts/repository/publish-authoritative-bundle.sh
+    test: tests/repository/test_publish_authoritative_bundle.py
+    local_bare_remote_restore: passed
+    behavior:
+      - verify_git_bundle
+      - preserve_pre_consolidation_remote_refs
+      - replace_main_and_bootstrap_v01_with_authoritative_head
+      - fetch_back_and_verify_commit_and_tree_sha
+  remote_transport_constraint:
+    current_agent_environment: cannot_perform_integrity_preserving_binary_git_push_to_github
+    prohibited_workaround: do_not_claim_file_by_file_or_truncated_blob_copy_as_complete
+    manual_gate: run_authoritative_restore_script_from_authenticated_git_environment

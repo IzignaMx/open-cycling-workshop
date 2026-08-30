@@ -1,0 +1,65 @@
+name: ocwp-dev
+
+services:
+  postgres:
+    image: postgres:18.4-trixie
+    environment:
+      POSTGRES_DB: ocwp
+      POSTGRES_USER: ocwp
+      POSTGRES_PASSWORD: ocwp-dev-only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ocwp -d ocwp"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/platform.Dockerfile
+    environment:
+      OCWP_ENVIRONMENT: development
+      OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-dev-only@postgres:5432/ocwp
+      OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
+      OCWP_LOG_LEVEL: INFO
+    secrets:
+      - auth_secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "alembic upgrade head && uvicorn cycling_workshop.runtime:app --host 0.0.0.0 --port 8000"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/platform.Dockerfile
+    environment:
+      OCWP_ENVIRONMENT: development
+      OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-dev-only@postgres:5432/ocwp
+      OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
+      OCWP_LOG_LEVEL: INFO
+    secrets:
+      - auth_secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["ocwp-worker"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+secrets:
+  auth_secret:
+    file: ./secrets/dev_auth_secret.txt

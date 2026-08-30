@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+**/.tmp-*
+packages/api-client/openapi.json
+LICENSE
+LICENSES

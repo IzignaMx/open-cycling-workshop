@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>OCWP IndexedDB benchmark</title></head>
+<body><pre id="result">running</pre>
+<script>
+(async () => {
+  const total = Number(new URLSearchParams(location.search).get('total') ?? '100000')
+  const payload = 'x'.repeat(256)
+  const dbName = `ocwp-benchmark-${Date.now()}`
+  const open = indexedDB.open(dbName, 1)
+  open.onupgradeneeded = () => open.result.createObjectStore('records', { keyPath: 'id' })
+  const db = await new Promise((resolve, reject) => {
+    open.onsuccess = () => resolve(open.result)
+    open.onerror = () => reject(open.error)
+  })
+  const started = performance.now()
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('records', 'readwrite')
+    const store = tx.objectStore('records')
+    for (let i = 0; i < total; i += 1) {
+      store.put({ id: i, organization_id: 'org-1', location_id: 'loc-1', version: 1, payload })
+    }
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error)
+  })
+  const writeMs = performance.now() - started
+  const readStarted = performance.now()
+  const count = await new Promise((resolve, reject) => {
+    const request = db.transaction('records').objectStore('records').count()
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+  const sample = await new Promise((resolve, reject) => {
+    const request = db.transaction('records').objectStore('records').get(total - 1)
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+  const readMs = performance.now() - readStarted
+  const result = {
+    status: count === total && sample?.id === total - 1 ? 'pass' : 'fail',
+    total,
+    payload_bytes: payload.length,
+    write_ms: Math.round(writeMs * 100) / 100,
+    count_and_sample_read_ms: Math.round(readMs * 100) / 100,
+    indexeddb_available: typeof indexedDB !== 'undefined',
+    service_worker_available: 'serviceWorker' in navigator,
+    user_agent: navigator.userAgent,
+  }
+  document.getElementById('result').textContent = JSON.stringify(result)
+  db.close()
+  indexedDB.deleteDatabase(dbName)
+  document.title = 'DONE'
+})().catch((error) => {
+  document.getElementById('result').textContent = JSON.stringify({ status: 'fail', error: String(error) })
+  document.title = 'DONE'
+})
+</script></body></html>
