@@ -129,7 +129,9 @@ def test_reuse_configuration_and_hosted_license_gate_are_versioned() -> None:
     security = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
     assert 'SPDX-License-Identifier = "AGPL-3.0-only"' in reuse
     assert "Open Cycling Workshop Platform contributors" in reuse
-    assert "uvx reuse lint" in security
+    # Resilient to how the hosted gate invokes the tool (plain uvx or with
+    # pinned extras); the contract is that a hosted reuse lint exists.
+    assert "reuse lint" in security
 
 
 def test_compose_routes_healthchecks_through_database_readiness() -> None:
