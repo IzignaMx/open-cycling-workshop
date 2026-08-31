@@ -2,20 +2,29 @@ schema: 1
 project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
-branch: bootstrap/v0.1
-status: repository_consolidation_partial_manual_runtime_gates
-last_checkpoint: repository-consolidation-and-agent-handoff
+branch: main
+status: repository_consolidated_on_github_local_runtime_gates_green_pending_hosted_ci
+last_checkpoint: github-consolidation-and-full-local-qualification
 
 locally_verified_tasks:
   - R01-T001
   - R01-T003
   - R01-T004
+  - R01-T005
+  - R01-T006
+  - R01-T008
   - R01-T009
+  - R01-T010
+  - R01-T011
+  - R01-T012
   - R01-T013
+  - R01-T014
+  - R01-T015
   - R01-T016
   - R01-T017
   - R01-T018
   - R01-T019
+  - R01-T020
   - R01-T022
   - R01-T023
   - R01-T024
@@ -24,45 +33,29 @@ locally_verified_tasks:
   - R01-T027
   - R01-T028
   - R01-T029
+  - R01-T030
   - R01-T031
 
 implemented_evidence_pending:
-  R01-T002: AGPL-3.0-only, SPDX and REUSE.toml are versioned and hosted `reuse lint` is mandatory, but REUSE tooling cannot execute locally
-  R01-T005: pnpm workspace and runtime are pinned, but pnpm-lock generation is blocked because Corepack cannot reach registry.npmjs.org
-  R01-T006: uv workspace and Python runtime are pinned, but uv.lock generation is blocked because required packages are absent from the offline uv cache
-  R01-T007: CI covers PostgreSQL 18.4, full static analysis, production PWA preview E2E and now emits an auditable V0.1 qualification artifact, but GitHub-hosted execution has not run in this container
-  R01-T008: Ruff, mypy, ESLint, Prettier and strict TypeScript gates are versioned, but Ruff/mypy/npm tooling cannot execute locally
-  R01-T010: React/Vite/PWA surface, same-origin API wiring and offline TypeScript verification pass; hosted E2E now runs against the production Vite preview, but the real build still requires pnpm dependencies
-  R01-T011: accessible UI baseline, semantic sync state and hosted axe gate exist, but browser accessibility evidence is pending
-  R01-T012: Tailwind 4 and semantic branding tokens are configured, but real Vite/Tailwind build is pending
-  R01-T014: PostgreSQL 18.4 Compose and CI service are versioned; canonical Alembic 0001→0004 DDL was applied and smoke-tested on an isolated PostgreSQL 18.4 qualification branch, while local Docker execution remains unavailable
-  R01-T015: Dexie schema v2 and scoped repository abstraction pass TypeScript/core tests, but real IndexedDB runtime evidence is pending
-  R01-T020: scoped pull/merge/cursor behavior and coordinator tests pass; hosted Playwright now specifies two-browser convergence, but it has not executed
-  R01-T021: conflicts persist by scope and visible Conflict Center/status UI exists; hosted browser evidence is pending
-  R01-T030: Customer slice passes real Uvicorn HTTP smoke; hosted PostgreSQL+IndexedDB Playwright golden slice now requires Service Worker readiness, offline reload persistence, reconnect and second-browser convergence, but remains unexecuted
-  R01-T032: Compose, ocwpctl doctor/status and password-file bootstrap admin exist, but fresh-install smoke is blocked by Docker
-  R01-T033: backup command construction and structural verification are tested, but actual pg_dump/restore execution is blocked by PostgreSQL tools
-  R01-T034: REUSE, dependency, secret and container security workflows are versioned, but hosted scanners have not executed here
+  R01-T002: AGPL-3.0-only, SPDX and REUSE.toml are versioned; hosted `reuse lint` still pending
+  R01-T007: CI workflow covers PostgreSQL 18.4, full static analysis, production PWA preview E2E and qualification artifact; a green hosted run on the consolidated main is still pending
+  R01-T021: conflicts persist by scope and Conflict Center/status UI is versioned; explicit hosted browser conflict-path evidence is pending
+  R01-T032: Compose, ocwpctl doctor/status and password-file bootstrap admin exist; a fresh-install Compose smoke has not been executed in this environment yet
+  R01-T033: backup command construction and structural verification are tested; a real pg_dump/restore drill is pending
+  R01-T034: REUSE, dependency, secret and container security workflows are versioned with the trivy-action pin corrected (v0.31.0); hosted scanners have not executed yet
   R01-T036: deterministic duplicate/reorder chaos and service-level two-device convergence pass, while browser/device chaos remains pending for qualification
 
 blocked_tasks:
   R01-T035: requires real IndexedDB 100k+ benchmark plus Android and Windows storage qualification
 
 known_environment_constraints:
-  - npm_registry_unreachable_eai_again_registry_npmjs_org
-  - pnpm_command_unavailable_in_checkpoint_d_runtime
-  - uv_offline_cache_missing_alembic_and_cannot_generate_uv_lock
-  - docker_cli_unavailable
-  - postgresql_server_and_client_unavailable
-  - ruff_unavailable
-  - mypy_unavailable
-  - psycopg_v3_module_unavailable_in_execution_container
-  - browser_navigation_blocked_by_execution_environment_policy
-  - chromium_managed_urlblocklist_blocks_all_navigations
-  - chromium_cdp_runtime_starts_but_navigation_returns_err_blocked_by_administrator
+  - host_port_5432_occupied_by_unrelated_project_container
+  - native_windows_postgresql_listening_on_5433
+  - qualification_database_mapped_to_host_port_5434
 
 verification:
-  python_tests: 95_passed_1_skipped_local_postgresql_integration
+  python_tests: 99_passed_0_skipped_with_local_postgresql_18_4_ocwp_test_database_url
+  postgresql_integration: passed_local_docker_postgres_18_4_alembic_0001_to_head_empty_database
   runtime_http_smoke: passed_real_uvicorn_sqlite_surrogate_with_persisted_login_and_readiness
   frontend_core_tests: 19_passed
   api_client_core_tests: 1_passed
@@ -70,11 +63,14 @@ verification:
   openapi_contract: passed
   typescript_api_generation: passed
   typescript_api_typecheck: passed
-  repository_contract: passed_after_versioning_plugin_sdk_workspace
-  pwa_build: hosted_production_preview_gate_hardened_but_locally_blocked_by_unexecutable_pnpm_corepack_registry_access
-  browser_e2e: production_pwa_preview_service_worker_offline_reload_and_two_browser_gate_versioned_but_unexecuted_locally
-  postgresql_integration: partial_remote_postgresql_18_4_schema_smoke_passed_plain_provider_uri_regression_fixed_local_engine_test_blocked_by_missing_psycopg_module
-  indexeddb_device_qualification: blocked_by_managed_urlblocklist_and_missing_android_windows_target_devices
+  repository_contract: passed
+  python_static_analysis: ruff_check_and_format_green_mypy_green_48_files
+  frontend_static_analysis: eslint_and_prettier_green
+  pwa_build: passed_production_vite_build_with_service_worker_and_precache
+  pnpm_frozen_install: passed_from_committed_pnpm_lock_yaml
+  uv_frozen_install: passed_from_committed_uv_lock
+  browser_e2e: passed_production_pwa_preview_service_worker_offline_reload_reconnect_and_two_browser_convergence_with_axe_zero_critical_serious
+  indexeddb_device_qualification: blocked_pending_100k_benchmark_and_android_windows_physical_devices
 
 checkpoint_h_evidence:
   github_publication:
@@ -170,7 +166,17 @@ checkpoint_d_evidence:
     provider: temporary_isolated_neon_project_and_branch
     server_version: 18.4
     alembic_head: '0004'
-    tables_verified: [organizations, locations, customers, sync_mutation_receipts, sync_changes, outbox_events, background_jobs, users]
+    tables_verified:
+      [
+        organizations,
+        locations,
+        customers,
+        sync_mutation_receipts,
+        sync_changes,
+        outbox_events,
+        background_jobs,
+        users,
+      ]
     synthetic_tenant_fk_smoke: passed
     cleanup: qualification_branch_and_project_deleted_after_evidence
     parent_application_tables_after_branch_cleanup: 0
@@ -186,52 +192,59 @@ verification_policy:
   exact_commit_verification_required_before_checkpoint_artifacts: true
 
 next_focus:
-  - run hosted CI with registry access to generate and commit pnpm-lock.yaml and uv.lock
-  - rerun native IndexedDB 100k benchmark in a browser environment without managed URLBlocklist restrictions
-  - execute the automated SQLAlchemy/Alembic PostgreSQL 18.4 integration test in CI with psycopg v3 installed; plain provider URIs are now normalized canonically
-  - execute real Vite/PWA build and Playwright Chromium golden slice
-  - demonstrate offline IndexedDB mutation persistence and two-browser convergence
-  - execute axe Critical/Serious accessibility gate
-  - execute REUSE, Ruff, mypy, ESLint, Prettier and security scanners
-  - execute Android and Windows storage benchmark before closing R01-T035
+  - obtain a green hosted CI run on consolidated main and archive the qualification artifact tied to the exact SHA
+  - run the Security workflow (REUSE, pip-audit, gitleaks, trivy) and record evidence
+  - run Compose fresh-install smoke and backup/restore drill with the local Docker engine
+  - run native IndexedDB 100k benchmark in a real browser (scripts/benchmarks)
+  - execute Android and Windows physical Tier 1 qualification before closing R01-T035
+  - protect main and configure CODEOWNERS after the first green CI baseline
 
 repository_consolidation_evidence:
   purpose: make_github_canonical_without_losing_authoritative_files
   authoritative_inputs:
-    - checkpoint_h_bundle_commit_2e1df1283b7ea6f19731efb982d8ea29e8ae1be0
-    - repository_contract_plus_manual_actions_and_master_agent_loop_v02
+    - local working tree of the active project folder (218 tracked files, declared by the owner as the current truth)
+    - remote audit before replacement: main and bootstrap/v0.1 contained only bootstrap staging (7 files), 0 artifacts, 0 releases, 0 tags
+  actions:
+    - audited remote branches; verified the staged bundle fragment checkpoint-h.part00 (10 KB) was incomplete and the restore helper already existed locally at scripts/repository/publish-authoritative-bundle.sh
+    - created root consolidation commit 390241e from the local tree with DCO sign-off
+    - preserved the pre-consolidation remote state under tag archive/pre-consolidation-2026-08-30
+    - force-replaced main (audited repository-maintenance operation) and deleted bootstrap/v0.1
+    - fetched back and verified remote main commit and tree SHAs equal local HEAD (round-trip integrity)
   required_remote_invariants:
-    - main_and_bootstrap_v01_resolve_to_same_complete_consolidated_commit
+    - main_contains_the_complete_consolidated_tree
     - manual_actions_checklist_is_versioned
     - master_agent_loop_v02_is_versioned
     - agents_md_points_to_v02_loop
     - ci_and_security_workflows_are_versioned
     - license_and_normative_docs_are_complete
   completion_evidence_required:
-    - git_bundle_sha256_verified_by_github_actions
-    - git_bundle_verify_passes_in_github_actions
-    - representative_remote_files_are_fetchable_after_restore
-    - hosted_ci_status_is_recorded
-  note: V0.1 remains partial until manual/runtime gates in MANUAL-ACTIONS-CHECKLIST.md are proven.
+    - green_hosted_ci_on_main
+    - v0_1_qualification_artifact_tied_to_exact_sha
+  note: V0.1 remains partial until hosted CI and the remaining manual/runtime gates in MANUAL-ACTIONS-CHECKLIST.md are proven.
 
-repository_consolidation_local_verification:
-  python_tests: 98_passed_1_skipped_postgresql_external_database_only
-  frontend_core_tests: 19_passed
-  api_client_core_tests: 1_passed
-  runtime_http_smoke: passed
-  openapi_contract: passed
-  typescript_generation_and_typecheck: passed
-  repository_contract: passed_including_restore_script_checklist_agents_and_master_loop
-  authoritative_restore_script:
-    path: scripts/repository/publish-authoritative-bundle.sh
-    test: tests/repository/test_publish_authoritative_bundle.py
-    local_bare_remote_restore: passed
-    behavior:
-      - verify_git_bundle
-      - preserve_pre_consolidation_remote_refs
-      - replace_main_and_bootstrap_v01_with_authoritative_head
-      - fetch_back_and_verify_commit_and_tree_sha
-  remote_transport_constraint:
-    current_agent_environment: cannot_perform_integrity_preserving_binary_git_push_to_github
-    prohibited_workaround: do_not_claim_file_by_file_or_truncated_blob_copy_as_complete
-    manual_gate: run_authoritative_restore_script_from_authenticated_git_environment
+session_2026_08_30_fixes:
+  bugs_found_and_fixed_by_real_execution:
+    - security workflow pinned aquasecurity/trivy-action@0.31.0 (nonexistent tag) corrected to @v0.31.0
+    - dev dependencies were missing httpx required by starlette TestClient; added and locked
+    - pytest lacked pythonpath configuration; added [".", "services/platform/src"] so `uv run pytest -q` works outside the original container
+    - 132 ruff violations (E501, B904, E731, SIM108, SIM115, RUF043, I001) fixed properly without weakening configuration
+    - mypy assignment narrowing failure in sync service fixed by renaming the re-fetched customer variable
+    - repository tests were not hermetic against developer git config (commit.gpgsign hang) and used POSIX-only unzip; made hermetic via GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM and zipfile
+    - publish-script test resolved WSL bash on Windows; now resolves Git for Windows bash explicitly
+    - runtime HTTP smoke failed Windows temp cleanup after uvicorn termination; TemporaryDirectory ignore_cleanup_errors added
+    - frontend test tools spawned tsc shims unspawnable on Windows; now run the resolved typescript/bin/tsc via process.execPath
+    - api-client package lacked a typescript devDependency so its scripts could not run
+    - eslint config gained node/browser globals for mjs tools, underscore omission pattern, and a documented exemption for the offline typecheck shim
+    - prettier ignores generated artifacts (lockfiles, generated client) so contract --check regeneration stays byte-stable
+    - vite preview lacked its proxy block so CI-mode E2E against the production build could never reach the backend
+    - ApiClient and HttpSyncTransport stored a detached `fetch` reference which throws Illegal invocation in browsers; bound to globalThis
+    - E2E seed and ocwpctl bootstrap_admin hit PostgreSQL FK violations because the unit of work emitted users before tenancy parents (masked by SQLite not enforcing FKs); explicit flush of parents added
+    - sync status showed generic error instead of offline when the network dropped mid-flight; transport now classifies network-level failures as SyncTransportOfflineError and the app retries every 2s while offline because navigator.onLine and the online event are unreliable
+  evidence:
+    golden_slice_e2e: passed_2026_08_30_local_windows_postgresql_18_4_docker_production_pwa_preview
+
+authoritative_restore_script:
+  path: scripts/repository/publish-authoritative-bundle.sh
+  test: tests/repository/test_publish_authoritative_bundle.py
+  local_bare_remote_restore: passed_hermetic_windows_and_posix
+  retained_for: future_integrity_preserving_restores_and_disaster_recovery
