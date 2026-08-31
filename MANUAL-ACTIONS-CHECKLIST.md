@@ -102,8 +102,8 @@
   - Remaining: repeat on Android tablet and on physical Windows hardware to close R01-T035.
 - [x] **Run pending-mutation persistence across reload while offline.**
   - Evidence (2026-08-30): Golden Slice reload-while-offline step passed with customer + queued mutation intact. Browser/OS restart persistence still pending (P1 device tests).
-- [ ] **Prove Dexie migrations preserve queued mutations.**
-  - Evidence (2026-08-31, pending hosted CI): `e2e/dexie-migration-persistence.spec.ts` seeds a raw version-1 database (v1 store/index layout) with a pending create, the app upgrades the store to schema v2 in place and the preserved mutation syncs with the queue drained.
+- [x] **Prove Dexie migrations preserve queued mutations.**
+  - Evidence (2026-08-31, hosted CI green on PR #4, run 33447612587): `e2e/dexie-migration-persistence.spec.ts` seeds a raw version-1 database (v1 store/index layout) with a pending create, the app upgrades the store to schema v2 in place and the preserved mutation syncs with the queue drained.
 - [ ] **Test quota pressure and clear user-facing recovery behavior.**
 - [ ] **Document Android storage-eviction behavior and recovery procedure.**
 - [ ] **Never use “delete IndexedDB” as the normal migration/recovery strategy.**
