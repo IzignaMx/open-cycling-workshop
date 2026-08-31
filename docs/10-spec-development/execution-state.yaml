@@ -3,8 +3,8 @@ project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
-status: compose_backup_and_indexeddb_benchmark_proven_pending_physical_devices_and_conflict_chaos
-last_checkpoint: runtime-gates-compose-backup-benchmark-2026-08-31
+status: v01_qualification_artifact_passed_hosted_remaining_physical_devices_and_conflict_chaos
+last_checkpoint: hosted-qualification-passed-and-main-protected-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -70,6 +70,14 @@ verification:
   uv_frozen_install: passed_from_committed_uv_lock
   browser_e2e: passed_both_local_and_hosted_production_pwa_preview_service_worker_offline_reload_reconnect_and_two_browser_convergence_with_axe_zero_critical_serious
   indexeddb_device_qualification: blocked_pending_100k_benchmark_and_android_windows_physical_devices
+
+hosted_qualification_2026_08_31_passed:
+  ci_run: 33358054057_success
+  commit: 31518cc0
+  artifact_status: passed
+  indexeddb_100k_hosted: pass_100000_records_write_39412_ms_read_104_7_ms_ubuntu_runner
+  browser_e2e_hosted: pass_production_preview_two_browser_convergence
+  note: first overall-passed qualification artifact in project history; supersedes the partial runs of the same day
 
 hosted_qualification_2026_08_31:
   ci_run: 33356009981_success
