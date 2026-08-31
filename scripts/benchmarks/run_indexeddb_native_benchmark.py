@@ -100,8 +100,16 @@ def main() -> int:
     try:
         payload = json.loads(html.unescape(output))
     except json.JSONDecodeError:
-        print(json.dumps({"status": "blocked", "reason": "browser driver produced no result",
-                          "driver_stdout": output[-500:], "driver_stderr": result.stderr[-500:]}))
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "reason": "browser driver produced no result",
+                    "driver_stdout": output[-500:],
+                    "driver_stderr": result.stderr[-500:],
+                }
+            )
+        )
         return 2
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0 if payload.get("status") == "pass" else 1
