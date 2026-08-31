@@ -110,6 +110,8 @@
 
 ## P0 · Tier 1 physical device qualification
 
+> **Protocolo operativo listo (2026-08-31):** ejecuta `docs/11-device-qualification/2026-08-31-tier1-protocol.md` (Windows en este equipo + tablet Android con las dos opciones de conectividad) y registra la evidencia en `docs/11-device-qualification/2026-08-31-tier1-results.md`. Para la opción sin cable usa `infra/compose/docker-compose.tier1.yml`.
+
 - [ ] **Windows Tier 1 test.**
   - Supported Chromium-based browser.
   - Install PWA.

@@ -1,0 +1,14 @@
+# Tier 1 LAN override: expose the API on all interfaces so a physically
+# connected device can reach the stack without USB port forwarding
+# (protocol Option B in docs/11-device-qualification/2026-08-31-tier1-protocol.md).
+#
+# Usage:
+#   docker compose -f infra/compose/docker-compose.dev.yml \
+#                  -f infra/compose/docker-compose.tier1.yml up -d
+#
+# Remember to allow inbound port 8000 in Windows Firewall and to prefer the
+# USB adb-reverse option when possible (keeps localhost as a secure context).
+services:
+  api:
+    ports:
+      - '0.0.0.0:8000:8000'
