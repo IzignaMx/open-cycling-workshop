@@ -33,6 +33,7 @@ try {
     '--test',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
+    'tests/sync/retry-policy.test.mjs',
     'tests/auth/session.test.mjs',
     'tests/customers/local-customer.test.mjs',
     'tests/sync/conflict-center.test.mjs',

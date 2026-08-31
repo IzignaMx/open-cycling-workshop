@@ -13,6 +13,7 @@
   "include": [
     "src/sync/coordinator.ts",
     "src/sync/types.ts",
+    "src/sync/retry-policy.ts",
     "src/shared/ids.ts",
     "src/sync/scope.ts",
     "src/sync/dexie-store.ts",

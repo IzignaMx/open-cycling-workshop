@@ -3,8 +3,8 @@ project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
-status: browser_conflict_path_proven_remaining_physical_devices_and_chaos
-last_checkpoint: browser-conflict-path-proven-2026-08-31
+status: browser_chaos_proven_remaining_physical_devices_and_secondary_gates
+last_checkpoint: browser-chaos-and-retry-backoff-proven-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -40,9 +40,9 @@ locally_verified_tasks:
   - R01-T033
   - R01-T034
   - R01-T021
+  - R01-T036
 
-implemented_evidence_pending:
-  R01-T036: deterministic duplicate/reorder chaos and service-level two-device convergence pass, while browser/device chaos remains pending for qualification
+implemented_evidence_pending: {}
 
 blocked_tasks:
   R01-T035: desktop 100k benchmark proven (43.25 s write / 149.5 ms read, real Chromium); Android tablet and physical-Windows device qualification remain
