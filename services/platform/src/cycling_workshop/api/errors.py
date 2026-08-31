@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from cycling_workshop.api.middleware import request_id_var
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-
-from cycling_workshop.api.middleware import request_id_var
 
 
 @dataclass(slots=True)

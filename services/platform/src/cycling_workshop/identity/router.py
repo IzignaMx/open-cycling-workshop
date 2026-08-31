@@ -25,7 +25,11 @@ def login(
         organization_id=payload.organization_id,
         username=payload.username,
     )
-    if account is None or not account.is_active or not PasswordService().verify(account.password_hash, payload.password):
+    if (
+        account is None
+        or not account.is_active
+        or not PasswordService().verify(account.password_hash, payload.password)
+    ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
     token_service: SessionTokenService = request.app.state.session_tokens
@@ -73,6 +77,8 @@ def logout_all(
             organization_id=principal.organization_id,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
+        ) from exc
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

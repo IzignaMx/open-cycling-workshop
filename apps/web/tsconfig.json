@@ -4,19 +4,10 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@ocwp/ui": [
-        "../../packages/ui/src/index.ts"
-      ],
-      "@ocwp/branding": [
-        "../../packages/branding/src/index.ts"
-      ],
-      "@ocwp/api-client": [
-        "../../packages/api-client/src/index.ts"
-      ]
+      "@ocwp/ui": ["../../packages/ui/src/index.ts"],
+      "@ocwp/branding": ["../../packages/branding/src/index.ts"],
+      "@ocwp/api-client": ["../../packages/api-client/src/index.ts"]
     }
   },
-  "include": [
-    "src",
-    "vite.config.ts"
-  ]
+  "include": ["src", "vite.config.ts"]
 }

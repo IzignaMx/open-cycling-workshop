@@ -28,12 +28,15 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         OCWP_DATABASE_URL: process.env.OCWP_E2E_DATABASE_URL ?? '',
-        OCWP_AUTH_SECRET: process.env.OCWP_AUTH_SECRET ?? 'e2e-only-secret-00000000000000000000000000000000',
+        OCWP_AUTH_SECRET:
+          process.env.OCWP_AUTH_SECRET ?? 'e2e-only-secret-00000000000000000000000000000000',
         OCWP_ENVIRONMENT: 'test',
       },
     },
     {
-      command: process.env.CI ? 'pnpm exec vite preview --host 127.0.0.1 --port 5173' : 'pnpm dev -- --host 127.0.0.1',
+      command: process.env.CI
+        ? 'pnpm exec vite preview --host 127.0.0.1 --port 5173'
+        : 'pnpm dev -- --host 127.0.0.1',
       url: 'http://127.0.0.1:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

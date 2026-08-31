@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cycling_workshop.db.base import Base
@@ -10,9 +10,7 @@ from cycling_workshop.db.base import Base
 
 class JobRecord(Base):
     __tablename__ = "background_jobs"
-    __table_args__ = (
-        Index("ix_background_jobs_claim", "state", "available_at", "created_at"),
-    )
+    __table_args__ = (Index("ix_background_jobs_claim", "state", "available_at", "created_at"),)
 
     job_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     job_type: Mapped[str] = mapped_column(String(120), nullable=False)

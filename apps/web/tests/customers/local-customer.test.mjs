@@ -32,7 +32,10 @@ test('buildLocalCustomerCreate rejects a blank display name before persistence',
     () =>
       buildLocalCustomerCreate(
         { organizationId: 'org-1', locationId: 'loc-1', displayName: '   ' },
-        { now: () => '2026-08-07T00:00:00.000Z', newId: () => '018f0000-0000-7000-8000-000000000001' },
+        {
+          now: () => '2026-08-07T00:00:00.000Z',
+          newId: () => '018f0000-0000-7000-8000-000000000001',
+        },
       ),
     /nombre es obligatorio/i,
   )

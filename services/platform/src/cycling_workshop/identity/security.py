@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-import jwt
 
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.shared.ids import new_id
@@ -59,7 +59,9 @@ class SessionTokenService:
             options={"require": ["exp", "iat", "sub", "org", "caps"]},
         )
         capabilities = claims.get("caps")
-        if not isinstance(capabilities, list) or not all(isinstance(value, str) for value in capabilities):
+        if not isinstance(capabilities, list) or not all(
+            isinstance(value, str) for value in capabilities
+        ):
             raise jwt.InvalidTokenError("caps claim must be a string list")
         location_id = claims.get("loc")
         if location_id is not None and not isinstance(location_id, str):

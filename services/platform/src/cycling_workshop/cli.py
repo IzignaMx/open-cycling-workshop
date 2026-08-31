@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from cycling_workshop.db.session import build_engine
 from cycling_workshop.identity.models import UserRecord
-from cycling_workshop.identity.repository import SqlAlchemyUserRepository, UserAccount, normalize_username
+from cycling_workshop.identity.repository import (
+    SqlAlchemyUserRepository,
+    UserAccount,
+    normalize_username,
+)
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.settings import Settings
 from cycling_workshop.shared.ids import new_id
@@ -58,8 +62,15 @@ def bootstrap_admin(
             if session.scalar(select(UserRecord.id).limit(1)) is not None:
                 raise RuntimeError("bootstrap admin refused because a user already exists")
             organization = OrganizationRecord(id=organization_id, name=organization_name.strip())
-            location = LocationRecord(id=location_id, organization_id=organization_id, name=location_name.strip())
+            location = LocationRecord(
+                id=location_id, organization_id=organization_id, name=location_name.strip()
+            )
             session.add_all([organization, location])
+            # Flush tenancy parents before adding the admin user: the unit of
+            # work orders mappers by relationship(), and UserRecord has none
+            # to tenancy, so PostgreSQL (unlike the SQLite surrogate tests)
+            # would otherwise receive the users INSERT before its FK parents.
+            session.flush()
             SqlAlchemyUserRepository(session).add(
                 UserAccount(
                     user_id=user_id,
@@ -94,7 +105,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     bootstrap = subcommands.add_parser("bootstrap", help="Initialize a fresh installation")
     bootstrap_commands = bootstrap.add_subparsers(dest="bootstrap_command", required=True)
-    admin = bootstrap_commands.add_parser("admin", help="Create the first organization, location, and administrator")
+    admin = bootstrap_commands.add_parser(
+        "admin", help="Create the first organization, location, and administrator"
+    )
     admin.add_argument("--organization-name", required=True)
     admin.add_argument("--location-name", required=True)
     admin.add_argument("--username", required=True)

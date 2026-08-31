@@ -30,7 +30,13 @@ export class SyncCoordinator {
 
   async runOnce({ online }: { online: boolean }): Promise<SyncRunResult> {
     if (!online) {
-      return { status: 'offline', pushed: 0, conflicts: 0, pulled: 0, cursor: await this.#store.getCursor() }
+      return {
+        status: 'offline',
+        pushed: 0,
+        conflicts: 0,
+        pulled: 0,
+        cursor: await this.#store.getCursor(),
+      }
     }
 
     const pending = await this.#store.listPending(this.#batchSize)

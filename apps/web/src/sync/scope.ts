@@ -7,7 +7,8 @@ export interface SyncScope {
 }
 
 export function syncScopeKey(organizationId: string, locationId: string): string {
-  if (!organizationId || !locationId) throw new Error('sync scope requires organization and location')
+  if (!organizationId || !locationId)
+    throw new Error('sync scope requires organization and location')
   return `${organizationId}::${locationId}`
 }
 

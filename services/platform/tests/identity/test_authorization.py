@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import pytest
-
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.identity.security import PasswordService, SessionTokenService
 
@@ -16,7 +15,9 @@ def test_password_service_hashes_and_verifies_without_plaintext_round_trip() -> 
 
 
 def test_session_token_round_trip_preserves_scoped_principal() -> None:
-    service = SessionTokenService(secret="test-secret-that-is-long-enough-for-tests", ttl=timedelta(minutes=5))
+    service = SessionTokenService(
+        secret="test-secret-that-is-long-enough-for-tests", ttl=timedelta(minutes=5)
+    )
     principal = Principal(
         user_id="user-1",
         organization_id="org-1",
@@ -38,7 +39,7 @@ def test_authorization_is_deny_by_default() -> None:
         capabilities=frozenset(),
     )
 
-    with pytest.raises(PermissionError, match="customers.read"):
+    with pytest.raises(PermissionError, match=r"customers\.read"):
         authorize(
             principal,
             capability="customers.read",
@@ -82,4 +83,4 @@ def test_authorization_allows_matching_capability_and_scope() -> None:
 
 def test_password_service_treats_malformed_hash_as_invalid_credentials() -> None:
     service = PasswordService()
-    assert service.verify('not-an-argon2-hash', 'correct horse battery staple') is False
+    assert service.verify("not-an-argon2-hash", "correct horse battery staple") is False

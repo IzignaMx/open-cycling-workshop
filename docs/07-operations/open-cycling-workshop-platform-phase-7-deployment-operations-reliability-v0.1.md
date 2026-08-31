@@ -69,33 +69,33 @@ Todo procedimiento importante debe tener comandos reproducibles o una implementa
 
 ## 3. Decisiones operativas cerradas
 
-| ID | Decisión | Estado | Motivo |
-|---|---|---|---|
-| OPS-ADR-001 | Debian 13 stable como host Linux de referencia | Accepted | Estabilidad, soporte prolongado, amd64 y arm64 |
-| OPS-ADR-002 | Docker Engine + Docker Compose para servidor V1 | Accepted | Portabilidad y baja complejidad operacional |
-| OPS-ADR-003 | Caddy como edge, static server y reverse proxy oficial | Accepted | TLS automático, configuración compacta y reverse proxy robusto |
-| OPS-ADR-004 | Sólo 80/443 públicos para aplicación | Accepted | Superficie de ataque mínima |
-| OPS-ADR-005 | PostgreSQL nunca expuesto a Internet | Accepted | Data plane interno |
-| OPS-ADR-006 | Contenedores de aplicación ejecutan como usuario no root | Accepted | Menor impacto de compromiso |
-| OPS-ADR-007 | Docker Compose secrets para secrets locales de producción | Accepted | Acceso granular y menor exposición que env vars ordinarias |
-| OPS-ADR-008 | Configuración no secreta en TOML versionable por instalación | Accepted | Legibilidad y validación estructurada |
-| OPS-ADR-009 | Caddy automatic HTTPS en Cloud | Accepted | Reduce errores manuales de certificados |
-| OPS-ADR-010 | Split DNS + certificado público o CA interna administrada para LAN | Accepted | PWA requiere secure context estable |
-| OPS-ADR-011 | Docker image digests como identidad de despliegue | Accepted | Reproducibilidad y rollback verificable |
-| OPS-ADR-012 | OCI images para `linux/amd64` y `linux/arm64` | Accepted | VPS, mini PC y ARM compatibles |
-| OPS-ADR-013 | Baseline backup = pg_dump + restic cifrado | Accepted | Sencillo, portable y suficiente para microinstalaciones |
-| OPS-ADR-014 | Reliability tier = pgBackRest + WAL/PITR + offsite repo | Accepted | RPO reducido y recuperación temporal |
-| OPS-ADR-015 | Restore drills obligatorios | Accepted | Un backup no probado no cuenta como recuperable |
-| OPS-ADR-016 | Logs estructurados JSON a stdout | Accepted | Container native y vendor neutral |
-| OPS-ADR-017 | OpenTelemetry hooks + Prometheus compatible metrics | Accepted | Observabilidad portable y desacoplada |
-| OPS-ADR-018 | Observability stack como profile opcional | Accepted | No penaliza microtalleres |
-| OPS-ADR-019 | `ocwpctl` como interfaz operacional canónica | Accepted | Reduce procedimientos manuales divergentes |
-| OPS-ADR-020 | Actualización controlada, no auto update del Core | Accepted | Evita migraciones no supervisadas |
-| OPS-ADR-021 | Security updates del host automatizables, reboot controlado | Accepted | Seguridad sin interrupciones sorpresivas |
-| OPS-ADR-022 | Trunk release artifacts firmados y con SBOM | Accepted | Supply chain verificable |
-| OPS-ADR-023 | LAN recomendado para operación multiusuario sin WAN | Accepted | Resiliencia del taller ante ISP |
-| OPS-ADR-024 | Cloud recomendado para multisucursal | Accepted | Autoridad compartida y acceso remoto |
-| OPS-ADR-025 | Standalone no se considera sustituto de backup externo | Accepted | IndexedDB puede depender de políticas de almacenamiento del navegador |
+| ID          | Decisión                                                           | Estado   | Motivo                                                                |
+| ----------- | ------------------------------------------------------------------ | -------- | --------------------------------------------------------------------- |
+| OPS-ADR-001 | Debian 13 stable como host Linux de referencia                     | Accepted | Estabilidad, soporte prolongado, amd64 y arm64                        |
+| OPS-ADR-002 | Docker Engine + Docker Compose para servidor V1                    | Accepted | Portabilidad y baja complejidad operacional                           |
+| OPS-ADR-003 | Caddy como edge, static server y reverse proxy oficial             | Accepted | TLS automático, configuración compacta y reverse proxy robusto        |
+| OPS-ADR-004 | Sólo 80/443 públicos para aplicación                               | Accepted | Superficie de ataque mínima                                           |
+| OPS-ADR-005 | PostgreSQL nunca expuesto a Internet                               | Accepted | Data plane interno                                                    |
+| OPS-ADR-006 | Contenedores de aplicación ejecutan como usuario no root           | Accepted | Menor impacto de compromiso                                           |
+| OPS-ADR-007 | Docker Compose secrets para secrets locales de producción          | Accepted | Acceso granular y menor exposición que env vars ordinarias            |
+| OPS-ADR-008 | Configuración no secreta en TOML versionable por instalación       | Accepted | Legibilidad y validación estructurada                                 |
+| OPS-ADR-009 | Caddy automatic HTTPS en Cloud                                     | Accepted | Reduce errores manuales de certificados                               |
+| OPS-ADR-010 | Split DNS + certificado público o CA interna administrada para LAN | Accepted | PWA requiere secure context estable                                   |
+| OPS-ADR-011 | Docker image digests como identidad de despliegue                  | Accepted | Reproducibilidad y rollback verificable                               |
+| OPS-ADR-012 | OCI images para `linux/amd64` y `linux/arm64`                      | Accepted | VPS, mini PC y ARM compatibles                                        |
+| OPS-ADR-013 | Baseline backup = pg_dump + restic cifrado                         | Accepted | Sencillo, portable y suficiente para microinstalaciones               |
+| OPS-ADR-014 | Reliability tier = pgBackRest + WAL/PITR + offsite repo            | Accepted | RPO reducido y recuperación temporal                                  |
+| OPS-ADR-015 | Restore drills obligatorios                                        | Accepted | Un backup no probado no cuenta como recuperable                       |
+| OPS-ADR-016 | Logs estructurados JSON a stdout                                   | Accepted | Container native y vendor neutral                                     |
+| OPS-ADR-017 | OpenTelemetry hooks + Prometheus compatible metrics                | Accepted | Observabilidad portable y desacoplada                                 |
+| OPS-ADR-018 | Observability stack como profile opcional                          | Accepted | No penaliza microtalleres                                             |
+| OPS-ADR-019 | `ocwpctl` como interfaz operacional canónica                       | Accepted | Reduce procedimientos manuales divergentes                            |
+| OPS-ADR-020 | Actualización controlada, no auto update del Core                  | Accepted | Evita migraciones no supervisadas                                     |
+| OPS-ADR-021 | Security updates del host automatizables, reboot controlado        | Accepted | Seguridad sin interrupciones sorpresivas                              |
+| OPS-ADR-022 | Trunk release artifacts firmados y con SBOM                        | Accepted | Supply chain verificable                                              |
+| OPS-ADR-023 | LAN recomendado para operación multiusuario sin WAN                | Accepted | Resiliencia del taller ante ISP                                       |
+| OPS-ADR-024 | Cloud recomendado para multisucursal                               | Accepted | Autoridad compartida y acceso remoto                                  |
+| OPS-ADR-025 | Standalone no se considera sustituto de backup externo             | Accepted | IndexedDB puede depender de políticas de almacenamiento del navegador |
 
 ## 4. Topologías oficiales
 
@@ -965,11 +965,11 @@ IndexedDB migrations ocurren en cliente.
 
 Se definen tres niveles.
 
-| Tier | Uso | PostgreSQL | Blobs/config | RPO objetivo inicial |
-|---|---|---|---|---|
-| Standalone | Un dispositivo | app export | app export | depende de frecuencia del operador |
-| Baseline | Micro/LAN/Cloud pequeño | pg_dump custom diario | restic cifrado | ≤ 24 h |
-| Reliability | Managed / multisucursal | pgBackRest + WAL/PITR | restic/versioned object storage | ≤ 15 min DB, blobs según policy |
+| Tier        | Uso                     | PostgreSQL            | Blobs/config                    | RPO objetivo inicial               |
+| ----------- | ----------------------- | --------------------- | ------------------------------- | ---------------------------------- |
+| Standalone  | Un dispositivo          | app export            | app export                      | depende de frecuencia del operador |
+| Baseline    | Micro/LAN/Cloud pequeño | pg_dump custom diario | restic cifrado                  | ≤ 24 h                             |
+| Reliability | Managed / multisucursal | pgBackRest + WAL/PITR | restic/versioned object storage | ≤ 15 min DB, blobs según policy    |
 
 Los objetivos se convierten en SLA sólo cuando el implementador los contrata y opera.
 
@@ -1122,12 +1122,12 @@ Esto permite vender soporte con evidencia real en lugar de promesas vagas.
 
 Valores iniciales de producto, a validar con hardware real:
 
-| Deployment | RTO objetivo operacional |
-|---|---|
-| Standalone import | ≤ 60 min para dataset típico |
-| LAN Baseline | ≤ 4 h |
-| Cloud Baseline | ≤ 4 h |
-| Managed Reliability | ≤ 2 h |
+| Deployment          | RTO objetivo operacional     |
+| ------------------- | ---------------------------- |
+| Standalone import   | ≤ 60 min para dataset típico |
+| LAN Baseline        | ≤ 4 h                        |
+| Cloud Baseline      | ≤ 4 h                        |
+| Managed Reliability | ≤ 2 h                        |
 
 Un SLA contractual puede ser más estricto sólo si existe infraestructura, personal y pruebas que lo respalden.
 
@@ -1495,11 +1495,11 @@ El ledger y audit history son append oriented. Su crecimiento debe monitorizarse
 
 Cifras preliminares que deberán validarse con benchmarks de Fase 6:
 
-| Tier | Usuarios concurrentes | Host inicial orientativo |
-|---|---:|---|
-| Micro | 1-5 | 2 vCPU · 4 GB RAM |
-| Standard | 5-20 | 4 vCPU · 8 GB RAM |
-| Multi-location | 20+ | 8 vCPU · 16 GB RAM + storage separado recomendado |
+| Tier           | Usuarios concurrentes | Host inicial orientativo                          |
+| -------------- | --------------------: | ------------------------------------------------- |
+| Micro          |                   1-5 | 2 vCPU · 4 GB RAM                                 |
+| Standard       |                  5-20 | 4 vCPU · 8 GB RAM                                 |
+| Multi-location |                   20+ | 8 vCPU · 16 GB RAM + storage separado recomendado |
 
 El almacenamiento no se deriva de esta tabla porque las fotografías dominan el consumo y varían mucho entre talleres.
 
@@ -2118,28 +2118,28 @@ Después de install/upgrade:
 
 Además de Fase 6, V1 requiere:
 
-| Gate | Condición |
-|---|---|
-| OPS-GATE-001 | instalación limpia LAN reproducible |
-| OPS-GATE-002 | instalación limpia Cloud reproducible |
-| OPS-GATE-003 | Standalone export/import validado |
-| OPS-GATE-004 | Caddy TLS Cloud validado |
-| OPS-GATE-005 | LAN secure context validado en Tier 1 |
-| OPS-GATE-006 | backup baseline + restore completo |
-| OPS-GATE-007 | PITR documentado y probado en reliability profile |
-| OPS-GATE-008 | upgrade desde versión soportada |
+| Gate         | Condición                                           |
+| ------------ | --------------------------------------------------- |
+| OPS-GATE-001 | instalación limpia LAN reproducible                 |
+| OPS-GATE-002 | instalación limpia Cloud reproducible               |
+| OPS-GATE-003 | Standalone export/import validado                   |
+| OPS-GATE-004 | Caddy TLS Cloud validado                            |
+| OPS-GATE-005 | LAN secure context validado en Tier 1               |
+| OPS-GATE-006 | backup baseline + restore completo                  |
+| OPS-GATE-007 | PITR documentado y probado en reliability profile   |
+| OPS-GATE-008 | upgrade desde versión soportada                     |
 | OPS-GATE-009 | application rollback dentro de compatibility window |
-| OPS-GATE-010 | failed migration entra a estado seguro |
-| OPS-GATE-011 | disk pressure alert y degradation probados |
-| OPS-GATE-012 | WAN outage no detiene Core LAN |
-| OPS-GATE-013 | server outage no pierde mutaciones locales |
-| OPS-GATE-014 | orphaned client recovery rehearsal |
-| OPS-GATE-015 | diagnostics bundle sin secrets/PII crítica |
-| OPS-GATE-016 | image digests + SBOM + signatures verificables |
-| OPS-GATE-017 | secrets no presentes en repository/logs |
-| OPS-GATE-018 | host rebuild desde artifacts + backup |
-| OPS-GATE-019 | alerting de backup failure probado |
-| OPS-GATE-020 | runbooks de incidentes críticos revisados |
+| OPS-GATE-010 | failed migration entra a estado seguro              |
+| OPS-GATE-011 | disk pressure alert y degradation probados          |
+| OPS-GATE-012 | WAN outage no detiene Core LAN                      |
+| OPS-GATE-013 | server outage no pierde mutaciones locales          |
+| OPS-GATE-014 | orphaned client recovery rehearsal                  |
+| OPS-GATE-015 | diagnostics bundle sin secrets/PII crítica          |
+| OPS-GATE-016 | image digests + SBOM + signatures verificables      |
+| OPS-GATE-017 | secrets no presentes en repository/logs             |
+| OPS-GATE-018 | host rebuild desde artifacts + backup               |
+| OPS-GATE-019 | alerting de backup failure probado                  |
+| OPS-GATE-020 | runbooks de incidentes críticos revisados           |
 
 ## 103. Operational Definition of Done
 

@@ -20,7 +20,10 @@ function customerFromChange(item: ChangeItem, scope: SyncScope): LocalCustomer |
   ) {
     throw new Error(`invalid customer change payload for cursor ${item.cursor}`)
   }
-  if (payload.organization_id !== scope.organizationId || payload.location_id !== scope.locationId) {
+  if (
+    payload.organization_id !== scope.organizationId ||
+    payload.location_id !== scope.locationId
+  ) {
     throw new Error(`customer payload scope mismatch for cursor ${item.cursor}`)
   }
   return {

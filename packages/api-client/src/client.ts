@@ -32,7 +32,11 @@ export class ApiClient {
   constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/$/, '')
     this.#tokenProvider = options.tokenProvider
-    this.#fetcher = options.fetcher ?? fetch
+    // Bind the default fetcher to globalThis: in browsers `fetch` is a method
+    // of Window and invoking the detached reference throws
+    // "Illegal invocation". Node's standalone fetch does not need a receiver,
+    // which is why Node-only tests never exposed this.
+    this.#fetcher = options.fetcher ?? fetch.bind(globalThis)
   }
 
   async login(input: LoginRequest): Promise<LoginResponse> {

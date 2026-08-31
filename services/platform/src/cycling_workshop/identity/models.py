@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, String, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cycling_workshop.db.base import Base

@@ -363,15 +363,15 @@ Antes de V1.0 ningún sistema crítico debe tener únicamente una persona capaz 
 
 Objetivos:
 
-| Activo | Mínimo V1 |
-|---|---:|
-| Release pipeline | 2 personas |
-| Security advisories | 2 personas |
-| Registry de plugins | 2 personas |
-| Dominio y DNS | 2 custodios |
-| Package publishing | 2 custodios |
+| Activo                         |   Mínimo V1 |
+| ------------------------------ | ----------: |
+| Release pipeline               |  2 personas |
+| Security advisories            |  2 personas |
+| Registry de plugins            |  2 personas |
+| Dominio y DNS                  | 2 custodios |
+| Package publishing             | 2 custodios |
 | Backup de activos comunitarios | 2 custodios |
-| Steering decisions | 3 miembros |
+| Steering decisions             |  3 miembros |
 
 ## 25. Recertificación de permisos
 
@@ -563,13 +563,13 @@ status/good-first-issue
 
 Objetivos comunitarios, no SLA contractual:
 
-| Tipo | Primera revisión objetivo |
-|---|---:|
-| Security privada | 2 días hábiles |
-| Pérdida de datos | 2 días hábiles |
-| Bug crítico | 3 días hábiles |
-| Bug ordinario | 7 días |
-| Feature request | 14 días |
+| Tipo             | Primera revisión objetivo |
+| ---------------- | ------------------------: |
+| Security privada |            2 días hábiles |
+| Pérdida de datos |            2 días hábiles |
+| Bug crítico      |            3 días hábiles |
+| Bug ordinario    |                    7 días |
+| Feature request  |                   14 días |
 
 El incumplimiento no implica automáticamente soporte comercial debido.
 
@@ -819,7 +819,7 @@ version: 1.2.0
 license: AGPL-3.0-only
 source: https://example.org/source
 core:
-  requires: ">=1.0.0 <2.0.0"
+  requires: '>=1.0.0 <2.0.0'
 runtime:
   type: connector
 permissions:
@@ -1590,51 +1590,51 @@ registry/
 
 Se añaden los siguientes registros aceptados:
 
-| ID | Decisión |
-|---|---|
-| GOV-ADR-001 | Core y aplicaciones oficiales usan `AGPL-3.0-only` |
-| GOV-ADR-002 | Contribuciones mediante DCO 1.1, sin CLA en V1 |
-| GOV-ADR-003 | Contributor Covenant 2.1 como Code of Conduct baseline |
-| GOV-ADR-004 | Contributor ladder explícito |
-| GOV-ADR-005 | Bootstrap governance con transición automática a Steering Council |
-| GOV-ADR-006 | RFCs públicos para cambios significativos |
-| GOV-ADR-007 | Dos approvals para cambios de alto riesgo |
-| GOV-ADR-008 | Stable releases requieren two-person rule |
-| GOV-ADR-009 | Registry oficial Git-backed en V1 |
-| GOV-ADR-010 | Community plugins untrusted by default |
+| ID          | Decisión                                                           |
+| ----------- | ------------------------------------------------------------------ |
+| GOV-ADR-001 | Core y aplicaciones oficiales usan `AGPL-3.0-only`                 |
+| GOV-ADR-002 | Contribuciones mediante DCO 1.1, sin CLA en V1                     |
+| GOV-ADR-003 | Contributor Covenant 2.1 como Code of Conduct baseline             |
+| GOV-ADR-004 | Contributor ladder explícito                                       |
+| GOV-ADR-005 | Bootstrap governance con transición automática a Steering Council  |
+| GOV-ADR-006 | RFCs públicos para cambios significativos                          |
+| GOV-ADR-007 | Dos approvals para cambios de alto riesgo                          |
+| GOV-ADR-008 | Stable releases requieren two-person rule                          |
+| GOV-ADR-009 | Registry oficial Git-backed en V1                                  |
+| GOV-ADR-010 | Community plugins untrusted by default                             |
 | GOV-ADR-011 | In-process Official plugins bajo AGPL y review equivalente al Core |
-| GOV-ADR-012 | Out-of-process connector como extensión preferida para terceros |
-| GOV-ADR-013 | Registry trust levels normalizados |
-| GOV-ADR-014 | Verified y Official no pueden comprarse |
-| GOV-ADR-015 | Trademarks separados de licencia del código |
-| GOV-ADR-016 | Directorio comercial neutral de implementadores permitido |
-| GOV-ADR-017 | OpenSSF Scorecard y Best Practices como objetivos de madurez |
-| GOV-ADR-018 | Bus factor y sucesión forman parte de release readiness |
+| GOV-ADR-012 | Out-of-process connector como extensión preferida para terceros    |
+| GOV-ADR-013 | Registry trust levels normalizados                                 |
+| GOV-ADR-014 | Verified y Official no pueden comprarse                            |
+| GOV-ADR-015 | Trademarks separados de licencia del código                        |
+| GOV-ADR-016 | Directorio comercial neutral de implementadores permitido          |
+| GOV-ADR-017 | OpenSSF Scorecard y Best Practices como objetivos de madurez       |
+| GOV-ADR-018 | Bus factor y sucesión forman parte de release readiness            |
 
 ## 116. Governance gates para V1.0
 
-| Gate | Condición |
-|---|---|
-| GOV-GATE-V1-001 | `LICENSE` contiene AGPL v3 y SPDX usa `AGPL-3.0-only` |
-| GOV-GATE-V1-002 | `CONTRIBUTING.md` documenta DCO y flujo de PR |
-| GOV-GATE-V1-003 | DCO check bloqueante activo |
-| GOV-GATE-V1-004 | `CODE_OF_CONDUCT.md` y canal privado de enforcement disponibles |
-| GOV-GATE-V1-005 | `SECURITY.md` con versiones soportadas y disclosure privado |
-| GOV-GATE-V1-006 | `GOVERNANCE.md` publica roles y decisión process |
-| GOV-GATE-V1-007 | `MAINTAINERS.md` refleja owners vigentes |
-| GOV-GATE-V1-008 | CODEOWNERS protege scopes críticos |
-| GOV-GATE-V1-009 | release stable requiere dos personas |
-| GOV-GATE-V1-010 | Source Code link AGPL probado en PWA/portal cuando aplique |
-| GOV-GATE-V1-011 | `TRADEMARKS.md` publicado antes de branding estable |
-| GOV-GATE-V1-012 | plugin manifest schema versionado |
-| GOV-GATE-V1-013 | registry policy publicada |
-| GOV-GATE-V1-014 | compatibility test kit ejecutable |
-| GOV-GATE-V1-015 | proceso Quarantined/Revoked probado administrativamente |
-| GOV-GATE-V1-016 | security advisory flow de plugins documentado |
+| Gate            | Condición                                                                |
+| --------------- | ------------------------------------------------------------------------ |
+| GOV-GATE-V1-001 | `LICENSE` contiene AGPL v3 y SPDX usa `AGPL-3.0-only`                    |
+| GOV-GATE-V1-002 | `CONTRIBUTING.md` documenta DCO y flujo de PR                            |
+| GOV-GATE-V1-003 | DCO check bloqueante activo                                              |
+| GOV-GATE-V1-004 | `CODE_OF_CONDUCT.md` y canal privado de enforcement disponibles          |
+| GOV-GATE-V1-005 | `SECURITY.md` con versiones soportadas y disclosure privado              |
+| GOV-GATE-V1-006 | `GOVERNANCE.md` publica roles y decisión process                         |
+| GOV-GATE-V1-007 | `MAINTAINERS.md` refleja owners vigentes                                 |
+| GOV-GATE-V1-008 | CODEOWNERS protege scopes críticos                                       |
+| GOV-GATE-V1-009 | release stable requiere dos personas                                     |
+| GOV-GATE-V1-010 | Source Code link AGPL probado en PWA/portal cuando aplique               |
+| GOV-GATE-V1-011 | `TRADEMARKS.md` publicado antes de branding estable                      |
+| GOV-GATE-V1-012 | plugin manifest schema versionado                                        |
+| GOV-GATE-V1-013 | registry policy publicada                                                |
+| GOV-GATE-V1-014 | compatibility test kit ejecutable                                        |
+| GOV-GATE-V1-015 | proceso Quarantined/Revoked probado administrativamente                  |
+| GOV-GATE-V1-016 | security advisory flow de plugins documentado                            |
 | GOV-GATE-V1-017 | activos críticos tienen dos custodios o excepción de bootstrap publicada |
-| GOV-GATE-V1-018 | release artifacts incluyen SBOM y provenance |
-| GOV-GATE-V1-019 | OpenSSF Scorecard habilitado y revisado |
-| GOV-GATE-V1-020 | ruta de export y cambio de proveedor documentada para clientes |
+| GOV-GATE-V1-018 | release artifacts incluyen SBOM y provenance                             |
+| GOV-GATE-V1-019 | OpenSSF Scorecard habilitado y revisado                                  |
+| GOV-GATE-V1-020 | ruta de export y cambio de proveedor documentada para clientes           |
 
 ## 117. Definition of Done de la fase
 

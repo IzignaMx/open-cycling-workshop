@@ -19,7 +19,7 @@ def build_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
-def session_scope(factory: sessionmaker[Session]) -> Generator[Session, None, None]:
+def session_scope(factory: sessionmaker[Session]) -> Generator[Session]:
     session = factory()
     try:
         yield session

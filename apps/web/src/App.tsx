@@ -17,7 +17,11 @@ import { db } from './local/db.js'
 import type { ConflictRecord } from './local/types.js'
 import { SyncCoordinator } from './sync/coordinator.js'
 import { DexieSyncStore } from './sync/dexie-store.js'
-import { HttpSyncTransport, SyncTransportError } from './sync/http-transport.js'
+import {
+  HttpSyncTransport,
+  SyncTransportError,
+  SyncTransportOfflineError,
+} from './sync/http-transport.js'
 import { syncScopeKey } from './sync/scope.js'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -35,12 +39,24 @@ export function App() {
   )
 
   const initialSnapshot = useMemo(() => sessionStore.getSnapshot(), [sessionStore])
-  const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(initialSnapshot?.user ?? null)
+  const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(
+    initialSnapshot?.user ?? null,
+  )
   const [authBusy, setAuthBusy] = useState(false)
-  const [authMessage, setAuthMessage] = useState<string | null>(null)
+  // Derived once at mount: a persisted session that starts offline informs the
+  // user immediately without a synchronous setState inside an effect.
+  const [authMessage, setAuthMessage] = useState<string | null>(() => {
+    const snapshot = initialSnapshot
+    if (snapshot?.token && snapshot.user && !navigator.onLine) {
+      return 'Sesión local activa. Se revalidará cuando vuelva la conexión.'
+    }
+    return null
+  })
   const [lastCustomer, setLastCustomer] = useState<string | null>(null)
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
-  const [syncState, setSyncState] = useState<SyncVisualState>(() => (navigator.onLine ? 'local' : 'offline'))
+  const [syncState, setSyncState] = useState<SyncVisualState>(() =>
+    navigator.onLine ? 'local' : 'offline',
+  )
 
   const syncScope = useMemo(() => {
     if (!currentUser?.location_id) return null
@@ -60,44 +76,53 @@ export function App() {
   }, [sessionStore, syncScope])
 
   const refreshConflicts = useCallback(async (): Promise<ConflictRecord[]> => {
-    if (!syncScope) {
-      setConflicts([])
-      return []
-    }
-    const items = await db.conflicts.where('scope_key').equals(syncScopeKey(syncScope.organizationId, syncScope.locationId)).toArray()
+    // Every path awaits before setState so effects can invoke this without a
+    // synchronous state update cascading inside the effect body.
+    const pending = syncScope
+      ? db.conflicts
+          .where('scope_key')
+          .equals(syncScopeKey(syncScope.organizationId, syncScope.locationId))
+          .toArray()
+      : Promise.resolve<ConflictRecord[]>([])
+    const items = await pending
     setConflicts(items)
     return items
   }, [syncScope])
 
   const runSync = useCallback(async () => {
     if (!coordinator) return
-    if (!navigator.onLine) {
-      setSyncState('offline')
-      return
-    }
 
+    // Attempt the real transport even when navigator.onLine claims offline:
+    // the browser signal is unreliable and the transport classifies network
+    // failures as offline by itself, so an optimistic attempt is the only way
+    // to discover that connectivity has returned.
     setSyncState('syncing')
     try {
       const result = await coordinator.runOnce({ online: true })
       const storedConflicts = await refreshConflicts()
       setSyncState(result.conflicts > 0 || storedConflicts.length > 0 ? 'conflict' : 'synced')
     } catch (error) {
+      if (error instanceof SyncTransportOfflineError) {
+        setSyncState('offline')
+        return
+      }
       if (error instanceof SyncTransportError && error.status === 401) {
         sessionStore.clear()
         setCurrentUser(null)
-        setAuthMessage('La sesión expiró. Tus cambios locales siguen guardados. Inicia sesión para sincronizarlos.')
+        setAuthMessage(
+          'La sesión expiró. Tus cambios locales siguen guardados. Inicia sesión para sincronizarlos.',
+        )
       }
-      setSyncState('error')
+      // A failure while the device is offline is the offline state, not an
+      // error: local changes are safe and the queue retries on reconnect.
+      setSyncState(navigator.onLine ? 'error' : 'offline')
     }
   }, [coordinator, refreshConflicts, sessionStore])
 
   useEffect(() => {
     const snapshot = sessionStore.getSnapshot()
     if (!snapshot?.token) return
-    if (!navigator.onLine) {
-      if (snapshot.user) setAuthMessage('Sesión local activa. Se revalidará cuando vuelva la conexión.')
-      return
-    }
+    if (!navigator.onLine) return
 
     let cancelled = false
     void api
@@ -137,9 +162,26 @@ export function App() {
   }, [runSync])
 
   useEffect(() => {
+    // Bounded periodic retry while offline: navigator.onLine and the window
+    // 'online' event are not reliable in every browser state, so the only
+    // trustworthy reconnect signal is a real transport attempt.
+    if (syncState !== 'offline') return
+    const timer = window.setTimeout(() => void runSync(), 2000)
+    return () => window.clearTimeout(timer)
+  }, [syncState, runSync])
+
+  useEffect(() => {
     if (!currentUser) return
-    void refreshConflicts()
-    void runSync()
+    let cancelled = false
+    // Both functions setState; running them inside an async continuation keeps
+    // the effect body free of synchronous state updates.
+    void (async () => {
+      await refreshConflicts()
+      if (!cancelled) await runSync()
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [currentUser, refreshConflicts, runSync])
 
   async function login(input: LoginRequest) {
@@ -154,7 +196,8 @@ export function App() {
     } catch (error) {
       sessionStore.clear()
       setCurrentUser(null)
-      if (error instanceof ApiError && error.status === 401) throw new Error('Credenciales inválidas')
+      if (error instanceof ApiError && error.status === 401)
+        throw new Error('Credenciales inválidas')
       throw error
     } finally {
       setAuthBusy(false)
@@ -191,7 +234,8 @@ export function App() {
           </p>
           <h1 className="text-4xl font-semibold tracking-tight">Acceso al taller</h1>
           <p className="leading-7 text-[var(--ocwp-color-muted)]">
-            Inicia sesión una vez para trabajar con el scope de tu organización y ubicación, incluso durante interrupciones temporales de red.
+            Inicia sesión una vez para trabajar con el scope de tu organización y ubicación, incluso
+            durante interrupciones temporales de red.
           </p>
         </header>
         <section className="rounded-2xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-5 shadow-sm">
@@ -201,7 +245,8 @@ export function App() {
     )
   }
 
-  const canCreateCustomers = Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'customers.write')
+  const canCreateCustomers =
+    Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'customers.write')
 
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl gap-8 px-5 py-8 md:grid-cols-[1fr_22rem]">
@@ -209,7 +254,8 @@ export function App() {
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--ocwp-color-muted)]">
           <span>V0.1 · local-first bootstrap</span>
           <span>
-            Sesión: <strong className="text-[var(--ocwp-color-text)]">{currentUser.display_name}</strong>
+            Sesión:{' '}
+            <strong className="text-[var(--ocwp-color-text)]">{currentUser.display_name}</strong>
           </span>
         </div>
         <div className="grid gap-3">
@@ -220,17 +266,24 @@ export function App() {
             Operación de taller que no se detiene cuando falla Internet.
           </h1>
           <p className="max-w-2xl text-lg leading-8 text-[var(--ocwp-color-muted)]">
-            Los clientes se guardan primero en este dispositivo. La sincronización ocurre después y nunca convierte una operación local válida en un error por una caída de red.
+            Los clientes se guardan primero en este dispositivo. La sincronización ocurre después y
+            nunca convierte una operación local válida en un error por una caída de red.
           </p>
         </div>
         <SyncStatus state={syncState} />
         {authMessage ? (
-          <p role="status" className="rounded-xl border border-[var(--ocwp-color-border)] p-4 text-sm">
+          <p
+            role="status"
+            className="rounded-xl border border-[var(--ocwp-color-border)] p-4 text-sm"
+          >
             {authMessage}
           </p>
         ) : null}
         {lastCustomer ? (
-          <div className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4" role="status">
+          <div
+            className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4"
+            role="status"
+          >
             Último cliente local: <strong>{lastCustomer}</strong>
           </div>
         ) : null}
@@ -241,7 +294,11 @@ export function App() {
           <Button type="button" onClick={logoutLocal}>
             Cerrar esta sesión
           </Button>
-          <Button type="button" disabled={authBusy || !navigator.onLine} onClick={() => void revokeSessions()}>
+          <Button
+            type="button"
+            disabled={authBusy || !navigator.onLine}
+            onClick={() => void revokeSessions()}
+          >
             Revocar todas las sesiones
           </Button>
         </div>
@@ -252,7 +309,8 @@ export function App() {
           <h2 className="mb-4 text-xl font-semibold">Alta rápida</h2>
           {!currentUser.location_id ? (
             <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
-              Este usuario no tiene una ubicación activa. Selecciona o asigna una ubicación antes de registrar clientes.
+              Este usuario no tiene una ubicación activa. Selecciona o asigna una ubicación antes de
+              registrar clientes.
             </p>
           ) : !canCreateCustomers ? (
             <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
@@ -275,7 +333,12 @@ export function App() {
             />
           )}
         </section>
-        <ConflictCenter conflicts={conflicts} onRefresh={async () => { await refreshConflicts() }} />
+        <ConflictCenter
+          conflicts={conflicts}
+          onRefresh={async () => {
+            await refreshConflicts()
+          }}
+        />
       </aside>
     </main>
   )

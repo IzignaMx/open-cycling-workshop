@@ -20,7 +20,8 @@ export class OcwpDatabase extends Dexie {
       customers: 'customer_id, organization_id, location_id, display_name, updated_at',
       mutationQueue: 'mutation_id, state, organization_id, location_id, entity_type, queued_at',
       syncState: 'key, scope_key, organization_id, location_id',
-      conflicts: 'mutation_id, scope_key, organization_id, location_id, entity_type, entity_id, recorded_at',
+      conflicts:
+        'mutation_id, scope_key, organization_id, location_id, entity_type, entity_id, recorded_at',
     })
   }
 }

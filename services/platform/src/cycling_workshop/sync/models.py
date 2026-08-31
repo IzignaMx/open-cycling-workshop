@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, JSON, String
+from sqlalchemy import JSON, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cycling_workshop.db.base import Base
@@ -10,7 +10,9 @@ from cycling_workshop.db.base import Base
 
 class MutationReceiptRecord(Base):
     __tablename__ = "sync_mutation_receipts"
-    __table_args__ = (Index("ix_sync_receipts_org_entity", "organization_id", "entity_type", "entity_id"),)
+    __table_args__ = (
+        Index("ix_sync_receipts_org_entity", "organization_id", "entity_type", "entity_id"),
+    )
 
     mutation_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)

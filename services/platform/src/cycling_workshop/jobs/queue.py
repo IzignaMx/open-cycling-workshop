@@ -93,6 +93,7 @@ class PostgresJobQueue:
             attempts=record.attempts,
             lease_until=lease_until,
         )
+
     def complete(self, job_id: str, *, completed_at: datetime) -> None:
         record = self._session.get(JobRecord, job_id)
         if record is None:
@@ -120,4 +121,3 @@ class PostgresJobQueue:
         record.lease_until = None
         record.last_error = error[:4000]
         self._session.flush()
-

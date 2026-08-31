@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 _DEFAULT_DEV_SECRET = "development-only-secret-change-before-production-0000000000000000"
 
@@ -14,17 +14,20 @@ class Settings:
     auth_secret: str = _DEFAULT_DEV_SECRET
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         environment = os.getenv("OCWP_ENVIRONMENT", "development")
         auth_secret = os.getenv("OCWP_AUTH_SECRET")
         if auth_secret is None and (secret_file := os.getenv("OCWP_AUTH_SECRET_FILE")):
             try:
-                auth_secret = open(secret_file, encoding="utf-8").read().strip()
+                with open(secret_file, encoding="utf-8") as secret_handle:
+                    auth_secret = secret_handle.read().strip()
             except OSError as exc:
                 raise RuntimeError("OCWP_AUTH_SECRET_FILE could not be read") from exc
         auth_secret = auth_secret or _DEFAULT_DEV_SECRET
         if environment == "production" and auth_secret == _DEFAULT_DEV_SECRET:
-            raise RuntimeError("OCWP_AUTH_SECRET or OCWP_AUTH_SECRET_FILE is required in production")
+            raise RuntimeError(
+                "OCWP_AUTH_SECRET or OCWP_AUTH_SECRET_FILE is required in production"
+            )
         return cls(
             environment=environment,
             database_url=os.getenv(

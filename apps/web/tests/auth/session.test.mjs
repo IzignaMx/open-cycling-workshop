@@ -5,9 +5,15 @@ import { SessionStore } from '../../.tmp-auth/src/auth/session.js'
 
 class FakeStorage {
   values = new Map()
-  getItem(key) { return this.values.get(key) ?? null }
-  setItem(key, value) { this.values.set(key, value) }
-  removeItem(key) { this.values.delete(key) }
+  getItem(key) {
+    return this.values.get(key) ?? null
+  }
+  setItem(key, value) {
+    this.values.set(key, value)
+  }
+  removeItem(key) {
+    this.values.delete(key)
+  }
 }
 
 test('SessionStore keeps the bearer token only in its supplied session-scoped storage', () => {
@@ -36,7 +42,10 @@ test('buildLoginRequest trims identifiers without mutating the password', async 
     username: 'ADMIN',
     password: '  password with spaces  ',
   })
-  assert.throws(() => buildLoginRequest({ organizationId: ' ', username: 'admin', password: 'x' }), /organization/i)
+  assert.throws(
+    () => buildLoginRequest({ organizationId: ' ', username: 'admin', password: 'x' }),
+    /organization/i,
+  )
 })
 
 test('SessionStore restores the validated user scope together with the token and ignores corrupt snapshots', () => {
@@ -59,7 +68,8 @@ test('SessionStore restores the validated user scope together with the token and
 })
 
 test('session policy clears credentials only for authoritative authentication failures', async () => {
-  const { shouldClearSessionAfterAuthError } = await import('../../.tmp-auth/src/auth/session-policy.js')
+  const { shouldClearSessionAfterAuthError } =
+    await import('../../.tmp-auth/src/auth/session-policy.js')
   assert.equal(shouldClearSessionAfterAuthError(401), true)
   assert.equal(shouldClearSessionAfterAuthError(403), true)
   assert.equal(shouldClearSessionAfterAuthError(500), false)

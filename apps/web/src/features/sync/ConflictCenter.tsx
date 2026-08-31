@@ -39,13 +39,18 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
       ) : (
         <ul className="mt-4 grid gap-3" aria-live="polite">
           {items.map((item) => (
-            <li key={item.mutationId} className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4">
+            <li
+              key={item.mutationId}
+              className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4"
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="grid gap-1">
                   <strong>{item.title}</strong>
                   <span className="text-sm text-[var(--ocwp-color-muted)]">{item.description}</span>
                 </div>
-                <span className="text-sm font-semibold text-[var(--ocwp-color-danger)]">{item.statusLabel}</span>
+                <span className="text-sm font-semibold text-[var(--ocwp-color-danger)]">
+                  {item.statusLabel}
+                </span>
               </div>
               <p className="mt-3 text-xs text-[var(--ocwp-color-muted)]">
                 ID: <code>{item.entityId}</code>

@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from cycling_workshop.app import create_app
 from cycling_workshop.db.base import Base
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.settings import Settings
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 def build_client(*, active: bool = True, username: str = "Admin") -> TestClient:
@@ -56,14 +55,20 @@ def test_login_returns_bearer_token_and_me_reflects_persisted_scope() -> None:
 
     login = client.post(
         "/api/v1/auth/login",
-        json={"organization_id": "org-1", "username": "  ADMIN ", "password": "correct horse battery staple"},
+        json={
+            "organization_id": "org-1",
+            "username": "  ADMIN ",
+            "password": "correct horse battery staple",
+        },
     )
 
     assert login.status_code == 200
     payload = login.json()
     assert payload["token_type"] == "bearer"
     assert payload["access_token"]
-    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {payload['access_token']}"})
+    me = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {payload['access_token']}"}
+    )
     assert me.status_code == 200
     assert me.json() == {
         "user_id": "user-1",
@@ -79,7 +84,11 @@ def test_login_rejects_wrong_password_with_generic_credentials_error() -> None:
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"organization_id": "org-1", "username": "admin", "password": "definitely wrong password"},
+        json={
+            "organization_id": "org-1",
+            "username": "admin",
+            "password": "definitely wrong password",
+        },
     )
 
     assert response.status_code == 401
@@ -91,7 +100,11 @@ def test_inactive_user_cannot_login() -> None:
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"organization_id": "org-1", "username": "admin", "password": "correct horse battery staple"},
+        json={
+            "organization_id": "org-1",
+            "username": "admin",
+            "password": "correct horse battery staple",
+        },
     )
 
     assert response.status_code == 401
@@ -102,7 +115,11 @@ def test_logout_all_invalidates_the_current_session_version() -> None:
     client = build_client()
     login = client.post(
         "/api/v1/auth/login",
-        json={"organization_id": "org-1", "username": "admin", "password": "correct horse battery staple"},
+        json={
+            "organization_id": "org-1",
+            "username": "admin",
+            "password": "correct horse battery staple",
+        },
     )
     token = login.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -116,26 +133,30 @@ def test_logout_all_invalidates_the_current_session_version() -> None:
 def test_persisted_capability_revocation_takes_effect_before_token_expiry() -> None:
     client = build_client()
     login = client.post(
-        '/api/v1/auth/login',
-        json={'organization_id': 'org-1', 'username': 'admin', 'password': 'correct horse battery staple'},
+        "/api/v1/auth/login",
+        json={
+            "organization_id": "org-1",
+            "username": "admin",
+            "password": "correct horse battery staple",
+        },
     )
-    headers = {'Authorization': f"Bearer {login.json()['access_token']}"}
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
     factory = client.app.state.session_factory
     with factory() as session:
-        account = session.get(UserRecord, 'user-1')
+        account = session.get(UserRecord, "user-1")
         assert account is not None
-        account.capabilities = ['customers.read']
+        account.capabilities = ["customers.read"]
         session.commit()
 
     response = client.post(
-        '/api/v1/customers',
+        "/api/v1/customers",
         headers=headers,
         json={
-            'customer_id': '018f0000-0000-7000-8000-000000000999',
-            'display_name': 'No autorizado',
-            'location_id': 'loc-1',
+            "customer_id": "018f0000-0000-7000-8000-000000000999",
+            "display_name": "No autorizado",
+            "location_id": "loc-1",
         },
     )
     assert response.status_code == 403
-    assert response.json()['detail'] == 'capability denied'
+    assert response.json()["detail"] == "capability denied"

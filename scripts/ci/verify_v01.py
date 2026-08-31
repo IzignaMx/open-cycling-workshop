@@ -25,9 +25,9 @@ class Check:
 def run_check(name: str, command: list[str], *, env: dict[str, str] | None = None) -> Check:
     result = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True)
     detail = (result.stdout + result.stderr).strip()
-    return Check(name=name, status="pass" if result.returncode == 0 else "fail", detail=detail[-4000:])
-
-
+    return Check(
+        name=name, status="pass" if result.returncode == 0 else "fail", detail=detail[-4000:]
+    )
 
 
 def probe_tool(name: str, executable: str, version_args: list[str], blocked_reason: str) -> Check:
@@ -50,8 +50,6 @@ def probe_tool(name: str, executable: str, version_args: list[str], blocked_reas
         return Check(f"tool_{name}", "blocked", f"{blocked_reason}; probe failed: {suffix}")
     version = detail.splitlines()[0] if detail else "version probe passed"
     return Check(f"tool_{name}", "pass", f"{path} · {version}")
-
-
 
 
 def qualification_metadata() -> dict[str, str | bool]:
@@ -93,19 +91,36 @@ def static_analysis_checks(
             [
                 run_check(
                     "python_ruff",
-                    ["ruff", "check", "services/platform/src", "services/platform/tests", "tests", "scripts"],
+                    [
+                        "ruff",
+                        "check",
+                        "services/platform/src",
+                        "services/platform/tests",
+                        "tests",
+                        "scripts",
+                    ],
                     env=env,
                 ),
                 run_check(
                     "python_format",
-                    ["ruff", "format", "--check", "services/platform/src", "services/platform/tests", "tests", "scripts"],
+                    [
+                        "ruff",
+                        "format",
+                        "--check",
+                        "services/platform/src",
+                        "services/platform/tests",
+                        "tests",
+                        "scripts",
+                    ],
                     env=env,
                 ),
                 run_check("python_mypy", ["mypy", "services/platform/src"], env=env),
             ]
         )
     else:
-        blockers.append(Check("python_static_analysis", "blocked", "Ruff and mypy must both execute"))
+        blockers.append(
+            Check("python_static_analysis", "blocked", "Ruff and mypy must both execute")
+        )
 
     if pnpm_probe.status == "pass":
         checks.extend(
@@ -113,40 +128,72 @@ def static_analysis_checks(
                 run_check("frontend_eslint", ["pnpm", "exec", "eslint", "."], env=env),
                 run_check(
                     "frontend_prettier",
-                    ["pnpm", "exec", "prettier", "--check", "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"],
+                    [
+                        "pnpm",
+                        "exec",
+                        "prettier",
+                        "--check",
+                        "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}",
+                    ],
                     env=env,
                 ),
             ]
         )
     else:
-        blockers.append(Check("frontend_static_analysis", "blocked", "pnpm must execute with workspace dependencies"))
+        blockers.append(
+            Check(
+                "frontend_static_analysis",
+                "blocked",
+                "pnpm must execute with workspace dependencies",
+            )
+        )
 
     return checks, blockers
-
 
 
 def postgresql_runtime_checks(env: dict[str, str]) -> tuple[list[Check], list[Check]]:
     checks: list[Check] = []
     blockers: list[Check] = []
     if importlib.util.find_spec("psycopg") is None:
-        blockers.append(Check("python_psycopg", "blocked", "psycopg v3 is not installed in the execution environment"))
+        blockers.append(
+            Check(
+                "python_psycopg",
+                "blocked",
+                "psycopg v3 is not installed in the execution environment",
+            )
+        )
     else:
         checks.append(Check("python_psycopg", "pass", "psycopg v3 import available"))
 
     database_url = env.get("OCWP_TEST_DATABASE_URL")
     if not database_url:
-        blockers.append(Check("postgresql_integration", "blocked", "OCWP_TEST_DATABASE_URL is required"))
+        blockers.append(
+            Check("postgresql_integration", "blocked", "OCWP_TEST_DATABASE_URL is required")
+        )
     elif any(item.name == "python_psycopg" for item in blockers):
-        blockers.append(Check("postgresql_integration", "blocked", "psycopg v3 is required for PostgreSQL integration"))
+        blockers.append(
+            Check(
+                "postgresql_integration",
+                "blocked",
+                "psycopg v3 is required for PostgreSQL integration",
+            )
+        )
     else:
         checks.append(
             run_check(
                 "postgresql_integration",
-                [sys.executable, "-m", "pytest", "-q", "services/platform/tests/db/test_postgres_integration.py"],
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "services/platform/tests/db/test_postgres_integration.py",
+                ],
                 env=env,
             )
         )
     return checks, blockers
+
 
 def indexeddb_runtime_check() -> Check:
     result = subprocess.run(
@@ -163,14 +210,24 @@ def indexeddb_runtime_check() -> Check:
     return Check("indexeddb_100k", "fail", detail)
 
 
-def browser_runtime_checks(pnpm_probe: Check, env: dict[str, str]) -> tuple[list[Check], list[Check]]:
+def browser_runtime_checks(
+    pnpm_probe: Check, env: dict[str, str]
+) -> tuple[list[Check], list[Check]]:
     checks: list[Check] = []
     blockers: list[Check] = []
     if pnpm_probe.status != "pass":
         blockers.extend(
             [
-                Check("pwa_build", "blocked", "pnpm must execute with installed workspace dependencies"),
-                Check("browser_e2e", "blocked", "pnpm/Playwright must execute before browser E2E can run"),
+                Check(
+                    "pwa_build",
+                    "blocked",
+                    "pnpm must execute with installed workspace dependencies",
+                ),
+                Check(
+                    "browser_e2e",
+                    "blocked",
+                    "pnpm/Playwright must execute before browser E2E can run",
+                ),
             ]
         )
         return checks, blockers
@@ -179,17 +236,24 @@ def browser_runtime_checks(pnpm_probe: Check, env: dict[str, str]) -> tuple[list
     database_url = env.get("OCWP_E2E_DATABASE_URL")
     if not database_url:
         blockers.append(
-            Check("browser_e2e", "blocked", "OCWP_E2E_DATABASE_URL is required for destructive browser E2E setup")
+            Check(
+                "browser_e2e",
+                "blocked",
+                "OCWP_E2E_DATABASE_URL is required for destructive browser E2E setup",
+            )
         )
         return checks, blockers
 
-    prepare = run_check("browser_e2e_prepare", [sys.executable, "scripts/e2e/prepare_e2e_database.py"], env=env)
+    prepare = run_check(
+        "browser_e2e_prepare", [sys.executable, "scripts/e2e/prepare_e2e_database.py"], env=env
+    )
     checks.append(prepare)
     if prepare.status != "pass":
         checks.append(Check("browser_e2e", "fail", "browser E2E database preparation failed"))
         return checks, blockers
     checks.append(run_check("browser_e2e", ["pnpm", "--filter", "@ocwp/web", "test:e2e"], env=env))
     return checks, blockers
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -202,10 +266,19 @@ def main() -> int:
     checks = [
         run_check("repository_contract", [sys.executable, "scripts/ci/verify_repository.py"]),
         run_check("python_tests", [sys.executable, "-m", "pytest", "-q"], env=python_env),
-        run_check("runtime_http_smoke", [sys.executable, "scripts/ci/runtime_http_smoke.py"], env=python_env),
+        run_check(
+            "runtime_http_smoke",
+            [sys.executable, "scripts/ci/runtime_http_smoke.py"],
+            env=python_env,
+        ),
         run_check("frontend_core_tests", ["node", "apps/web/tools/run-core-tests.mjs"]),
-        run_check("api_client_core_tests", ["node", "packages/api-client/tools/run-core-tests.mjs"]),
-        run_check("frontend_offline_typecheck", ["tsc", "-p", "apps/web/tsconfig.offline-check.json", "--pretty", "false"]),
+        run_check(
+            "api_client_core_tests", ["node", "packages/api-client/tools/run-core-tests.mjs"]
+        ),
+        run_check(
+            "frontend_offline_typecheck",
+            ["tsc", "-p", "apps/web/tsconfig.offline-check.json", "--pretty", "false"],
+        ),
         run_check(
             "openapi_contract",
             [sys.executable, "scripts/contracts/export_openapi.py", "--check"],
@@ -226,8 +299,16 @@ def main() -> int:
     checks.extend(postgresql_checks)
     blockers.extend(postgresql_blockers)
     for filename, name, reason in (
-        ("pnpm-lock.yaml", "pnpm_lock", "registry access is required to produce and verify the lockfile"),
-        ("uv.lock", "uv_lock", "registry/cache access is required to produce and verify the lockfile"),
+        (
+            "pnpm-lock.yaml",
+            "pnpm_lock",
+            "registry access is required to produce and verify the lockfile",
+        ),
+        (
+            "uv.lock",
+            "uv_lock",
+            "registry/cache access is required to produce and verify the lockfile",
+        ),
     ):
         if (ROOT / filename).is_file():
             checks.append(Check(name, "pass", filename))
@@ -237,8 +318,19 @@ def main() -> int:
     tool_probes: dict[str, Check] = {}
     for name, executable, version_args, reason in (
         ("docker", "docker", ["--version"], "Docker CLI is unavailable in the execution container"),
-        ("pnpm", "pnpm", ["--version"], "pnpm cannot execute because the npm registry is unreachable or Corepack is not provisioned"),
-        ("psql", "psql", ["--version"], "PostgreSQL client/server tools are unavailable in the execution container"),
+        (
+            "pnpm",
+            "pnpm",
+            ["--version"],
+            "pnpm cannot execute because the npm registry is unreachable "
+            "or Corepack is not provisioned",
+        ),
+        (
+            "psql",
+            "psql",
+            ["--version"],
+            "PostgreSQL client/server tools are unavailable in the execution container",
+        ),
         ("ruff", "ruff", ["--version"], "Ruff is not installed in the execution container"),
         ("mypy", "mypy", ["--version"], "mypy is not installed in the execution container"),
     ):

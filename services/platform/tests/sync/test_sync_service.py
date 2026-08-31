@@ -1,15 +1,14 @@
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
 from cycling_workshop.db.base import Base
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.sync.domain import MutationEnvelope, SyncConflict
 from cycling_workshop.sync.service import SyncService
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 
 def build_session() -> Session:
@@ -32,7 +31,9 @@ def build_session() -> Session:
     return session
 
 
-def customer_create_mutation(*, mutation_id: str | None = None, entity_id: str | None = None) -> MutationEnvelope:
+def customer_create_mutation(
+    *, mutation_id: str | None = None, entity_id: str | None = None
+) -> MutationEnvelope:
     return MutationEnvelope(
         mutation_id=mutation_id or new_id(),
         entity_type="customer",
@@ -128,9 +129,8 @@ def test_update_with_stale_base_version_becomes_explicit_conflict() -> None:
 
 
 def test_customer_mutation_writes_outbox_event_in_same_transaction() -> None:
-    from sqlalchemy import select
-
     from cycling_workshop.events.models import OutboxRecord
+    from sqlalchemy import select
 
     with build_session() as session:
         service = SyncService(session)

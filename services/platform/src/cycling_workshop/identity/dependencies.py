@@ -35,11 +35,23 @@ def principal_from_request(
                 user_id=token_principal.user_id,
                 organization_id=token_principal.organization_id,
             )
-        if account is None or not account.is_active or account.session_version != token_principal.session_version:
+        if (
+            account is None
+            or not account.is_active
+            or account.session_version != token_principal.session_version
+        ):
             raise ValueError("session no longer valid")
-        if token_principal.location_id is not None and account.location_id is not None and token_principal.location_id != account.location_id:
+        if (
+            token_principal.location_id is not None
+            and account.location_id is not None
+            and token_principal.location_id != account.location_id
+        ):
             raise ValueError("session scope changed")
-        effective_location = token_principal.location_id if token_principal.location_id is not None else account.location_id
+        effective_location = (
+            token_principal.location_id
+            if token_principal.location_id is not None
+            else account.location_id
+        )
         return Principal(
             user_id=account.user_id,
             organization_id=account.organization_id,
@@ -48,7 +60,9 @@ def principal_from_request(
             session_version=account.session_version,
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
+        ) from exc
 
 
 def require_capability(capability: str) -> Callable[..., Principal]:

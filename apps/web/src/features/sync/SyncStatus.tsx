@@ -13,7 +13,9 @@ export function SyncStatus({ state }: SyncStatusProps) {
       className="rounded-xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-4"
     >
       <strong className="block">{presentation.label}</strong>
-      <span className="mt-1 block text-sm leading-6 text-[var(--ocwp-color-muted)]">{presentation.detail}</span>
+      <span className="mt-1 block text-sm leading-6 text-[var(--ocwp-color-muted)]">
+        {presentation.detail}
+      </span>
     </section>
   )
 }

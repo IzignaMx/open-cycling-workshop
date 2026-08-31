@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from contextvars import ContextVar
 import json
 import logging
 import time
 import uuid
+from contextvars import ContextVar
 
 from fastapi import FastAPI, Request
 

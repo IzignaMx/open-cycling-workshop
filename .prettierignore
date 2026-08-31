@@ -5,3 +5,6 @@ coverage
 packages/api-client/openapi.json
 LICENSE
 LICENSES
+pnpm-lock.yaml
+uv.lock
+packages/api-client/src/generated.ts

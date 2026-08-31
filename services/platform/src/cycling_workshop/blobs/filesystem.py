@@ -31,7 +31,11 @@ class FilesystemBlobStorage:
 
     def _path_for(self, key: str) -> Path:
         parsed = PurePosixPath(key)
-        if parsed.is_absolute() or not parsed.parts or any(part in {"", ".", ".."} for part in parsed.parts):
+        if (
+            parsed.is_absolute()
+            or not parsed.parts
+            or any(part in {"", ".", ".."} for part in parsed.parts)
+        ):
             raise ValueError("invalid blob key")
         candidate = (self._root / Path(*parsed.parts)).resolve()
         if self._root not in candidate.parents:

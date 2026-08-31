@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-import re
-
 
 _UNSET = object()
 
@@ -60,7 +59,7 @@ class Customer:
         email: str | None = None,
         phone: str | None = None,
         now: datetime | None = None,
-    ) -> "Customer":
+    ) -> Customer:
         timestamp = now or _now()
         return cls(
             customer_id=customer_id,
@@ -74,7 +73,7 @@ class Customer:
             version=1,
         )
 
-    def rename(self, display_name: str, *, now: datetime | None = None) -> "Customer":
+    def rename(self, display_name: str, *, now: datetime | None = None) -> Customer:
         return replace(
             self,
             display_name=_normalize_name(display_name),
@@ -88,20 +87,30 @@ class Customer:
         email: str | None,
         phone: str | None,
         now: datetime | None = None,
-    ) -> "Customer":
+    ) -> Customer:
         return self.update(email=email, phone=phone, now=now)
 
     def update(
         self,
         *,
         display_name: str | object = _UNSET,
-        email: str | None | object = _UNSET,
-        phone: str | None | object = _UNSET,
+        email: str | object | None = _UNSET,
+        phone: str | object | None = _UNSET,
         now: datetime | None = None,
-    ) -> "Customer":
-        next_name = self.display_name if display_name is _UNSET else _normalize_name(str(display_name))
-        next_email = self.email if email is _UNSET else _normalize_email(email if isinstance(email, str) else None)
-        next_phone = self.phone if phone is _UNSET else _normalize_phone(phone if isinstance(phone, str) else None)
+    ) -> Customer:
+        next_name = (
+            self.display_name if display_name is _UNSET else _normalize_name(str(display_name))
+        )
+        next_email = (
+            self.email
+            if email is _UNSET
+            else _normalize_email(email if isinstance(email, str) else None)
+        )
+        next_phone = (
+            self.phone
+            if phone is _UNSET
+            else _normalize_phone(phone if isinstance(phone, str) else None)
+        )
         return replace(
             self,
             display_name=next_name,

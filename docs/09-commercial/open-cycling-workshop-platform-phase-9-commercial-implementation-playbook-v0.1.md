@@ -104,17 +104,17 @@ La factura y propuesta deben describir el servicio real prestado.
 
 ## 5. Segmentación comercial
 
-| Segmento | Perfil típico | Complejidad | Oferta inicial recomendada |
-|---|---|---|---|
-| Microtaller | 1 a 2 personas, servicio mecánico | Baja | Community / Starter |
-| Taller independiente | 2 a 8 personas | Media | Workshop Standard |
-| Tienda + taller | ventas, inventario y servicio | Media/Alta | Workshop Commerce |
-| Taller móvil | operación desde tablet y campo | Media | Workshop Mobile |
-| Cooperativa | gobernanza compartida y presupuesto sensible | Media | Community Pro |
-| Bike fitting / servicio especializado | agenda y expediente | Media | Specialist |
-| Flotilla pequeña | mantenimiento interno | Alta | Fleet Module |
-| Multisucursal | varias ubicaciones | Alta | Multi-site |
-| Organización social | taller comunitario o educativo | Variable | Social Impact |
+| Segmento                              | Perfil típico                                | Complejidad | Oferta inicial recomendada |
+| ------------------------------------- | -------------------------------------------- | ----------- | -------------------------- |
+| Microtaller                           | 1 a 2 personas, servicio mecánico            | Baja        | Community / Starter        |
+| Taller independiente                  | 2 a 8 personas                               | Media       | Workshop Standard          |
+| Tienda + taller                       | ventas, inventario y servicio                | Media/Alta  | Workshop Commerce          |
+| Taller móvil                          | operación desde tablet y campo               | Media       | Workshop Mobile            |
+| Cooperativa                           | gobernanza compartida y presupuesto sensible | Media       | Community Pro              |
+| Bike fitting / servicio especializado | agenda y expediente                          | Media       | Specialist                 |
+| Flotilla pequeña                      | mantenimiento interno                        | Alta        | Fleet Module               |
+| Multisucursal                         | varias ubicaciones                           | Alta        | Multi-site                 |
+| Organización social                   | taller comunitario o educativo               | Variable    | Social Impact              |
 
 ## 6. Ideal Customer Profile inicial
 
@@ -161,16 +161,16 @@ El ICP prioritario para primeras implementaciones es un taller o tienda con tall
 
 Se adopta una puntuación de 0 a 2 por dimensión:
 
-| Dimensión | 0 | 1 | 2 |
-|---|---|---|---|
-| Dolor operativo | bajo | moderado | crítico |
-| Decisor | ausente | parcial | disponible |
-| Presupuesto | incierto | limitado | alineado |
-| Procesos | caóticos | parcialmente definidos | documentables |
-| Datos | inexistentes | dispersos | migrables |
-| Hardware | insuficiente | parcial | adecuado |
-| Apertura al cambio | baja | media | alta |
-| Urgencia | indefinida | trimestre | 30 días |
+| Dimensión          | 0            | 1                      | 2             |
+| ------------------ | ------------ | ---------------------- | ------------- |
+| Dolor operativo    | bajo         | moderado               | crítico       |
+| Decisor            | ausente      | parcial                | disponible    |
+| Presupuesto        | incierto     | limitado               | alineado      |
+| Procesos           | caóticos     | parcialmente definidos | documentables |
+| Datos              | inexistentes | dispersos              | migrables     |
+| Hardware           | insuficiente | parcial                | adecuado      |
+| Apertura al cambio | baja         | media                  | alta          |
+| Urgencia           | indefinida   | trimestre              | 30 días       |
 
 Interpretación:
 
@@ -233,11 +233,11 @@ Incluye:
 
 Rangos recomendados en México, antes de IVA cuando corresponda:
 
-| Tipo | Alcance | Precio recomendado MXN |
-|---|---|---:|
-| Light | 1 sesión + checklist | $1,500 a $3,000 |
-| Standard | 2 a 4 sesiones + diagnóstico | $4,000 a $8,000 |
-| Complex | multisucursal / migración / integraciones | $9,000 a $20,000+ |
+| Tipo     | Alcance                                   | Precio recomendado MXN |
+| -------- | ----------------------------------------- | ---------------------: |
+| Light    | 1 sesión + checklist                      |        $1,500 a $3,000 |
+| Standard | 2 a 4 sesiones + diagnóstico              |        $4,000 a $8,000 |
+| Complex  | multisucursal / migración / integraciones |      $9,000 a $20,000+ |
 
 El importe de discovery puede acreditarse parcialmente contra implementación cuando mejore cierre comercial, sin regalar análisis complejo.
 
@@ -305,17 +305,17 @@ Cada desviación del flujo estándar debe identificarse como configuración, plu
 
 ## 15. Solution Fit Matrix
 
-| Necesidad | Core | Configuración | Plugin | Custom |
-|---|---|---|---|---|
-| Clientes y bicicletas | Sí | — | — | — |
-| Órdenes | Sí | Sí | — | — |
-| Inventario | Sí | Sí | — | — |
-| POS | Módulo oficial | Sí | — | — |
-| WhatsApp | — | — | Connector | — |
-| CFDI México | — | — | Jurisdictional | Posible |
-| Renta | — | — | Module | — |
-| Flotillas | — | — | Module | Posible |
-| Reporte específico | — | Posible | Report provider | Posible |
+| Necesidad             | Core           | Configuración | Plugin          | Custom  |
+| --------------------- | -------------- | ------------- | --------------- | ------- |
+| Clientes y bicicletas | Sí             | —             | —               | —       |
+| Órdenes               | Sí             | Sí            | —               | —       |
+| Inventario            | Sí             | Sí            | —               | —       |
+| POS                   | Módulo oficial | Sí            | —               | —       |
+| WhatsApp              | —              | —             | Connector       | —       |
+| CFDI México           | —              | —             | Jurisdictional  | Posible |
+| Renta                 | —              | —             | Module          | —       |
+| Flotillas             | —              | —             | Module          | Posible |
+| Reporte específico    | —              | Posible       | Report provider | Posible |
 
 ## 16. Arquitectura comercial por capas
 
@@ -360,12 +360,12 @@ Reducción de errores, trazabilidad, ahorro de tiempo, experiencia de cliente y 
 
 Para estimar trabajos no paquetizables se recomienda una tarifa interna efectiva, no necesariamente mostrada al cliente:
 
-| Perfil comercial | Tarifa efectiva orientativa MXN/h |
-|---|---:|
-| Implementador independiente | $750 a $1,250 |
-| Especialista senior | $1,000 a $1,600 |
-| Agencia pequeña | $1,100 a $1,800 |
-| Trabajo urgente / alto riesgo | +25% a +60% |
+| Perfil comercial              | Tarifa efectiva orientativa MXN/h |
+| ----------------------------- | --------------------------------: |
+| Implementador independiente   |                     $750 a $1,250 |
+| Especialista senior           |                   $1,000 a $1,600 |
+| Agencia pequeña               |                   $1,100 a $1,800 |
+| Trabajo urgente / alto riesgo |                       +25% a +60% |
 
 Estas cifras son una política recomendada, no una tarifa obligatoria del proyecto.
 
@@ -633,13 +633,13 @@ La migración se divide en:
 
 ## 32. Migration tiers
 
-| Tier | Descripción | Precio orientativo MXN |
-|---|---|---:|
-| M0 | sin migración | $0 |
-| M1 | CSV limpio, hasta 500 registros | $1,500 a $4,000 |
-| M2 | múltiples archivos / 5,000 registros | $5,000 a $12,000 |
-| M3 | datos sucios, mapping y deduplicación | $12,000 a $30,000 |
-| M4 | legado / API / histórico complejo | $30,000+ |
+| Tier | Descripción                           | Precio orientativo MXN |
+| ---- | ------------------------------------- | ---------------------: |
+| M0   | sin migración                         |                     $0 |
+| M1   | CSV limpio, hasta 500 registros       |        $1,500 a $4,000 |
+| M2   | múltiples archivos / 5,000 registros  |       $5,000 a $12,000 |
+| M3   | datos sucios, mapping y deduplicación |      $12,000 a $30,000 |
+| M4   | legado / API / histórico complejo     |               $30,000+ |
 
 ## 33. Migration dry run
 
@@ -836,15 +836,15 @@ Responsable de credenciales, infraestructura y backups, puede ser cliente o impl
 
 ## 47. RACI mínimo
 
-| Actividad | Implementador | Client Owner | Champion |
-|---|---|---|---|
-| Discovery | R | A | C |
-| Configuración | R | C | C |
-| Migración | R | A | C |
-| UAT | C | A | R |
-| Capacitación | R | C | R |
-| Go-live | R | A | R |
-| Handover | R | A | C |
+| Actividad     | Implementador | Client Owner | Champion |
+| ------------- | ------------- | ------------ | -------- |
+| Discovery     | R             | A            | C        |
+| Configuración | R             | C            | C        |
+| Migración     | R             | A            | C        |
+| UAT           | C             | A            | R        |
+| Capacitación  | R             | C            | R        |
+| Go-live       | R             | A            | R        |
+| Handover      | R             | A            | C        |
 
 R = Responsible, A = Accountable, C = Consulted.
 
@@ -918,12 +918,12 @@ En talleres con más de cuatro usuarios se recomienda capacitar primero a una o 
 
 ## 53. Training pricing
 
-| Modalidad | Precio orientativo MXN |
-|---|---:|
-| Remota 60 a 90 min | $900 a $1,800 |
+| Modalidad                |     Precio orientativo MXN |
+| ------------------------ | -------------------------: |
+| Remota 60 a 90 min       |              $900 a $1,800 |
 | Presencial media jornada | $2,500 a $5,000 + viáticos |
-| Presencial día completo | $4,500 a $8,000 + viáticos |
-| Train-the-trainer | $4,000 a $10,000 |
+| Presencial día completo  | $4,500 a $8,000 + viáticos |
+| Train-the-trainer        |           $4,000 a $10,000 |
 
 ## 54. Go-live strategy
 
@@ -1086,11 +1086,11 @@ Consulta, mejora o defecto menor.
 
 ## 65. SLA ejemplo
 
-| Plan | P1 respuesta | P2 | P3 | Cobertura |
-|---|---|---|---|---|
-| Community | best effort | best effort | best effort | laboral |
-| Managed | 4 h laborales | 1 día laboral | 2 días | laboral |
-| Priority | 1 h laboral | 4 h laborales | 1 día | ampliada acordada |
+| Plan      | P1 respuesta  | P2            | P3          | Cobertura         |
+| --------- | ------------- | ------------- | ----------- | ----------------- |
+| Community | best effort   | best effort   | best effort | laboral           |
+| Managed   | 4 h laborales | 1 día laboral | 2 días      | laboral           |
+| Priority  | 1 h laboral   | 4 h laborales | 1 día       | ampliada acordada |
 
 24/7 se cotiza separadamente y no se ofrece por defecto a un microtaller.
 
@@ -1120,10 +1120,10 @@ Una bolsa de horas puede venderse prepagada con caducidad razonable.
 Ejemplo:
 
 | Bolsa | Precio recomendado MXN |
-|---|---:|
-| 5 h | $4,500 a $6,000 |
-| 10 h | $8,500 a $11,000 |
-| 20 h | $16,000 a $20,000 |
+| ----- | ---------------------: |
+| 5 h   |        $4,500 a $6,000 |
+| 10 h  |       $8,500 a $11,000 |
+| 20 h  |      $16,000 a $20,000 |
 
 ## 68. Custom development
 
@@ -1200,15 +1200,15 @@ Proyectos con incertidumbre alta requieren mayor colchón.
 
 Workshop Standard vendido en $24,900 MXN:
 
-| Concepto | Importe MXN |
-|---|---:|
-| Ingreso | $24,900 |
-| 16 h trabajo a costo interno $600/h | -$9,600 |
-| Infra / herramientas iniciales | -$600 |
-| Reserva soporte | -$1,500 |
-| Contingencia utilizada | -$1,000 |
-| Contribución | $12,200 |
-| Margen aproximado | 49% |
+| Concepto                            | Importe MXN |
+| ----------------------------------- | ----------: |
+| Ingreso                             |     $24,900 |
+| 16 h trabajo a costo interno $600/h |     -$9,600 |
+| Infra / herramientas iniciales      |       -$600 |
+| Reserva soporte                     |     -$1,500 |
+| Contingencia utilizada              |     -$1,000 |
+| Contribución                        |     $12,200 |
+| Margen aproximado                   |         49% |
 
 El objetivo es demostrar si el precio sostiene realmente la atención profesional prometida.
 
@@ -1742,28 +1742,28 @@ La presión comercial no bypassa release qualification.
 
 Antes de declarar V1 comercialmente implementable:
 
-| Gate | Condición |
-|---|---|
-| COM-GATE-001 | paquetes y alcance publicados |
-| COM-GATE-002 | demo-workshop reproducible |
-| COM-GATE-003 | demo offline reproducible |
+| Gate         | Condición                      |
+| ------------ | ------------------------------ |
+| COM-GATE-001 | paquetes y alcance publicados  |
+| COM-GATE-002 | demo-workshop reproducible     |
+| COM-GATE-003 | demo offline reproducible      |
 | COM-GATE-004 | discovery checklist versionado |
-| COM-GATE-005 | proposal template |
-| COM-GATE-006 | SOW template |
-| COM-GATE-007 | UAT template |
-| COM-GATE-008 | handover template |
-| COM-GATE-009 | pricing calculator interno |
-| COM-GATE-010 | migration tiers documentados |
-| COM-GATE-011 | training material por rol |
-| COM-GATE-012 | support plans definidos |
-| COM-GATE-013 | SLA examples definidos |
-| COM-GATE-014 | trueque policy definida |
-| COM-GATE-015 | AGPL language en propuestas |
-| COM-GATE-016 | source handoff procedure |
-| COM-GATE-017 | exit plan documentado |
-| COM-GATE-018 | managed service runbook |
-| COM-GATE-019 | unit economics revisables |
-| COM-GATE-020 | case-study consent separado |
+| COM-GATE-005 | proposal template              |
+| COM-GATE-006 | SOW template                   |
+| COM-GATE-007 | UAT template                   |
+| COM-GATE-008 | handover template              |
+| COM-GATE-009 | pricing calculator interno     |
+| COM-GATE-010 | migration tiers documentados   |
+| COM-GATE-011 | training material por rol      |
+| COM-GATE-012 | support plans definidos        |
+| COM-GATE-013 | SLA examples definidos         |
+| COM-GATE-014 | trueque policy definida        |
+| COM-GATE-015 | AGPL language en propuestas    |
+| COM-GATE-016 | source handoff procedure       |
+| COM-GATE-017 | exit plan documentado          |
+| COM-GATE-018 | managed service runbook        |
+| COM-GATE-019 | unit economics revisables      |
+| COM-GATE-020 | case-study consent separado    |
 
 ## 121. Artefactos comerciales objetivo
 
@@ -1924,23 +1924,23 @@ La respuesta puede ser re-scope, capacitación, automatización o ajuste de prec
 
 ## 132. Commercial ADRs
 
-| ID | Decisión | Estado |
-|---|---|---|
-| COM-ADR-001 | vender servicios, no licencia propietaria | Accepted |
-| COM-ADR-002 | pricing por alcance/riesgo/valor | Accepted |
-| COM-ADR-003 | discovery complejo es facturable | Accepted |
-| COM-ADR-004 | paquetes con rangos, no precio universal | Accepted |
-| COM-ADR-005 | trueque valorizado contractualmente | Accepted |
-| COM-ADR-006 | managed support separado de implementación | Accepted |
-| COM-ADR-007 | pass-through costs visibles | Accepted |
-| COM-ADR-008 | no soporte ilimitado | Accepted |
-| COM-ADR-009 | handover y exit plan obligatorios | Accepted |
-| COM-ADR-010 | customización vía plugins antes de fork | Accepted |
-| COM-ADR-011 | margen objetivo 45% a 60% | Accepted |
-| COM-ADR-012 | descuentos sociales explícitos | Accepted |
-| COM-ADR-013 | multisucursal requiere discovery complejo | Accepted |
-| COM-ADR-014 | hardware tiene margen cuando se administra | Accepted |
-| COM-ADR-015 | cloud no se fuerza si LAN es mejor | Accepted |
+| ID          | Decisión                                    | Estado   |
+| ----------- | ------------------------------------------- | -------- |
+| COM-ADR-001 | vender servicios, no licencia propietaria   | Accepted |
+| COM-ADR-002 | pricing por alcance/riesgo/valor            | Accepted |
+| COM-ADR-003 | discovery complejo es facturable            | Accepted |
+| COM-ADR-004 | paquetes con rangos, no precio universal    | Accepted |
+| COM-ADR-005 | trueque valorizado contractualmente         | Accepted |
+| COM-ADR-006 | managed support separado de implementación  | Accepted |
+| COM-ADR-007 | pass-through costs visibles                 | Accepted |
+| COM-ADR-008 | no soporte ilimitado                        | Accepted |
+| COM-ADR-009 | handover y exit plan obligatorios           | Accepted |
+| COM-ADR-010 | customización vía plugins antes de fork     | Accepted |
+| COM-ADR-011 | margen objetivo 45% a 60%                   | Accepted |
+| COM-ADR-012 | descuentos sociales explícitos              | Accepted |
+| COM-ADR-013 | multisucursal requiere discovery complejo   | Accepted |
+| COM-ADR-014 | hardware tiene margen cuando se administra  | Accepted |
+| COM-ADR-015 | cloud no se fuerza si LAN es mejor          | Accepted |
 | COM-ADR-016 | COM gates bloquean declaración comercial V1 | Accepted |
 
 ## 133. Riesgos residuales comerciales

@@ -11,15 +11,15 @@
 
 ## 2. Política de autonomía técnica
 
-| ID | Política | Criterio |
-|---|---|---|
-| TA-01 | Decidir por evidencia | Optimizar corrección, resiliencia, mantenibilidad, seguridad, accesibilidad, portabilidad, rendimiento y costo total. |
-| TA-02 | ADR obligatorio | Toda decisión arquitectónica relevante queda documentada. |
-| TA-03 | No bloquear por preferencia | No se pide aprobación humana para decisiones técnicas ordinarias ya resolubles. |
-| TA-04 | Spikes sólo cuando aporten evidencia | Se prototipa cuando existe incertidumbre material medible. |
-| TA-05 | Reversibilidad | Boundaries y adapters reducen lock-in. |
-| TA-06 | No sobreingeniería | Microservicios, brokers o Kubernetes requieren necesidad demostrada. |
-| TA-07 | Mejor resultado global | No optimizar una capa sacrificando seguridad, offline, accesibilidad o TCO. |
+| ID    | Política                             | Criterio                                                                                                              |
+| ----- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| TA-01 | Decidir por evidencia                | Optimizar corrección, resiliencia, mantenibilidad, seguridad, accesibilidad, portabilidad, rendimiento y costo total. |
+| TA-02 | ADR obligatorio                      | Toda decisión arquitectónica relevante queda documentada.                                                             |
+| TA-03 | No bloquear por preferencia          | No se pide aprobación humana para decisiones técnicas ordinarias ya resolubles.                                       |
+| TA-04 | Spikes sólo cuando aporten evidencia | Se prototipa cuando existe incertidumbre material medible.                                                            |
+| TA-05 | Reversibilidad                       | Boundaries y adapters reducen lock-in.                                                                                |
+| TA-06 | No sobreingeniería                   | Microservicios, brokers o Kubernetes requieren necesidad demostrada.                                                  |
+| TA-07 | Mejor resultado global               | No optimizar una capa sacrificando seguridad, offline, accesibilidad o TCO.                                           |
 
 ## 3. Licenciamiento
 
@@ -29,24 +29,24 @@ Plugins jurídicamente separables pueden usar otra licencia, siempre que su inte
 
 ## 4. ADRs cerrados
 
-| ADR | Área | Decisión | Estado |
-|---|---|---|---|
-| ADR-001 | Arquitectura | Monolito modular | Accepted |
-| ADR-002 | Frontend | React + TypeScript + Vite PWA | Accepted |
-| ADR-003 | Persistencia local | IndexedDB mediante Dexie y repository abstraction | Accepted |
-| ADR-004 | Backend | Python + FastAPI + Pydantic + SQLAlchemy 2 + Alembic | Accepted |
-| ADR-005 | DB servidor | PostgreSQL | Accepted |
-| ADR-006 | IDs | UUIDv7 | Accepted |
-| ADR-007 | Sync | Mutation log idempotente + cursor incremental + policy por dominio | Accepted |
-| ADR-008 | Eventos | Transactional Outbox | Accepted |
-| ADR-009 | Jobs | Queue durable en PostgreSQL + worker dedicado | Accepted |
-| ADR-010 | API | REST JSON versionada + OpenAPI | Accepted |
-| ADR-011 | Desktop | PWA default, Tauri sólo para capabilities nativas | Accepted |
-| ADR-012 | Deployment | Docker Compose | Accepted |
-| ADR-013 | AuthZ | RBAC por capabilities y scopes | Accepted |
-| ADR-014 | Blobs | Filesystem y S3-compatible mediante abstraction | Accepted |
-| ADR-015 | Plugins | Manifest + capabilities + hooks versionados | Accepted |
-| ADR-016 | Licencia | AGPL-3.0-only | Accepted |
+| ADR     | Área               | Decisión                                                           | Estado   |
+| ------- | ------------------ | ------------------------------------------------------------------ | -------- |
+| ADR-001 | Arquitectura       | Monolito modular                                                   | Accepted |
+| ADR-002 | Frontend           | React + TypeScript + Vite PWA                                      | Accepted |
+| ADR-003 | Persistencia local | IndexedDB mediante Dexie y repository abstraction                  | Accepted |
+| ADR-004 | Backend            | Python + FastAPI + Pydantic + SQLAlchemy 2 + Alembic               | Accepted |
+| ADR-005 | DB servidor        | PostgreSQL                                                         | Accepted |
+| ADR-006 | IDs                | UUIDv7                                                             | Accepted |
+| ADR-007 | Sync               | Mutation log idempotente + cursor incremental + policy por dominio | Accepted |
+| ADR-008 | Eventos            | Transactional Outbox                                               | Accepted |
+| ADR-009 | Jobs               | Queue durable en PostgreSQL + worker dedicado                      | Accepted |
+| ADR-010 | API                | REST JSON versionada + OpenAPI                                     | Accepted |
+| ADR-011 | Desktop            | PWA default, Tauri sólo para capabilities nativas                  | Accepted |
+| ADR-012 | Deployment         | Docker Compose                                                     | Accepted |
+| ADR-013 | AuthZ              | RBAC por capabilities y scopes                                     | Accepted |
+| ADR-014 | Blobs              | Filesystem y S3-compatible mediante abstraction                    | Accepted |
+| ADR-015 | Plugins            | Manifest + capabilities + hooks versionados                        | Accepted |
+| ADR-016 | Licencia           | AGPL-3.0-only                                                      | Accepted |
 
 ## 5. Principios vigentes
 

@@ -16,20 +16,20 @@ Definir amenazas, activos, trust boundaries, controles preventivos y detectivos,
 
 ## 3. Activos críticos
 
-| ID | Activo | Criticidad |
-|---|---|---|
-| A-01 | Identidades y credenciales | Crítico |
-| A-02 | PII de clientes | Alto |
-| A-03 | Bicycle Passport | Alto |
-| A-04 | Órdenes y autorizaciones | Crítico |
-| A-05 | Pagos y caja | Crítico |
-| A-06 | Inventario | Alto |
-| A-07 | Mensajería | Alto |
-| A-08 | Backups | Crítico |
-| A-09 | Secrets de integraciones | Crítico |
-| A-10 | Audit log | Crítico |
-| A-11 | Plugins y supply chain | Crítico |
-| A-12 | Disponibilidad offline | Crítico |
+| ID   | Activo                     | Criticidad |
+| ---- | -------------------------- | ---------- |
+| A-01 | Identidades y credenciales | Crítico    |
+| A-02 | PII de clientes            | Alto       |
+| A-03 | Bicycle Passport           | Alto       |
+| A-04 | Órdenes y autorizaciones   | Crítico    |
+| A-05 | Pagos y caja               | Crítico    |
+| A-06 | Inventario                 | Alto       |
+| A-07 | Mensajería                 | Alto       |
+| A-08 | Backups                    | Crítico    |
+| A-09 | Secrets de integraciones   | Crítico    |
+| A-10 | Audit log                  | Crítico    |
+| A-11 | Plugins y supply chain     | Crítico    |
+| A-12 | Disponibilidad offline     | Crítico    |
 
 ## 4. Trust boundaries
 
@@ -128,18 +128,18 @@ Official releases generan SBOM, hashes y provenance/firma cuando sea viable. El 
 
 ## 13. Privacidad
 
-| ID | Principio |
-|---|---|
-| PD-01 | Data minimization |
-| PD-02 | Purpose limitation |
-| PD-03 | Private by default |
-| PD-04 | Configurable retention |
-| PD-05 | Export/portability |
-| PD-06 | Deletion/anonymization donde proceda |
-| PD-07 | Consent separado para comunicaciones |
-| PD-08 | Vendor minimization |
+| ID    | Principio                               |
+| ----- | --------------------------------------- |
+| PD-01 | Data minimization                       |
+| PD-02 | Purpose limitation                      |
+| PD-03 | Private by default                      |
+| PD-04 | Configurable retention                  |
+| PD-05 | Export/portability                      |
+| PD-06 | Deletion/anonymization donde proceda    |
+| PD-07 | Consent separado para comunicaciones    |
+| PD-08 | Vendor minimization                     |
 | PD-09 | Telemetry transparente y deshabilitable |
-| PD-10 | No surveillance de ciclistas |
+| PD-10 | No surveillance de ciclistas            |
 
 ## 14. Data classes
 

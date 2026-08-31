@@ -12,7 +12,7 @@ class OrganizationRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
 
-    locations: Mapped[list["LocationRecord"]] = relationship(
+    locations: Mapped[list[LocationRecord]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )

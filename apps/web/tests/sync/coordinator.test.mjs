@@ -132,7 +132,6 @@ test('uuidv7 client ids are canonical, unique, and lexically monotonic', async (
   assert.ok(values.every((value) => value[14] === '7'))
 })
 
-
 test('permanent push conflicts move out of the retry queue and into conflict center', async () => {
   const store = new FakeStore()
   const transport = new FakeTransport()
@@ -220,12 +219,24 @@ test('sync ignores acknowledgement ids that were not present in the pushed batch
   await coordinator.runOnce({ online: true })
 
   assert.deepEqual(store.acked, [])
-  assert.deepEqual(store.pending.map((item) => item.mutation_id), ['mutation-local'])
+  assert.deepEqual(
+    store.pending.map((item) => item.mutation_id),
+    ['mutation-local'],
+  )
 })
 
 test('HTTP sync transport preserves unauthorized status so the app can require reauthentication', async () => {
-  const { HttpSyncTransport, SyncTransportError } = await import('../../.tmp-sync/src/sync/http-transport.js')
-  const transport = new HttpSyncTransport('', () => 'expired-token', async () => new Response(JSON.stringify({ detail: 'invalid session' }), { status: 401, headers: { 'content-type': 'application/json' } }))
+  const { HttpSyncTransport, SyncTransportError } =
+    await import('../../.tmp-sync/src/sync/http-transport.js')
+  const transport = new HttpSyncTransport(
+    '',
+    () => 'expired-token',
+    async () =>
+      new Response(JSON.stringify({ detail: 'invalid session' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
+  )
 
   await assert.rejects(
     () => transport.pull(0, 'loc-1'),

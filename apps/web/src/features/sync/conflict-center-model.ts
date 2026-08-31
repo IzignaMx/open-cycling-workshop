@@ -13,7 +13,9 @@ const ENTITY_TITLES: Record<string, string> = {
   customer: 'Cliente con conflicto',
 }
 
-export function buildConflictCenterItems(conflicts: readonly ConflictRecord[]): ConflictCenterItem[] {
+export function buildConflictCenterItems(
+  conflicts: readonly ConflictRecord[],
+): ConflictCenterItem[] {
   return [...conflicts]
     .map((conflict) => ({
       mutationId: conflict.mutation_id,

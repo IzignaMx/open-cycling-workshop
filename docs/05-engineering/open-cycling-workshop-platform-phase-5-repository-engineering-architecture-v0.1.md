@@ -23,32 +23,32 @@ Los objetivos concretos son:
 
 ## 2. Decisiones de ingeniería cerradas
 
-| ID | Decisión | Estado | Motivo principal |
-|---|---|---|---|
-| ENG-ADR-001 | Monorepo único | Accepted | Cambios de contrato, frontend, backend y docs permanecen atómicos |
-| ENG-ADR-002 | `pnpm` para workspace TypeScript | Accepted | Workspaces maduros, almacenamiento eficiente, lockfile reproducible |
-| ENG-ADR-003 | `uv` para Python | Accepted | Resolución, lock y entornos rápidos y reproducibles |
-| ENG-ADR-004 | Python Core como un paquete modular con múltiples entrypoints | Accepted | Evita duplicación entre API, worker y CLI |
-| ENG-ADR-005 | Backend organizado por bounded context y capas internas | Accepted | Protege dominio y reduce acoplamiento accidental |
-| ENG-ADR-006 | Frontend organizado por módulos de negocio | Accepted | Refleja el dominio y escala mejor que carpetas globales por tipo |
-| ENG-ADR-007 | OpenAPI generado por FastAPI como contrato HTTP canónico | Accepted | Evita esquemas TypeScript escritos manualmente |
-| ENG-ADR-008 | Cliente TypeScript generado desde OpenAPI | Accepted | Detecta drift en CI y simplifica consumo seguro |
-| ENG-ADR-009 | REST + JSON como API principal | Accepted | Simplicidad operativa, offline sync y tooling excelente |
-| ENG-ADR-010 | GitHub Actions como CI de referencia | Accepted | Ecosistema open source y checks de PR ampliamente accesibles |
-| ENG-ADR-011 | Trunk-based development con ramas cortas | Accepted | Reduce divergence y acelera integración |
-| ENG-ADR-012 | Conventional Commits + DCO | Accepted | Changelog automatizable y contribución sin CLA inicial |
-| ENG-ADR-013 | SemVer | Accepted | Compatibilidad comprensible para Core, API y plugins |
-| ENG-ADR-014 | `release-please` para automatizar releases | Accepted | PR de release auditable y menor automatismo destructivo |
-| ENG-ADR-015 | Ruff + mypy para Python | Accepted | Lint/format rápido más verificación estática explícita |
-| ENG-ADR-016 | ESLint + Prettier + TypeScript strict | Accepted | Ecosistema React estable y reglas verificables |
-| ENG-ADR-017 | Vitest + Testing Library + Playwright | Accepted | Cobertura equilibrada de lógica, UI y flujos reales |
-| ENG-ADR-018 | pytest + Hypothesis | Accepted | Unit/integration + propiedades para ledger y sincronización |
-| ENG-ADR-019 | Alembic forward-first y expand/contract | Accepted | Migraciones seguras y compatibles con despliegues graduales |
-| ENG-ADR-020 | Dexie schema migrations versionadas | Accepted | Evolución controlada de datos locales offline |
-| ENG-ADR-021 | REUSE/SPDX para higiene de licencias | Accepted | Cumplimiento AGPL y ecosistema de plugins auditable |
-| ENG-ADR-022 | Renovate para actualización de dependencias | Accepted | Cobertura multi-ecosistema y políticas agrupables |
-| ENG-ADR-023 | CI como autoridad, hooks locales opcionales | Accepted | Contribuir no depende de instalar hooks propietarios |
-| ENG-ADR-024 | Docs-as-code Markdown en el mismo monorepo | Accepted | Cambios de comportamiento y documentación viajan juntos |
+| ID          | Decisión                                                      | Estado   | Motivo principal                                                    |
+| ----------- | ------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| ENG-ADR-001 | Monorepo único                                                | Accepted | Cambios de contrato, frontend, backend y docs permanecen atómicos   |
+| ENG-ADR-002 | `pnpm` para workspace TypeScript                              | Accepted | Workspaces maduros, almacenamiento eficiente, lockfile reproducible |
+| ENG-ADR-003 | `uv` para Python                                              | Accepted | Resolución, lock y entornos rápidos y reproducibles                 |
+| ENG-ADR-004 | Python Core como un paquete modular con múltiples entrypoints | Accepted | Evita duplicación entre API, worker y CLI                           |
+| ENG-ADR-005 | Backend organizado por bounded context y capas internas       | Accepted | Protege dominio y reduce acoplamiento accidental                    |
+| ENG-ADR-006 | Frontend organizado por módulos de negocio                    | Accepted | Refleja el dominio y escala mejor que carpetas globales por tipo    |
+| ENG-ADR-007 | OpenAPI generado por FastAPI como contrato HTTP canónico      | Accepted | Evita esquemas TypeScript escritos manualmente                      |
+| ENG-ADR-008 | Cliente TypeScript generado desde OpenAPI                     | Accepted | Detecta drift en CI y simplifica consumo seguro                     |
+| ENG-ADR-009 | REST + JSON como API principal                                | Accepted | Simplicidad operativa, offline sync y tooling excelente             |
+| ENG-ADR-010 | GitHub Actions como CI de referencia                          | Accepted | Ecosistema open source y checks de PR ampliamente accesibles        |
+| ENG-ADR-011 | Trunk-based development con ramas cortas                      | Accepted | Reduce divergence y acelera integración                             |
+| ENG-ADR-012 | Conventional Commits + DCO                                    | Accepted | Changelog automatizable y contribución sin CLA inicial              |
+| ENG-ADR-013 | SemVer                                                        | Accepted | Compatibilidad comprensible para Core, API y plugins                |
+| ENG-ADR-014 | `release-please` para automatizar releases                    | Accepted | PR de release auditable y menor automatismo destructivo             |
+| ENG-ADR-015 | Ruff + mypy para Python                                       | Accepted | Lint/format rápido más verificación estática explícita              |
+| ENG-ADR-016 | ESLint + Prettier + TypeScript strict                         | Accepted | Ecosistema React estable y reglas verificables                      |
+| ENG-ADR-017 | Vitest + Testing Library + Playwright                         | Accepted | Cobertura equilibrada de lógica, UI y flujos reales                 |
+| ENG-ADR-018 | pytest + Hypothesis                                           | Accepted | Unit/integration + propiedades para ledger y sincronización         |
+| ENG-ADR-019 | Alembic forward-first y expand/contract                       | Accepted | Migraciones seguras y compatibles con despliegues graduales         |
+| ENG-ADR-020 | Dexie schema migrations versionadas                           | Accepted | Evolución controlada de datos locales offline                       |
+| ENG-ADR-021 | REUSE/SPDX para higiene de licencias                          | Accepted | Cumplimiento AGPL y ecosistema de plugins auditable                 |
+| ENG-ADR-022 | Renovate para actualización de dependencias                   | Accepted | Cobertura multi-ecosistema y políticas agrupables                   |
+| ENG-ADR-023 | CI como autoridad, hooks locales opcionales                   | Accepted | Contribuir no depende de instalar hooks propietarios                |
+| ENG-ADR-024 | Docs-as-code Markdown en el mismo monorepo                    | Accepted | Cambios de comportamiento y documentación viajan juntos             |
 
 ## 3. Topología del monorepo
 
@@ -712,7 +712,7 @@ El proyecto no promete ejecutar plugins comunitarios no confiables dentro del pr
 id: org.example.inventory-listener
 name: Inventory Listener
 version: 1.0.0
-platform: ">=1.0 <2.0"
+platform: '>=1.0 <2.0'
 license: AGPL-3.0-only
 capabilities:
   - inventory.read
@@ -764,12 +764,12 @@ Runtime configuration no sensible puede cargarse desde un endpoint/config genera
 
 Se normalizan cuatro perfiles:
 
-| Perfil | Propósito |
-|---|---|
-| `dev` | desarrollo humano con hot reload y servicios locales |
-| `test` | ejecución determinista y aislada |
-| `demo` | dataset seguro para demos, screenshots y capacitación |
-| `production` | defaults endurecidos y servicios persistentes |
+| Perfil       | Propósito                                             |
+| ------------ | ----------------------------------------------------- |
+| `dev`        | desarrollo humano con hot reload y servicios locales  |
+| `test`       | ejecución determinista y aislada                      |
+| `demo`       | dataset seguro para demos, screenshots y capacitación |
+| `production` | defaults endurecidos y servicios persistentes         |
 
 No debe existir lógica de negocio que cambie silenciosamente por entorno. Las diferencias son de infraestructura, debugging y configuración explícita.
 
@@ -1367,18 +1367,18 @@ Supersedes: ...
 
 Estas reglas deberán automatizarse progresivamente:
 
-| Fitness function | Verificación |
-|---|---|
-| Domain no importa FastAPI/SQLAlchemy | import/lint rule |
-| Módulos frontend no cruzan boundaries arbitrarios | ESLint import boundaries |
-| OpenAPI y cliente generado no divergen | generation diff |
-| Migration chain es aplicable desde release previo | CI database test |
-| IndexedDB schema migra fixture previo | browser test |
-| AGPL/REUSE completo | `reuse lint` |
-| Secrets ausentes | secret scan |
-| Critical UI keyboard accessible | Playwright/axe |
-| Sync duplicate mutation es idempotente | property/integration test |
-| Plugins incompatibles se rechazan | manifest compatibility tests |
+| Fitness function                                  | Verificación                 |
+| ------------------------------------------------- | ---------------------------- |
+| Domain no importa FastAPI/SQLAlchemy              | import/lint rule             |
+| Módulos frontend no cruzan boundaries arbitrarios | ESLint import boundaries     |
+| OpenAPI y cliente generado no divergen            | generation diff              |
+| Migration chain es aplicable desde release previo | CI database test             |
+| IndexedDB schema migra fixture previo             | browser test                 |
+| AGPL/REUSE completo                               | `reuse lint`                 |
+| Secrets ausentes                                  | secret scan                  |
+| Critical UI keyboard accessible                   | Playwright/axe               |
+| Sync duplicate mutation es idempotente            | property/integration test    |
+| Plugins incompatibles se rechazan                 | manifest compatibility tests |
 
 ## 50. Código de ejemplo y snippets en documentación
 
@@ -1638,18 +1638,18 @@ Cada uno podrá introducirse sólo cuando un problema medido lo justifique.
 
 ## 62. Riesgos de ingeniería y mitigaciones
 
-| Riesgo | Impacto | Mitigación |
-|---|---|---|
-| Monorepo se vuelve lento | Productividad | path-aware CI, cache, scripts segmentados |
-| Contextos se acoplan | Deuda estructural | import rules + ADR + fitness functions |
-| OpenAPI generation crea churn | PRs ruidosos | generator fijado + normalización determinista |
-| Offline tests son frágiles | Falsos negativos | network harness controlado y clocks inyectables |
-| Plugin API se congela muy pronto | Evolución difícil | surface mínima + experimental namespace pre-1.0 |
-| Shared Kernel crece | Acoplamiento | review explícita de cada adición |
-| Migrations bloquean producción | Downtime | expand/contract + rehearsal + budgets |
-| Tooling abruma contributors | Menos comunidad | bootstrap único, docs claras, CI como autoridad |
-| Licencias de assets se pierden | Riesgo legal | REUSE + provenance gate |
-| Actualizaciones automáticas rompen stack | Inestabilidad | Renovate + grouping + no auto-merge majors |
+| Riesgo                                   | Impacto           | Mitigación                                      |
+| ---------------------------------------- | ----------------- | ----------------------------------------------- |
+| Monorepo se vuelve lento                 | Productividad     | path-aware CI, cache, scripts segmentados       |
+| Contextos se acoplan                     | Deuda estructural | import rules + ADR + fitness functions          |
+| OpenAPI generation crea churn            | PRs ruidosos      | generator fijado + normalización determinista   |
+| Offline tests son frágiles               | Falsos negativos  | network harness controlado y clocks inyectables |
+| Plugin API se congela muy pronto         | Evolución difícil | surface mínima + experimental namespace pre-1.0 |
+| Shared Kernel crece                      | Acoplamiento      | review explícita de cada adición                |
+| Migrations bloquean producción           | Downtime          | expand/contract + rehearsal + budgets           |
+| Tooling abruma contributors              | Menos comunidad   | bootstrap único, docs claras, CI como autoridad |
+| Licencias de assets se pierden           | Riesgo legal      | REUSE + provenance gate                         |
+| Actualizaciones automáticas rompen stack | Inestabilidad     | Renovate + grouping + no auto-merge majors      |
 
 ## 63. Handoff hacia Fase 6
 

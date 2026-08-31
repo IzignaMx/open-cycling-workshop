@@ -6,7 +6,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy.orm import Session, sessionmaker
 
 
-def get_session(request: Request) -> Generator[Session, None, None]:
+def get_session(request: Request) -> Generator[Session]:
     factory: sessionmaker[Session] | None = request.app.state.session_factory
     if factory is None:
         raise HTTPException(

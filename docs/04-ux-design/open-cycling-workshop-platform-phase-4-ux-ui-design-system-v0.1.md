@@ -10,29 +10,29 @@ This phase turns product requirements into a verifiable operational experience a
 
 ### UX principles
 
-| ID | Principle | Rule |
-|---|---|---|
-| UX-01 | Operational clarity | Urgent, actionable and irreversible information outranks decoration. |
-| UX-02 | Local confidence | The user can tell whether work is local, syncing, synced, conflicted or blocked. |
-| UX-03 | Workshop-grade touch | Mechanic flows use large targets, quick reading and one-hand operation. |
-| UX-04 | Progressive disclosure | Complexity appears only when a task, module or capability needs it. |
-| UX-05 | Role-aware | Capabilities adapt navigation without creating separate apps per role. |
-| UX-06 | Accessible by construction | WCAG 2.2 AA is an acceptance criterion. |
-| UX-07 | Semantic white label | Brand tokens never redefine critical operational meaning. |
-| UX-08 | Fast paths first | Frequent workflows minimize re-entry, steps and unnecessary confirmation. |
-| UX-09 | Undo before confirmation | Reversible actions prefer undo; confirmation is for high-impact commits. |
-| UX-10 | No hidden failure | Sync, payment, inventory and permission failures remain visible until resolved. |
+| ID    | Principle                  | Rule                                                                             |
+| ----- | -------------------------- | -------------------------------------------------------------------------------- |
+| UX-01 | Operational clarity        | Urgent, actionable and irreversible information outranks decoration.             |
+| UX-02 | Local confidence           | The user can tell whether work is local, syncing, synced, conflicted or blocked. |
+| UX-03 | Workshop-grade touch       | Mechanic flows use large targets, quick reading and one-hand operation.          |
+| UX-04 | Progressive disclosure     | Complexity appears only when a task, module or capability needs it.              |
+| UX-05 | Role-aware                 | Capabilities adapt navigation without creating separate apps per role.           |
+| UX-06 | Accessible by construction | WCAG 2.2 AA is an acceptance criterion.                                          |
+| UX-07 | Semantic white label       | Brand tokens never redefine critical operational meaning.                        |
+| UX-08 | Fast paths first           | Frequent workflows minimize re-entry, steps and unnecessary confirmation.        |
+| UX-09 | Undo before confirmation   | Reversible actions prefer undo; confirmation is for high-impact commits.         |
+| UX-10 | No hidden failure          | Sync, payment, inventory and permission failures remain visible until resolved.  |
 
 ## 2. Contexts of use
 
-| Context | Conditions | UX consequence |
-|---|---|---|
-| Reception on Windows | Keyboard + mouse, large display, frequent interruptions | Instant search, shortcuts, rapid forms, split view |
-| Workshop Android tablet | Touch, gloves/dirty hands, variable light | Workshop Mode, 56 px primary targets, high visibility |
-| Sales floor | Mouse/touch/barcode scanner | Fast POS, scan-first focus, tolerant search |
-| Administration | Desktop, data-dense | Tables, saved filters, exports, analytics |
-| Customer | Personal phone | Mobile-first portal, plain language, no installation |
-| Technical admin | Desktop | Settings, diagnostics, backups, plugins, system health |
+| Context                 | Conditions                                              | UX consequence                                         |
+| ----------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
+| Reception on Windows    | Keyboard + mouse, large display, frequent interruptions | Instant search, shortcuts, rapid forms, split view     |
+| Workshop Android tablet | Touch, gloves/dirty hands, variable light               | Workshop Mode, 56 px primary targets, high visibility  |
+| Sales floor             | Mouse/touch/barcode scanner                             | Fast POS, scan-first focus, tolerant search            |
+| Administration          | Desktop, data-dense                                     | Tables, saved filters, exports, analytics              |
+| Customer                | Personal phone                                          | Mobile-first portal, plain language, no installation   |
+| Technical admin         | Desktop                                                 | Settings, diagnostics, backups, plugins, system health |
 
 ## 3. Global information architecture
 
@@ -70,13 +70,13 @@ Navigation is capability-aware but keeps a stable conceptual order. Global searc
 
 ## 4. Responsive shell
 
-| Viewport | Behavior |
-|---|---|
-| ≥1280 px | 248 px sidebar, 56 px top bar, fluid content, optional context panel |
-| 1024–1279 px | Collapsible 72/232 px sidebar, drawer secondary content |
-| 768–1023 px | Tablet landscape, navigation drawer, sticky actions, selected split views |
-| 640–767 px | One column internal UI, bottom action bar for frequent actions |
-| <640 px | Internal contingency support; Customer Portal is first-class |
+| Viewport     | Behavior                                                                  |
+| ------------ | ------------------------------------------------------------------------- |
+| ≥1280 px     | 248 px sidebar, 56 px top bar, fluid content, optional context panel      |
+| 1024–1279 px | Collapsible 72/232 px sidebar, drawer secondary content                   |
+| 768–1023 px  | Tablet landscape, navigation drawer, sticky actions, selected split views |
+| 640–767 px   | One column internal UI, bottom action bar for frequent actions            |
+| <640 px      | Internal contingency support; Customer Portal is first-class              |
 
 Use responsive breakpoints plus container queries so components adapt to available space, including plugin slots and context panels.
 
@@ -106,14 +106,14 @@ Workshop Mode is an official interaction mode for mechanic/tablet operation.
 
 ## 7. Offline and sync UX
 
-| State | Meaning | UI |
-|---|---|---|
-| Synced | Local and server confirmed | Check + “Synced” when relevant |
-| Local saved | Persisted on device, not yet remote | “Saved on this device” |
-| Syncing | Mutations in transit | Discreet progress |
-| Offline | Server unreachable | Persistent compact banner, work continues |
-| Conflict | Resolution required | Persistent Issue Center action |
-| Blocked | Invalid mutation/permission change | Explain, preserve data, guide resolution |
+| State       | Meaning                             | UI                                        |
+| ----------- | ----------------------------------- | ----------------------------------------- |
+| Synced      | Local and server confirmed          | Check + “Synced” when relevant            |
+| Local saved | Persisted on device, not yet remote | “Saved on this device”                    |
+| Syncing     | Mutations in transit                | Discreet progress                         |
+| Offline     | Server unreachable                  | Persistent compact banner, work continues |
+| Conflict    | Resolution required                 | Persistent Issue Center action            |
+| Blocked     | Invalid mutation/permission change  | Explain, preserve data, guide resolution  |
 
 ```text
 local transaction
@@ -125,20 +125,20 @@ local transaction
 
 ## 8. Critical flows
 
-| ID | Flow | Happy path |
-|---|---|---|
-| FL-01 | Bicycle intake | Find/create customer → bike → intake → photos → symptom → priority/date → order → receipt |
-| FL-02 | Diagnosis/estimate | Inspection → findings → work/parts → estimate → preview → publish/send |
-| FL-03 | Customer authorization | Secure link → review → approve/decline → evidence → notify shop |
-| FL-04 | Repair | Claim work → tasks/checks → parts → notes/photos → complete → QC |
-| FL-05 | Quality control | QC checklist → pass/rework → ready → communication |
-| FL-06 | Delivery | Order → balance → payment → docs → delivered → closed |
-| FL-07 | POS | Scan/search → cart → payment → receipt → stock ledger |
-| FL-08 | Purchasing | Supplier → PO → receive → cost → inventory movement → close |
-| FL-09 | Inventory | Find → per-location stock → movements → compensating adjustment |
-| FL-10 | Communication | Context → channel → template → preview → send/queue → delivery state |
-| FL-11 | Automation | Trigger → conditions → actions → test → enable → log |
-| FL-12 | Backup/restore | Health → backup → verify → rehearsal/controlled restore |
+| ID    | Flow                   | Happy path                                                                                |
+| ----- | ---------------------- | ----------------------------------------------------------------------------------------- |
+| FL-01 | Bicycle intake         | Find/create customer → bike → intake → photos → symptom → priority/date → order → receipt |
+| FL-02 | Diagnosis/estimate     | Inspection → findings → work/parts → estimate → preview → publish/send                    |
+| FL-03 | Customer authorization | Secure link → review → approve/decline → evidence → notify shop                           |
+| FL-04 | Repair                 | Claim work → tasks/checks → parts → notes/photos → complete → QC                          |
+| FL-05 | Quality control        | QC checklist → pass/rework → ready → communication                                        |
+| FL-06 | Delivery               | Order → balance → payment → docs → delivered → closed                                     |
+| FL-07 | POS                    | Scan/search → cart → payment → receipt → stock ledger                                     |
+| FL-08 | Purchasing             | Supplier → PO → receive → cost → inventory movement → close                               |
+| FL-09 | Inventory              | Find → per-location stock → movements → compensating adjustment                           |
+| FL-10 | Communication          | Context → channel → template → preview → send/queue → delivery state                      |
+| FL-11 | Automation             | Trigger → conditions → actions → test → enable → log                                      |
+| FL-12 | Backup/restore         | Health → backup → verify → rehearsal/controlled restore                                   |
 
 ## 9. Screen inventory
 
@@ -231,13 +231,13 @@ Branding can alter brand identity but not operational semantics.
 
 ```css
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --spacing-unit: 0.25rem;
 }
 
 :root {
   --brand-primary: oklch(0.57 0.19 252);
-  --brand-secondary: oklch(0.54 0.10 210);
+  --brand-secondary: oklch(0.54 0.1 210);
   --surface-canvas: oklch(0.985 0.004 250);
   --surface-panel: oklch(1 0 0);
   --text-primary: oklch(0.23 0.02 255);
@@ -245,8 +245,8 @@ Branding can alter brand identity but not operational semantics.
   --border-default: oklch(0.88 0.01 255);
   --state-success: oklch(0.52 0.15 145);
   --state-warning: oklch(0.63 0.14 75);
-  --state-danger:  oklch(0.54 0.20 27);
-  --state-info:    oklch(0.55 0.17 250);
+  --state-danger: oklch(0.54 0.2 27);
+  --state-info: oklch(0.55 0.17 250);
 }
 ```
 
@@ -262,24 +262,31 @@ Protected: danger, success, warning, info, focus and disabled semantics. Brand e
 ## 17. Component architecture
 
 ### Primitives
+
 Button, Input, Label, Checkbox, Radio, Switch, Select, Combobox, Dialog, AlertDialog, Popover, Tooltip, Tabs.
 
 ### Navigation
+
 AppShell, Sidebar, Breadcrumbs, Tabs, CommandPalette, ContextDrawer.
 
 ### Data
+
 DataTable, FilterBar, ColumnPicker, Pagination, EmptyState, Skeleton, MetricCard.
 
 ### Domain
+
 OrderStatus, BicycleIdentity, CustomerSummary, EstimateLines, InventoryMovement, PaymentPanel.
 
 ### Offline
+
 SyncBadge, OfflineBanner, MutationIssueCenter, ConflictResolver.
 
 ### Workshop
+
 WorkshopTask, LargeChecklist, TorqueEntry, PhotoCapture, PartConsume.
 
 ### Portal
+
 TrackingTimeline, AuthorizationCard, SecureLinkError.
 
 Radix Primitives provide behavior/accessibility foundations while the project owns styling, tokens, APIs and tests.
@@ -366,16 +373,16 @@ External telemetry is optional. Measure aggregate task duration, error rates, sy
 
 ## 28. Usability research
 
-| Test | Profile | Acceptance |
-|---|---|---|
-| UT-01 | Reception | Existing customer/bike order in <60 s |
-| UT-02 | Mechanic | Checklist + photo + part with glove simulation |
-| UT-03 | Offline | Continue work and understand sync state without training |
-| UT-04 | Conflict | Resolve guided conflict without data loss |
-| UT-05 | POS | Scan 5 products, correct quantity, charge |
-| UT-06 | Customer | Authorize estimate on mobile and understand total/scope |
-| UT-07 | Accessibility | Intake/authorization via keyboard + screen reader |
-| UT-08 | Admin | White-label configuration without contrast failure |
+| Test  | Profile       | Acceptance                                               |
+| ----- | ------------- | -------------------------------------------------------- |
+| UT-01 | Reception     | Existing customer/bike order in <60 s                    |
+| UT-02 | Mechanic      | Checklist + photo + part with glove simulation           |
+| UT-03 | Offline       | Continue work and understand sync state without training |
+| UT-04 | Conflict      | Resolve guided conflict without data loss                |
+| UT-05 | POS           | Scan 5 products, correct quantity, charge                |
+| UT-06 | Customer      | Authorize estimate on mobile and understand total/scope  |
+| UT-07 | Accessibility | Intake/authorization via keyboard + screen reader        |
+| UT-08 | Admin         | White-label configuration without contrast failure       |
 
 ## 29. Cross-cutting acceptance
 
@@ -409,20 +416,20 @@ External telemetry is optional. Measure aggregate task duration, error rates, sy
 
 ## 31. Accepted Design ADRs
 
-| ADR | Decision | Status |
-|---|---|---|
-| DADR-001 | Workshop-grade, precise, calm custom design language | Accepted |
-| DADR-002 | Tailwind CSS 4.x + CSS theme variables/container queries | Accepted |
-| DADR-003 | Radix Primitives under project-owned component layer | Accepted |
+| ADR      | Decision                                                                | Status   |
+| -------- | ----------------------------------------------------------------------- | -------- |
+| DADR-001 | Workshop-grade, precise, calm custom design language                    | Accepted |
+| DADR-002 | Tailwind CSS 4.x + CSS theme variables/container queries                | Accepted |
+| DADR-003 | Radix Primitives under project-owned component layer                    | Accepted |
 | DADR-004 | TanStack Table stable v8 until v9 exits beta and migration is justified | Accepted |
-| DADR-005 | Inter Variable bundled locally | Accepted |
-| DADR-006 | 44 px general touch baseline, 56 px Workshop primary | Accepted |
-| DADR-007 | Comfortable default, compact desktop opt-in, Workshop enlarged | Accepted |
-| DADR-008 | Configurable brand tokens; protected semantic operational tokens | Accepted |
-| DADR-009 | Light + dark + high contrast + optional Workshop high visibility | Accepted |
-| DADR-010 | Separate mobile-first Customer Portal experience | Accepted |
-| DADR-011 | Explicit persistent sync state + Issue Center | Accepted |
-| DADR-012 | Versioned plugin UI slots and local error isolation | Accepted |
+| DADR-005 | Inter Variable bundled locally                                          | Accepted |
+| DADR-006 | 44 px general touch baseline, 56 px Workshop primary                    | Accepted |
+| DADR-007 | Comfortable default, compact desktop opt-in, Workshop enlarged          | Accepted |
+| DADR-008 | Configurable brand tokens; protected semantic operational tokens        | Accepted |
+| DADR-009 | Light + dark + high contrast + optional Workshop high visibility        | Accepted |
+| DADR-010 | Separate mobile-first Customer Portal experience                        | Accepted |
+| DADR-011 | Explicit persistent sync state + Issue Center                           | Accepted |
+| DADR-012 | Versioned plugin UI slots and local error isolation                     | Accepted |
 
 ## 32. Outputs for Phase 5
 

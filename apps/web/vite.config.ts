@@ -3,6 +3,13 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const apiProxy = {
+  '/api': {
+    target: 'http://127.0.0.1:8000',
+    changeOrigin: false,
+  },
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -28,11 +35,14 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: false,
-      },
-    },
+    proxy: apiProxy,
+  },
+  // Browser E2E under CI runs against `vite preview` of the production
+  // build; the preview server has its own proxy configuration, without
+  // which same-origin /api calls never reach the backend.
+  preview: {
+    port: 5173,
+    strictPort: true,
+    proxy: apiProxy,
   },
 })

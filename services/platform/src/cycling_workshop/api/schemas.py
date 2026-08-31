@@ -4,9 +4,9 @@ from pydantic import BaseModel
 
 
 class HealthReadyResponse(BaseModel):
-    status: str = 'ready'
+    status: str = "ready"
     environment: str
 
 
 class HealthUnavailableResponse(BaseModel):
-    status: str = 'unavailable'
+    status: str = "unavailable"

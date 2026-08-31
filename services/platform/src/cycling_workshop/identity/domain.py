@@ -21,7 +21,11 @@ def authorize(
 ) -> None:
     if principal.organization_id != organization_id:
         raise PermissionError("organization scope denied")
-    if principal.location_id is not None and location_id is not None and principal.location_id != location_id:
+    if (
+        principal.location_id is not None
+        and location_id is not None
+        and principal.location_id != location_id
+    ):
         raise PermissionError("location scope denied")
     if capability not in principal.capabilities and "*" not in principal.capabilities:
         raise PermissionError(f"missing capability: {capability}")

@@ -59,15 +59,25 @@ async function pendingMutationCount(page: Page): Promise<number> {
   })
 }
 
-test('customer persists offline, syncs after reconnect, and converges in a second browser context', async ({ browser }) => {
+test('customer persists offline, syncs after reconnect, and converges in a second browser context', async ({
+  browser,
+}) => {
   const first = await browser.newContext()
   const firstPage = await first.newPage()
   await login(firstPage)
 
   const accessibility = await new AxeBuilder({ page: firstPage }).analyze()
-  expect(accessibility.violations.filter((violation) => ['critical', 'serious'].includes(violation.impact ?? ''))).toEqual([])
+  expect(
+    accessibility.violations.filter((violation) =>
+      ['critical', 'serious'].includes(violation.impact ?? ''),
+    ),
+  ).toEqual([])
 
-  await expect.poll(() => firstPage.evaluate(async () => Boolean((await navigator.serviceWorker.ready).active))).toBe(true)
+  await expect
+    .poll(() =>
+      firstPage.evaluate(async () => Boolean((await navigator.serviceWorker.ready).active)),
+    )
+    .toBe(true)
 
   await first.setOffline(true)
   await expect(firstPage.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
@@ -79,7 +89,9 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
   await expect.poll(() => pendingMutationCount(firstPage)).toBe(1)
 
   await firstPage.reload({ waitUntil: 'domcontentloaded' })
-  await expect(firstPage.getByText('Operación de taller que no se detiene cuando falla Internet.')).toBeVisible()
+  await expect(
+    firstPage.getByText('Operación de taller que no se detiene cuando falla Internet.'),
+  ).toBeVisible()
   await expect(firstPage.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
   await expect.poll(() => readIndexedDbCustomerNames(firstPage)).toContain(CUSTOMER_NAME)
   await expect.poll(() => pendingMutationCount(firstPage)).toBe(1)

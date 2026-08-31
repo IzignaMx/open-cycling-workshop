@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
 import uuid
+from datetime import UTC, datetime
 
 import pytest
-
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.shared.ids import new_id
 

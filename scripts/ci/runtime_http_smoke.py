@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import socket
 import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -32,7 +32,9 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def request_json(url: str, *, token: str | None = None, payload: dict[str, object] | None = None) -> tuple[dict[str, object], dict[str, str]]:
+def request_json(
+    url: str, *, token: str | None = None, payload: dict[str, object] | None = None
+) -> tuple[dict[str, object], dict[str, str]]:
     body = json.dumps(payload).encode() if payload is not None else None
     request = Request(url, data=body, method="POST" if body is not None else "GET")
     request.add_header("Accept", "application/json")
@@ -40,8 +42,10 @@ def request_json(url: str, *, token: str | None = None, payload: dict[str, objec
         request.add_header("Content-Type", "application/json")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
-    with urlopen(request, timeout=3) as response:  # noqa: S310 - localhost test harness only
-        return json.loads(response.read()), {key.lower(): value for key, value in response.headers.items()}
+    with urlopen(request, timeout=3) as response:
+        return json.loads(response.read()), {
+            key.lower(): value for key, value in response.headers.items()
+        }
 
 
 def main() -> int:
@@ -52,7 +56,12 @@ def main() -> int:
     from cycling_workshop.identity.security import PasswordService
     from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 
-    with tempfile.TemporaryDirectory(prefix="ocwp-runtime-") as directory:
+    # ignore_cleanup_errors: on Windows the terminated uvicorn child can hold
+    # the sqlite file for a few milliseconds after process.wait(), which would
+    # fail TemporaryDirectory cleanup and mask a successful smoke run.
+    with tempfile.TemporaryDirectory(
+        prefix="ocwp-runtime-", ignore_cleanup_errors=True
+    ) as directory:
         database_path = Path(directory) / "runtime.sqlite3"
         database_url = f"sqlite+pysqlite:///{database_path}"
         env = dict(os.environ)
@@ -95,7 +104,16 @@ def main() -> int:
         port = free_port()
         base_url = f"http://127.0.0.1:{port}"
         process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "cycling_workshop.runtime:app", "--host", "127.0.0.1", "--port", str(port)],
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "cycling_workshop.runtime:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
             cwd=ROOT,
             env=env,
             stdout=subprocess.PIPE,
@@ -112,9 +130,9 @@ def main() -> int:
                     health, headers = request_json(f"{base_url}/health/live")
                     readiness, _ = request_json(f"{base_url}/health/ready")
                     break
-                except URLError:
+                except URLError as exc:
                     if time.monotonic() >= deadline:
-                        raise RuntimeError("uvicorn did not become ready before timeout")
+                        raise RuntimeError("uvicorn did not become ready before timeout") from exc
                     time.sleep(0.1)
 
             login, _ = request_json(

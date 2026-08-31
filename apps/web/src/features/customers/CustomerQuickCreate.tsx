@@ -3,7 +3,11 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@ocwp/ui'
 
 export interface CustomerQuickCreateProps {
-  onCreate(input: { displayName: string; email: string | null; phone: string | null }): Promise<void>
+  onCreate(input: {
+    displayName: string
+    email: string | null
+    phone: string | null
+  }): Promise<void>
 }
 
 export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
@@ -41,7 +45,9 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
         <input
           required
           value={displayName}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setDisplayName(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setDisplayName(event.currentTarget.value)
+          }
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
           autoComplete="name"
         />

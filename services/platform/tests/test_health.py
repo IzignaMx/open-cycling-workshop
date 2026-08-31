@@ -1,8 +1,7 @@
+from cycling_workshop.app import create_app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from cycling_workshop.app import create_app
 
 
 def test_liveness_endpoint_is_available() -> None:
@@ -38,6 +37,6 @@ def test_request_id_is_preserved_when_client_supplies_one() -> None:
 
 def test_readiness_is_unavailable_without_a_database_session_factory() -> None:
     client = TestClient(create_app())
-    response = client.get('/health/ready')
+    response = client.get("/health/ready")
     assert response.status_code == 503
-    assert response.json() == {'status': 'unavailable'}
+    assert response.json() == {"status": "unavailable"}

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "services/platform/src"
@@ -16,7 +16,10 @@ def test_runtime_registers_all_database_models_in_fresh_process() -> None:
     code = """
 from cycling_workshop.runtime import app  # noqa: F401
 from cycling_workshop.db.base import Base
-required = {'organizations', 'locations', 'customers', 'sync_mutation_receipts', 'sync_changes', 'outbox_events', 'background_jobs'}
+required = {
+    'organizations', 'locations', 'customers', 'sync_mutation_receipts',
+    'sync_changes', 'outbox_events', 'background_jobs',
+}
 missing = sorted(required - set(Base.metadata.tables))
 if missing:
     raise SystemExit('missing tables: ' + ', '.join(missing))

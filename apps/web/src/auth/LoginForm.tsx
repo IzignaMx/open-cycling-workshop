@@ -35,7 +35,9 @@ export function LoginForm({ busy, message, onLogin }: LoginFormProps) {
         <input
           required
           value={organizationId}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setOrganizationId(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setOrganizationId(event.currentTarget.value)
+          }
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
           autoComplete="organization"
         />
@@ -45,7 +47,9 @@ export function LoginForm({ busy, message, onLogin }: LoginFormProps) {
         <input
           required
           value={username}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setUsername(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setUsername(event.currentTarget.value)
+          }
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
           autoComplete="username"
         />
@@ -56,7 +60,9 @@ export function LoginForm({ busy, message, onLogin }: LoginFormProps) {
           required
           type="password"
           value={password}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setPassword(event.currentTarget.value)
+          }
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
           autoComplete="current-password"
         />

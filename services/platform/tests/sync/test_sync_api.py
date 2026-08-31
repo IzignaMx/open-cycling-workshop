@@ -1,8 +1,3 @@
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from cycling_workshop.app import create_app
 from cycling_workshop.db.base import Base
 from cycling_workshop.identity.domain import Principal
@@ -10,6 +5,10 @@ from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.settings import Settings
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 def build_client() -> TestClient:

@@ -107,10 +107,13 @@ class SyncService:
         if mutation.operation == "create":
             if mutation.base_version is not None:
                 raise SyncConflict("create mutation cannot have a base version")
-            if repository.get(
-                customer_id=mutation.entity_id,
-                organization_id=mutation.organization_id,
-            ) is not None:
+            if (
+                repository.get(
+                    customer_id=mutation.entity_id,
+                    organization_id=mutation.organization_id,
+                )
+                is not None
+            ):
                 raise SyncConflict("customer already exists without matching mutation receipt")
             display_name = mutation.payload.get("display_name")
             if not isinstance(display_name, str):
@@ -129,17 +132,18 @@ class SyncService:
             repository.add(customer)
             return customer
 
-        customer = repository.get(
+        existing = repository.get(
             customer_id=mutation.entity_id,
             organization_id=mutation.organization_id,
         )
-        if customer is None:
+        if existing is None:
             raise SyncConflict("customer does not exist")
-        if customer.location_id != mutation.location_id:
+        if existing.location_id != mutation.location_id:
             raise SyncConflict("customer location scope mismatch")
-        if mutation.base_version != customer.version:
+        if mutation.base_version != existing.version:
             raise SyncConflict(
-                f"base version {mutation.base_version!r} does not match current version {customer.version}"
+                f"base version {mutation.base_version!r} does not match "
+                f"current version {existing.version}"
             )
 
         allowed = {"display_name", "email", "phone"}
@@ -154,7 +158,7 @@ class SyncService:
             if field in mutation.payload:
                 kwargs[field] = mutation.payload[field]
         try:
-            updated = customer.update(**kwargs)  # type: ignore[arg-type]
+            updated = existing.update(**kwargs)  # type: ignore[arg-type]
         except (TypeError, ValueError) as exc:
             raise SyncConflict(str(exc)) from exc
         repository.save(updated)

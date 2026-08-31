@@ -10,9 +10,5 @@
     "sourceMap": false,
     "skipLibCheck": true
   },
-  "include": [
-    "src/features/customers/local-customer.ts",
-    "src/local/types.ts",
-    "src/sync/types.ts"
-  ]
+  "include": ["src/features/customers/local-customer.ts", "src/local/types.ts", "src/sync/types.ts"]
 }

@@ -21,15 +21,28 @@ test('conflict center sorts newest issues first and exposes actionable labels', 
     },
   ])
 
-  assert.deepEqual(items.map((item) => item.mutationId), ['mutation-new', 'mutation-old'])
+  assert.deepEqual(
+    items.map((item) => item.mutationId),
+    ['mutation-new', 'mutation-old'],
+  )
   assert.equal(items[0].title, 'Cliente con conflicto')
   assert.match(items[0].description, /customer location scope mismatch/i)
   assert.equal(items[0].statusLabel, 'Requiere atención')
 })
 
 test('sync status model communicates local-first states without relying on color', async () => {
-  const { syncStatusPresentation } = await import('../../.tmp-conflict/src/features/sync/status-model.js')
-  assert.deepEqual(syncStatusPresentation('offline'), { label: 'Sin conexión', detail: 'El trabajo sigue guardándose en este dispositivo.' })
-  assert.deepEqual(syncStatusPresentation('syncing'), { label: 'Sincronizando', detail: 'Enviando y recibiendo cambios pendientes.' })
-  assert.deepEqual(syncStatusPresentation('conflict'), { label: 'Requiere atención', detail: 'Hay cambios que necesitan resolución manual.' })
+  const { syncStatusPresentation } =
+    await import('../../.tmp-conflict/src/features/sync/status-model.js')
+  assert.deepEqual(syncStatusPresentation('offline'), {
+    label: 'Sin conexión',
+    detail: 'El trabajo sigue guardándose en este dispositivo.',
+  })
+  assert.deepEqual(syncStatusPresentation('syncing'), {
+    label: 'Sincronizando',
+    detail: 'Enviando y recibiendo cambios pendientes.',
+  })
+  assert.deepEqual(syncStatusPresentation('conflict'), {
+    label: 'Requiere atención',
+    detail: 'Hay cambios que necesitan resolución manual.',
+  })
 })

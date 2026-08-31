@@ -32,7 +32,11 @@ test('auth methods use the canonical endpoints and bearer token only after login
     },
   })
 
-  const login = await client.login({ organization_id: 'org-1', username: 'admin', password: 'very long password' })
+  const login = await client.login({
+    organization_id: 'org-1',
+    username: 'admin',
+    password: 'very long password',
+  })
   token = login.access_token
   const me = await client.me()
   await client.logoutAll()

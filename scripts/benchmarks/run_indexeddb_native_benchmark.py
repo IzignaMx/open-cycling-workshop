@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from contextlib import contextmanager
 import html
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
 import threading
+from contextlib import contextmanager
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARK_DIR = ROOT / "scripts/benchmarks"
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: object) -> None:
         pass
 
 
 @contextmanager
 def server():
-    handler = lambda *args, **kwargs: QuietHandler(*args, directory=str(BENCHMARK_DIR), **kwargs)
+    def handler(*args: Any, **kwargs: Any) -> QuietHandler:
+        return QuietHandler(*args, directory=str(BENCHMARK_DIR), **kwargs)
+
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -57,24 +60,49 @@ def main() -> int:
     policy_dir = Path(os.getenv("OCWP_CHROMIUM_POLICY_DIR", "/etc/chromium/policies/managed"))
     blocking_policy = detect_url_block_policy(policy_dir)
     if blocking_policy is not None:
-        print(json.dumps({
-            "status": "blocked",
-            "reason": "chromium managed URLBlocklist blocks all navigations",
-            "policy": blocking_policy,
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "reason": "chromium managed URLBlocklist blocks all navigations",
+                    "policy": blocking_policy,
+                }
+            )
+        )
         return 2
     try:
         preflight = subprocess.run(
-            [chromium, "--headless=new", "--no-sandbox", "--disable-gpu", "--dump-dom", "data:text/html,<html><body>ocwp</body></html>"],
+            [
+                chromium,
+                "--headless=new",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--dump-dom",
+                "data:text/html,<html><body>ocwp</body></html>",
+            ],
             text=True,
             capture_output=True,
             timeout=8,
         )
     except subprocess.TimeoutExpired:
-        print(json.dumps({"status": "blocked", "reason": "chromium headless preflight timed out in this environment"}))
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "reason": "chromium headless preflight timed out in this environment",
+                }
+            )
+        )
         return 2
     if preflight.returncode != 0 or "ocwp" not in preflight.stdout:
-        print(json.dumps({"status": "blocked", "reason": "chromium headless preflight could not render a trivial page"}))
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "reason": "chromium headless preflight could not render a trivial page",
+                }
+            )
+        )
         return 2
     with server() as port, tempfile.TemporaryDirectory(prefix="ocwp-chromium-") as profile:
         total = os.getenv("OCWP_INDEXEDDB_BENCHMARK_TOTAL", "100000")

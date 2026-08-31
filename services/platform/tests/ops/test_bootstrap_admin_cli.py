@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
 from cycling_workshop.cli import main
 from cycling_workshop.db.base import Base
 from cycling_workshop.db.registry import register_models
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.security import PasswordService
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 
 def test_bootstrap_admin_creates_first_tenant_location_and_admin_without_password_in_argv(

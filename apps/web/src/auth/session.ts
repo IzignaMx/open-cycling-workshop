@@ -41,8 +41,12 @@ export class SessionStore {
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>
       if (typeof parsed.token !== 'string' || !parsed.token) return null
-      if (parsed.user !== null && parsed.user !== undefined && !isUserSnapshot(parsed.user)) return null
-      return { token: parsed.token, user: parsed.user && isUserSnapshot(parsed.user) ? parsed.user : null }
+      if (parsed.user !== null && parsed.user !== undefined && !isUserSnapshot(parsed.user))
+        return null
+      return {
+        token: parsed.token,
+        user: parsed.user && isUserSnapshot(parsed.user) ? parsed.user : null,
+      }
     } catch {
       return null
     }

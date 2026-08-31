@@ -83,18 +83,18 @@ Release Gate
 
 ### 3.1 Identificadores
 
-| Tipo | Prefijo | Ejemplo |
-|---|---|---|
-| Requisito funcional | `FR` | `FR-WO-021` |
-| Requisito no funcional | `NFR` | `NFR-OFF-004` |
-| Seguridad | `SEC` | `SEC-SYNC-007` |
-| Regla de negocio | `BR` | `BR-INV-003` |
-| Riesgo de calidad | `QRISK` | `QRISK-SYNC-004` |
-| Invariante | `INV` | `INV-LEDGER-002` |
-| Caso de prueba | `TC` | `TC-SYNC-014` |
-| Propiedad generativa | `PROP` | `PROP-INV-003` |
-| Escenario de caos | `CHAOS` | `CHAOS-OFF-006` |
-| Gate de release | `GATE` | `GATE-V1-012` |
+| Tipo                   | Prefijo | Ejemplo          |
+| ---------------------- | ------- | ---------------- |
+| Requisito funcional    | `FR`    | `FR-WO-021`      |
+| Requisito no funcional | `NFR`   | `NFR-OFF-004`    |
+| Seguridad              | `SEC`   | `SEC-SYNC-007`   |
+| Regla de negocio       | `BR`    | `BR-INV-003`     |
+| Riesgo de calidad      | `QRISK` | `QRISK-SYNC-004` |
+| Invariante             | `INV`   | `INV-LEDGER-002` |
+| Caso de prueba         | `TC`    | `TC-SYNC-014`    |
+| Propiedad generativa   | `PROP`  | `PROP-INV-003`   |
+| Escenario de caos      | `CHAOS` | `CHAOS-OFF-006`  |
+| Gate de release        | `GATE`  | `GATE-V1-012`    |
 
 ### 3.2 Regla de aceptación
 
@@ -110,18 +110,18 @@ Un requisito crítico no se considera terminado hasta tener al menos:
 
 Se adopta un modelo práctico inspirado en confiabilidad, seguridad, usabilidad y mantenibilidad, adaptado a la naturaleza local first.
 
-| Dimensión | Pregunta de control | Evidencia esperada |
-|---|---|---|
-| Correctitud | ¿El resultado de negocio es correcto? | Unit, property, integration, E2E |
-| Integridad | ¿Los datos permanecen consistentes? | Invariantes, DB tests, sync tests |
-| Resiliencia | ¿Continúa funcionando ante fallas parciales? | Chaos, offline, retry, recovery |
-| Seguridad | ¿Resiste abuso razonable? | SAST, DAST, authz tests, threat cases |
-| Privacidad | ¿Minimiza exposición y retención? | Data flow tests, export/delete tests |
-| Accesibilidad | ¿Puede completarse con tecnologías asistivas? | axe, keyboard, manual SR review |
-| Rendimiento | ¿Responde dentro de budgets? | Browser, API, load, storage benchmarks |
-| Compatibilidad | ¿Funciona en dispositivos soportados? | Matrix automation + device passes |
-| Operabilidad | ¿Puede respaldarse, actualizarse y recuperarse? | Restore drills, migration rehearsal |
-| Extensibilidad | ¿Plugins pueden evolucionar sin romper Core? | Contract tests, compatibility suites |
+| Dimensión      | Pregunta de control                                     | Evidencia esperada                               |
+| -------------- | ------------------------------------------------------- | ------------------------------------------------ |
+| Correctitud    | ¿El resultado de negocio es correcto?                   | Unit, property, integration, E2E                 |
+| Integridad     | ¿Los datos permanecen consistentes?                     | Invariantes, DB tests, sync tests                |
+| Resiliencia    | ¿Continúa funcionando ante fallas parciales?            | Chaos, offline, retry, recovery                  |
+| Seguridad      | ¿Resiste abuso razonable?                               | SAST, DAST, authz tests, threat cases            |
+| Privacidad     | ¿Minimiza exposición y retención?                       | Data flow tests, export/delete tests             |
+| Accesibilidad  | ¿Puede completarse con tecnologías asistivas?           | axe, keyboard, manual SR review                  |
+| Rendimiento    | ¿Responde dentro de budgets?                            | Browser, API, load, storage benchmarks           |
+| Compatibilidad | ¿Funciona en dispositivos soportados?                   | Matrix automation + device passes                |
+| Operabilidad   | ¿Puede respaldarse, actualizarse y recuperarse?         | Restore drills, migration rehearsal              |
+| Extensibilidad | ¿Plugins pueden evolucionar sin romper Core?            | Contract tests, compatibility suites             |
 | Mantenibilidad | ¿Las fallas se localizan y corrigen de forma razonable? | Static checks, architecture tests, observability |
 
 ## 5. Portfolio de pruebas
@@ -243,16 +243,16 @@ Los unit tests cubren lógica sin I/O real y deben ser extremadamente rápidos.
 
 ### 9.1 Casos prioritarios
 
-| Propiedad | Dominio | Ejemplo |
-|---|---|---|
-| Conmutatividad controlada | Ledger | movimientos independientes mantienen saldo final |
-| Idempotencia | Sync | repetir operación no duplica efecto |
-| Round trip | Serialization | encode/decode preserva contrato |
-| Conservación | Inventory | stock final = inicial + suma movimientos |
-| Invariantes de estado | Workshop | ningún camino alcanza estado imposible |
-| Monotonicidad | Cursors | cursor confirmado no decrece |
-| Preservación | Migration | datos antiguos representables permanecen |
-| Totalización | POS | subtotales + ajustes = total final |
+| Propiedad                 | Dominio       | Ejemplo                                          |
+| ------------------------- | ------------- | ------------------------------------------------ |
+| Conmutatividad controlada | Ledger        | movimientos independientes mantienen saldo final |
+| Idempotencia              | Sync          | repetir operación no duplica efecto              |
+| Round trip                | Serialization | encode/decode preserva contrato                  |
+| Conservación              | Inventory     | stock final = inicial + suma movimientos         |
+| Invariantes de estado     | Workshop      | ningún camino alcanza estado imposible           |
+| Monotonicidad             | Cursors       | cursor confirmado no decrece                     |
+| Preservación              | Migration     | datos antiguos representables permanecen         |
+| Totalización              | POS           | subtotales + ajustes = total final               |
 
 ### PROP-SYNC-001
 
@@ -386,18 +386,18 @@ Se mantendrá un modelo simplificado y determinista capaz de calcular el resulta
 
 ### 14.3 Escenarios obligatorios
 
-| ID | Escenario | Resultado esperado |
-|---|---|---|
-| TC-SYNC-001 | Crear offline y reconectar | entidad sincronizada una vez |
-| TC-SYNC-002 | ACK se pierde después de commit | retry no duplica operación |
-| TC-SYNC-003 | servidor reinicia entre lotes | cliente reanuda desde cursor seguro |
-| TC-SYNC-004 | dos dispositivos editan campos independientes | merge según política |
-| TC-SYNC-005 | dos dispositivos editan mismo campo protegido | conflicto visible o regla explícita |
-| TC-SYNC-006 | venta y ajuste simultáneos | ledger conserva ambos movimientos |
-| TC-SYNC-007 | token expira con queue pendiente | datos permanecen locales hasta reauth |
-| TC-SYNC-008 | payload incompatible | rechazo explícito sin pérdida local |
-| TC-SYNC-009 | duplicación de lote completo | estado final sin duplicados |
-| TC-SYNC-010 | reconexiones intermitentes | eventual convergence |
+| ID          | Escenario                                     | Resultado esperado                    |
+| ----------- | --------------------------------------------- | ------------------------------------- |
+| TC-SYNC-001 | Crear offline y reconectar                    | entidad sincronizada una vez          |
+| TC-SYNC-002 | ACK se pierde después de commit               | retry no duplica operación            |
+| TC-SYNC-003 | servidor reinicia entre lotes                 | cliente reanuda desde cursor seguro   |
+| TC-SYNC-004 | dos dispositivos editan campos independientes | merge según política                  |
+| TC-SYNC-005 | dos dispositivos editan mismo campo protegido | conflicto visible o regla explícita   |
+| TC-SYNC-006 | venta y ajuste simultáneos                    | ledger conserva ambos movimientos     |
+| TC-SYNC-007 | token expira con queue pendiente              | datos permanecen locales hasta reauth |
+| TC-SYNC-008 | payload incompatible                          | rechazo explícito sin pérdida local   |
+| TC-SYNC-009 | duplicación de lote completo                  | estado final sin duplicados           |
+| TC-SYNC-010 | reconexiones intermitentes                    | eventual convergence                  |
 
 ## 15. Concurrency testing
 
@@ -662,23 +662,23 @@ Los budgets se medirán en hardware representativo, no únicamente en máquinas 
 
 Objetivos iniciales para pantallas críticas con dataset representativo:
 
-| Métrica | Target preliminar |
-|---|---:|
-| Interaction response local | < 100 ms para acciones simples |
-| Cambio de vista ya cargada | < 250 ms percibidos |
-| Búsqueda local ordinaria | < 150 ms en dataset objetivo |
+| Métrica                             |                      Target preliminar |
+| ----------------------------------- | -------------------------------------: |
+| Interaction response local          |         < 100 ms para acciones simples |
+| Cambio de vista ya cargada          |                    < 250 ms percibidos |
+| Búsqueda local ordinaria            |           < 150 ms en dataset objetivo |
 | Render de lista grande virtualizada | sin bloqueo prolongado del main thread |
-| Startup offline instalada | usable sin depender de request remoto |
+| Startup offline instalada           |  usable sin depender de request remoto |
 
 ### 25.2 API
 
 Para operaciones ordinarias bajo carga nominal:
 
-| Percentil | Target preliminar |
-|---|---:|
-| p50 | < 150 ms |
-| p95 | < 500 ms |
-| p99 | < 1 s salvo operaciones explícitamente pesadas |
+| Percentil |                              Target preliminar |
+| --------- | ---------------------------------------------: |
+| p50       |                                       < 150 ms |
+| p95       |                                       < 500 ms |
+| p99       | < 1 s salvo operaciones explícitamente pesadas |
 
 Estos budgets son SLO internos iniciales y se calibrarán con benchmarks reales antes de V1.0.
 
@@ -1143,28 +1143,28 @@ Todos los gates V1 deben estar verdes.
 
 ## 47. V1.0 qualification gates
 
-| Gate | Condición de aprobación |
-|---|---|
-| GATE-V1-001 | cero defects C0 abiertos |
-| GATE-V1-002 | cero C1 abiertos sin excepción formal |
-| GATE-V1-003 | golden journey completo online y offline |
-| GATE-V1-004 | multi-device convergence suite aprobada |
+| Gate        | Condición de aprobación                                 |
+| ----------- | ------------------------------------------------------- |
+| GATE-V1-001 | cero defects C0 abiertos                                |
+| GATE-V1-002 | cero C1 abiertos sin excepción formal                   |
+| GATE-V1-003 | golden journey completo online y offline                |
+| GATE-V1-004 | multi-device convergence suite aprobada                 |
 | GATE-V1-005 | migrations PostgreSQL desde versión soportada aprobadas |
-| GATE-V1-006 | migrations IndexedDB desde versión soportada aprobadas |
-| GATE-V1-007 | restore drill completo aprobado |
-| GATE-V1-008 | inventory ledger invariant suite aprobada |
-| GATE-V1-009 | payment idempotency/reconciliation aprobada |
-| GATE-V1-010 | authz negative suite aprobada |
-| GATE-V1-011 | seguridad Critical/High bloqueante resuelta |
-| GATE-V1-012 | WCAG 2.2 AA crítica aprobada |
-| GATE-V1-013 | Tier 1 browser/device matrix aprobada |
-| GATE-V1-014 | performance budgets sin regresiones críticas |
-| GATE-V1-015 | plugin SDK compatibility suite aprobada |
-| GATE-V1-016 | AGPL/SPDX/REUSE/license checks aprobados |
-| GATE-V1-017 | SBOM y checksums generados |
-| GATE-V1-018 | upgrade rehearsal desde release previa soportada |
-| GATE-V1-019 | release notes y breaking changes documentados |
-| GATE-V1-020 | rollback/recovery playbook validado |
+| GATE-V1-006 | migrations IndexedDB desde versión soportada aprobadas  |
+| GATE-V1-007 | restore drill completo aprobado                         |
+| GATE-V1-008 | inventory ledger invariant suite aprobada               |
+| GATE-V1-009 | payment idempotency/reconciliation aprobada             |
+| GATE-V1-010 | authz negative suite aprobada                           |
+| GATE-V1-011 | seguridad Critical/High bloqueante resuelta             |
+| GATE-V1-012 | WCAG 2.2 AA crítica aprobada                            |
+| GATE-V1-013 | Tier 1 browser/device matrix aprobada                   |
+| GATE-V1-014 | performance budgets sin regresiones críticas            |
+| GATE-V1-015 | plugin SDK compatibility suite aprobada                 |
+| GATE-V1-016 | AGPL/SPDX/REUSE/license checks aprobados                |
+| GATE-V1-017 | SBOM y checksums generados                              |
+| GATE-V1-018 | upgrade rehearsal desde release previa soportada        |
+| GATE-V1-019 | release notes y breaking changes documentados           |
+| GATE-V1-020 | rollback/recovery playbook validado                     |
 
 ## 48. Defect severity model
 
@@ -1491,26 +1491,26 @@ Reglas:
 
 ## 65. Decisiones QA cerradas
 
-| ID | Decisión | Estado |
-|---|---|---|
-| QA-ADR-001 | pytest como runner backend | Accepted |
-| QA-ADR-002 | Hypothesis para property based testing | Accepted |
-| QA-ADR-003 | Vitest para unit/component frontend | Accepted |
-| QA-ADR-004 | Testing Library para UI behavior | Accepted |
-| QA-ADR-005 | Playwright para E2E y multi-context | Accepted |
-| QA-ADR-006 | axe-core para automatización de accesibilidad | Accepted |
-| QA-ADR-007 | PostgreSQL real para integration tests | Accepted |
-| QA-ADR-008 | Contenedores efímeros para dependencias de integración | Accepted |
-| QA-ADR-009 | Sync harness dedicado | Accepted |
-| QA-ADR-010 | Property tests obligatorios para ledger e idempotencia | Accepted |
-| QA-ADR-011 | Restore drill como gate V1 | Accepted |
-| QA-ADR-012 | No global coverage percentage como KPI principal | Accepted |
-| QA-ADR-013 | Mutation testing selectivo | Accepted |
-| QA-ADR-014 | Flaky tests tratados como defects | Accepted |
-| QA-ADR-015 | Hardware Tier 1 pass antes de V1 | Accepted |
-| QA-ADR-016 | WCAG 2.2 AA como release gate | Accepted |
+| ID         | Decisión                                                  | Estado   |
+| ---------- | --------------------------------------------------------- | -------- |
+| QA-ADR-001 | pytest como runner backend                                | Accepted |
+| QA-ADR-002 | Hypothesis para property based testing                    | Accepted |
+| QA-ADR-003 | Vitest para unit/component frontend                       | Accepted |
+| QA-ADR-004 | Testing Library para UI behavior                          | Accepted |
+| QA-ADR-005 | Playwright para E2E y multi-context                       | Accepted |
+| QA-ADR-006 | axe-core para automatización de accesibilidad             | Accepted |
+| QA-ADR-007 | PostgreSQL real para integration tests                    | Accepted |
+| QA-ADR-008 | Contenedores efímeros para dependencias de integración    | Accepted |
+| QA-ADR-009 | Sync harness dedicado                                     | Accepted |
+| QA-ADR-010 | Property tests obligatorios para ledger e idempotencia    | Accepted |
+| QA-ADR-011 | Restore drill como gate V1                                | Accepted |
+| QA-ADR-012 | No global coverage percentage como KPI principal          | Accepted |
+| QA-ADR-013 | Mutation testing selectivo                                | Accepted |
+| QA-ADR-014 | Flaky tests tratados como defects                         | Accepted |
+| QA-ADR-015 | Hardware Tier 1 pass antes de V1                          | Accepted |
+| QA-ADR-016 | WCAG 2.2 AA como release gate                             | Accepted |
 | QA-ADR-017 | Security High/Critical dentro del threat model bloquea V1 | Accepted |
-| QA-ADR-018 | Evidencia de release versionada por commit/artifact | Accepted |
+| QA-ADR-018 | Evidencia de release versionada por commit/artifact       | Accepted |
 
 ## 66. Riesgos QA que permanecen para validación empírica
 
