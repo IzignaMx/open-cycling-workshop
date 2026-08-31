@@ -171,3 +171,87 @@ def test_sync_batch_isolates_permanent_conflict_without_rolling_back_valid_mutat
     entity_ids = [item["entity_id"] for item in pulled.json()["items"]]
     assert valid_customer_id in entity_ids
     assert entity_ids.count(existing_customer_id) == 1
+
+
+def test_batch_with_one_conflict_preserves_independent_valid_mutations() -> None:
+    client = build_client()
+    first_customer = new_id()
+    create = client.post(
+        "/api/v1/sync/mutations",
+        json={
+            "mutations": [
+                {
+                    "mutation_id": new_id(),
+                    "entity_type": "customer",
+                    "entity_id": first_customer,
+                    "operation": "create",
+                    "organization_id": "org-1",
+                    "location_id": "loc-1",
+                    "base_version": None,
+                    "occurred_at": "2026-08-31T10:00:00Z",
+                    "payload": {"display_name": "Cliente Base"},
+                }
+            ]
+        },
+    )
+    assert create.status_code == 200
+    assert create.json()["results"][0]["status"] == "applied"
+
+    valid_before = new_id()
+    valid_after = new_id()
+    stale_mutation = new_id()
+    batch = client.post(
+        "/api/v1/sync/mutations",
+        json={
+            "mutations": [
+                {
+                    "mutation_id": valid_before,
+                    "entity_type": "customer",
+                    "entity_id": new_id(),
+                    "operation": "create",
+                    "organization_id": "org-1",
+                    "location_id": "loc-1",
+                    "base_version": None,
+                    "occurred_at": "2026-08-31T10:00:01Z",
+                    "payload": {"display_name": "Cliente Valido Antes"},
+                },
+                {
+                    "mutation_id": stale_mutation,
+                    "entity_type": "customer",
+                    "entity_id": first_customer,
+                    "operation": "update",
+                    "organization_id": "org-1",
+                    "location_id": "loc-1",
+                    "base_version": 99,
+                    "occurred_at": "2026-08-31T10:00:02Z",
+                    "payload": {"display_name": "Edicion Obsoleta"},
+                },
+                {
+                    "mutation_id": valid_after,
+                    "entity_type": "customer",
+                    "entity_id": new_id(),
+                    "operation": "create",
+                    "organization_id": "org-1",
+                    "location_id": "loc-1",
+                    "base_version": None,
+                    "occurred_at": "2026-08-31T10:00:03Z",
+                    "payload": {"display_name": "Cliente Valido Despues"},
+                },
+            ]
+        },
+    )
+    assert batch.status_code == 200
+    statuses = [result["status"] for result in batch.json()["results"]]
+    assert statuses == ["applied", "conflict", "applied"]
+    assert batch.json()["results"][1]["mutation_id"] == stale_mutation
+
+    feed = client.get("/api/v1/sync/changes", params={"cursor": 0, "location_id": "loc-1"})
+    assert feed.status_code == 200
+    created_names = [
+        item["payload"].get("display_name")
+        for item in feed.json()["items"]
+        if item["operation"] == "create"
+    ]
+    assert "Cliente Valido Antes" in created_names
+    assert "Cliente Valido Despues" in created_names
+    assert "Edicion Obsoleta" not in str(feed.json())
