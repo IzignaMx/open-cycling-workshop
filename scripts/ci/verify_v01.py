@@ -22,8 +22,14 @@ class Check:
     detail: str
 
 
-def run_check(name: str, command: list[str], *, env: dict[str, str] | None = None) -> Check:
-    result = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True)
+def run_check(
+    name: str,
+    command: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    cwd: Path | None = None,
+) -> Check:
+    result = subprocess.run(command, cwd=cwd or ROOT, env=env, text=True, capture_output=True)
     detail = (result.stdout + result.stderr).strip()
     return Check(
         name=name, status="pass" if result.returncode == 0 else "fail", detail=detail[-4000:]
@@ -125,13 +131,19 @@ def static_analysis_checks(
     if pnpm_probe.status == "pass":
         checks.extend(
             [
-                run_check("frontend_eslint", ["pnpm", "exec", "eslint", "."], env=env),
+                # Direct node invocations: pnpm launched from this Python
+                # process resolves tool versions differently across
+                # platforms; the workspace bins are the source of truth.
+                run_check(
+                    "frontend_eslint",
+                    ["node", str(ROOT / "node_modules" / "eslint" / "bin" / "eslint.js"), "."],
+                    env=env,
+                ),
                 run_check(
                     "frontend_prettier",
                     [
-                        "pnpm",
-                        "exec",
-                        "prettier",
+                        "node",
+                        str(ROOT / "node_modules" / "prettier" / "bin" / "prettier.cjs"),
                         "--check",
                         "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}",
                     ],
@@ -232,7 +244,21 @@ def browser_runtime_checks(
         )
         return checks, blockers
 
-    checks.append(run_check("pwa_build", ["pnpm", "--filter", "@ocwp/web", "build"], env=env))
+    web = ROOT / "apps" / "web"
+    tsc_bin = str(ROOT / "node_modules" / "typescript" / "bin" / "tsc")
+    vite_bin = str(web / "node_modules" / "vite" / "bin" / "vite.js")
+    playwright_bin = str(web / "node_modules" / "@playwright" / "test" / "cli.js")
+
+    def web_build() -> Check:
+        # Replicate the package build script (`tsc -b && vite build`) with
+        # direct node invocations: pnpm launched from this Python process
+        # resolves differently across platforms and shells.
+        compile_check = run_check("pwa_build", ["node", tsc_bin, "-b"], env=env, cwd=web)
+        if compile_check.status != "pass":
+            return Check("pwa_build", "fail", f"tsc -b failed: {compile_check.detail[-500:]}")
+        return run_check("pwa_build", ["node", vite_bin, "build"], env=env, cwd=web)
+
+    checks.append(web_build())
     database_url = env.get("OCWP_E2E_DATABASE_URL")
     if not database_url:
         blockers.append(
@@ -251,7 +277,7 @@ def browser_runtime_checks(
     if prepare.status != "pass":
         checks.append(Check("browser_e2e", "fail", "browser E2E database preparation failed"))
         return checks, blockers
-    checks.append(run_check("browser_e2e", ["pnpm", "--filter", "@ocwp/web", "test:e2e"], env=env))
+    checks.append(run_check("browser_e2e", ["node", playwright_bin, "test"], env=env, cwd=web))
     return checks, blockers
 
 
@@ -277,12 +303,12 @@ def main() -> int:
         ),
         run_check(
             "frontend_offline_typecheck",
-            # `pnpm exec tsc` pins the workspace TypeScript version; a bare
-            # `tsc` may resolve a newer compiler that rejects valid config.
+            # Run the workspace TypeScript directly with node: `pnpm exec`
+            # from a Python subprocess resolves different tsc versions or
+            # breaks pnpm's self-management depending on the platform.
             [
-                "pnpm",
-                "exec",
-                "tsc",
+                "node",
+                str(ROOT / "node_modules" / "typescript" / "bin" / "tsc"),
                 "-p",
                 "apps/web/tsconfig.offline-check.json",
                 "--pretty",
@@ -300,7 +326,14 @@ def main() -> int:
         ),
         run_check(
             "typescript_api_typecheck",
-            ["pnpm", "exec", "tsc", "-p", "packages/api-client/tsconfig.json", "--pretty", "false"],
+            [
+                "node",
+                str(ROOT / "node_modules" / "typescript" / "bin" / "tsc"),
+                "-p",
+                "packages/api-client/tsconfig.json",
+                "--pretty",
+                "false",
+            ],
         ),
     ]
 

@@ -34,9 +34,12 @@ export default defineConfig({
       },
     },
     {
-      command: process.env.CI
-        ? 'pnpm exec vite preview --host 127.0.0.1 --port 5173'
-        : 'pnpm dev -- --host 127.0.0.1',
+      // Always exercise the production build (vite preview) — the Golden
+      // Slice must prove offline behavior of what ships. Invoking vite via
+      // node keeps the server launch independent of pnpm's environment
+      // handling when Playwright is started from non-shell parents.
+      command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5173',
+      cwd: '.',
       url: 'http://127.0.0.1:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

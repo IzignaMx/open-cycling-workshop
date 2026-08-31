@@ -186,11 +186,10 @@ def test_ci_postgres_service_healthcheck_matches_the_e2e_database_name() -> None
 
 def test_hosted_browser_e2e_uses_the_production_pwa_build() -> None:
     config = (ROOT / "apps/web/playwright.config.ts").read_text(encoding="utf-8")
-    # Assert the behavior tokens (production preview under CI, dev server
-    # locally) instead of a formatting-sensitive single-line ternary.
-    assert "process.env.CI" in config
-    assert "'pnpm exec vite preview --host 127.0.0.1 --port 5173'" in config
-    assert "'pnpm dev -- --host 127.0.0.1'" in config
+    # The Golden Slice always runs against the production preview server,
+    # launched via node so it does not depend on pnpm's shell handling.
+    assert "'pnpm dev" not in config
+    assert "vite.js preview" in config
 
 
 def test_ci_publishes_a_v01_qualification_artifact() -> None:

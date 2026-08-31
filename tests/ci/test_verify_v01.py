@@ -79,8 +79,12 @@ def test_static_analysis_checks_run_available_python_and_frontend_tools(monkeypa
         "python_ruff",
         ("ruff", "check", "services/platform/src", "services/platform/tests", "tests", "scripts"),
     ) in calls
+    # Frontend tools run through node with explicit workspace bin paths so
+    # they do not depend on pnpm's environment handling.
     assert any(
-        name == "frontend_eslint" and command[:3] == ("pnpm", "exec", "eslint")
+        name == "frontend_eslint"
+        and command[0] == "node"
+        and command[1].replace("\\", "/").endswith("eslint/bin/eslint.js")
         for name, command in calls
     )
 
