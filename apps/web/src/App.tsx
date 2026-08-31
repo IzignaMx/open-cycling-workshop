@@ -22,6 +22,7 @@ import {
   SyncTransportError,
   SyncTransportOfflineError,
 } from './sync/http-transport.js'
+import { retryPlan } from './sync/retry-policy.js'
 import { syncScopeKey } from './sync/scope.js'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -57,6 +58,7 @@ export function App() {
   const [syncState, setSyncState] = useState<SyncVisualState>(() =>
     navigator.onLine ? 'local' : 'offline',
   )
+  const [retryAttempt, setRetryAttempt] = useState(0)
 
   const syncScope = useMemo(() => {
     if (!currentUser?.location_id) return null
@@ -101,6 +103,7 @@ export function App() {
       const result = await coordinator.runOnce({ online: true })
       const storedConflicts = await refreshConflicts()
       setSyncState(result.conflicts > 0 || storedConflicts.length > 0 ? 'conflict' : 'synced')
+      setRetryAttempt(0)
     } catch (error) {
       if (error instanceof SyncTransportOfflineError) {
         setSyncState('offline')
@@ -162,13 +165,22 @@ export function App() {
   }, [runSync])
 
   useEffect(() => {
-    // Bounded periodic retry while offline: navigator.onLine and the window
-    // 'online' event are not reliable in every browser state, so the only
-    // trustworthy reconnect signal is a real transport attempt.
-    if (syncState !== 'offline') return
-    const timer = window.setTimeout(() => void runSync(), 2000)
+    // Bounded exponential backoff for transient outcomes (offline and
+    // temporary server failures). navigator.onLine and the window 'online'
+    // event are not reliable in every browser state, and 5xx responses must
+    // also re-attempt, so the trustworthy signal is a real transport attempt
+    // under a bounded budget. Permanent failures never schedule retries: they
+    // surface in the Conflict Center.
+    if (syncState !== 'offline' && syncState !== 'error') return
+    if (!coordinator) return
+    const plan = retryPlan(retryAttempt)
+    if (plan.exhausted) return
+    const timer = window.setTimeout(() => {
+      setRetryAttempt((attempt) => attempt + 1)
+      void runSync()
+    }, plan.delayMs)
     return () => window.clearTimeout(timer)
-  }, [syncState, runSync])
+  }, [syncState, retryAttempt, coordinator, runSync])
 
   useEffect(() => {
     if (!currentUser) return
