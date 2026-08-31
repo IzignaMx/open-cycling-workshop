@@ -103,6 +103,7 @@
 - [x] **Run pending-mutation persistence across reload while offline.**
   - Evidence (2026-08-30): Golden Slice reload-while-offline step passed with customer + queued mutation intact. Browser/OS restart persistence still pending (P1 device tests).
 - [ ] **Prove Dexie migrations preserve queued mutations.**
+  - Evidence (2026-08-31, pending hosted CI): `e2e/dexie-migration-persistence.spec.ts` seeds a raw version-1 database (v1 store/index layout) with a pending create, the app upgrades the store to schema v2 in place and the preserved mutation syncs with the queue drained.
 - [ ] **Test quota pressure and clear user-facing recovery behavior.**
 - [ ] **Document Android storage-eviction behavior and recovery procedure.**
 - [ ] **Never use “delete IndexedDB” as the normal migration/recovery strategy.**
@@ -212,7 +213,8 @@
   - Evidence (2026-08-31): `e2e/conflict-path.spec.ts` — online create (v1), remote concurrent update via API while the device is offline, stale local edit queued (base_version 1), reconnect push yields a real server conflict; visible in Conflict Center, mutation leaves the retry queue, device converges to the winning edit and the incident persists across reload.
 - [ ] **Cursor durability across restart.**
 - [ ] **Remote change with wrong tenant/location scope cannot advance local cursor.**
-- [ ] **Large reconnect batch does not lose valid operations when one mutation conflicts.**
+- [x] **Large reconnect batch does not lose valid operations when one mutation conflicts.**
+  - Evidence (2026-08-31): service-level batch isolation test (`test_sync_api.py`) plus browser chaos — three queued mutations with a stale middle entry reconnect into one push; both independent valid creates apply, the conflict surfaces in the Conflict Center and the queue drains.
 
 ## P1 · GitHub/community administration
 
@@ -270,3 +272,4 @@ Add durable evidence below instead of editing completed checklist history away.
 | 2026-08-31 | `main` protection active               | API PUT branches/main/protection: PRs required, checks `verify`+`security` required (strict), force-push/deletion blocked, conversation resolution required, `enforce_admins=false` (documented break-glass)                 | repository settings                                    | solo-custodian bootstrap policy recorded above                                                     |
 | 2026-08-31 | R01-T021 browser conflict-path         | New `e2e/conflict-path.spec.ts` green locally with the golden slice (2/2, 9.7 s) and on hosted CI: real stale-base_version conflict → visible Conflict Center → queue drain → convergence → persistence after reload         | `feat/e2e-conflict-path` PR                            | first explicit hosted browser conflict evidence                                                    |
 | 2026-08-31 | R01-T036 browser chaos                 | `e2e/sync-chaos.spec.ts`: triple delivery of one mutation → exactly once (1 feed entry, server v1, queue drained); two injected 503 → bounded backoff (retry-policy, core-tested) → convergence. Suite 4/4 in 19.9 s locally | PR `feat/sync-retry-backoff-browser-chaos`             | closes duplicate/out-of-order/5xx-retry chaos items                                                |
+| 2026-08-31 | Dexie migration + batch isolation      | New `e2e/dexie-migration-persistence.spec.ts` (raw v1 DB → in-place upgrade → preserved queue entry syncs) and large-batch conflict isolation (service test + browser chaos). Local suite 6/6 in 26.7 s; pytest 100/100      | PR `feat/dexie-migration-and-batch-isolation`          | Dexie item flips to checked once this PR's hosted CI is green                                      |

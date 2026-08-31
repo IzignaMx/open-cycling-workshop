@@ -177,3 +177,187 @@ test('temporary server failure retries with backoff and converges', async ({ pag
   await expect.poll(() => pendingMutationCount(page)).toBe(0)
   await page.unrouteAll()
 })
+
+/** Queue mutations exactly like the repository layer does while offline. */
+async function queueCreateMutation(page: Page, displayName: string): Promise<void> {
+  await page.evaluate(
+    async ({ displayName, organizationId, locationId }) => {
+      const request = indexedDB.open('ocwp')
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      try {
+        const transaction = database.transaction('mutationQueue', 'readwrite')
+        const store = transaction.objectStore('mutationQueue')
+        const record = {
+          mutation_id: crypto.randomUUID(),
+          entity_type: 'customer',
+          entity_id: crypto.randomUUID(),
+          operation: 'create',
+          organization_id: organizationId,
+          location_id: locationId,
+          base_version: null,
+          occurred_at: new Date().toISOString(),
+          payload: { display_name: displayName },
+          state: 'pending',
+          queued_at: new Date().toISOString(),
+        }
+        await new Promise<void>((resolve, reject) => {
+          const put = store.put(record)
+          put.onsuccess = () => resolve()
+          put.onerror = () => reject(put.error)
+        })
+      } finally {
+        database.close()
+      }
+    },
+    { displayName, organizationId: ORGANIZATION_ID, locationId: LOCATION_ID },
+  )
+}
+
+/** Queue a stale update against a customer the server has since moved on. */
+async function queueStaleUpdateMutation(
+  page: Page,
+  entityId: string,
+  displayName: string,
+): Promise<void> {
+  await page.evaluate(
+    async ({ entityId, displayName, organizationId, locationId }) => {
+      const request = indexedDB.open('ocwp')
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      try {
+        const transaction = database.transaction('mutationQueue', 'readwrite')
+        const store = transaction.objectStore('mutationQueue')
+        const record = {
+          mutation_id: crypto.randomUUID(),
+          entity_type: 'customer',
+          entity_id: entityId,
+          operation: 'update',
+          organization_id: organizationId,
+          location_id: locationId,
+          base_version: 1,
+          occurred_at: new Date().toISOString(),
+          payload: { display_name: displayName },
+          state: 'pending',
+          queued_at: new Date().toISOString(),
+        }
+        await new Promise<void>((resolve, reject) => {
+          const put = store.put(record)
+          put.onsuccess = () => resolve()
+          put.onerror = () => reject(put.error)
+        })
+      } finally {
+        database.close()
+      }
+    },
+    { entityId, displayName, organizationId: ORGANIZATION_ID, locationId: LOCATION_ID },
+  )
+}
+
+async function readCustomerIdByDisplayName(
+  page: Page,
+  displayName: string,
+): Promise<string | null> {
+  return page.evaluate(
+    async ({ displayName }) => {
+      const request = indexedDB.open('ocwp')
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      try {
+        const transaction = database.transaction('customers', 'readonly')
+        const store = transaction.objectStore('customers')
+        const rows = await new Promise<{ customer_id: string; display_name: string }[]>(
+          (resolve, reject) => {
+            const all = store.getAll()
+            all.onsuccess = () => resolve(all.result)
+            all.onerror = () => reject(all.error)
+          },
+        )
+        return rows.find((row) => row.display_name === displayName)?.customer_id ?? null
+      } finally {
+        database.close()
+      }
+    },
+    { displayName },
+  )
+}
+
+test('large reconnect batch keeps every valid operation when one mutation conflicts', async ({
+  page,
+  request,
+}) => {
+  await login(page)
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado', {
+    timeout: 15_000,
+  })
+  const token = await sessionToken(page)
+
+  // Base customer the offline device will edit against a stale version.
+  await page.getByLabel('Nombre').fill('Cliente Lote Base')
+  await page.getByLabel('Correo').fill('batch-base@example.test')
+  await page.getByRole('button', { name: 'Guardar cliente' }).click()
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado', {
+    timeout: 15_000,
+  })
+  const baseCustomerId = await readCustomerIdByDisplayName(page, 'Cliente Lote Base')
+  expect(baseCustomerId).toBeTruthy()
+
+  // Offline: the server moves the base customer forward while the device
+  // queues a batch of three mutations, the middle one built on a stale
+  // base_version.
+  await page.context().setOffline(true)
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
+
+  await request.post('/api/v1/sync/mutations', {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      mutations: [
+        {
+          mutation_id: crypto.randomUUID(),
+          entity_type: 'customer',
+          entity_id: baseCustomerId,
+          operation: 'update',
+          organization_id: ORGANIZATION_ID,
+          location_id: LOCATION_ID,
+          base_version: 1,
+          occurred_at: new Date().toISOString(),
+          payload: { display_name: 'Cliente Lote Base Remoto' },
+        },
+      ],
+    },
+  })
+
+  await queueCreateMutation(page, 'Cliente Lote Valido A')
+  await queueStaleUpdateMutation(page, baseCustomerId!, 'Cliente Lote Edicion Obsoleta')
+  await queueCreateMutation(page, 'Cliente Lote Valido B')
+  await expect.poll(() => pendingMutationCount(page)).toBe(3)
+
+  // Reconnect: exactly one conflict must surface and both independent valid
+  // creates must survive it in the same batch.
+  await page.context().setOffline(false)
+  await page.getByRole('button', { name: 'Sincronizar ahora' }).click()
+
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Requiere atención', {
+    timeout: 20_000,
+  })
+  await expect.poll(() => pendingMutationCount(page)).toBe(0)
+
+  const center = page.locator('section[aria-labelledby="conflict-center-title"]')
+  await expect(center.getByText('Cliente con conflicto')).toBeVisible()
+  await expect(center.getByText(/base version/, { exact: false })).toBeVisible()
+
+  const feed = await request.get(`/api/v1/sync/changes?cursor=0&location_id=${LOCATION_ID}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const body = (await feed.json()) as { items: { payload?: { display_name?: string } }[] }
+  const names = body.items.map((item) => item.payload?.display_name ?? '')
+  expect(names).toContain('Cliente Lote Valido A')
+  expect(names).toContain('Cliente Lote Valido B')
+  expect(names).not.toContain('Cliente Lote Edicion Obsoleta')
+})
