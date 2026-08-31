@@ -1,0 +1,33 @@
+# Open Cycling Workshop Platform · CODEOWNERS
+# Bootstrap phase: the Founding Maintainer owns every path. Add independent
+# custodians for high-risk paths as governance milestones require (see
+# GOVERNANCE.md and MANUAL-ACTIONS-CHECKLIST.md).
+
+# Default owner for everything not listed below
+* @CripterHack
+
+# CI, security and release tooling
+/.github/workflows/ @CripterHack
+/scripts/ci/ @CripterHack
+/scripts/database/ @CripterHack
+/scripts/release/ @CripterHack
+/scripts/repository/ @CripterHack
+/scripts/benchmarks/ @CripterHack
+
+# Auth/RBAC and identity
+/services/platform/src/cycling_workshop/identity/ @CripterHack
+
+# Sync engine (offline queues, cursors, conflict policy)
+/services/platform/src/cycling_workshop/sync/ @CripterHack
+/apps/web/src/sync/ @CripterHack
+
+# Database schema migrations
+/services/platform/migrations/ @CripterHack
+
+# Plugin permissions surface
+/packages/plugin-sdk/ @CripterHack
+
+# Execution state and operating protocol
+/docs/10-spec-development/execution-state.yaml @CripterHack
+/AGENTS.md @CripterHack
+/MANUAL-ACTIONS-CHECKLIST.md @CripterHack

@@ -8,7 +8,10 @@ services:
       POSTGRES_USER: ocwp
       POSTGRES_PASSWORD: ocwp-dev-only
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # postgres 18+ stores data in major-version subdirectories; mounting the
+      # parent (not .../data) is the image's supported layout and keeps
+      # pg_upgrade --link usable across future major upgrades.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ocwp -d ocwp']
       interval: 5s

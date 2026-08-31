@@ -4,10 +4,8 @@ from __future__ import annotations
 import html
 import json
 import os
-import re
-import shutil
 import subprocess
-import tempfile
+import sys
 import threading
 from contextlib import contextmanager
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +14,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARK_DIR = ROOT / "scripts/benchmarks"
+BROWSER_DRIVER = BENCHMARK_DIR / "run_indexeddb_benchmark_browser.mjs"
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -53,10 +52,6 @@ def detect_url_block_policy(policy_dir: Path) -> str | None:
 
 
 def main() -> int:
-    chromium = shutil.which("chromium")
-    if chromium is None:
-        print(json.dumps({"status": "blocked", "reason": "chromium unavailable"}))
-        return 2
     policy_dir = Path(os.getenv("OCWP_CHROMIUM_POLICY_DIR", "/etc/chromium/policies/managed"))
     blocking_policy = detect_url_block_policy(policy_dir)
     if blocking_policy is not None:
@@ -70,65 +65,46 @@ def main() -> int:
             )
         )
         return 2
-    try:
-        preflight = subprocess.run(
-            [
-                chromium,
-                "--headless=new",
-                "--no-sandbox",
-                "--disable-gpu",
-                "--dump-dom",
-                "data:text/html,<html><body>ocwp</body></html>",
-            ],
-            text=True,
-            capture_output=True,
-            timeout=8,
-        )
-    except subprocess.TimeoutExpired:
-        print(
-            json.dumps(
-                {
-                    "status": "blocked",
-                    "reason": "chromium headless preflight timed out in this environment",
-                }
-            )
-        )
-        return 2
-    if preflight.returncode != 0 or "ocwp" not in preflight.stdout:
-        print(
-            json.dumps(
-                {
-                    "status": "blocked",
-                    "reason": "chromium headless preflight could not render a trivial page",
-                }
-            )
-        )
-        return 2
-    with server() as port, tempfile.TemporaryDirectory(prefix="ocwp-chromium-") as profile:
+
+    node = "node" if sys.platform != "win32" else os.getenv("OCWP_NODE_BIN", "node")
+    timeout_seconds = int(os.getenv("OCWP_INDEXEDDB_BENCHMARK_TIMEOUT", "300"))
+
+    with server() as port:
         total = os.getenv("OCWP_INDEXEDDB_BENCHMARK_TOTAL", "100000")
-        result = subprocess.run(
-            [
-                chromium,
-                "--headless=new",
-                "--no-sandbox",
-                "--disable-gpu",
-                f"--user-data-dir={profile}",
-                "--virtual-time-budget=60000",
-                "--dump-dom",
-                f"http://127.0.0.1:{port}/indexeddb_native_100k.html?total={total}",
-            ],
-            text=True,
-            capture_output=True,
-            timeout=90,
-        )
-        match = re.search(r'<pre id="result">(.*?)</pre>', result.stdout, re.DOTALL)
-        if match is None:
-            print(result.stdout[-4000:])
-            print(result.stderr[-4000:])
-            return 1
-        payload = json.loads(html.unescape(match.group(1)))
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
-        return 0 if payload.get("status") == "pass" else 1
+        url = f"http://127.0.0.1:{port}/indexeddb_native_100k.html?total={total}"
+        env = dict(os.environ)
+        env["OCWP_BENCHMARK_TIMEOUT_MS"] = str(timeout_seconds * 1000)
+        try:
+            result = subprocess.run(
+                [node, str(BROWSER_DRIVER), url],
+                text=True,
+                capture_output=True,
+                timeout=timeout_seconds + 60,
+                env=env,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                json.dumps(
+                    {
+                        "status": "blocked",
+                        "reason": "benchmark browser run timed out in this environment",
+                    }
+                )
+            )
+            return 2
+        except OSError as error:
+            print(json.dumps({"status": "blocked", "reason": f"node unavailable: {error}"}))
+            return 2
+
+    output = result.stdout.strip()
+    try:
+        payload = json.loads(html.unescape(output))
+    except json.JSONDecodeError:
+        print(json.dumps({"status": "blocked", "reason": "browser driver produced no result",
+                          "driver_stdout": output[-500:], "driver_stderr": result.stderr[-500:]}))
+        return 2
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0 if payload.get("status") == "pass" else 1
 
 
 if __name__ == "__main__":

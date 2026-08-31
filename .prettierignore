@@ -8,3 +8,5 @@ LICENSES
 pnpm-lock.yaml
 uv.lock
 packages/api-client/src/generated.ts
+playwright-report
+test-results

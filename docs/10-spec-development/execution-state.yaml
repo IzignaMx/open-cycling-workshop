@@ -3,8 +3,8 @@ project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
-status: hosted_ci_and_security_green_local_runtime_gates_green_remaining_manual_device_gates
-last_checkpoint: hosted-qualification-green-2026-08-31
+status: compose_backup_and_indexeddb_benchmark_proven_pending_physical_devices_and_conflict_chaos
+last_checkpoint: runtime-gates-compose-backup-benchmark-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -36,16 +36,16 @@ locally_verified_tasks:
   - R01-T030
   - R01-T031
   - R01-T007
+  - R01-T032
+  - R01-T033
   - R01-T034
 
 implemented_evidence_pending:
   R01-T021: conflicts persist by scope and Conflict Center/status UI is versioned; explicit hosted browser conflict-path evidence is pending
-  R01-T032: Compose, ocwpctl doctor/status and password-file bootstrap admin exist; a fresh-install Compose smoke has not been executed in this environment yet
-  R01-T033: backup command construction and structural verification are tested; a real pg_dump/restore drill is pending
   R01-T036: deterministic duplicate/reorder chaos and service-level two-device convergence pass, while browser/device chaos remains pending for qualification
 
 blocked_tasks:
-  R01-T035: requires real IndexedDB 100k+ benchmark plus Android and Windows storage qualification
+  R01-T035: desktop 100k benchmark proven (43.25 s write / 149.5 ms read, real Chromium); Android tablet and physical-Windows device qualification remain
 
 known_environment_constraints:
   - host_port_5432_occupied_by_unrelated_project_container
@@ -198,12 +198,12 @@ verification_policy:
   exact_commit_verification_required_before_checkpoint_artifacts: true
 
 next_focus:
-  - obtain a green hosted CI run on consolidated main and archive the qualification artifact tied to the exact SHA
-  - run the Security workflow (REUSE, pip-audit, gitleaks, trivy) and record evidence
-  - run Compose fresh-install smoke and backup/restore drill with the local Docker engine
-  - run native IndexedDB 100k benchmark in a real browser (scripts/benchmarks)
-  - execute Android and Windows physical Tier 1 qualification before closing R01-T035
-  - protect main and configure CODEOWNERS after the first green CI baseline
+  - execute Android tablet and physical-Windows Tier 1 qualification to close R01-T035
+  - produce hosted browser conflict-path evidence for R01-T021 and browser/device chaos for R01-T036
+  - prove Dexie migrations preserve queued mutations and test quota pressure behavior
+  - backup fallback drill with a corrupt/unavailable latest dump; re-measure RTO on production-like volume
+  - repeat the Compose fresh-install smoke on the first clean Linux host (target topology)
+  - tighten main protection (approvals, code-owner reviews, enforce for admins) once a second custodian exists; then work through short-lived PRs only
 
 repository_consolidation_evidence:
   purpose: make_github_canonical_without_losing_authoritative_files
@@ -227,6 +227,29 @@ repository_consolidation_evidence:
     - green_hosted_ci_on_main
     - v0_1_qualification_artifact_tied_to_exact_sha
   note: V0.1 remains partial until hosted CI and the remaining manual/runtime gates in MANUAL-ACTIONS-CHECKLIST.md are proven.
+
+session_2026_08_31_runtime_gates:
+  compose_fresh_install:
+    result: pass
+    fix: postgres_18_plus_volume_mount_parent_not_data_dir
+    evidence: build_from_scratch_live_ready_health_ports_audit_nonroot_ocwp_secrets_gitignored_down_up_cycle_with_persisted_data_and_login
+    bootstrap_admin_on_real_postgresql: created_true
+  backup_restore_drill:
+    result: pass
+    tooling: scripts/database/backup_postgres.py_runner_indirection_with_container_pg_dump_pg_restore
+    dump_bytes: 19350
+    restored_clean_instance_tables_identical: 9
+    timings: backup_plus_verify_0_43s_restore_0_42s_dev_dataset
+  indexeddb_100k_desktop:
+    result: pass
+    engine: real_chromium_151_headless_via_playwright
+    write_ms: 43250
+    count_and_sample_read_ms: 149_5
+    fix: virtual_time_budget_never_completes_with_pending_indexeddb_io_driver_now_waits_for_title_DONE
+  governance:
+    main_protection: pull_requests_required_checks_verify_and_security_required_force_push_and_deletion_blocked_conversation_resolution_required
+    bootstrap_policy: zero_approvals_and_enforce_admins_off_until_second_custodian_documented_break_glass
+    codeowners: versioned_for_high_risk_paths
 
 session_2026_08_30_fixes:
   bugs_found_and_fixed_by_real_execution:
