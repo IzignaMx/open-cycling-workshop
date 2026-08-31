@@ -160,7 +160,8 @@
 - [x] **Record measured RPO/RTO for the tested topology.**
   - Evidence: backup+verify 0.43 s, restore 0.42 s on the dev dataset (Windows/Docker); RPO equals the operator's backup schedule, dumps are point-in-time consistent. Re-measure on realistic data volume before production claims.
 - [ ] **Verify backup encryption and key recovery procedures for managed deployments.** (applies when the managed topology exists)
-- [ ] **Test failure where the latest backup is corrupt/unavailable and document fallback.**
+- [x] **Test failure where the latest backup is corrupt/unavailable and document fallback.**
+  - Evidence (2026-08-31): corrupt-generation drill — generation 2 truncated to 25% is rejected by the repository tooling (`pg_restore --list`: end-of-file, 0.19 s), fallback to generation 1 restores into a clean instance (0.29 s) with the generation-1 state and identical schema. Documented procedure: keep ≥2 generations, verify each with `pg_restore --list` after writing, fall back to the previous verified generation, restore into a clean instance and run consistency checks before declaring recovery.
 - [x] **Do not mark backup support complete until restore is proven.** — proven for the dev topology above.
 
 ## P1 · GitHub Actions qualification artifacts
@@ -173,7 +174,8 @@
   - Evidence: schema 2, `ci: true`, 26/26 checks pass, overall `partial` only on environment/manual gates (psql client, IndexedDB 100k benchmark, physical devices).
 - [x] **Ensure the qualification artifact records the exact Git commit SHA and runtime versions.**
   - Evidence: `git_sha d60ed4e493c0827430e77a4c7f4b69c0349cf8b7` with Python/Node/platform metadata.
-- [ ] **Archive the successful V0.1 qualification artifact as release/checkpoint evidence.**
+- [x] **Archive the successful V0.1 qualification artifact as release/checkpoint evidence.**
+  - Evidence (2026-08-31): pre-release `v0.1.0-qualification.2026-08-31` on qualified commit `456c7bc` (CI run 33448325753) with `v0.1-qualification.json` attached (status `passed`, 27/27 checks, `ci: true`).
 - [x] **Investigate flaky jobs rather than rerunning until green.**
   - Every failure in the loop was root-caused (trivy tag, gitleaks license, REUSE coverage, env-var override in the migration test, pnpm-from-Python tool resolution) and fixed at the cause.
 
