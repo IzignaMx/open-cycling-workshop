@@ -3,8 +3,8 @@ project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
-status: v01_qualification_artifact_passed_hosted_remaining_physical_devices_and_conflict_chaos
-last_checkpoint: hosted-qualification-passed-and-main-protected-2026-08-31
+status: browser_conflict_path_proven_remaining_physical_devices_and_chaos
+last_checkpoint: browser-conflict-path-proven-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -39,9 +39,9 @@ locally_verified_tasks:
   - R01-T032
   - R01-T033
   - R01-T034
+  - R01-T021
 
 implemented_evidence_pending:
-  R01-T021: conflicts persist by scope and Conflict Center/status UI is versioned; explicit hosted browser conflict-path evidence is pending
   R01-T036: deterministic duplicate/reorder chaos and service-level two-device convergence pass, while browser/device chaos remains pending for qualification
 
 blocked_tasks:
