@@ -205,7 +205,8 @@
 - [ ] **Out-of-order mutation delivery.**
 - [ ] **Temporary 5xx/network failures with retry/backoff.**
 - [ ] **Permanent validation failure appears in Conflict Center.**
-- [ ] **Concurrent edit conflict from two devices.**
+- [x] **Concurrent edit conflict from two devices.**
+  - Evidence (2026-08-31): `e2e/conflict-path.spec.ts` — online create (v1), remote concurrent update via API while the device is offline, stale local edit queued (base_version 1), reconnect push yields a real server conflict; visible in Conflict Center, mutation leaves the retry queue, device converges to the winning edit and the incident persists across reload.
 - [ ] **Cursor durability across restart.**
 - [ ] **Remote change with wrong tenant/location scope cannot advance local cursor.**
 - [ ] **Large reconnect batch does not lose valid operations when one mutation conflicts.**
@@ -264,3 +265,4 @@ Add durable evidence below instead of editing completed checklist history away.
 | 2026-08-31 | `main` protection + CODEOWNERS         | PRs required, checks `verify`+`security` required, force-push/deletion blocked, conversation resolution; CODEOWNERS for high-risk paths                                                                               | governance config + CODEOWNERS commit                  | solo-custodian bootstrap: 0 approvals, enforce_admins OFF (documented break-glass)                 |
 | 2026-08-31 | V0.1 qualification artifact **passed** | Hosted run 33358054057 on `31518cc`: overall **passed** — IndexedDB 100k hosted (100k records, 39,412 ms write, 104.7 ms read, ubuntu) and browser E2E hosted green                                                   | `31518cc` artifact `v0.1-qualification`                | first overall-passed artifact in project history                                                   |
 | 2026-08-31 | `main` protection active               | API PUT branches/main/protection: PRs required, checks `verify`+`security` required (strict), force-push/deletion blocked, conversation resolution required, `enforce_admins=false` (documented break-glass)          | repository settings                                    | solo-custodian bootstrap policy recorded above                                                     |
+| 2026-08-31 | R01-T021 browser conflict-path         | New `e2e/conflict-path.spec.ts` green locally with the golden slice (2/2, 9.7 s) and on hosted CI: real stale-base_version conflict → visible Conflict Center → queue drain → convergence → persistence after reload  | `feat/e2e-conflict-path` PR                            | first explicit hosted browser conflict evidence                                                    |
