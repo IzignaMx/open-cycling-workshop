@@ -156,12 +156,17 @@
 
 ## P1 · GitHub Actions qualification artifacts
 
-- [ ] **Run `.github/workflows/ci.yml` manually once after repository consolidation.**
-- [ ] **Run `.github/workflows/security.yml` manually once after repository consolidation.**
-- [ ] **Download and inspect `v0.1-qualification.json`.**
-- [ ] **Ensure the qualification artifact records the exact Git commit SHA and runtime versions.**
+- [x] **Run `.github/workflows/ci.yml` manually once after repository consolidation.**
+  - Evidence (2026-08-31): green on push `d60ed4e`, run 33356009981 — includes PostgreSQL 18.4 service, full static analysis, production PWA build, Playwright golden slice and the qualification verifier.
+- [x] **Run `.github/workflows/security.yml` manually once after repository consolidation.**
+  - Evidence: green on push `d60ed4e`, run 33356010020 — gitleaks (pinned image v8.30.1), REUSE 216/216, pip-audit, Trivy 0.63.0 with zero CRITICAL/HIGH.
+- [x] **Download and inspect `v0.1-qualification.json`.**
+  - Evidence: schema 2, `ci: true`, 26/26 checks pass, overall `partial` only on environment/manual gates (psql client, IndexedDB 100k benchmark, physical devices).
+- [x] **Ensure the qualification artifact records the exact Git commit SHA and runtime versions.**
+  - Evidence: `git_sha d60ed4e493c0827430e77a4c7f4b69c0349cf8b7` with Python/Node/platform metadata.
 - [ ] **Archive the successful V0.1 qualification artifact as release/checkpoint evidence.**
-- [ ] **Investigate flaky jobs rather than rerunning until green.**
+- [x] **Investigate flaky jobs rather than rerunning until green.**
+  - Every failure in the loop was root-caused (trivy tag, gitleaks license, REUSE coverage, env-var override in the migration test, pnpm-from-Python tool resolution) and fixed at the cause.
 
 ## P1 · Security and privacy manual review
 

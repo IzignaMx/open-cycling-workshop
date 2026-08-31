@@ -2,7 +2,7 @@
 
 Open source, local-first, offline-first operating platform for bicycle workshops, stores, cooperatives, fleets, and cycling-related service organizations.
 
-> Status: **V0.1 Foundations / repository consolidated on GitHub · full local qualification green (PostgreSQL 18.4, static analysis, production PWA build, Golden Slice E2E) · hosted CI confirmation pending**. This repository is not yet a production release.
+> Status: **V0.1 Foundations / hosted CI + Security green on consolidated main · full local qualification green (PostgreSQL 18.4, static analysis, production PWA build, Golden Slice E2E) · remaining: device/storage/backup runtime gates**. This repository is not yet a production release.
 
 ## Principles
 
