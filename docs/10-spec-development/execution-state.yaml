@@ -4,7 +4,7 @@ active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
 status: all_automatable_v01_gates_proven_remaining_physical_devices_and_manual_reviews
-last_checkpoint: backup-fallback-drill-and-qualification-release-archive-2026-08-31
+last_checkpoint: tier1-protocol-and-v02-plan-ready-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -217,6 +217,18 @@ verification_policy:
   preserve_intended_postgresql_browser_and_device_gates: true
   exact_commit_verification_required_before_checkpoint_artifacts: true
 
+v02_plan:
+  document: docs/superpowers/plans/2026-08-31-v0.2-workshop-core.md
+  scope: bicycles_basic_plus_service_orders_state_machine_tasks_timeline
+  status: ready_for_execution_after_operator_approval
+  note: V0.1 physical gates (R01-T035) run in parallel as manual work per the Tier 1 protocol; V0.2 implementation must not weaken any V0.1 gate.
+
+tier1_protocol:
+  document: docs/11-device-qualification/2026-08-31-tier1-protocol.md
+  results_template: docs/11-device-qualification/2026-08-31-tier1-results.md
+  lan_override: infra/compose/docker-compose.tier1.yml
+  status: awaiting_operator_execution
+
 next_focus:
   - execute Android tablet and physical-Windows Tier 1 qualification to close R01-T035
   - produce hosted browser conflict-path evidence for R01-T021 and browser/device chaos for R01-T036
@@ -224,6 +236,8 @@ next_focus:
   - backup fallback drill with a corrupt/unavailable latest dump; re-measure RTO on production-like volume
   - repeat the Compose fresh-install smoke on the first clean Linux host (target topology)
   - tighten main protection (approvals, code-owner reviews, enforce for admins) once a second custodian exists; then work through short-lived PRs only
+  - operator executes the Tier 1 physical protocol and records evidence in the results template
+  - execute the V0.2 Workshop Core plan (bicycles + service orders) task-by-task under the Master Loop
 
 repository_consolidation_evidence:
   purpose: make_github_canonical_without_losing_authoritative_files
