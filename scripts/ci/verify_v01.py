@@ -277,7 +277,17 @@ def main() -> int:
         ),
         run_check(
             "frontend_offline_typecheck",
-            ["tsc", "-p", "apps/web/tsconfig.offline-check.json", "--pretty", "false"],
+            # `pnpm exec tsc` pins the workspace TypeScript version; a bare
+            # `tsc` may resolve a newer compiler that rejects valid config.
+            [
+                "pnpm",
+                "exec",
+                "tsc",
+                "-p",
+                "apps/web/tsconfig.offline-check.json",
+                "--pretty",
+                "false",
+            ],
         ),
         run_check(
             "openapi_contract",
@@ -290,7 +300,7 @@ def main() -> int:
         ),
         run_check(
             "typescript_api_typecheck",
-            ["tsc", "-p", "packages/api-client/tsconfig.json", "--pretty", "false"],
+            ["pnpm", "exec", "tsc", "-p", "packages/api-client/tsconfig.json", "--pretty", "false"],
         ),
     ]
 
