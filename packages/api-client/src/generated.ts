@@ -1,5 +1,31 @@
 // Generated from packages/api-client/openapi.json. Do not edit by hand.
 
+export interface BicycleCreateRequest {
+  bicycle_id?: string | null
+  bicycle_type?: string | null
+  brand: string
+  customer_id: string
+  location_id: string
+  model?: string | null
+  notes?: string | null
+  wheel_size?: string | null
+}
+
+export interface BicycleResponse {
+  bicycle_id: string
+  bicycle_type: string | null
+  brand: string
+  created_at: string
+  customer_id: string
+  location_id: string
+  model: string | null
+  notes: string | null
+  organization_id: string
+  updated_at: string
+  version: number
+  wheel_size: string | null
+}
+
 export interface ChangeItemResponse {
   cursor: number
   entity_id: string
@@ -91,12 +117,56 @@ export interface MutationResultResponse {
   status: "applied" | "conflict"
 }
 
+export interface OrderTransitionRequest {
+  action: "start_diagnosis" | "authorize" | "reject" | "start_work" | "request_parts" | "resume_work" | "mark_ready" | "close" | "cancel"
+  note?: string | null
+}
+
 export interface PushMutationsRequest {
   mutations: Array<MutationRequest>
 }
 
 export interface PushMutationsResponse {
   results: Array<MutationResultResponse>
+}
+
+export interface ServiceOrderCreateRequest {
+  accessories?: string | null
+  bicycle_id?: string | null
+  customer_id: string
+  intake_condition?: string | null
+  location_id: string
+  order_id?: string | null
+  priority?: string
+  reported_problem: string
+}
+
+export interface ServiceOrderEventResponse {
+  action: string
+  actor_id: string
+  event_id: string
+  from_state: string
+  note: string | null
+  occurred_at: string
+  order_id: string
+  to_state: string
+}
+
+export interface ServiceOrderResponse {
+  accessories: string | null
+  bicycle_id: string | null
+  created_at: string
+  customer_id: string
+  diagnosis: string | null
+  intake_condition: string | null
+  location_id: string
+  order_id: string
+  organization_id: string
+  priority: string
+  reported_problem: string
+  state: string
+  updated_at: string
+  version: number
 }
 
 export interface ValidationError {
