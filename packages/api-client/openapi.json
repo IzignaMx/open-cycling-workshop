@@ -1,6 +1,192 @@
 {
   "components": {
     "schemas": {
+      "BicycleCreateRequest": {
+        "properties": {
+          "bicycle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Id"
+          },
+          "bicycle_type": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Type"
+          },
+          "brand": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Brand",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "wheel_size": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wheel Size"
+          }
+        },
+        "required": [
+          "customer_id",
+          "location_id",
+          "brand"
+        ],
+        "title": "BicycleCreateRequest",
+        "type": "object"
+      },
+      "BicycleResponse": {
+        "properties": {
+          "bicycle_id": {
+            "title": "Bicycle Id",
+            "type": "string"
+          },
+          "bicycle_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Type"
+          },
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "wheel_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wheel Size"
+          }
+        },
+        "required": [
+          "bicycle_id",
+          "customer_id",
+          "organization_id",
+          "location_id",
+          "brand",
+          "model",
+          "bicycle_type",
+          "wheel_size",
+          "notes",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "BicycleResponse",
+        "type": "object"
+      },
       "ChangeItemResponse": {
         "properties": {
           "cursor": {
@@ -479,6 +665,42 @@
         "title": "MutationResultResponse",
         "type": "object"
       },
+      "OrderTransitionRequest": {
+        "properties": {
+          "action": {
+            "enum": [
+              "start_diagnosis",
+              "authorize",
+              "reject",
+              "start_work",
+              "request_parts",
+              "resume_work",
+              "mark_ready",
+              "close",
+              "cancel"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "OrderTransitionRequest",
+        "type": "object"
+      },
       "PushMutationsRequest": {
         "properties": {
           "mutations": {
@@ -511,6 +733,252 @@
           "results"
         ],
         "title": "PushMutationsResponse",
+        "type": "object"
+      },
+      "ServiceOrderCreateRequest": {
+        "properties": {
+          "accessories": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessories"
+          },
+          "bicycle_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Id"
+          },
+          "customer_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "intake_condition": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intake Condition"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "priority": {
+            "default": "normal",
+            "maxLength": 30,
+            "title": "Priority",
+            "type": "string"
+          },
+          "reported_problem": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reported Problem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "location_id",
+          "reported_problem"
+        ],
+        "title": "ServiceOrderCreateRequest",
+        "type": "object"
+      },
+      "ServiceOrderEventResponse": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "from_state": {
+            "title": "From State",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "to_state": {
+            "title": "To State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "order_id",
+          "from_state",
+          "to_state",
+          "action",
+          "actor_id",
+          "note",
+          "occurred_at"
+        ],
+        "title": "ServiceOrderEventResponse",
+        "type": "object"
+      },
+      "ServiceOrderResponse": {
+        "properties": {
+          "accessories": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessories"
+          },
+          "bicycle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnosis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis"
+          },
+          "intake_condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intake Condition"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "reported_problem": {
+            "title": "Reported Problem",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_id",
+          "customer_id",
+          "bicycle_id",
+          "organization_id",
+          "location_id",
+          "state",
+          "reported_problem",
+          "intake_condition",
+          "accessories",
+          "priority",
+          "diagnosis",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "ServiceOrderResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -693,6 +1161,123 @@
         ]
       }
     },
+    "/api/v1/bicycles": {
+      "post": {
+        "operationId": "create_bicycle_api_v1_bicycles_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BicycleCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BicycleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Bicycle",
+        "tags": [
+          "bicycles"
+        ]
+      }
+    },
+    "/api/v1/bicycles/{bicycle_id}": {
+      "get": {
+        "operationId": "get_bicycle_api_v1_bicycles__bicycle_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bicycle_id",
+            "required": true,
+            "schema": {
+              "title": "Bicycle Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BicycleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Bicycle",
+        "tags": [
+          "bicycles"
+        ]
+      }
+    },
     "/api/v1/customers": {
       "post": {
         "operationId": "create_customer_api_v1_customers_post",
@@ -807,6 +1392,315 @@
         "summary": "Get Customer",
         "tags": [
           "customers"
+        ]
+      }
+    },
+    "/api/v1/customers/{customer_id}/bicycles": {
+      "get": {
+        "operationId": "list_customer_bicycles_api_v1_customers__customer_id__bicycles_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BicycleResponse"
+                  },
+                  "title": "Response List Customer Bicycles Api V1 Customers  Customer Id  Bicycles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Customer Bicycles",
+        "tags": [
+          "bicycles"
+        ]
+      }
+    },
+    "/api/v1/service-orders": {
+      "post": {
+        "operationId": "create_service_order_api_v1_service_orders_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceOrderCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Service Order",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/v1/service-orders/{order_id}": {
+      "get": {
+        "operationId": "get_service_order_api_v1_service_orders__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Service Order",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/v1/service-orders/{order_id}/events": {
+      "get": {
+        "operationId": "list_service_order_events_api_v1_service_orders__order_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceOrderEventResponse"
+                  },
+                  "title": "Response List Service Order Events Api V1 Service Orders  Order Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Service Order Events",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/v1/service-orders/{order_id}/transitions": {
+      "post": {
+        "operationId": "transition_service_order_api_v1_service_orders__order_id__transitions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transition Service Order",
+        "tags": [
+          "service-orders"
         ]
       }
     },

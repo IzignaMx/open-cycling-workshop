@@ -62,6 +62,33 @@ class SqlAlchemyServiceOrderRepository:
             )
         )
 
+    def list_events(
+        self, *, order_id: str, organization_id: str, limit: int = 200
+    ) -> list[ServiceOrderEvent]:
+        statement = (
+            select(ServiceOrderEventRecord)
+            .where(
+                ServiceOrderEventRecord.order_id == order_id,
+                ServiceOrderEventRecord.organization_id == organization_id,
+            )
+            .order_by(ServiceOrderEventRecord.occurred_at, ServiceOrderEventRecord.event_id)
+            .limit(limit)
+        )
+        return [
+            ServiceOrderEvent(
+                event_id=record.event_id,
+                order_id=record.order_id,
+                organization_id=record.organization_id,
+                from_state=record.from_state,
+                to_state=record.to_state,
+                action=record.action,
+                actor_id=record.actor_id,
+                note=record.note,
+                occurred_at=_as_utc(record.occurred_at),
+            )
+            for record in self._session.scalars(statement)
+        ]
+
     @staticmethod
     def _to_record(order: ServiceOrder) -> ServiceOrderRecord:
         return ServiceOrderRecord(

@@ -9,10 +9,12 @@ from cycling_workshop import __version__
 from cycling_workshop.api.errors import install_error_handlers
 from cycling_workshop.api.middleware import configure_logging, install_request_context
 from cycling_workshop.api.schemas import HealthReadyResponse, HealthUnavailableResponse
+from cycling_workshop.bicycles.router import router as bicycles_router
 from cycling_workshop.customers.router import router as customers_router
 from cycling_workshop.db.registry import register_models
 from cycling_workshop.identity.router import router as identity_router
 from cycling_workshop.identity.security import SessionTokenService
+from cycling_workshop.service_orders.router import router as service_orders_router
 from cycling_workshop.settings import Settings
 from cycling_workshop.sync.router import router as sync_router
 
@@ -61,6 +63,8 @@ def create_app(
 
     app.include_router(identity_router)
     app.include_router(customers_router)
+    app.include_router(bicycles_router)
+    app.include_router(service_orders_router)
     app.include_router(sync_router)
     return app
 

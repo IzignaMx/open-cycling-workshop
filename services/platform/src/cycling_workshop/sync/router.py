@@ -44,6 +44,20 @@ def push_mutations(
                     organization_id=item.organization_id,
                     location_id=item.location_id,
                 )
+            elif item.entity_type == "bicycle":
+                authorize(
+                    principal,
+                    capability="bicycles.write",
+                    organization_id=item.organization_id,
+                    location_id=item.location_id,
+                )
+            elif item.entity_type == "service_order":
+                authorize(
+                    principal,
+                    capability="orders.write",
+                    organization_id=item.organization_id,
+                    location_id=item.location_id,
+                )
             try:
                 with session.begin_nested():
                     result = service.apply(
