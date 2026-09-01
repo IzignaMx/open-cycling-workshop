@@ -18,6 +18,13 @@
     "src/sync/scope.ts",
     "src/sync/dexie-store.ts",
     "src/local/types.ts",
+    "src/local/bicycle-types.ts",
+    "src/local/service-order-types.ts",
+    "src/features/orders/state-machine.ts",
+    "src/features/bicycles/local-bicycle.ts",
+    "src/features/bicycles/repository.ts",
+    "src/features/orders/local-order.ts",
+    "src/features/orders/repository.ts",
     "tools/dexie-shim.d.ts",
     "src/sync/http-transport.ts"
   ]
