@@ -18,7 +18,8 @@ from cycling_workshop.runtime import app  # noqa: F401
 from cycling_workshop.db.base import Base
 required = {
     'organizations', 'locations', 'customers', 'sync_mutation_receipts',
-    'sync_changes', 'outbox_events', 'background_jobs',
+    'sync_changes', 'outbox_events', 'background_jobs', 'bicycles',
+    'service_orders', 'service_order_events',
 }
 missing = sorted(required - set(Base.metadata.tables))
 if missing:

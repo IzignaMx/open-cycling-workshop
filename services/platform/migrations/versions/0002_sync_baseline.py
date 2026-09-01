@@ -5,8 +5,8 @@ Revises: 0001
 """
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0002"
 down_revision = "0001"
@@ -27,7 +27,9 @@ def upgrade() -> None:
         sa.Column("entity_version", sa.Integer(), nullable=False),
         sa.Column("applied_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_sync_mutation_receipts_organization_id", "sync_mutation_receipts", ["organization_id"])
+    op.create_index(
+        "ix_sync_mutation_receipts_organization_id", "sync_mutation_receipts", ["organization_id"]
+    )
     op.create_index(
         "ix_sync_receipts_org_entity",
         "sync_mutation_receipts",

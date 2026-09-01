@@ -36,3 +36,6 @@ def test_alembic_head_contains_v01_infrastructure_tables(
     assert "outbox_events" in tables
     assert "background_jobs" in tables
     assert "users" in tables
+    assert "bicycles" in tables
+    assert "service_orders" in tables
+    assert "service_order_events" in tables
