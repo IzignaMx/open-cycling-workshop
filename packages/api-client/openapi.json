@@ -361,7 +361,11 @@
             "type": "string"
           },
           "entity_type": {
-            "const": "customer",
+            "enum": [
+              "customer",
+              "bicycle",
+              "service_order"
+            ],
             "title": "Entity Type",
             "type": "string"
           },
