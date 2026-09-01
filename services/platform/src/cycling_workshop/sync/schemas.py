@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 class MutationRequest(BaseModel):
     mutation_id: str = Field(min_length=36, max_length=36)
-    entity_type: Literal["customer"]
+    entity_type: Literal["customer", "bicycle", "service_order"]
     entity_id: str = Field(min_length=36, max_length=36)
     operation: Literal["create", "update"]
     organization_id: str = Field(min_length=1, max_length=36)
