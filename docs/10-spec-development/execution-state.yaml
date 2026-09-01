@@ -4,7 +4,7 @@ active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
 status: all_automatable_v01_gates_proven_remaining_physical_devices_and_manual_reviews
-last_checkpoint: v02-server-side-complete-tasks-1-6-2026-09-01
+last_checkpoint: v02-tasks-1-7-client-store-layer-complete-2026-09-01
 
 locally_verified_tasks:
   - R01-T001
@@ -228,9 +228,10 @@ v02_plan:
     R02-T004: sync_fanout_bicycles_and_service_orders_pr_11
     R02-T005: rest_api_and_regenerated_contracts_pr_12
     R02-T006: change_feed_coverage_and_scope_isolation_pr_13
+    R02-T007: dexie_schema_v3_and_local_repositories_pr_15
   adr_notes:
     invalid_order_transition: permanent_sync_conflict_not_retriable_surfaces_in_conflict_center
-  next: R02-T007_dexie_schema_v3_and_local_repositories
+  next: R02-T008_order_intake_ui_and_R02-T009_order_detail_board
   note: V0.1 physical gates (R01-T035) run in parallel as manual work per the Tier 1 protocol; V0.2 implementation must not weaken any V0.1 gate.
 
 tier1_protocol:
