@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-EntityType = Literal["customer"]
+EntityType = Literal["customer", "bicycle", "service_order"]
 MutationOperation = Literal["create", "update"]
 
 

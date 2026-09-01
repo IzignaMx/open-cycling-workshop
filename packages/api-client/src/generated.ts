@@ -73,7 +73,7 @@ export interface LoginResponse {
 export interface MutationRequest {
   base_version?: number | null
   entity_id: string
-  entity_type: string
+  entity_type: "customer" | "bicycle" | "service_order"
   location_id: string
   mutation_id: string
   occurred_at: string

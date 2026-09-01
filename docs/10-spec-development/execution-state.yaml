@@ -4,7 +4,7 @@ active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 branch: main
 status: all_automatable_v01_gates_proven_remaining_physical_devices_and_manual_reviews
-last_checkpoint: tier1-protocol-and-v02-plan-ready-2026-08-31
+last_checkpoint: v02-tasks-1-4-merged-sync-fanout-green-2026-08-31
 
 locally_verified_tasks:
   - R01-T001
@@ -220,7 +220,15 @@ verification_policy:
 v02_plan:
   document: docs/superpowers/plans/2026-08-31-v0.2-workshop-core.md
   scope: bicycles_basic_plus_service_orders_state_machine_tasks_timeline
-  status: ready_for_execution_after_operator_approval
+  status: in_execution
+  completed_tasks:
+    R02-T001: bicycles_domain_and_repository_pr_8
+    R02-T002: order_state_machine_and_timeline_events_pr_9
+    R02-T003: migration_0005_workshop_core_tables_pr_10
+    R02-T004: sync_fanout_bicycles_and_service_orders_pr_11
+  adr_notes:
+    invalid_order_transition: permanent_sync_conflict_not_retriable_surfaces_in_conflict_center
+  next: R02-T005_rest_api_and_contracts
   note: V0.1 physical gates (R01-T035) run in parallel as manual work per the Tier 1 protocol; V0.2 implementation must not weaken any V0.1 gate.
 
 tier1_protocol:
