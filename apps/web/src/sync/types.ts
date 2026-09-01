@@ -1,4 +1,4 @@
-export type EntityType = 'customer'
+export type EntityType = 'customer' | 'bicycle' | 'service_order'
 export type MutationOperation = 'create' | 'update'
 
 export interface MutationEnvelope {
