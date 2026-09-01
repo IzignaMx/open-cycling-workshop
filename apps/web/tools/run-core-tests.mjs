@@ -21,6 +21,7 @@ const outputs = [
   new URL('../.tmp-customer/', import.meta.url),
   new URL('../.tmp-conflict/', import.meta.url),
   new URL('../.tmp-auth/', import.meta.url),
+  new URL('../.tmp-orders/', import.meta.url),
 ]
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
@@ -29,14 +30,17 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.customer-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.conflict-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.auth-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
     'tests/sync/retry-policy.test.mjs',
     'tests/sync/dexie-v3.test.mjs',
+    'tests/sync/merge-workshop-core.test.mjs',
     'tests/orders/state-machine.test.mjs',
     'tests/orders/local-order.test.mjs',
+    'tests/orders/order-model.test.mjs',
     'tests/auth/session.test.mjs',
     'tests/customers/local-customer.test.mjs',
     'tests/sync/conflict-center.test.mjs',

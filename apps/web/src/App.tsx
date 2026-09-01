@@ -8,12 +8,18 @@ import { hasCapability } from './auth/capabilities.js'
 import { LoginForm } from './auth/LoginForm.js'
 import { shouldClearSessionAfterAuthError } from './auth/session-policy.js'
 import { SessionStore } from './auth/session.js'
+import { BicycleLocalRepository } from './features/bicycles/repository.js'
 import { CustomerQuickCreate } from './features/customers/CustomerQuickCreate.js'
 import { CustomerLocalRepository } from './features/customers/repository.js'
+import { OrderList } from './features/orders/OrderList.js'
+import { OrderQuickIntake } from './features/orders/OrderQuickIntake.js'
+import { ServiceOrderLocalRepository } from './features/orders/repository.js'
+import type { OrderAction } from './features/orders/state-machine.js'
 import { ConflictCenter } from './features/sync/ConflictCenter.js'
 import { SyncStatus } from './features/sync/SyncStatus.js'
 import type { SyncVisualState } from './features/sync/status-model.js'
 import { db } from './local/db.js'
+import type { LocalServiceOrder, LocalServiceOrderEvent } from './local/service-order-types.js'
 import type { ConflictRecord } from './local/types.js'
 import { SyncCoordinator } from './sync/coordinator.js'
 import { DexieSyncStore } from './sync/dexie-store.js'
@@ -27,8 +33,15 @@ import { syncScopeKey } from './sync/scope.js'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
 
+interface CustomerRow {
+  customer_id: string
+  display_name: string
+}
+
 export function App() {
   const repository = useMemo(() => new CustomerLocalRepository(db), [])
+  const bicycleRepository = useMemo(() => new BicycleLocalRepository(db), [])
+  const orderRepository = useMemo(() => new ServiceOrderLocalRepository(db), [])
   const sessionStore = useMemo(() => new SessionStore(window.sessionStorage), [])
   const api = useMemo(
     () =>
@@ -54,6 +67,9 @@ export function App() {
     return null
   })
   const [lastCustomer, setLastCustomer] = useState<string | null>(null)
+  const [localCustomers, setLocalCustomers] = useState<CustomerRow[]>([])
+  const [orders, setOrders] = useState<LocalServiceOrder[]>([])
+  const [orderEvents, setOrderEvents] = useState<LocalServiceOrderEvent[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [syncState, setSyncState] = useState<SyncVisualState>(() =>
     navigator.onLine ? 'local' : 'offline',
@@ -89,6 +105,40 @@ export function App() {
     const items = await pending
     setConflicts(items)
     return items
+  }, [syncScope])
+
+  const refreshWorkshopData = useCallback(async (): Promise<void> => {
+    // Await-first so effects can call this without synchronous setState.
+    if (!syncScope) {
+      setLocalCustomers([])
+      setOrders([])
+      setOrderEvents([])
+      return
+    }
+    const [customers, orderRows, eventRows] = await Promise.all([
+      db.customers
+        .where('organization_id')
+        .equals(syncScope.organizationId)
+        .toArray()
+        .then((rows) =>
+          rows
+            .filter((row) => row.location_id === syncScope.locationId)
+            .map((row) => ({ customer_id: row.customer_id, display_name: row.display_name })),
+        ),
+      db.serviceOrders
+        .where('organization_id')
+        .equals(syncScope.organizationId)
+        .toArray()
+        .then((rows) =>
+          rows
+            .filter((row) => row.location_id === syncScope.locationId)
+            .sort((a, b) => a.created_at.localeCompare(b.created_at)),
+        ),
+      db.serviceOrderEvents.toArray(),
+    ])
+    setLocalCustomers(customers)
+    setOrders(orderRows)
+    setOrderEvents(eventRows)
   }, [syncScope])
 
   const runSync = useCallback(async () => {
@@ -188,13 +238,14 @@ export function App() {
     // Both functions setState; running them inside an async continuation keeps
     // the effect body free of synchronous state updates.
     void (async () => {
+      await refreshWorkshopData()
       await refreshConflicts()
       if (!cancelled) await runSync()
     })()
     return () => {
       cancelled = true
     }
-  }, [currentUser, refreshConflicts, runSync])
+  }, [currentUser, refreshConflicts, refreshWorkshopData, runSync])
 
   async function login(input: LoginRequest) {
     setAuthBusy(true)
@@ -237,6 +288,51 @@ export function App() {
     }
   }
 
+  async function createOrder(input: {
+    customerId: string
+    reportedProblem: string
+    intakeCondition: string | null
+    accessories: string | null
+    priority: string
+    brand: string | null
+    model: string | null
+  }): Promise<void> {
+    const scope = syncScope
+    if (!scope) throw new Error('Se requiere una ubicación activa')
+    let bicycleId: string | null = null
+    if (input.brand) {
+      const bicycle = await bicycleRepository.create({
+        organizationId: scope.organizationId,
+        locationId: scope.locationId,
+        customerId: input.customerId,
+        brand: input.brand,
+        model: input.model,
+      })
+      bicycleId = bicycle.bicycle_id
+    }
+    await orderRepository.create({
+      organizationId: scope.organizationId,
+      locationId: scope.locationId,
+      customerId: input.customerId,
+      bicycleId,
+      reportedProblem: input.reportedProblem,
+      intakeCondition: input.intakeCondition,
+      accessories: input.accessories,
+      priority: input.priority,
+    })
+    setSyncState(navigator.onLine ? 'local' : 'offline')
+    await refreshWorkshopData()
+    void runSync()
+  }
+
+  async function transitionOrder(order: LocalServiceOrder, action: OrderAction): Promise<void> {
+    if (!currentUser) return
+    await orderRepository.applyTransition(order, action, { actorId: currentUser.user_id })
+    setSyncState(navigator.onLine ? 'local' : 'offline')
+    await refreshWorkshopData()
+    void runSync()
+  }
+
   if (!currentUser) {
     return (
       <main className="mx-auto grid min-h-screen max-w-lg content-center gap-8 px-5 py-10">
@@ -259,6 +355,8 @@ export function App() {
 
   const canCreateCustomers =
     Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'customers.write')
+  const canCreateOrders =
+    Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'orders.write')
 
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl gap-8 px-5 py-8 md:grid-cols-[1fr_22rem]">
@@ -340,10 +438,28 @@ export function App() {
                 })
                 setLastCustomer(customer.display_name)
                 setSyncState(navigator.onLine ? 'local' : 'offline')
+                await refreshWorkshopData()
                 void runSync()
               }}
             />
           )}
+        </section>
+        <section
+          aria-labelledby="order-intake-title"
+          className="rounded-2xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-5 shadow-sm"
+        >
+          <h2 id="order-intake-title" className="mb-4 text-xl font-semibold">
+            Nueva orden de servicio
+          </h2>
+          {!canCreateOrders ? (
+            <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
+              Tu sesión actual no tiene la capability <code>orders.write</code>.
+            </p>
+          ) : (
+            <OrderQuickIntake customers={localCustomers} onCreateOrder={createOrder} />
+          )}
+          <h3 className="mt-6 text-lg font-semibold">Órdenes</h3>
+          <OrderList orders={orders} events={orderEvents} onTransition={transitionOrder} />
         </section>
         <ConflictCenter
           conflicts={conflicts}
