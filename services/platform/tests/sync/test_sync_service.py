@@ -144,3 +144,97 @@ def test_customer_mutation_writes_outbox_event_in_same_transaction() -> None:
         assert events[0].event_type == "customer.created"
         assert events[0].aggregate_id == mutation.entity_id
         assert events[0].organization_id == mutation.organization_id
+
+
+def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
+    with build_session() as session:
+        from cycling_workshop.customers.models import CustomerRecord
+
+        now = datetime(2026, 8, 31, tzinfo=UTC)
+        session.add(
+            CustomerRecord(
+                id="customer-1",
+                organization_id="org-1",
+                location_id="loc-1",
+                display_name="Ana Rivera",
+                created_at=now,
+                updated_at=now,
+                version=1,
+            )
+        )
+        session.commit()
+        service = SyncService(session)
+
+        bicycle_id = new_id()
+        order_id = new_id()
+        service.apply(
+            MutationEnvelope(
+                mutation_id=new_id(),
+                entity_type="bicycle",
+                entity_id=bicycle_id,
+                operation="create",
+                organization_id="org-1",
+                location_id="loc-1",
+                base_version=None,
+                occurred_at=now,
+                payload={"customer_id": "customer-1", "brand": "Trek Marlin"},
+            )
+        )
+        service.apply(
+            MutationEnvelope(
+                mutation_id=new_id(),
+                entity_type="service_order",
+                entity_id=order_id,
+                operation="create",
+                organization_id="org-1",
+                location_id="loc-1",
+                base_version=None,
+                occurred_at=now,
+                payload={
+                    "customer_id": "customer-1",
+                    "reported_problem": "Cadena saltando",
+                },
+            )
+        )
+        service.apply(
+            MutationEnvelope(
+                mutation_id=new_id(),
+                entity_type="service_order",
+                entity_id=order_id,
+                operation="update",
+                organization_id="org-1",
+                location_id="loc-1",
+                base_version=1,
+                occurred_at=now,
+                payload={"transition": {"action": "start_diagnosis", "actor_id": "user-1"}},
+            )
+        )
+        session.commit()
+
+        page = service.pull_changes(
+            organization_id="org-1", location_id="loc-1", after_cursor=0, limit=100
+        )
+        assert [(item.entity_type, item.operation) for item in page.items] == [
+            ("bicycle", "create"),
+            ("service_order", "create"),
+            ("service_order", "update"),
+        ]
+        bicycle_entry, order_create, order_update = page.items
+        assert bicycle_entry.payload["brand"] == "Trek Marlin"
+        assert order_create.payload["state"] == "INTAKE"
+        assert order_update.payload["state"] == "DIAGNOSIS"
+        assert order_update.entity_version == 2
+        cursors = [item.cursor for item in page.items]
+        assert cursors == sorted(cursors) and len(set(cursors)) == 3
+
+        foreign_tenant = service.pull_changes(
+            organization_id="org-2", location_id="loc-2", after_cursor=0, limit=100
+        )
+        assert foreign_tenant.items == []
+        assert foreign_tenant.next_cursor == 0
+
+        foreign_location = service.pull_changes(
+            organization_id="org-1", location_id="loc-2", after_cursor=0, limit=100
+        )
+        assert foreign_location.items == []
+        assert foreign_location.next_cursor == 0
