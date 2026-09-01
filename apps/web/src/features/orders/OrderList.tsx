@@ -1,5 +1,4 @@
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
-import { Button } from '@ocwp/ui'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
 import { orderActionsFor, type OrderAction } from './state-machine.js'
 
@@ -44,13 +43,14 @@ export function OrderList({ orders, events, onTransition }: OrderListProps) {
             {actions.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {actions.map((action) => (
-                  <Button
+                  <button
                     key={action}
                     type="button"
                     onClick={() => void onTransition(order, action)}
+                    className="min-h-11 rounded-[var(--ocwp-radius-sm)] border border-[var(--ocwp-color-border)] px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-accent)]"
                   >
                     {TRANSITION_ACTION_LABELS[action] ?? action}
-                  </Button>
+                  </button>
                 ))}
               </div>
             ) : (

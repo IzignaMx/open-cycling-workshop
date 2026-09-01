@@ -90,7 +90,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           required
           rows={2}
           value={reportedProblem}
-          onChange={(event) => setReportedProblem(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+            setReportedProblem(event.currentTarget.value)
+          }
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3 py-2"
         />
       </label>
@@ -98,7 +100,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <span className="font-medium">Condición al recibir</span>
         <input
           value={intakeCondition}
-          onChange={(event) => setIntakeCondition(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setIntakeCondition(event.currentTarget.value)
+          }
           className={inputClass}
         />
       </label>
@@ -106,7 +110,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <span className="font-medium">Accesorios</span>
         <input
           value={accessories}
-          onChange={(event) => setAccessories(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setAccessories(event.currentTarget.value)
+          }
           className={inputClass}
         />
       </label>
@@ -114,7 +120,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <span className="font-medium">Prioridad</span>
         <select
           value={priority}
-          onChange={(event) => setPriority(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            setPriority(event.currentTarget.value)
+          }
           className={inputClass}
         >
           <option value="low">Baja</option>
@@ -127,7 +135,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <input
           type="checkbox"
           checked={withBicycle}
-          onChange={(event) => setWithBicycle(event.currentTarget.checked)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setWithBicycle(event.currentTarget.checked)
+          }
           className="size-5"
         />
         <span className="font-medium">Agregar bicicleta</span>
@@ -139,7 +149,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
             <input
               required
               value={brand}
-              onChange={(event) => setBrand(event.currentTarget.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setBrand(event.currentTarget.value)
+              }
               className={inputClass}
             />
           </label>
@@ -147,7 +159,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
             <span className="font-medium">Modelo</span>
             <input
               value={model}
-              onChange={(event) => setModel(event.currentTarget.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setModel(event.currentTarget.value)
+              }
               className={inputClass}
             />
           </label>
