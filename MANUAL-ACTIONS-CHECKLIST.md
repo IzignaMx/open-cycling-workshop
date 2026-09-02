@@ -2,6 +2,53 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+# Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
+
+> **RESUMEN EJECUTIVO DE ACCIONES MANUALES PENDIENTES (2026-09-01).** Todo lo automatizable está probado y en verde (V0.1 completo salvo físico; V0.2 Increment 1 completo; Increment 2 en curso). Lo único que avanza este proyecto ahora requiere manos humanas, en este orden de prioridad:
+
+## 1 · Cerrar V0.1 — Calificación física Tier 1 (ÚNICO bloqueador de release)
+
+- **Ejecutar el protocolo** `docs/11-device-qualification/2026-08-31-tier1-protocol.md`:
+  - **Windows (este equipo)**: pasos W1–W8 (~20 min): login → instalar PWA → offline create → reload offline → reconexión exactly-once (verificar `count(*) = 1` en PG) → conflicto → teclado → reinstalación.
+  - **Android tablet**: pasos A1–A7 (~25 min) con **Opción A recomendada** (`adb reverse tcp:5173 tcp:5173` mantiene localhost como contexto seguro) o B (flag de origen seguro + `docker-compose.tier1.yml`).
+- **Registrar evidencia** en `docs/11-device-qualification/2026-08-31-tier1-results.md` + capturas en `evidence/`.
+- Al entregar resultados: se cierra R01-T035, V0.1 se declara calificado y se archiva el checkpoint de release.
+
+## 2 · Revisiones manuales de accesibilidad (P1, cierran gates de V0.1)
+
+- Teclado-only sobre toda la UI V0.1+V0.2 (login, alta cliente/orden, acciones de orden, Conflict Center).
+- Lector de pantalla: 1 ruta Windows + 1 ruta Android.
+- Contraste (default + branding), reduced-motion cuando exista animación.
+- Touch targets en la tablet (cubierto parcialmente por A3 del protocolo).
+
+## 3 · Observación de almacenamiento (P0 pendiente parcial)
+
+- Presión de cuota IndexedDB (protocolo A6) y **decisión sobre `navigator.storage.persist()`** — hallazgo recurrente; si el desalojo ocurre, abre issue y lo implementamos.
+
+## 4 · Gobernanza (cuando aplique)
+
+- **Segundo custodio** → entonces ajustar protección de `main` (1 aprobación, code-owner reviews, `enforce_admins=true`) y trabajar solo vía PR.
+- Verificar rechazo DCO de un commit sin firmar en rama de prueba (gate hospedado).
+- Revisar visibilidad/owners del repo y administradores de recuperación.
+- Descripciones/topics del repo (sin llamarlo producción antes de V1).
+
+## 5 · Operación (cuando exista el host de destino)
+
+- **Compose fresh-install smoke en host Linux limpio** (primera topología real: LAN o Cloud).
+- DNS real / TLS cuando se pruebe el borde de producción.
+- Re-medir RPO/RTO del drill de backup con volumen realista.
+- Backup encryption para la topología administrada (si aplica).
+- Decidir y documentar rotación de credenciales/secretos del deploy.
+
+## 6 · Limpieza local discrecional (sin urgencia)
+
+- Ramas locales desechables (los permisos del agente bloquean `git branch -D`): `git branch -D feat/inc2-t1-t2-inventory feat/v02-* docs/* feat/e2e-conflict-path ...`
+- Tag `archive/pre-consolidation-2026-08-30` borrable tras validar Actions.
+- Contenedores Docker locales (`ocwp-pg-e2e`, `ocwp-dev-postgres-1`) apagables si no se sigue desarrollando.
+- Ruta de drift: `apps/web/.tmp-*` y `test-results/` ya están gitignored.
+
+> Detalle completo y evidencia histórica de cada ítem: secciones siguientes de este archivo.
+
 ### P0 · Restaurar el repositorio remoto desde el bundle autoritativo
 
 > **Completado el 2026-08-30 por vía alternativa y verificada.** En lugar del bundle binario (cuyo fragmento subido a GitHub estaba truncado), se consolidó desde la carpeta local declarada autoritativa por el propietario, con auditoría previa del remoto (solo staging de rescate: 7 archivos, 0 artefactos, 0 releases, 0 tags; el helper ya estaba versionado localmente).
