@@ -19,7 +19,8 @@ from cycling_workshop.db.base import Base
 required = {
     'organizations', 'locations', 'customers', 'sync_mutation_receipts',
     'sync_changes', 'outbox_events', 'background_jobs', 'bicycles',
-    'service_orders', 'service_order_events',
+    'service_orders', 'service_order_events', 'products',
+    'inventory_movements',
 }
 missing = sorted(required - set(Base.metadata.tables))
 if missing:

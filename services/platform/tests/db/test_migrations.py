@@ -39,3 +39,5 @@ def test_alembic_head_contains_v01_infrastructure_tables(
     assert "bicycles" in tables
     assert "service_orders" in tables
     assert "service_order_events" in tables
+    assert "products" in tables
+    assert "inventory_movements" in tables
