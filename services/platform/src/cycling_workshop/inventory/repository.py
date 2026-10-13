@@ -34,11 +34,15 @@ class SqlAlchemyInventoryRepository:
             )
         )
 
-    def get_product(self, *, product_id: str, organization_id: str) -> Product | None:
+    def get_product(
+        self, *, product_id: str, organization_id: str, for_update: bool = False
+    ) -> Product | None:
         statement: Select[tuple[ProductRecord]] = select(ProductRecord).where(
             ProductRecord.id == product_id,
             ProductRecord.organization_id == organization_id,
         )
+        if for_update:
+            statement = statement.with_for_update()
         record = self._session.scalar(statement)
         if record is None:
             return None
@@ -53,6 +57,43 @@ class SqlAlchemyInventoryRepository:
             updated_at=_as_utc(record.updated_at),
             version=record.version,
         )
+
+    def list_products(
+        self, *, organization_id: str, location_id: str, limit: int, offset: int
+    ) -> list[Product]:
+        statement = (
+            select(ProductRecord)
+            .where(
+                ProductRecord.organization_id == organization_id,
+                ProductRecord.location_id == location_id,
+            )
+            .order_by(ProductRecord.name, ProductRecord.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return [
+            Product(
+                product_id=row.id,
+                organization_id=row.organization_id,
+                location_id=row.location_id,
+                sku=row.sku,
+                name=row.name,
+                unit=row.unit,
+                created_at=_as_utc(row.created_at),
+                updated_at=_as_utc(row.updated_at),
+                version=row.version,
+            )
+            for row in self._session.scalars(statement)
+        ]
+
+    def get_movement(self, *, movement_id: str, organization_id: str) -> InventoryMovement | None:
+        row = self._session.scalar(
+            select(InventoryMovementRecord).where(
+                InventoryMovementRecord.movement_id == movement_id,
+                InventoryMovementRecord.organization_id == organization_id,
+            )
+        )
+        return self._to_domain(row) if row is not None else None
 
     # ledger ---------------------------------------------------------------
 
@@ -74,13 +115,16 @@ class SqlAlchemyInventoryRepository:
         )
         return movement
 
-    def available_quantity(self, *, product_id: str, organization_id: str) -> int:
-        total = self._session.scalar(
-            select(func.coalesce(func.sum(InventoryMovementRecord.quantity), 0)).where(
-                InventoryMovementRecord.product_id == product_id,
-                InventoryMovementRecord.organization_id == organization_id,
-            )
+    def available_quantity(
+        self, *, product_id: str, organization_id: str, location_id: str | None = None
+    ) -> int:
+        statement = select(func.coalesce(func.sum(InventoryMovementRecord.quantity), 0)).where(
+            InventoryMovementRecord.product_id == product_id,
+            InventoryMovementRecord.organization_id == organization_id,
         )
+        if location_id is not None:
+            statement = statement.where(InventoryMovementRecord.location_id == location_id)
+        total = self._session.scalar(statement)
         return int(total or 0)
 
     def list_by_product(
@@ -114,12 +158,12 @@ class SqlAlchemyInventoryRepository:
     def released_reservation_ids(
         self, *, organization_id: str, reference_movement_id: str
     ) -> list[str]:
-        statement = select(InventoryMovementRecord.movement_id).where(
+        statement = select(InventoryMovementRecord.reference_movement_id).where(
             InventoryMovementRecord.organization_id == organization_id,
             InventoryMovementRecord.reference_movement_id == reference_movement_id,
-            InventoryMovementRecord.kind == "RELEASE",
+            InventoryMovementRecord.kind.in_(("RELEASE", "CONSUME")),
         )
-        return list(self._session.scalars(statement))
+        return [value for value in self._session.scalars(statement) if value is not None]
 
     @staticmethod
     def _to_domain(record: InventoryMovementRecord) -> InventoryMovement:
