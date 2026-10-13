@@ -6,11 +6,8 @@ import { buildScopedConflict, syncScopeKey, type SyncScope } from './scope.js'
 import type { ChangeItem, ConflictMutationResult, MutationEnvelope, SyncStore } from './types.js'
 
 function customerFromChange(item: ChangeItem, scope: SyncScope): LocalCustomer | null {
-  if (item.entity_type !== 'customer' || !item.payload) return null
-  if (item.organization_id !== scope.organizationId || item.location_id !== scope.locationId) {
-    throw new Error(`sync change scope mismatch for cursor ${item.cursor}`)
-  }
-  const payload = item.payload
+  if (item.entity_type !== 'customer') return null
+  const payload = requireScope(item, scope, 'customer')
   if (
     typeof payload.customer_id !== 'string' ||
     typeof payload.organization_id !== 'string' ||
@@ -21,12 +18,6 @@ function customerFromChange(item: ChangeItem, scope: SyncScope): LocalCustomer |
     typeof payload.version !== 'number'
   ) {
     throw new Error(`invalid customer change payload for cursor ${item.cursor}`)
-  }
-  if (
-    payload.organization_id !== scope.organizationId ||
-    payload.location_id !== scope.locationId
-  ) {
-    throw new Error(`customer payload scope mismatch for cursor ${item.cursor}`)
   }
   return {
     customer_id: payload.customer_id,
@@ -42,18 +33,21 @@ function customerFromChange(item: ChangeItem, scope: SyncScope): LocalCustomer |
 }
 
 function requireScope(item: ChangeItem, scope: SyncScope, kind: string): Record<string, unknown> {
-  if (item.organization_id !== scope.organizationId || item.location_id !== scope.locationId) {
-    throw new Error(`sync change scope mismatch for cursor ${item.cursor}`)
-  }
   if (!item.payload) {
     throw new Error(`invalid ${kind} change payload for cursor ${item.cursor}`)
+  }
+  if (
+    item.payload.organization_id !== scope.organizationId ||
+    item.payload.location_id !== scope.locationId
+  ) {
+    throw new Error(`${kind} payload scope mismatch for cursor ${item.cursor}`)
   }
   return item.payload
 }
 
 function bicycleFromChange(item: ChangeItem, scope: SyncScope): LocalBicycle | null {
   if (item.entity_type !== 'bicycle') return null
-  const payload = requireScope(item, scope, 'bicycle') as Record<string, unknown>
+  const payload = requireScope(item, scope, 'bicycle')
   if (
     typeof payload.bicycle_id !== 'string' ||
     typeof payload.customer_id !== 'string' ||
@@ -82,7 +76,7 @@ function bicycleFromChange(item: ChangeItem, scope: SyncScope): LocalBicycle | n
 
 function serviceOrderFromChange(item: ChangeItem, scope: SyncScope): LocalServiceOrder | null {
   if (item.entity_type !== 'service_order') return null
-  const payload = requireScope(item, scope, 'service order') as Record<string, unknown>
+  const payload = requireScope(item, scope, 'service order')
   if (
     typeof payload.order_id !== 'string' ||
     typeof payload.customer_id !== 'string' ||
@@ -167,6 +161,14 @@ export class DexieSyncStore implements SyncStore {
       this.database.syncState,
       async () => {
         for (const item of items) {
+          // Validate even unrecognized entities before skipping them: a foreign
+          // change must never consume this scope's durable cursor.
+          if (
+            item.organization_id !== this.#scope.organizationId ||
+            item.location_id !== this.#scope.locationId
+          ) {
+            throw new Error(`sync change scope mismatch for cursor ${item.cursor}`)
+          }
           const customer = customerFromChange(item, this.#scope)
           if (customer) {
             await this.database.customers.put(customer)

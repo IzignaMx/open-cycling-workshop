@@ -332,3 +332,27 @@ authoritative_restore_script:
   test: tests/repository/test_publish_authoritative_bundle.py
   local_bare_remote_restore: passed_hermetic_windows_and_posix
   retained_for: future_integrity_preserving_restores_and_disaster_recovery
+
+# Corrective increment; does not supersede historical release evidence above.
+sync_pull_scope_integrity_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md
+  status: verified
+  requirements: [R01-T020, TC-SYNC-008, OFF-007]
+  implementation_plan_acceptance: v02_workshop_core_task_6_scope_isolation
+  server_restart_gate: TC-SYNC-003_not_proven_by_client_reload_tests
+  change: validate_all_envelopes_and_recognized_payload_scopes_before_durable_cursor_advance
+  core_red: 72_tests_59_passed_13_failed
+  core_green: 72_passed_0_failed
+  local_qualification: partial_21_checks_passed_0_failed_5_blocked
+  python_tests: 176_passed_1_postgresql_skip
+  browser_tests: sync-scope-integrity_spec_two_rollback_reload_recovery_journeys
+  browser_evidence: hosted_9_of_9_passed_including_both_scope_integrity_journeys
+  hosted_ci_run: 38380494341
+  hosted_head: cf756f8d1e08e58d921f4f0a3f6ad05e4322916a
+  hosted_tested_merge: cc537e9ba17f1cd15876ab0d0e88155a347bcb08
+  hosted_tree_equals_head: b9e1da250f6b3ff5a2145d150532dd35f3b27673
+  hosted_qualification: passed_27_checks_zero_blockers_artifact_11803227821
+  hosted_python_tests: 177_passed_zero_skips
+  hosted_security_and_dco: passed
+  independent_review: no_code_defects_traceability_corrections_applied
+  release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
