@@ -356,3 +356,13 @@ sync_pull_scope_integrity_2026_10_13:
   hosted_security_and_dco: passed
   independent_review: no_code_defects_traceability_corrections_applied
   release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
+
+sync_chaos_setup_barrier_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-sync-chaos-setup-barrier.md
+  status: in_progress
+  incident_ci_run: 38426124042
+  incident_job: 115395858982
+  incident: qualification_repeat_expected_three_queued_mutations_received_four_retry_passed
+  regression: held_indexeddb_completion_then_withheld_real_server_ack
+  hosted_red_green: pending
+  release_gates: unchanged

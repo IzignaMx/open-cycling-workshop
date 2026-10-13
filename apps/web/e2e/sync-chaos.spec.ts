@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
 const ORGANIZATION_ID = '00000000-0000-7000-8000-000000000001'
 const LOCATION_ID = '00000000-0000-7000-8000-000000000002'
@@ -288,6 +288,122 @@ async function readCustomerIdByDisplayName(
   )
 }
 
+/** Readiness before constructing the independent three-mutation chaos batch. */
+async function waitForBaselineCustomer(
+  page: Page,
+  _request: APIRequestContext,
+  _token: string,
+  displayName: string,
+  timeout = 10_000,
+): Promise<string> {
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado', {
+    timeout,
+  })
+  const customerId = await readCustomerIdByDisplayName(page, displayName)
+  expect(customerId).toBeTruthy()
+  return customerId!
+}
+
+/** Hold notification of the real committed create, without faking durable data. */
+async function holdCreateCompletion(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const prototype = IDBTransaction.prototype
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'oncomplete')!
+    const gate = { held: false, release: () => {} }
+    Object.assign(window, { baselineCompletionGate: gate })
+    Object.defineProperty(prototype, 'oncomplete', {
+      configurable: true,
+      get: descriptor.get,
+      set(callback: (this: IDBTransaction, event: Event) => void) {
+        descriptor.set!.call(this, function (this: IDBTransaction, event: Event) {
+          if (
+            this.mode === 'readwrite' &&
+            this.objectStoreNames.length === 2 &&
+            this.objectStoreNames.contains('customers') &&
+            this.objectStoreNames.contains('mutationQueue')
+          ) {
+            Object.defineProperty(prototype, 'oncomplete', descriptor)
+            gate.held = true
+            gate.release = () => {
+              gate.release = () => {}
+              callback.call(this, event)
+            }
+          } else {
+            callback.call(this, event)
+          }
+        })
+      },
+    })
+  })
+}
+
+async function releaseCreateCompletion(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const gate = (window as unknown as { baselineCompletionGate: { release(): void } })
+      .baselineCompletionGate
+    gate.release()
+  })
+}
+
+test('baseline setup rejects stale synced state and a withheld create acknowledgement', async ({
+  page,
+  request,
+}) => {
+  await login(page)
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+  const token = await sessionToken(page)
+  await holdCreateCompletion(page)
+
+  let releaseAck = () => {}
+  const ackGate = new Promise<void>((resolve) => {
+    releaseAck = resolve
+  })
+  let ackHeld = false
+  await page.route('**/api/v1/sync/mutations', async (route) => {
+    const response = await route.fetch()
+    expect(response.ok()).toBeTruthy()
+    ackHeld = true
+    await ackGate
+    await route.fulfill({ response })
+  })
+
+  try {
+    await page.getByLabel('Nombre').fill('Cliente Barrera Base')
+    await page.getByRole('button', { name: 'Guardar cliente' }).click()
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { baselineCompletionGate: { held: boolean } }).baselineCompletionGate
+          .held,
+    )
+    // This is the original race window: durable row + create queue entry,
+    // while the label still describes the earlier empty sync run.
+    await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+    await expect(page.getByRole('button', { name: 'Guardando…' })).toBeDisabled()
+    expect(await readCustomerIdByDisplayName(page, 'Cliente Barrera Base')).toBeTruthy()
+    expect(await pendingMutationCount(page)).toBe(1)
+    // A bounded negative readiness probe, not a sleep or an increased timeout.
+    await expect(
+      waitForBaselineCustomer(page, request, token, 'Cliente Barrera Base', 250),
+    ).rejects.toThrow()
+
+    await releaseCreateCompletion(page)
+    await expect(page.getByText('Cliente guardado localmente')).toBeVisible()
+    await expect.poll(() => ackHeld).toBe(true)
+    expect(await pendingMutationCount(page)).toBe(1)
+    await expect(
+      waitForBaselineCustomer(page, request, token, 'Cliente Barrera Base', 250),
+    ).rejects.toThrow()
+
+    releaseAck()
+    await waitForBaselineCustomer(page, request, token, 'Cliente Barrera Base')
+    expect(await pendingMutationCount(page)).toBe(0)
+  } finally {
+    await releaseCreateCompletion(page)
+    releaseAck()
+    await page.unrouteAll({ behavior: 'wait' })
+  }
+})
+
 test('large reconnect batch keeps every valid operation when one mutation conflicts', async ({
   page,
   request,
@@ -302,11 +418,7 @@ test('large reconnect batch keeps every valid operation when one mutation confli
   await page.getByLabel('Nombre').fill('Cliente Lote Base')
   await page.getByLabel('Correo').fill('batch-base@example.test')
   await page.getByRole('button', { name: 'Guardar cliente' }).click()
-  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado', {
-    timeout: 15_000,
-  })
-  const baseCustomerId = await readCustomerIdByDisplayName(page, 'Cliente Lote Base')
-  expect(baseCustomerId).toBeTruthy()
+  const baseCustomerId = await waitForBaselineCustomer(page, request, token, 'Cliente Lote Base')
 
   // Offline: the server moves the base customer forward while the device
   // queues a batch of three mutations, the middle one built on a stale
