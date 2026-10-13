@@ -263,7 +263,11 @@
 - [x] **Concurrent edit conflict from two devices.**
   - Evidence (2026-08-31): `e2e/conflict-path.spec.ts` — online create (v1), remote concurrent update via API while the device is offline, stale local edit queued (base_version 1), reconnect push yields a real server conflict; visible in Conflict Center, mutation leaves the retry queue, device converges to the winning edit and the incident persists across reload.
 - [ ] **Cursor durability across restart.**
-- [ ] **Remote change with wrong tenant/location scope cannot advance local cursor.**
+- [x] **Remote change with wrong tenant/location scope cannot advance local cursor.**
+  - Evidence (2026-10-13): PR #21; 29 new core cases plus two production-PWA
+    rollback/reload/recovery journeys. Hosted CI run 38380494341 passed all nine
+    E2E tests and 27 qualification checks; exact head/merge/tree evidence is in
+    `docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md`.
 - [x] **Large reconnect batch does not lose valid operations when one mutation conflicts.**
   - Evidence (2026-08-31): service-level batch isolation test (`test_sync_api.py`) plus browser chaos — three queued mutations with a stale middle entry reconnect into one push; both independent valid creates apply, the conflict surfaces in the Conflict Center and the queue drains.
 
@@ -325,12 +329,12 @@ Add durable evidence below instead of editing completed checklist history away.
 | 2026-08-31 | R01-T036 browser chaos                 | `e2e/sync-chaos.spec.ts`: triple delivery of one mutation → exactly once (1 feed entry, server v1, queue drained); two injected 503 → bounded backoff (retry-policy, core-tested) → convergence. Suite 4/4 in 19.9 s locally | PR `feat/sync-retry-backoff-browser-chaos`             | closes duplicate/out-of-order/5xx-retry chaos items                                                |
 | 2026-08-31 | Dexie migration + batch isolation      | New `e2e/dexie-migration-persistence.spec.ts` (raw v1 DB → in-place upgrade → preserved queue entry syncs) and large-batch conflict isolation (service test + browser chaos). Local suite 6/6 in 26.7 s; pytest 100/100      | PR `feat/dexie-migration-and-batch-isolation`          | Dexie item flips to checked once this PR's hosted CI is green                                      |
 
-## 2026-10-13 · Scoped pull integrity follow-up
+## 2026-10-13 · Scoped pull integrity evidence
 
-- [ ] Verify the draft PR's hosted `sync-scope-integrity.spec.ts` journeys on its
-      exact head commit before closing the wrong-tenant/location cursor gate above.
-      The correction validates every envelope and all recognized payload scopes;
-      72 core tests pass after a 13-failure regression run. Local table fakes do not
-      prove IndexedDB rollback. Local Chromium navigation is policy-blocked, so
-      browser rollback/reload/recovery evidence remains pending hosted CI.
-      See `docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md`.
+- [x] Hosted `sync-scope-integrity.spec.ts` journeys verified for PR #21.
+      CI run 38380494341: 177 Python tests, 72 frontend tests, nine browser journeys,
+      and 27 qualification checks passed. Both foreign-payload cases prove atomic
+      rollback and durable client reload/recovery. Head, synthetic test merge, tree,
+      and artifact IDs are recorded in the increment specification. The local
+      Chromium policy block was respected. Physical-device qualification and
+      TC-SYNC-003 server-restart evidence remain separate, unresolved gates.

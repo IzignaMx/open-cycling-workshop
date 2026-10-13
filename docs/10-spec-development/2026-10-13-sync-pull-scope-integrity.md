@@ -55,6 +55,28 @@ an enforcement fix for the accepted Dexie/scoped-sync architecture.
 Local browser execution is blocked by the managed Chromium URLBlocklist;
 PostgreSQL integration is unavailable in this workspace (no server or Docker).
 Do not interpret local unit/static/build checks as browser/PostgreSQL evidence.
-The draft PR's hosted CI must validate the browser journey on the exact head.
+Hosted CI supplied the missing browser/PostgreSQL proof below.
 Physical Windows/Android, storage pressure, and broader release qualification
 remain separate gates in the manual checklist.
+
+## Hosted verification
+
+[CI run 38380494341](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38380494341)
+passed for PR #21 head `cf756f8d1e08e58d921f4f0a3f6ad05e4322916a`.
+GitHub tested its synthetic PR merge `cc537e9ba17f1cd15876ab0d0e88155a347bcb08`;
+the merge tree matches that head exactly (`b9e1da250f6b3ff5a2145d150532dd35f3b27673`).
+No merge into main was performed.
+
+- 177 Python tests passed with PostgreSQL 18.4; zero skips.
+- 72 frontend core tests passed.
+- All nine Playwright journeys passed, including both new scope-integrity cases;
+  the qualification verifier repeated the nine journeys successfully.
+- Hosted qualification: 27 checks passed, zero blockers, status `passed`.
+- Qualification artifact: `v0.1-qualification`, ID `11803227821`.
+- Associated Security and DCO workflows passed.
+- Independent review found no implementation defects; normative traceability
+  corrections were applied in the subsequent documentation-only commit.
+
+The fix is verified for the scoped-pull acceptance above. These automated results
+do not close physical-device gates or establish TC-SYNC-003 server-restart proof.
+Future changes still require their own exact-head CI; the PR records latest runs.
