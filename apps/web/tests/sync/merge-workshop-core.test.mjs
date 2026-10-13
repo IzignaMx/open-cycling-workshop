@@ -166,3 +166,71 @@ test('mergeAndAdvance rejects a foreign-scope order payload before advancing', a
   const orders = await database.serviceOrders.toArray()
   assert.equal(orders.length, 0)
 })
+
+function scopedChange(entityType, cursor = 6) {
+  return {
+    cursor,
+    entity_type: entityType,
+    entity_id: `${entityType}-scope-test`,
+    organization_id: scope.organizationId,
+    location_id: scope.locationId,
+    payload: {
+      customer_id: 'customer-scope-test',
+      bicycle_id: 'bicycle-scope-test',
+      order_id: 'service_order-scope-test',
+      organization_id: scope.organizationId,
+      location_id: scope.locationId,
+      display_name: 'Scope test',
+      brand: 'Scope test',
+      state: 'INTAKE',
+      reported_problem: 'Scope test',
+      created_at: '2026-09-01T10:00:00Z',
+      updated_at: '2026-09-01T10:00:00Z',
+      version: 1,
+    },
+  }
+}
+
+for (const entityType of ['customer', 'bicycle', 'service_order']) {
+  for (const layer of ['envelope', 'payload']) {
+    for (const field of ['organization_id', 'location_id']) {
+      for (const invalid of ['foreign-scope', undefined]) {
+        test(`merge rejects ${entityType} ${layer} ${field}=${invalid} without advancing`, async () => {
+          const database = new FakeDatabase()
+          const syncStore = store(database)
+          await syncStore.mergeAndAdvance([], 5)
+          const change = scopedChange(entityType)
+          const target = layer === 'payload' ? change.payload : change
+          target[field] = invalid
+
+          await assert.rejects(() => syncStore.mergeAndAdvance([change], 6), /scope mismatch/)
+          assert.equal(await syncStore.getCursor(), 5)
+          assert.deepEqual(await database.customers.toArray(), [])
+          assert.deepEqual(await database.bicycles.toArray(), [])
+          assert.deepEqual(await database.serviceOrders.toArray(), [])
+        })
+      }
+    }
+  }
+  test(`merge rejects missing ${entityType} payload without advancing`, async () => {
+    const database = new FakeDatabase()
+    const syncStore = store(database)
+    await syncStore.mergeAndAdvance([], 5)
+    const change = scopedChange(entityType)
+    delete change.payload
+    await assert.rejects(() => syncStore.mergeAndAdvance([change], 6), /invalid .* payload/)
+    assert.equal(await syncStore.getCursor(), 5)
+  })
+}
+
+for (const field of ['organization_id', 'location_id']) {
+  test(`merge rejects foreign ${field} even for an unknown entity`, async () => {
+    const database = new FakeDatabase()
+    const syncStore = store(database)
+    await syncStore.mergeAndAdvance([], 5)
+    const change = scopedChange('future_entity')
+    change[field] = 'foreign-scope'
+    await assert.rejects(() => syncStore.mergeAndAdvance([change], 6), /scope mismatch/)
+    assert.equal(await syncStore.getCursor(), 5)
+  })
+}
