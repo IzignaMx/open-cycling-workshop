@@ -324,3 +324,13 @@ Add durable evidence below instead of editing completed checklist history away.
 | 2026-08-31 | R01-T021 browser conflict-path         | New `e2e/conflict-path.spec.ts` green locally with the golden slice (2/2, 9.7 s) and on hosted CI: real stale-base_version conflict → visible Conflict Center → queue drain → convergence → persistence after reload         | `feat/e2e-conflict-path` PR                            | first explicit hosted browser conflict evidence                                                    |
 | 2026-08-31 | R01-T036 browser chaos                 | `e2e/sync-chaos.spec.ts`: triple delivery of one mutation → exactly once (1 feed entry, server v1, queue drained); two injected 503 → bounded backoff (retry-policy, core-tested) → convergence. Suite 4/4 in 19.9 s locally | PR `feat/sync-retry-backoff-browser-chaos`             | closes duplicate/out-of-order/5xx-retry chaos items                                                |
 | 2026-08-31 | Dexie migration + batch isolation      | New `e2e/dexie-migration-persistence.spec.ts` (raw v1 DB → in-place upgrade → preserved queue entry syncs) and large-batch conflict isolation (service test + browser chaos). Local suite 6/6 in 26.7 s; pytest 100/100      | PR `feat/dexie-migration-and-batch-isolation`          | Dexie item flips to checked once this PR's hosted CI is green                                      |
+
+## 2026-10-13 · Scoped pull integrity follow-up
+
+- [ ] Verify the draft PR's hosted `sync-scope-integrity.spec.ts` journeys on its
+      exact head commit before closing the wrong-tenant/location cursor gate above.
+      The correction validates every envelope and all recognized payload scopes;
+      72 core tests pass after a 13-failure regression run. Local table fakes do not
+      prove IndexedDB rollback. Local Chromium navigation is policy-blocked, so
+      browser rollback/reload/recovery evidence remains pending hosted CI.
+      See `docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md`.

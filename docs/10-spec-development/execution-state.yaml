@@ -332,3 +332,17 @@ authoritative_restore_script:
   test: tests/repository/test_publish_authoritative_bundle.py
   local_bare_remote_restore: passed_hermetic_windows_and_posix
   retained_for: future_integrity_preserving_restores_and_disaster_recovery
+
+# Corrective increment; does not supersede historical release evidence above.
+sync_pull_scope_integrity_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md
+  status: implemented_pending_evidence
+  requirements: [R01-T020, R02-T006, TC-SYNC-008, OFF-007, TC-SYNC-003]
+  change: validate_all_envelopes_and_recognized_payload_scopes_before_durable_cursor_advance
+  core_red: 72_tests_59_passed_13_failed
+  core_green: 72_passed_0_failed
+  local_qualification: partial_21_checks_passed_0_failed_5_blocked
+  python_tests: 176_passed_1_postgresql_skip
+  browser_tests: sync-scope-integrity_spec_two_rollback_reload_recovery_journeys
+  browser_evidence: pending_hosted_ci_local_managed_chromium_navigation_blocked
+  release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
