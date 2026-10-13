@@ -3,10 +3,16 @@
 ## Specification and acceptance criteria
 
 This corrective increment implements the existing R01-T020 durable client merge
-and R02-T006 scope-isolation contracts. It does not open a new release scope.
+contract and the Workshop Core implementation plan's Task 6 scope-isolation
+acceptance criterion (`docs/superpowers/plans/2026-08-31-v0.2-workshop-core.md`).
+It does not open a new release scope.
 Normative sources: Master Agent Loop v0.2 §11; Technical Architecture v0.2 sync
 protocol; Security/Privacy §§9–10; QA TC-SYNC-008 (incompatible payload without
-local loss) and OFF-007 / TC-SYNC-003 (durable restart/resume).
+local loss) and OFF-007 (local persistence). TC-SYNC-003 requires a **server**
+restart between batches and is not proven by these client-reload journeys.
+The normative R02-T006 concerns offline intake photographs; the historical
+execution-state mapping uses that ID differently and is not a normative source
+for this increment.
 
 1. Every change envelope must match the active organization and location,
    including entity types the client does not yet recognize.

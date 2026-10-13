@@ -337,7 +337,9 @@ authoritative_restore_script:
 sync_pull_scope_integrity_2026_10_13:
   document: docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md
   status: implemented_pending_evidence
-  requirements: [R01-T020, R02-T006, TC-SYNC-008, OFF-007, TC-SYNC-003]
+  requirements: [R01-T020, TC-SYNC-008, OFF-007]
+  implementation_plan_acceptance: v02_workshop_core_task_6_scope_isolation
+  server_restart_gate: TC-SYNC-003_not_proven_by_client_reload_tests
   change: validate_all_envelopes_and_recognized_payload_scopes_before_durable_cursor_advance
   core_red: 72_tests_59_passed_13_failed
   core_green: 72_passed_0_failed
