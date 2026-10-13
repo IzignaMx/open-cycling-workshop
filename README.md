@@ -4,6 +4,14 @@ Open source, local-first, offline-first operating platform for bicycle workshops
 
 > Status: **V0.1 foundations proven (hosted CI/Security green, all automatable gates) · V0.2 Workshop Core increment 1 complete: bicycles + service orders with offline lifecycle, conflict convergence and E2E coverage · remaining: physical device qualification (Tier 1) and V0.1 manual reviews**. This repository is not yet a production release.
 
+## V0.2 Increment 2 progress
+
+Task 4 adds the [pure quote domain](docs/10-spec-development/2026-10-13-quote-domain.md):
+integer-only labor/part/tax/discount calculations and immutable version history.
+Quote persistence, authorization, API, sync and UI remain unimplemented.
+Inventory API Task 3 is a separate pending draft. See [Unreleased changes](CHANGELOG.md);
+development versions and existing physical/manual release gates are unchanged.
+
 ## Principles
 
 - Offline First and Local First
@@ -50,7 +58,7 @@ Run the locally available V0.1 verification suite:
 python scripts/ci/verify_v01.py --allow-blocked
 ```
 
-The verifier distinguishes failures from environment-dependent blockers. In this execution environment the Python suite, real Uvicorn HTTP smoke, TypeScript core tests, generated API client tests, fallback frontend typecheck, repository contract and OpenAPI drift checks can run. Docker, PostgreSQL, the npm registry, Ruff, mypy and browser navigation are unavailable or policy-blocked here, so their gates intentionally remain incomplete.
+The verifier distinguishes failures from environment-dependent blockers. In this execution environment the Python suite, real Uvicorn HTTP smoke, TypeScript core tests, generated API client tests, fallback frontend typecheck, repository contract and OpenAPI drift checks can run. Frozen Python/TypeScript installs, Ruff, mypy, frontend checks and the production PWA build can run. Docker/PostgreSQL runtime and browser navigation remain unavailable or policy-blocked locally; runtime evidence is separately tracked in hosted CI. Physical qualification remains manual.
 
 ## Development commands
 

@@ -338,3 +338,13 @@ Add durable evidence below instead of editing completed checklist history away.
       and artifact IDs are recorded in the increment specification. The local
       Chromium policy block was respected. Physical-device qualification and
       TC-SYNC-003 server-restart evidence remain separate, unresolved gates.
+
+## 2026-10-13 · Quote domain Task 4
+
+- Quote arithmetic and immutable revisions have 106 focused tests passing locally;
+  [Task 4 evidence](docs/10-spec-development/2026-10-13-quote-domain.md) tracks final
+  qualification and hosted CI. This is a pure-domain increment, not a working
+  quote workflow or a qualified release.
+- No new operator action is required for the pure calculations. PostgreSQL,
+  browser, physical-device and other existing manual release gates remain open
+  where their own evidence is absent. Inventory API Task 3 is a separate draft.
