@@ -598,3 +598,75 @@ def test_cli_redacts_failures_and_uses_separate_target_secret(
     assert restore.call_args.kwargs["confirm_empty_target"] is True
     out = capsys.readouterr()
     assert "private-synthetic" not in out.out + out.err
+
+
+def test_postgres_directory_is_durable_before_outer_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    directory = tmp_path / "durable-generation"
+    nested = directory / "postgres"
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = "00000003-00000001-1"
+    monkeypatch.setattr(postgres, "_database_metadata", lambda connection: metadata())
+    monkeypatch.setattr(branding, "_snapshot_metadata", lambda connection: snapshot())
+    events: list[str] = []
+    original_fsync, original_publish = os.fsync, branding._publish_manifest
+
+    def fsync(descriptor: int) -> None:
+        if nested.exists() and os.path.samestat(os.fstat(descriptor), nested.stat()):
+            assert (nested / postgres.DUMP_NAME).is_file()
+            assert (nested / postgres.MANIFEST_NAME).is_file()
+            events.append("postgres-directory-durable")
+        original_fsync(descriptor)
+
+    def publish(path: Path, manifest: dict[str, object]) -> None:
+        events.append("outer-completion")
+        assert events == ["postgres-directory-durable", "outer-completion"]
+        original_publish(path, manifest)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    monkeypatch.setattr(branding, "_publish_manifest", publish)
+    branding.create_branding_bundle(
+        "postgresql://user@localhost/source",
+        directory,
+        asset_root=tmp_path / "assets",
+        runner=Runner(),
+        engine_factory=lambda *args, **kwargs: engine,
+    )
+    assert events == ["postgres-directory-durable", "outer-completion"]
+
+
+def test_failed_postgres_directory_fsync_never_publishes_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    directory = tmp_path / "failed-durability"
+    nested = directory / "postgres"
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = "00000003-00000001-1"
+    monkeypatch.setattr(postgres, "_database_metadata", lambda connection: metadata())
+    monkeypatch.setattr(branding, "_snapshot_metadata", lambda connection: snapshot())
+    original_fsync = os.fsync
+
+    def fsync(descriptor: int) -> None:
+        if nested.exists() and os.path.samestat(os.fstat(descriptor), nested.stat()):
+            raise OSError("synthetic directory durability failure")
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    with pytest.raises(postgres.BackupError):
+        branding.create_branding_bundle(
+            "postgresql://user@localhost/source",
+            directory,
+            asset_root=tmp_path / "assets",
+            runner=Runner(),
+            engine_factory=lambda *args, **kwargs: engine,
+        )
+    assert not (directory / branding.MANIFEST_NAME).exists()

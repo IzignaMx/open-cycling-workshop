@@ -377,6 +377,10 @@ def create_branding_bundle(
             "restore_tested": False,
             "excludes": EXCLUDES,
         }
+        # Nested dump/manifest files are fsynced by the PostgreSQL tool, but its
+        # directory entries must also be durable before the outer completion marker.
+        with _directory(directory / "postgres") as nested_directory:
+            os.fsync(nested_directory)
         _publish_manifest(directory, manifest)
     except postgres.BackupError:
         raise
