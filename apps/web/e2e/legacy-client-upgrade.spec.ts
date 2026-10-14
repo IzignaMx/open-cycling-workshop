@@ -119,10 +119,32 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   await expect(old.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible()
   expect(await rawDatabase(old)).toEqual(first)
   const refusedProtocol = old.waitForResponse(
-    (r) => r.url().endsWith('/api/v1/sync/mutations') && r.status() === 409,
+    (r) =>
+      r.url() === `${BASE}/api/v1/sync/mutations` &&
+      r.request().method() === 'POST' &&
+      r.status() === 409,
   )
   await login(old)
-  expect((await (await refusedProtocol).json()).error.code).toBe('client_upgrade_required')
+  const protocolRefusal = await refusedProtocol
+  const requestId = protocolRefusal.headers()['x-request-id']
+  expect(requestId).toMatch(/^req-[0-9a-f]{32}$/)
+  // The exact old transport never consumes error bodies. Read only the proxy's
+  // passive observation of this same response; do not replay the mutation or
+  // alter the historical App/SW to make a browser body observer complete.
+  await expect
+    .poll(async () => {
+      const observed = await context.request.get(`${BASE}/__fixture/refusal/${requestId}`)
+      if (observed.status() === 404) return null
+      expect(observed.status()).toBe(200)
+      return observed.json()
+    })
+    .toEqual({
+      requestId,
+      method: protocolRefusal.request().method(),
+      path: new URL(protocolRefusal.url()).pathname,
+      status: protocolRefusal.status(),
+      code: 'client_upgrade_required',
+    })
   await old.route('**/api/**', (route) => route.abort())
   const preserved = await rawDatabase(old)
   expect(preserved).toEqual(first)
