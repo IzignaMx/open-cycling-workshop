@@ -229,6 +229,7 @@
   - Evidence (2026-08-31): green on push `d60ed4e`, run 33356009981 — includes PostgreSQL 18.4 service, full static analysis, production PWA build, Playwright golden slice and the qualification verifier.
 - [x] **Run `.github/workflows/security.yml` manually once after repository consolidation.**
   - Evidence: green on push `d60ed4e`, run 33356010020 — gitleaks (pinned image v8.30.1), REUSE 216/216, pip-audit, Trivy 0.63.0 with zero CRITICAL/HIGH.
+  - Coverage qualification (2026-10-14): this preserves the historical workflow conclusion. PR38 later demonstrated that a green badge can conceal zero-history Gitleaks coverage and an audit without project input. Actual history/locked-project coverage requires separate current evidence; no assertion is made that the older run had the same specific failure.
 - [x] **Download and inspect `v0.1-qualification.json`.**
   - Evidence: schema 2, `ci: true`, 26/26 checks pass, overall `partial` only on environment/manual gates (psql client, IndexedDB 100k benchmark, physical devices).
 - [x] **Ensure the qualification artifact records the exact Git commit SHA and runtime versions.**

@@ -72,8 +72,9 @@ assertion in `467fd84` removes its newly introduced optional-index typing
 observation without relaxing preservation assertions. Separate focused results
 overlap and must not be summed with the aggregate.
 
-The final documentation/publication head receives its own aggregate artifact;
-its SHA must not be substituted for the source checkpoint above. Hosted CI and
+The attempted final documentation-head aggregate was interrupted and produced
+no completed artifact. Its SHA must not be substituted for the source checkpoint
+above; the source checkpoint remains the recorded local aggregate evidence. Hosted CI and
 actual screenshot inspection must be tied to the published candidate tree.
 Configured types pass; an exploratory E2E compile with both optional/index
 strictness flags exposes pre-existing test diagnostics, so it is not claimed
@@ -138,3 +139,42 @@ restore over existing data. Follow the
 native old-SW/reconnect/restore evidence, actual screenshot inspection and
 existing physical/accessibility/recovery gates remain separate. Independent
 source review is closed; it does not substitute for those runtime gates.
+
+## First hosted candidate and reviewed corrections
+
+PR38 published head `b9da73fa7c764b7a3592688db7199e77457e44a0`
+(tree `0b5bd4e399dd577b879f2f2a8c7bf524f54cccc6`) reached genuine
+floor1 Docker/browser execution. Runtime run
+[38611518026](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38611518026)
+failed during `offline_create_reload` after **six of eleven checks**. Its
+artifact `11918391432` was downloaded and ZIP SHA-256 verified as
+`1bf787bdb0c065cd9cb48d96abff1c851599180c57f73d34487f851a6cbf9673`.
+All three ARM64 cross-builds passed, but restore and the remaining runtime
+checks were not reached. No physical ARM runtime evidence is implied.
+
+The safe failure envelope did not identify the individual offline assertion.
+The reviewed diagnostic correction adds fourteen fixed, content-free subphase
+labels; removing only label assignments leaves the browser script byte-identical.
+Every assertion, timeout, operation order and redaction rule is preserved. This
+is improved diagnosis, not a claimed fix of the underlying offline failure.
+
+A separate real floor1 route probe demonstrated that captured logout-all omitted
+its required write-protocol header: HTTP409, unchanged session version1, and the
+old token still valid. The minimal correction sends protocol1 and independently
+proves HTTP204, session version2 and old-token HTTP401 through the compiled
+production transport and actual FastAPI routes with synthetic SQLite data.
+This is route evidence, not PostgreSQL concurrency or browser evidence.
+
+Both corrections are independently reviewed and integrated at local
+`501bb689db21aa8828f72ee1e7477e7f3909376c` (tree
+`f1afe1b859ae144dc245f6c687f222f31de4f68e`). Focused combined checks passed
+477 frontend core tests, 23 runtime Python tests, web/offline types, touched
+ESLint/Prettier and whitespace checks. These overlap earlier suites and are not
+an additional complete aggregate. Exact corrected-head hosted qualification,
+underlying offline diagnosis and actual screenshot inspection remain required.
+
+The first Security workflow's green conclusion did not establish scan coverage:
+Gitleaks logged a Git ownership error and zero scanned commits/bytes; pip-audit
+was not explicitly supplied the project graph. This coverage defect is tracked
+in the separate security-scan correction; no green badge substitutes for actual
+history and locked-dependency coverage evidence.
