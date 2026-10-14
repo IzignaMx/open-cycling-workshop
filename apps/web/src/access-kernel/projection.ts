@@ -3,6 +3,7 @@ import type { KernelDatabase } from './database.js'
 import {
   entityCapability,
   operationIntact,
+  operationProvenance,
   requireCapability,
   validateProjection,
 } from './operations.js'
@@ -20,6 +21,7 @@ export const heldDependencyStates = new Set([
   'held_dependency',
   'held_integrity',
   'held_retry',
+  'held_recovery',
 ])
 
 async function dependenciesVisible(
@@ -52,6 +54,7 @@ async function dependenciesVisible(
         !parent ||
         !delivery ||
         !operationIntact(parent) ||
+        !operationProvenance(parent, context) ||
         parent.principalKey !== operation.principalKey ||
         parent.locationId !== operation.locationId ||
         parent.localSequence >= child.localSequence ||
@@ -122,9 +125,14 @@ export async function readProjection(
     )
       throw new Error('Invalid applied projection metadata')
     const operation = await load(applied)
-    optimistic = operation.optimistic
-    optimisticStatus = 'applied_awaiting_projection'
-    overlaySequence = operation.localSequence
+    if (
+      operationProvenance(operation, context) &&
+      (await dependenciesVisible(db, operation, context))
+    ) {
+      optimistic = operation.optimistic
+      optimisticStatus = 'applied_awaiting_projection'
+      overlaySequence = operation.localSequence
+    }
   }
   const blocked = await db.operationDelivery
     .where('[principalKey+locationId+entityType+entityId+blocked+localSequence]')
@@ -146,7 +154,10 @@ export async function readProjection(
       for (const delivery of page) {
         if (!replayableStates.has(delivery.state) && delivery.state !== 'inflight') continue
         const operation = await load(delivery)
-        if (await dependenciesVisible(db, operation, context)) {
+        if (
+          operationProvenance(operation, context) &&
+          (await dependenciesVisible(db, operation, context))
+        ) {
           optimistic = operation.optimistic
           optimisticStatus = 'pending'
           found = true

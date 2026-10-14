@@ -212,7 +212,12 @@ test('B incarnation rotation refuses completed partition reuse while preserving 
   assert.equal(next.state, 'BASELINE_REQUIRED')
   assert.notEqual(next.ticket.partitionId, first.ticket.partitionId)
   assert.deepEqual(await db.accessContexts.get(first.ticket.partitionId), before)
-  assert.deepEqual((await db.cachePartitions.get(first.ticket.partitionId)).baseline, baseline)
+  // Increment C rebinds only the active owner on equivalent verification; immutable
+  // origin and initial start/completion evidence remain unchanged through rotation.
+  assert.deepEqual((await db.cachePartitions.get(first.ticket.partitionId)).baseline, {
+    ...baseline,
+    owner: same.ticket,
+  })
 })
 
 test('B rejects internally consistent historical completion with unknown provenance or old policy', () => {

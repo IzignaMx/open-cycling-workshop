@@ -1,4 +1,5 @@
 import type { EntityType, MutationResult } from '../sync/types.js'
+import { isDatasetIncarnation } from './context.js'
 import type { LocalCommand, OwnedOperation, VerifiedAccessContext } from './types.js'
 
 /** Reject non-JSON values instead of silently dropping undefined, NaN, dates or prototypes. */
@@ -57,6 +58,22 @@ export function validateProjection(
 }
 export function validateCommand(command: LocalCommand, context: VerifiedAccessContext): string {
   const envelope = command.envelope
+  const fields = [
+    'mutation_id',
+    'entity_type',
+    'entity_id',
+    'operation',
+    'organization_id',
+    'location_id',
+    'base_version',
+    'occurred_at',
+    'payload',
+  ]
+  if (
+    Object.keys(envelope).length !== fields.length ||
+    fields.some((key) => !Object.hasOwn(envelope, key))
+  )
+    throw new Error('Expected exact wire envelope')
   const canonical = canonicalJson(envelope)
   requireCapability(context, entityCapability(envelope.entity_type, 'write'))
   if (
@@ -76,6 +93,10 @@ export function validateCommand(command: LocalCommand, context: VerifiedAccessCo
   if (command.optimistic.version !== (envelope.base_version ?? 0) + 1)
     throw new Error('Optimistic command version mismatch')
   if (
+    !Array.isArray(command.dependsOn) ||
+    command.dependsOn.length > 100 ||
+    !Array.isArray(command.localEvents) ||
+    command.localEvents.length > 100 ||
     new Set(command.dependsOn).size !== command.dependsOn.length ||
     command.dependsOn.some((id) => typeof id !== 'string' || !id || id === envelope.mutation_id)
   )
@@ -92,6 +113,15 @@ export function operationIntact(operation: OwnedOperation): boolean {
     envelope.entity_id === operation.entityId &&
     envelope.organization_id === operation.organizationId &&
     envelope.location_id === operation.locationId
+  )
+}
+export function operationProvenance(
+  operation: OwnedOperation,
+  context: VerifiedAccessContext,
+): boolean {
+  return (
+    isDatasetIncarnation(operation.authoredDatasetIncarnation) &&
+    operation.authoredDatasetIncarnation === context.datasetIncarnation
   )
 }
 export function validateResults(
