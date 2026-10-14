@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Branding qualification setup and ARM diagnostics
+
+- Prepare and validate the private artifact parent before the real recovery
+  fixtures run on a clean checkout; retain both required restore proofs.
+- Preserve the failed QEMU qualifying attempt and add bounded timeout, exit, CPU
+  and separately labelled phase diagnostics. Production decoder limits and
+  qualification outcomes are unchanged.
+
 ## Unreleased · Shared workshop branding
 
 - Add independently authorized per-workshop name, curated palette and bounded

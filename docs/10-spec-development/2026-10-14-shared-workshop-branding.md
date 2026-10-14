@@ -131,3 +131,43 @@ client/server tools, and managed Chromium navigation restrictions. No browser
 policy bypass was attempted. Hosted exact-source tests, actual screenshot review,
 physical Windows/Android, screen readers, glare and realistic recovery capacity
 remain open. Public contacts and profile interchange remain follow-on scope.
+
+## First hosted candidate and bounded corrections
+
+The initial draft [PR40](https://github.com/IzignaMx/open-cycling-workshop/pull/40)
+published head `2813dc7c98b31092bb597bbe543a41dccf75ded5`. Its tested merge
+`eb4a31b55af4ef1a698daf58762da41c01b8b78b` has tree
+`416f0737d677b2c810af7be302facee03fe9340e`, identical to the local implementation
+checkpoint. This run provides partial evidence, not a passing candidate:
+
+- [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38655209041)
+  passed: 248 content commits, 12,147,729 bytes, 41 active packages, zero findings
+  and seven canaries.
+- [Disposable runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38655208868)
+  passed its original checks and actual named-volume API save/read, source restart,
+  database-plus-assets restore, restored restart, exact profile/byte comparison
+  and stale-token refusal.
+- The actual loaded ARM64 image ran under QEMU, but the decoder qualifying attempt
+  failed with `decoder_unavailable_under_emulation` after 2.009593 seconds. Its
+  unchanged wall limit is two seconds. This coarse result does not distinguish
+  cold startup, imports, decode, resource-limit refusal or signal exit. ARM runtime
+  qualification remains failed; native Raspberry behavior is not established.
+- [CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38655209127)
+  passed 2,140 Python tests with fourteen explicit skips. Both dedicated PG18
+  recovery cases then failed in pytest fixture setup because the clean checkout
+  lacked the parent `artifacts` directory. The clients correctly reported 18.4;
+  neither recovery scenario reached its assertions.
+- Consequently, direct kernel and browser steps were skipped. The independent
+  aggregate passed 25 of 26 controls; browser journeys failed before launch because
+  their skipped install step left Chromium absent. The downloaded artifact has 125
+  missing-executable contexts across 63 cases and no PNG captures. These are setup
+  failures, not executed UI or visual qualification.
+
+The correction prepares only the artifact parent, validates its ownership and
+ancestor chain, preserves existing modes and refuses unsafe parents or a
+substituted basetemp before pytest cleanup. The two-proof validator is unchanged.
+The ARM probe now retains original-attempt timeout/exit/spawn/CPU evidence and may
+run one explicitly supporting phase diagnostic with the same bounds. Instrumented
+second-child timing cannot prove the original bottleneck; its outcome cannot
+replace the original failure or exit status. Neither change edits production
+decoder limits or recovery authority. A new exact-source hosted run is required.
