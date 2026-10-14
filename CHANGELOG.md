@@ -41,6 +41,16 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Security
 
+- Migration test setup excludes ambient application URLs and secret-file
+  fallbacks. PostgreSQL infrastructure tests validate dedicated loopback targets
+  and pin the raw test URL during Alembic execution; no runtime resolver behavior
+  changed. No-network regressions cover target isolation and redacted rejection.
+
+- Sync pulls enforce the authenticated location when no location is requested
+  and filter each known entity by its read capability before pagination. Unknown
+  feed types are denied by default; see the
+  [scope and cursor decision](docs/02-technical-architecture/2026-10-14-sync-read-authorization.md).
+
 - Inventory commands derive actor/organization/location server-side and reject
   client overrides. Canonical Unicode SKU lengths, bounded pagination and NUL
   text validation prevent malformed requests from becoming storage errors.

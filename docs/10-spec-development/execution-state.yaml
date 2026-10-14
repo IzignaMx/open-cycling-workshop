@@ -404,8 +404,37 @@ inventory_quote_integration_2026_10_14:
   quote_migration_reserved: 0008
   release_gates: unchanged
 
+sync_read_authorization_2026_10_14:
+  document: docs/10-spec-development/2026-10-14-sync-read-authorization.md
+  adr: docs/02-technical-architecture/2026-10-14-sync-read-authorization.md
+  status: implemented_pending_evidence
+  requirements: [FR-IAM-004, SEC-002]
+  base_commit: 98394826884020d9de2498cab551120087dd5334
+  scope: server_pull_effective_location_and_entity_read_capability_filter_before_pagination
+  regression_red: 13_failed_3_passed
+  regression_green: 16_passed
+  focused_sync_tests: 36_passed
+  python_suite: 492_passed_8_postgresql_skips
+  static_checks: ruff_lint_format_and_mypy_69_files_passed
+  api_contracts: openapi_and_typescript_unchanged_checks_passed
+  independent_review: no_implementation_defects_platform_446_passed_8_postgresql_skips
+  local_qualification: partial_21_checks_passed_zero_failures_five_environment_blockers
+  frontend_core_tests: 72_passed
+  api_client_tests: 1_passed
+  production_pwa_build: passed
+  hosted_verified_checkpoint: head_0a9c935_ci_38545079024_500_python_27_checks_passed
+  reconciliation_base: 0342799bbdbebdcb6f7c692e398ae8b512979fb7
+  hosted_verification: final_reconciled_head_ci_pending
+  test_target_prerequisite: ambient_database_url_file_isolation_and_validated_postgres_target_pin
+  test_target_regression: no_network_red_18_failed_1_passed_then_green_19_passed
+  test_target_combined_python: 577_passed_9_live_postgresql_skips
+  test_target_static_checks: ruff_lint_format_and_touched_docs_prettier_passed
+  test_target_runtime_resolver: unchanged_actual_postgres_migration_not_run_locally
+  follow_up: authorization_changes_need_session_revocation_and_scoped_resnapshot_without_pending_mutation_loss
+  release_gates: unchanged
+
 local_workshop_mvp_2026_10_14:
-  status: implemented_pending_hosted_qualification
+  status: merged_hosted_verified_physical_acceptance_pending
   baseline: b1df504bfd7d7050ee915df0bd43c55d19811a3f
   plan: docs/10-spec-development/2026-10-14-local-workshop-mvp.md
   adr: docs/02-technical-architecture/2026-10-14-portable-local-runtime.md
@@ -419,7 +448,8 @@ local_workshop_mvp_2026_10_14:
   frontend_core_tests: 74_passed
   local_qualification: 21_passed_0_failed_5_environment_blockers
   independent_review: complete_no_unresolved_findings_after_safety_fixes
-  qualification: pending_combined_final_tree_and_hosted_runtime
+  qualification: head_4d95527_ci_38546710635_27_checks_and_runtime_38546710553_11_checks_passed
+  merged_main: 0342799bbdbebdcb6f7c692e398ae8b512979fb7
   release: development_versions_retained_no_production_readiness_claim
 
 local_workshop_mvp_first_hosted_2026_10_14:
@@ -431,7 +461,9 @@ local_workshop_mvp_first_hosted_2026_10_14:
   arm64_builds: platform_web_operations_passed_no_image_publication
   physical_hardware: not_tested
   later_integration: main_9839482_plus_current_schema_fixture_correction
-  final_exact_head_evidence: pending_pr_25_ci
+  final_exact_head_evidence: head_4d95527_tree_896baaca_all_checks_passed
+  final_runtime_artifact: 11885510168
+  final_qualification_artifact: 11884254806
 sync_chaos_setup_barrier_2026_10_13:
   document: docs/10-spec-development/2026-10-13-sync-chaos-setup-barrier.md
   status: verified

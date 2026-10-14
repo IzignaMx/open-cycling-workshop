@@ -107,19 +107,22 @@ def pull_changes(
     location_id: Annotated[str | None, Query(max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> ChangePageResponse:
+    # An omitted query parameter must never widen a location-bound session.
+    effective_location = principal.location_id if location_id is None else location_id
     try:
         authorize(
             principal,
             capability="sync.pull",
             organization_id=principal.organization_id,
-            location_id=location_id,
+            location_id=effective_location,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     page = SyncService(session).pull_changes(
         organization_id=principal.organization_id,
-        location_id=location_id,
+        location_id=effective_location,
+        capabilities=principal.capabilities,
         after_cursor=cursor,
         limit=limit,
     )

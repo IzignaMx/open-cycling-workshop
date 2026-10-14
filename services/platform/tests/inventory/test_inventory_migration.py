@@ -28,7 +28,12 @@ def migration_database(
 ) -> Iterator[tuple[Config, Engine]]:
     # Alembic env.py gives the environment URL precedence. Never migrate a
     # developer, production, or shared CI database from these isolated tests.
-    for variable in ("OCWP_DATABASE_URL", "OCWP_E2E_DATABASE_URL", "OCWP_TEST_DATABASE_URL"):
+    for variable in (
+        "OCWP_DATABASE_URL",
+        "OCWP_DATABASE_URL_FILE",
+        "OCWP_E2E_DATABASE_URL",
+        "OCWP_TEST_DATABASE_URL",
+    ):
         monkeypatch.delenv(variable, raising=False)
     service_root = Path(__file__).resolve().parents[2]
     url = f"sqlite+pysqlite:///{tmp_path / 'inventory_migration.sqlite3'}"
@@ -71,7 +76,12 @@ def postgres_migration_database(
     if not configured_url:
         pytest.skip("OCWP_TEST_DATABASE_URL not configured for live PostgreSQL migration tests")
     url = _validated_postgres_test_url(configured_url)
-    for variable in ("OCWP_DATABASE_URL", "OCWP_E2E_DATABASE_URL", "OCWP_TEST_DATABASE_URL"):
+    for variable in (
+        "OCWP_DATABASE_URL",
+        "OCWP_DATABASE_URL_FILE",
+        "OCWP_E2E_DATABASE_URL",
+        "OCWP_TEST_DATABASE_URL",
+    ):
         monkeypatch.delenv(variable, raising=False)
 
     # An unpredictable, explicitly created schema is the entire reset boundary.
