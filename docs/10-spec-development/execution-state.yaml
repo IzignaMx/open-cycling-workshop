@@ -444,7 +444,7 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
   quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
   quote_main_merge: 98394826884020d9de2498cab551120087dd5334
-  quote_migration_reserved: 0009
+  quote_migration_reserved: 0010
   reservation_update: identity_administration_0008_priority_supersedes_earlier_quote_0008_reservation
   release_gates: unchanged
 
@@ -475,7 +475,7 @@ access_administration_2026_10_14:
   runtime_prerequisite: pr25_merged_0342799_included_with_pr26_target_isolation_fix
   independent_work: visual_theme_changes
   migration: 0008_identity_administration_down_revision_0007
-  future_quote_migration: 0009_down_revision_0008_no_empty_reserved_migration
+  future_quote_migration: 0010_down_revision_0009_no_empty_reserved_migration
   legacy_accounts: preserve_credentials_active_state_grants_scope_session_versions_no_implicit_owner
   initial_owner: explicit_separate_account_cli_refuses_any_owner_record_including_inactive
   owner_invariant: protected_is_owner_organization_scope_full_concrete_catalog_last_active_owner_guard
@@ -837,3 +837,17 @@ isolated_offline_identity_kernel_2026_10_14:
   live_ui_risks: existing_cross_user_cache_replay_offline_permission_freshness_remain_open
   operator_gate: preserve_legacy_pending_work_verified_backup_reviewed_provenance_and_non_destructive_recovery
   release_gates: unchanged_physical_windows_android_accessibility_and_other_manual_qualification
+
+# Additive server-only baseline; physical and activation gates above remain open.
+bounded_authoritative_baselines_2026_10_14:
+  status: implemented_pending_evidence
+  base: d831cd49136e3d036199a2464b5e422e8608d615
+  migration: 0009_down_revision_0008
+  future_quote_migration: 0010_down_revision_0009
+  context_advertisement: null
+  production_client: unchanged_v4_kernel_inactive
+  local_python: 1105_passed_140_explicit_skips
+  local_frontend_core: 158_passed
+  independent_review: no_remaining_findings_after_near_limit_and_collection_fixes
+  postgres_qualification: pending_exact_head_hosted_run
+  spec: docs/10-spec-development/2026-10-14-bounded-authoritative-baselines.md

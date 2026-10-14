@@ -61,7 +61,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def handle_api_error(request: Request, exc: ApiError) -> JSONResponse:
         del request
+        retry = (exc.details or {}).get("retry_after_seconds")
+        headers = {"Retry-After": str(retry)} if isinstance(retry, int) and retry > 0 else None
         return JSONResponse(
+            headers=headers,
             status_code=exc.status_code,
             content={
                 "error": {

@@ -79,6 +79,68 @@
         "title": "AccessContextResponse",
         "type": "object"
       },
+      "ActivationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Checkpoint",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "protocol",
+          "checkpoint"
+        ],
+        "title": "ActivationRequest",
+        "type": "object"
+      },
+      "ActivationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "baseline_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Baseline Id",
+            "type": "string"
+          },
+          "checkpoint": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Checkpoint",
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/AccessContextResponse"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "protocol",
+          "baseline_id",
+          "authorization_epoch",
+          "checkpoint",
+          "context"
+        ],
+        "title": "ActivationResponse",
+        "type": "object"
+      },
       "BicycleCreateRequest": {
         "properties": {
           "bicycle_id": {
@@ -165,6 +227,148 @@
           "brand"
         ],
         "title": "BicycleCreateRequest",
+        "type": "object"
+      },
+      "BicyclePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "bicycle_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Bicycle Id",
+            "type": "string"
+          },
+          "bicycle_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Type"
+          },
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "organization_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "wheel_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wheel Size"
+          }
+        },
+        "required": [
+          "organization_id",
+          "location_id",
+          "created_at",
+          "updated_at",
+          "version",
+          "bicycle_id",
+          "customer_id",
+          "brand",
+          "model",
+          "bicycle_type",
+          "wheel_size",
+          "notes"
+        ],
+        "title": "BicyclePayload",
+        "type": "object"
+      },
+      "BicycleRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "const": "bicycle",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "entity_version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Entity Version",
+            "type": "integer"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/BicyclePayload"
+          }
+        },
+        "required": [
+          "payload",
+          "entity_type",
+          "entity_id",
+          "entity_version"
+        ],
+        "title": "BicycleRecord",
         "type": "object"
       },
       "BicycleResponse": {
@@ -371,6 +575,43 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "Completion": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "baseline_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Id"
+          },
+          "checkpoint": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Checkpoint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_id",
+          "authorization_epoch",
+          "checkpoint"
+        ],
+        "title": "Completion",
         "type": "object"
       },
       "ContextPrincipal": {
@@ -600,6 +841,117 @@
         "title": "CustomerCreateRequest",
         "type": "object"
       },
+      "CustomerPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organization_id",
+          "location_id",
+          "created_at",
+          "updated_at",
+          "version",
+          "customer_id",
+          "display_name",
+          "email",
+          "phone"
+        ],
+        "title": "CustomerPayload",
+        "type": "object"
+      },
+      "CustomerRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "const": "customer",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "entity_version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Entity Version",
+            "type": "integer"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/CustomerPayload"
+          }
+        },
+        "required": [
+          "payload",
+          "entity_type",
+          "entity_id",
+          "entity_version"
+        ],
+        "title": "CustomerRecord",
+        "type": "object"
+      },
       "CustomerResponse": {
         "properties": {
           "created_at": {
@@ -667,6 +1019,153 @@
           "version"
         ],
         "title": "CustomerResponse",
+        "type": "object"
+      },
+      "DeltaPage": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "baseline_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Id"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Completion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "continuation": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Continuation",
+            "type": "string"
+          },
+          "page_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Page Id",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "catching_up",
+              "complete"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "predecessor": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Predecessor",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          },
+          "records": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "bicycle": "#/components/schemas/BicycleRecord",
+                  "customer": "#/components/schemas/CustomerRecord",
+                  "service_order": "#/components/schemas/ServiceOrderRecord"
+                },
+                "propertyName": "entity_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CustomerRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/BicycleRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/ServiceOrderRecord"
+                }
+              ]
+            },
+            "maxItems": 100,
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "protocol",
+          "baseline_id",
+          "authorization_epoch",
+          "page_id",
+          "predecessor",
+          "records",
+          "phase",
+          "continuation",
+          "completion"
+        ],
+        "title": "DeltaPage",
+        "type": "object"
+      },
+      "FinalizeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "baseline_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Baseline Id",
+            "type": "string"
+          },
+          "continuation": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Continuation",
+            "type": "string"
+          },
+          "predecessor": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Predecessor",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "protocol",
+          "baseline_id",
+          "authorization_epoch",
+          "predecessor",
+          "continuation"
+        ],
+        "title": "FinalizeResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1152,6 +1651,28 @@
         "title": "OrderTransitionRequest",
         "type": "object"
       },
+      "PageRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "continuation": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Continuation",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "protocol",
+          "continuation"
+        ],
+        "title": "PageRequest",
+        "type": "object"
+      },
       "PatchUserRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1428,6 +1949,92 @@
         "title": "RoleResponse",
         "type": "object"
       },
+      "ScanPage": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "baseline_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Baseline Id",
+            "type": "string"
+          },
+          "continuation": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Continuation",
+            "type": "string"
+          },
+          "page_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Page Id",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "scan",
+              "scan_complete"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "predecessor": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Predecessor",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          },
+          "records": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "bicycle": "#/components/schemas/BicycleRecord",
+                  "customer": "#/components/schemas/CustomerRecord",
+                  "service_order": "#/components/schemas/ServiceOrderRecord"
+                },
+                "propertyName": "entity_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CustomerRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/BicycleRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/ServiceOrderRecord"
+                }
+              ]
+            },
+            "maxItems": 100,
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "protocol",
+          "baseline_id",
+          "authorization_epoch",
+          "page_id",
+          "predecessor",
+          "records",
+          "phase",
+          "continuation"
+        ],
+        "title": "ScanPage",
+        "type": "object"
+      },
       "ServiceOrderCreateRequest": {
         "properties": {
           "accessories": {
@@ -1566,6 +2173,171 @@
         "title": "ServiceOrderEventResponse",
         "type": "object"
       },
+      "ServiceOrderPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "accessories": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessories"
+          },
+          "bicycle_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bicycle Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnosis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis"
+          },
+          "intake_condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intake Condition"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "order_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Order Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "reported_problem": {
+            "title": "Reported Problem",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "INTAKE",
+              "DIAGNOSIS",
+              "AUTHORIZED",
+              "REJECTED",
+              "IN_PROGRESS",
+              "WAITING_FOR_PARTS",
+              "READY",
+              "CLOSED",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organization_id",
+          "location_id",
+          "created_at",
+          "updated_at",
+          "version",
+          "order_id",
+          "customer_id",
+          "bicycle_id",
+          "state",
+          "reported_problem",
+          "intake_condition",
+          "accessories",
+          "priority",
+          "diagnosis"
+        ],
+        "title": "ServiceOrderPayload",
+        "type": "object"
+      },
+      "ServiceOrderRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "const": "service_order",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "entity_version": {
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Entity Version",
+            "type": "integer"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ServiceOrderPayload"
+          }
+        },
+        "required": [
+          "payload",
+          "entity_type",
+          "entity_id",
+          "entity_version"
+        ],
+        "title": "ServiceOrderRecord",
+        "type": "object"
+      },
       "ServiceOrderResponse": {
         "properties": {
           "accessories": {
@@ -1672,6 +2444,81 @@
           "version"
         ],
         "title": "ServiceOrderResponse",
+        "type": "object"
+      },
+      "StartRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_epoch": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          },
+          "request_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "selected_location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Selected Location Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol",
+          "selected_location_id",
+          "authorization_epoch",
+          "request_id"
+        ],
+        "title": "StartRequest",
+        "type": "object"
+      },
+      "StartResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Baseline Id",
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/AccessContextResponse"
+          },
+          "continuation": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Continuation",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "protocol",
+          "baseline_id",
+          "context",
+          "continuation",
+          "expires_at"
+        ],
+        "title": "StartResponse",
         "type": "object"
       },
       "StockResponse": {
@@ -3469,6 +4316,242 @@
         ]
       }
     },
+    "/api/v1/sync/baselines/finalize": {
+      "post": {
+        "operationId": "finalize_api_v1_sync_baselines_finalize_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalizeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finalize",
+        "tags": [
+          "baselines"
+        ]
+      }
+    },
+    "/api/v1/sync/baselines/page": {
+      "post": {
+        "operationId": "page_api_v1_sync_baselines_page_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Page",
+        "tags": [
+          "baselines"
+        ]
+      }
+    },
+    "/api/v1/sync/baselines/start": {
+      "post": {
+        "operationId": "start_api_v1_sync_baselines_start_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "baselines"
+        ]
+      }
+    },
+    "/api/v1/sync/baselines/validate-activation": {
+      "post": {
+        "operationId": "activate_api_v1_sync_baselines_validate_activation_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate",
+        "tags": [
+          "baselines"
+        ]
+      }
+    },
     "/api/v1/sync/changes": {
       "get": {
         "operationId": "pull_changes_api_v1_sync_changes_get",
@@ -3555,6 +4638,65 @@
         "summary": "Pull Changes",
         "tags": [
           "sync"
+        ]
+      }
+    },
+    "/api/v1/sync/deltas/page": {
+      "post": {
+        "operationId": "delta_api_v1_sync_deltas_page_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeltaPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delta",
+        "tags": [
+          "baselines"
         ]
       }
     },

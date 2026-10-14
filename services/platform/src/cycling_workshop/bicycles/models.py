@@ -43,3 +43,11 @@ class BicycleRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+Index(
+    "ix_bicycles_baseline_scan",
+    BicycleRecord.organization_id,
+    BicycleRecord.location_id,
+    BicycleRecord.id.collate("C"),
+).ddl_if(dialect="postgresql")

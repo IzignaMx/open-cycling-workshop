@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Bounded authoritative server baselines
+
+- Add durable, identity-bound full scans and finite ordered delta runs, exact
+  retry responses, two active device slots and bounded absolute-lived metadata.
+- Add migration 0009 and indexed authorized reads with SQL byte-size preflight;
+  move the unimplemented quote reservation to 0010. Stored supported long Text
+  values are preserved without borrowing REST create-request limits.
+- Keep baseline advertisement null pending complete exact-head qualification;
+  production v4, inactive kernel, old-writer and restore activation gates remain.
+  No deployment, credentials, browser activation or business-data cleanup.
+
 ## Unreleased · Ordered supported change-feed writers
 
 - Customer/bicycle/order REST creates and order transitions now publish the same

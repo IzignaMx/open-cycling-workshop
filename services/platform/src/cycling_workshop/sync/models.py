@@ -28,6 +28,13 @@ class MutationReceiptRecord(Base):
 class ChangeRecord(Base):
     __tablename__ = "sync_changes"
     __table_args__ = (
+        Index(
+            "ix_sync_changes_org_location_type_cursor",
+            "organization_id",
+            "location_id",
+            "entity_type",
+            "cursor",
+        ),
         Index("ix_sync_changes_org_cursor", "organization_id", "cursor"),
         Index("ix_sync_changes_org_location_cursor", "organization_id", "location_id", "cursor"),
     )
