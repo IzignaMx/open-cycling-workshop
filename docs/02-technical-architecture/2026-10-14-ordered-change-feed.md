@@ -143,3 +143,54 @@ in the UI workspace was corrected without source changes before rerunning the
 complete aggregate. Independent reconciliation review verified byte-identical
 server and client boundaries above and found no defects. Final hosted CI remains
 pending; historical baseline, mixed-writer rollout and physical gates stay open.
+
+## Combined-head browser failure and bounded fixture correction
+
+Published combined head `5177d4fc2f5d2c44f2f6f638b234b8ba6120bf49` ran CI
+`38564469464` (job `115853504193`). Python passed 1,047 tests with three unrelated
+skips; all ten ordering cases executed. The isolated kernel browser suite passed
+8 tests and frontend core passed 158. Runtime `38564469777`, Security
+`38564470129` and DCO `38564469775` passed, including three ARM64 builds.
+
+The direct PWA suite passed 22 tests and failed the order lifecycle case:
+`order-lifecycle.spec.ts:115` observed a non-OK remote transition response. Its
+original HTTP status and body are **unknown**. The retry separately failed a
+strict locator because two records shared the fixed problem text. The later
+qualification PWA suite passed all 23 tests but does not erase the direct failure.
+The successful qualification invocation overwrote the earlier screenshot, trace
+and error context: downloaded artifact `11894741424` contains none of those
+failure files. This diagnostic loss is recorded rather than inventing a 404 or
+409 explanation.
+
+A source-level fixture defect is independently identifiable: the previous sync
+label was treated as proof that a newly created intake had committed and its
+acknowledgement had drained the durable queue. A bounded test-only correction
+uses unique customer/order fixtures, scopes each action and conflict to that
+order, requires its matching applied create response and durable queue drain,
+and verifies the authoritative server state is INTAKE/version 1 before going
+offline. Remote transition and timeline assertions retain exact success and
+exactly-two-events requirements, with explicit HTTP status/body diagnostics.
+
+A new controlled browser regression holds local completion, then server create,
+then the real committed create acknowledgement. It is designed to demonstrate
+that the old synced-label predicate can pass too early and the new readiness
+barrier rejects all incomplete stages. Its controlled 404 is distinct from the
+unknown original failure status. Native execution of that regression is pending
+hosted proof; no local browser navigation was attempted or claimed.
+
+Direct, retry-free-repeat and qualification browser phases now retain separate
+result/report directories and always-upload artifacts. Two deterministic
+artifact-routing regressions were observed failing before that change and
+passing after it. The existing retry-free gate retains the two chaos journeys
+and adds both order cases, five executions each (20 total), with zero retries.
+No production/domain/sync/kernel implementation changed, no timeout increased,
+and no assertion or acceptance criterion was weakened.
+
+Local correction verification: aggregate 21 checks passed, zero failed, five
+unchanged environment blockers; Python 977 passed/75 skipped, frontend 158 passed,
+API client one passed. Strict order-fixture TypeScript check, ESLint, formatting,
+contracts and PWA build passed. Playwright discovery found exactly 20 selected
+retry-free repeat executions, including both new/order cases. Independent review
+found no actionable defects. The controlled native-browser regression and final
+corrected-head hosted acceptance remain pending; no successful local browser
+execution or original failure HTTP status is inferred from these checks.

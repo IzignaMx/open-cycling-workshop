@@ -246,3 +246,19 @@ def test_repository_has_manual_actions_and_master_agent_loop_v02() -> None:
 def test_readme_python_verification_includes_repository_root() -> None:
     readme = (ROOT / "README.md").read_text()
     assert "PYTHONPATH=.:services/platform/src pytest -q" in readme
+
+
+def test_browser_phase_evidence_paths_do_not_overlap() -> None:
+    config = (ROOT / "apps/web/playwright.config.ts").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "process.env.OCWP_PLAYWRIGHT_OUTPUT_DIR ?? './test-results/direct'" in config
+    assert "process.env.PLAYWRIGHT_HTML_OUTPUT_DIR ?? './playwright-report/direct'" in config
+    assert "retries: process.env.CI ? 1 : 0" in config
+    for phase in ("direct", "retry-free-repeat", "qualification"):
+        assert f"name: browser-e2e-{phase}-${{{{ github.sha }}}}" in workflow
+        assert f"apps/web/test-results/{phase}/" in workflow
+        assert f"apps/web/playwright-report/{phase}/" in workflow
+    assert "OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/retry-free-repeat" in workflow
+    assert "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/retry-free-repeat" in workflow
+    assert "--repeat-each=5 --retries=0 --workers=1" in workflow
+    assert "path: apps/web/.tmp-kernel-browser-results/" in workflow

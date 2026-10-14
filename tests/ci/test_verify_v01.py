@@ -162,3 +162,29 @@ def test_postgresql_runtime_checks_execute_integration_when_ready(monkeypatch) -
         name == "postgresql_integration" and "test_postgres_integration.py" in " ".join(command)
         for name, command in calls
     )
+
+
+def test_qualifier_browser_evidence_is_isolated_even_with_inherited_direct_paths(monkeypatch):
+    calls = []
+    env = {
+        "OCWP_E2E_DATABASE_URL": "postgresql://example.invalid/ocwp_e2e",
+        "OCWP_PLAYWRIGHT_OUTPUT_DIR": "test-results/direct",
+        "PLAYWRIGHT_HTML_OUTPUT_DIR": "playwright-report/direct",
+    }
+    original = dict(env)
+
+    def fake_run_check(name, command, *, env=None, cwd=None):
+        calls.append((name, command, env, cwd))
+        return MODULE.Check(name, "pass", "ok")
+
+    monkeypatch.setattr(MODULE, "run_check", fake_run_check)
+    checks, blockers = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+
+    assert blockers == []
+    assert all(check.status == "pass" for check in checks)
+    browser = next(call for call in calls if call[0] == "browser_e2e")
+    web = ROOT / "apps/web"
+    assert browser[2]["OCWP_PLAYWRIGHT_OUTPUT_DIR"] == str(web / "test-results/qualification")
+    assert browser[2]["PLAYWRIGHT_HTML_OUTPUT_DIR"] == str(web / "playwright-report/qualification")
+    assert browser[1][-1] == "test"
+    assert env == original

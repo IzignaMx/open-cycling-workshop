@@ -102,11 +102,17 @@ jobs:
       - name: Prepare browser E2E database
         run: uv run python scripts/e2e/prepare_e2e_database.py
       - name: Run browser E2E
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/direct
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/direct
         run: pnpm --filter @ocwp/web test:e2e
-      - name: Repeat sync baseline and reconnect journeys without retries
+      - name: Repeat sync and order baseline journeys without retries
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/retry-free-repeat
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/retry-free-repeat
         run: >-
-          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts
-          --grep 'baseline setup|large reconnect batch'
+          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/order-lifecycle.spec.ts
+          --grep 'baseline setup|large reconnect batch|order baseline|order lifecycle'
           --repeat-each=5 --retries=0 --workers=1
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
@@ -126,14 +132,32 @@ jobs:
           name: v0.1-qualification
           path: artifacts/v0.1-qualification.json
           if-no-files-found: error
-      - name: Upload browser screenshots and traces
+      - name: Upload direct browser screenshots and traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-e2e-evidence-${{ github.sha }}
+          name: browser-e2e-direct-${{ github.sha }}
           path: |
-            apps/web/test-results/
-            apps/web/playwright-report/
+            apps/web/test-results/direct/
+            apps/web/playwright-report/direct/
+          if-no-files-found: warn
+      - name: Upload retry-free-repeat browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-retry-free-repeat-${{ github.sha }}
+          path: |
+            apps/web/test-results/retry-free-repeat/
+            apps/web/playwright-report/retry-free-repeat/
+          if-no-files-found: warn
+      - name: Upload qualification browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-qualification-${{ github.sha }}
+          path: |
+            apps/web/test-results/qualification/
+            apps/web/playwright-report/qualification/
           if-no-files-found: warn
       - name: Upload isolated kernel browser evidence
         if: always()
