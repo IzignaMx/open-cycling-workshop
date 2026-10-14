@@ -308,27 +308,39 @@ async function run() {
     assert.match(notFound.headers()['content-type'], /application\/json/)
     assert.equal(await probe.locator('#root').count(), 0)
 
-    step = 'offline_create_reload'
+    step = 'offline_event'
     const customerName = 'Customer created offline through Caddy'
     await context.setOffline(true)
+    step = 'offline_ui_state'
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
+    step = 'offline_create'
     await create(customerName)
+    step = 'offline_journal_delivery'
     await expect.poll(async () => (await snapshot(page)).journal.length).toBe(1)
     const beforeReload = await snapshot(page)
     const first = beforeReload.journal[0]
     assert.equal(first.authoredDatasetIncarnation, input.datasetIncarnation)
     assert.equal(beforeReload.delivery[0].state, 'pending')
+    step = 'offline_reload'
     await page.reload({ waitUntil: 'domcontentloaded' })
+    step = 'offline_readmission'
     await ready(page)
+    step = 'offline_reloaded_ui_state'
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
+    step = 'offline_reloaded_projection'
     await expect(
       page.getByRole('list', { name: 'Clientes locales' }).getByText(customerName, { exact: true }),
     ).toBeVisible()
+    step = 'offline_preserved_journal'
     const afterReload = await snapshot(page)
     assert.deepEqual(afterReload.journal, beforeReload.journal)
+    step = 'offline_preserved_events'
     assert.deepEqual(afterReload.events, beforeReload.events)
+    step = 'offline_pending_delivery'
     assert.equal(afterReload.delivery[0].state, 'pending')
+    step = 'offline_preserved_session'
     assert.equal((await session(page)).bindingId, initialSession.bindingId)
+    step = 'offline_backend_navigation'
     let offlineApiFailed = false
     try {
       await probe.goto(`${input.base}/api/offline-probe`, { waitUntil: 'domcontentloaded' })
@@ -336,6 +348,7 @@ async function run() {
       offlineApiFailed = true
     }
     assert.equal(offlineApiFailed, true)
+    step = 'offline_backend_no_spa'
     assert.equal(await probe.locator('#root').count(), 0)
     await probe.close()
 
