@@ -870,3 +870,22 @@ isolated_server_context_adapter_2026_10_14:
   legacy_recovery: original_realm_journals_preserved_no_retarget_or_replay
   remaining_gates: baseline_ingestion_activation_old_writer_cutover_restore_physical_accessibility
   record: docs/10-spec-development/2026-10-14-isolated-server-context-adapter.md
+
+isolated_baseline_client_2026_10_14:
+  status: implemented_pending_evidence
+  base: 2723ec321a606a69a2516f1eaea4d96600354f8f
+  scope: isolated_initial_baseline_consumer_no_production_imports
+  context_advertisement: null
+  ordinary_null_behavior: baseline_required_zero_requests_no_activation_or_reuse
+  schema: unchanged_v1_through_v5_additive_nonindexed_partition_format_1
+  local_focused: 222_passed_zero_skips_independent_review
+  local_frontend_core: 320_passed_zero_skips
+  local_python: 1107_passed_140_explicit_skips
+  local_aggregate: 21_pass_zero_fail_five_explicit_environment_blockers
+  actual_server_contract: five_response_kinds_three_entity_types_five_phase_resume_passed
+  independent_review: no_remaining_concrete_source_findings
+  native_browser: blocked_local_sandbox_pending_exact_head_hosted
+  production_activation: not_performed
+  ongoing_deltas_and_offline_reload_admission: pending_separate_combined_integration
+  journals_and_legacy: preserved_no_ack_attribution_replay_or_deletion
+  record: docs/10-spec-development/2026-10-14-isolated-baseline-client.md

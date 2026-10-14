@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Isolated bounded baseline consumer
+
+- Add durable private staging, exact request replay, bounded wire decoding,
+  version-dominance merges, completion-proof gates and full partition fences.
+- Preserve v1–v5 schema history and every original journal/legacy row.
+- Keep actual null advertisement and production App/defaultDB unchanged;
+  isolated server/browser qualification is separate from production activation.
+  See the [increment record](docs/10-spec-development/2026-10-14-isolated-baseline-client.md).
+
 ## Unreleased · Bounded authoritative server baselines
 
 - Add durable, identity-bound full scans and finite ordered delta runs, exact

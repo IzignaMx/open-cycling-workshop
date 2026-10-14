@@ -689,3 +689,23 @@ Current SQL reservation: bounded baselines implement 0009 after 0008; unimplemen
 quote persistence moves to 0010 after 0009. Earlier reservation notes remain
 historical. Existing physical Windows/Android, accessibility and recovery gates
 remain open. No source increment is installation or rollout evidence.
+
+## 2026-10-14 · Isolated bounded baseline consumer gates
+
+- [ ] Record independent review and exact-final-head hosted Chromium qualification
+      for the new actual-FastAPI isolated journey. Local fake IndexedDB and
+      type/build results do not establish native browser behavior; local
+      Chromium launch is blocked by the execution sandbox.
+- [ ] Before ordinary supported-protocol activation, separately qualify genuine
+      server advertisement, generated contracts and epoch-consistent context,
+      start and activation responses. The server still advertises null; ordinary
+      clients remain BASELINE_REQUIRED with zero baseline requests.
+- [ ] Before production integration, combine initial baseline, ongoing deltas and
+      offline-reload admission with production auth/repositories and existing
+      Golden Slice preservation. Keep old-writer/service-worker cutover,
+      restore/session invalidation, history-preserving recovery, accessibility
+      and physical-device gates open on their own evidence.
+
+No database migration, oldDB deletion, legacy author inference, installation or
+production activation is authorized or performed by this source increment. See
+[the increment record](docs/10-spec-development/2026-10-14-isolated-baseline-client.md).
