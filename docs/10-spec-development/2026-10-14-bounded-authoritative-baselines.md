@@ -110,3 +110,21 @@ Anticipated files: sync/baseline_{schemas,codec,models,store,queries,service,rou
 - PostgreSQL, Docker/runtime restore, physical devices and native PWA evidence
   remain separate exact-head hosted/operator gates. No app, CI workflow or
   phase-separated artifact configuration changed.
+
+## Main33 reconciliation
+
+Reconcile with actual integrated main33
+`00279018c2156ee3aa3e5438cfa7be5dc8feceaf`, retaining the isolated
+server-context adapter unchanged. The backend remains byte-identical to reviewed
+implementation commit `98ce45518bdaec65841ce28073877de26e60b429`.
+Only the two additive changelog/state conflicts required reconciliation; both
+progress records survive. Advertisement stays null, so the adapter still returns
+BASELINE_REQUIRED and no production code imports it or activates the kernel.
+Fresh union qualification and independent source comparison precede publication.
+
+Union results: 1105 Python passed with 140 explicit skips; 216 frontend core
+passed; aggregate qualification 21 passed, zero failures and five explicit
+environment blockers (PostgreSQL URL, Docker, psql, managed-browser benchmark
+policy, native E2E database setup). All code, generated contracts, static checks
+and PWA build are green locally. PostgreSQL/native/physical/restore evidence
+remains pending and snapshot advertisement stays null.

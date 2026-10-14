@@ -842,12 +842,31 @@ isolated_offline_identity_kernel_2026_10_14:
 bounded_authoritative_baselines_2026_10_14:
   status: implemented_pending_evidence
   base: d831cd49136e3d036199a2464b5e422e8608d615
+  reconciled_main33: 00279018c2156ee3aa3e5438cfa7be5dc8feceaf
   migration: 0009_down_revision_0008
   future_quote_migration: 0010_down_revision_0009
   context_advertisement: null
   production_client: unchanged_v4_kernel_inactive
   local_python: 1105_passed_140_explicit_skips
-  local_frontend_core: 158_passed
+  local_frontend_core: 216_passed_after_main33_reconciliation
+  local_aggregate: 21_pass_0_fail_5_explicit_environment_blockers
   independent_review: no_remaining_findings_after_near_limit_and_collection_fixes
   postgres_qualification: pending_exact_head_hosted_run
   spec: docs/10-spec-development/2026-10-14-bounded-authoritative-baselines.md
+
+isolated_server_context_adapter_2026_10_14:
+  status: implemented_pending_hosted_and_production_integration_evidence
+  base: d831cd49136e3d036199a2464b5e422e8608d615
+  scope: isolated_transport_no_production_imports_no_persistence
+  contract: exact_current_null_realm_null_snapshot_closed_response
+  grant_semantics: server_literal_concrete_list_no_client_expansion
+  request_fences: captured_session_token_principal_realm_scope_generation_attempt
+  context_state: BASELINE_REQUIRED_only
+  regression_red: missing_adapter_module_observed_before_implementation
+  focused_tests: 58_passed_injected_fetch_and_clock
+  frontend_core_tests: 216_passed_zero_skips
+  native_browser_and_http_evidence: not_claimed_by_unit_tests
+  production_activation: not_performed
+  legacy_recovery: original_realm_journals_preserved_no_retarget_or_replay
+  remaining_gates: baseline_ingestion_activation_old_writer_cutover_restore_physical_accessibility
+  record: docs/10-spec-development/2026-10-14-isolated-server-context-adapter.md
