@@ -21,6 +21,7 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
           </h2>
           <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
             Los conflictos se conservan localmente para que puedan resolverse sin perder cambios.
+            Sólo se muestran incidencias con tipo verificado y permiso de lectura.
           </p>
         </div>
         <button
@@ -34,7 +35,7 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
 
       {items.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-[var(--ocwp-color-border)] p-4 text-sm text-[var(--ocwp-color-muted)]">
-          No hay conflictos pendientes.
+          No hay incidencias visibles para tus permisos actuales.
         </p>
       ) : (
         <ul className="mt-4 grid gap-3" aria-live="polite">

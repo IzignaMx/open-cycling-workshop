@@ -108,6 +108,34 @@ auth/sync continuations from an earlier login/scope. Deterministic unit tests
 cover deferred completion and same-user logout/login; these prove the guard,
 not a complete browser race. Scoped render filters add defense in depth.
 
+Cached customer/order content, totals, last-customer notices and per-entity
+conflict contents additionally require explicit `customers.read`, `bicycles.read`
+or `orders.read`. Write grants never imply read grants; unknown conflict entities
+are hidden, even with a wildcard. Bicycle association display is a separate
+presentation flag, so hiding it never changes the order used by a transition.
+Restricted totals say “Sin acceso” rather than falsely reporting zero. Existing
+cached rows and mutation queues are not deleted or altered by these display gates.
+Conflict provenance required a bounded compatibility correction: the old recorder
+labelled every conflict `customer`, even for bicycle/order mutations. New records
+obtain `entity_type` and an optional nonindexed `entity_type_source: queued_mutation`
+marker only from a matching durable queued mutation (mutation ID, entity ID,
+organization and location), in the existing conflict/queue transaction. Unknown
+source types or mismatched identities reject without acknowledging queued work.
+A missing queued source leaves existing records untouched. Only validated records
+are acknowledged through the existing conflict workflow. No additional schema
+version/index or migration is needed.
+
+Legacy rows lack trustworthy type provenance. They remain byte-for-byte stored,
+including reason/ID, but their details are hidden for every reader until a future
+safe reconciliation can establish their source. They are never silently relabelled
+from their old `customer` field. Generic conflict status remains available; the
+empty-state text promises only that no permitted verified issue is visible.
+
+These are UI guards using the current session snapshot, not security against a
+device owner reading IndexedDB. Offline permission freshness, cache revocation,
+authorization epochs and safe resnapshot/reconciliation remain pending in the
+administration rollout; server authorization remains authoritative when connected.
+
 Browser acceptance includes exact seven-store v3→v4 preservation, offline theme switching with a
 queued mutation and partially filled forms, stable input nodes/selection/focus,
 history and search state, all four structural geometries, tablet touch targets,

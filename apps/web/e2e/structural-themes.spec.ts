@@ -7,12 +7,16 @@ const THEMES = [
   { id: 'ritmo', label: 'Ritmo modular' },
   { id: 'noche', label: 'Turno nocturno' },
 ] as const
+const READ_CAPABILITIES = ['customers.read', 'bicycles.read', 'orders.read']
 const SCOPE = { organizationId: 'visual-org', userId: 'visual-user', locationId: 'visual-workshop' }
 const VALID_LOGO =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQCbD7DwADAAGyeEyo+gAAAABJRU5ErkJggg=='
 
 /** Exact Dexie v3 stores at physical IDB version 30, before presentation v4. All data is synthetic. */
-async function seedWorkshop(page: Page, capabilities = ['customers.write', 'orders.write']) {
+async function seedWorkshop(
+  page: Page,
+  capabilities = [...READ_CAPABILITIES, 'customers.write', 'orders.write'],
+) {
   await page.route('**/api/**', (route) => route.abort('internetdisconnected'))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -376,7 +380,7 @@ test('personal logo remains available offline, is location scoped, and restore d
 test('read-only permissions, corrupt configuration and failed saves keep the workshop usable', async ({
   page,
 }) => {
-  await seedWorkshop(page, [])
+  await seedWorkshop(page, READ_CAPABILITIES)
   await openSettings(page)
   for (const theme of THEMES) {
     await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
@@ -419,4 +423,110 @@ test('read-only permissions, corrupt configuration and failed saves keep the wor
   await expect(page.locator('.preference-status')).toContainText('no pudo guardarse')
   await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'ritmo')
   await expect(page.locator('.order-card')).toHaveCount(4)
+})
+
+test("same-workshop restricted user cannot render another reader's cached data in any theme", async ({
+  page,
+}) => {
+  await seedWorkshop(page)
+  await expect(page.getByLabel('Cliente', { exact: true })).toContainText(
+    'Cliente de prueba visual',
+  )
+  // v3 hardcoded every conflict as customer; retain the row but hide its ambiguous details.
+  await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
+  await page.evaluate(async (scope) => {
+    const request = indexedDB.open('ocwp')
+    const database = await new Promise<IDBDatabase>((resolve) => {
+      request.onsuccess = () => resolve(request.result)
+    })
+    const tx = database.transaction('conflicts', 'readwrite')
+    tx.objectStore('conflicts').put({
+      mutation_id: 'verified-customer-conflict',
+      organization_id: scope.organizationId,
+      location_id: scope.locationId,
+      scope_key: `${scope.organizationId}::${scope.locationId}`,
+      entity_type: 'customer',
+      entity_type_source: 'queued_mutation',
+      entity_id: 'visual-customer',
+      reason: 'Conflicto verificado de cliente',
+      recorded_at: '2026-10-14T10:00:00Z',
+    })
+    await new Promise<void>((resolve) => {
+      tx.oncomplete = () => resolve()
+    })
+    database.close()
+  }, SCOPE)
+  await page.getByRole('button', { name: 'Actualizar', exact: true }).click()
+  await expect(page.getByText('Conflicto verificado de cliente', { exact: true })).toBeVisible()
+  await expect(page.locator('.order-summary').first()).toContainText('con bicicleta')
+  await page.getByLabel('Nombre', { exact: true }).fill('Cliente creado antes del cambio')
+  await page.getByRole('button', { name: 'Guardar cliente' }).click()
+  await expect(page.getByText('Último cliente local:')).toContainText(
+    'Cliente creado antes del cambio',
+  )
+  const before = await operationalSnapshot(page)
+  expect((before.mutationQueue as unknown[]).length).toBe(2)
+  await page.evaluate(() => {
+    const session = JSON.parse(sessionStorage.getItem('ocwp.session.v2')!)
+    session.user.user_id = 'restricted-user-same-workshop'
+    session.user.display_name = 'Usuario sin lectura'
+    // A write capability must never imply permission to read the retained cache.
+    session.user.capabilities = ['customers.write', 'orders.write']
+    sessionStorage.setItem('ocwp.session.v2', JSON.stringify(session))
+  })
+  await page.reload()
+  await expect(page.getByText('Usuario sin lectura', { exact: true })).toBeVisible()
+  await openSettings(page)
+  for (const theme of THEMES) {
+    await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
+    await expect(page.locator('.order-card')).toHaveCount(0)
+    await expect(page.getByLabel('Buscar órdenes')).toHaveCount(0)
+    await expect(page.getByLabel('Cliente', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Historial (1)', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Conflicto verificado de cliente', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Último cliente local:')).toHaveCount(0)
+    await expect(page.locator('.workshop-metrics dd')).toHaveText([
+      'Sin acceso',
+      'Sin acceso',
+      'Sin acceso',
+      'Sin acceso',
+    ])
+    await expect(page.locator('main')).not.toContainText('Cliente de prueba visual')
+    await expect(page.locator('main')).not.toContainText('Cliente creado antes del cambio')
+    await expect(page.locator('main')).not.toContainText('Caso visual')
+  }
+  expect(await operationalSnapshot(page)).toEqual(before)
+})
+
+test('partial reads hide bicycle association and customer conflicts without changing order payloads', async ({
+  page,
+}) => {
+  await seedWorkshop(page, ['orders.read', 'orders.write'])
+  const before = await operationalSnapshot(page)
+  await expect(page.locator('.order-card')).toHaveCount(4)
+  for (const summary of await page.locator('.order-summary').all()) {
+    await expect(summary).not.toContainText('con bicicleta')
+  }
+  await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Cliente', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Para seleccionar un cliente necesitas el permiso')).toBeVisible()
+  await expect(page.locator('.workshop-metrics dd').last()).toHaveText('Sin acceso')
+  await page.getByRole('button', { name: 'Marcar lista', exact: true }).click()
+  await expect(page.locator('.order-card').first().locator('.state-badge')).toHaveText('Lista')
+  const after = await operationalSnapshot(page)
+  const changedOrder = (after.serviceOrders as { order_id: string; bicycle_id: string }[]).find(
+    (row) => row.order_id === 'visual-order-0',
+  )
+  expect(changedOrder?.bicycle_id).toBe('visual-bike')
+  expect(after.bicycles).toEqual(before.bicycles)
+  expect(after.customers).toEqual(before.customers)
+  expect(after.conflicts).toEqual(before.conflicts)
+  expect((after.mutationQueue as unknown[]).length).toBe(2)
+  const transition = (after.mutationQueue as { entity_type: string; payload: unknown }[]).find(
+    (row) => row.entity_type === 'service_order',
+  )
+  expect(transition?.payload).toEqual({
+    transition: { action: 'mark_ready', actor_id: SCOPE.userId, note: null },
+  })
 })

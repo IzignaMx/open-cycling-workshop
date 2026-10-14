@@ -12,6 +12,12 @@
   controls consistently honor the existing orders.write capability.
 - Session-generation guards reject late view updates from a previous login or
   scope, preserving current-user conflict/customer context.
+- Cached customer/order summaries and per-entity conflict contents require explicit
+  read permissions in every theme. Restricted users retain durable records/queues;
+  offline permission freshness and safe cache revocation/resnapshot remain pending.
+- Conflict types now come from the matching durable queued mutation rather than a
+  hardcoded customer label. Legacy ambiguous records stay stored but their details
+  are hidden; mismatched/unknown responses cannot acknowledge pending mutations.
 - Browser acceptance and screenshots are added; hosted/physical verification
   remains pending until recorded for the exact implementation.
 

@@ -34,5 +34,7 @@ export interface ConflictRecord {
   entity_type: string
   entity_id: string
   reason: string
+  /** Absent on legacy rows whose entity_type was hardcoded and cannot be trusted. */
+  entity_type_source?: 'queued_mutation'
   recorded_at: string
 }

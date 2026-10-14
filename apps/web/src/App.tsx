@@ -9,6 +9,7 @@ import { LoginForm } from './auth/LoginForm.js'
 import { shouldClearSessionAfterAuthError } from './auth/session-policy.js'
 import { SessionStore } from './auth/session.js'
 import { SessionViewGeneration } from './auth/view-generation.js'
+import { canReadConflict, workshopReadAccess } from './auth/workshop-read-access.js'
 import { BicycleLocalRepository } from './features/bicycles/repository.js'
 import { CustomerQuickCreate } from './features/customers/CustomerQuickCreate.js'
 import { CustomerLocalRepository } from './features/customers/repository.js'
@@ -405,6 +406,7 @@ export function App() {
     )
   }
 
+  const readAccess = workshopReadAccess(currentUser.capabilities)
   const canCreateCustomers =
     Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'customers.write')
   const canCreateOrders =
@@ -415,18 +417,22 @@ export function App() {
     userId: currentUser.user_id,
     locationId: currentUser.location_id,
   }
-  // Also scope the render during identity changes, before the asynchronous refresh completes.
+  // Gate cached content by current identity and explicit reads before rendering.
+  // This never deletes local rows/queued work and is not offline cache revocation.
   const visibleCustomers = localCustomers.filter(
     (row) =>
+      readAccess.customers &&
       row.organization_id === currentUser.organization_id &&
       row.location_id === currentUser.location_id,
   )
   const visibleOrders = orders.filter(
     (row) =>
+      readAccess.orders &&
       row.organization_id === currentUser.organization_id &&
       row.location_id === currentUser.location_id,
   )
   const visibleLastCustomer =
+    readAccess.customers &&
     lastCustomer?.userId === currentUser.user_id &&
     lastCustomer.organizationId === currentUser.organization_id &&
     lastCustomer.locationId === currentUser.location_id
@@ -457,19 +463,31 @@ export function App() {
       <dl className="workshop-metrics" aria-label="Resumen local del taller">
         <div>
           <dt>Órdenes activas</dt>
-          <dd>{activeOrders.length}</dd>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders ? activeOrders.length : 'Sin acceso'}
+          </dd>
         </div>
         <div>
           <dt>Listas para entrega</dt>
-          <dd>{visibleOrders.filter((order) => order.state === 'READY').length}</dd>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders
+              ? visibleOrders.filter((order) => order.state === 'READY').length
+              : 'Sin acceso'}
+          </dd>
         </div>
         <div>
           <dt>Esperan refacción</dt>
-          <dd>{visibleOrders.filter((order) => order.state === 'WAITING_FOR_PARTS').length}</dd>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders
+              ? visibleOrders.filter((order) => order.state === 'WAITING_FOR_PARTS').length
+              : 'Sin acceso'}
+          </dd>
         </div>
         <div>
           <dt>Clientes locales</dt>
-          <dd>{visibleCustomers.length}</dd>
+          <dd className={!readAccess.customers ? 'metric-restricted' : undefined}>
+            {readAccess.customers ? visibleCustomers.length : 'Sin acceso'}
+          </dd>
         </div>
       </dl>
       <section id="workshop-orders" className="orders-workspace" aria-labelledby="orders-title">
@@ -478,14 +496,23 @@ export function App() {
             <p className="eyebrow">Cola local</p>
             <h2 id="orders-title">Órdenes de servicio</h2>
           </div>
-          <span className="muted">{visibleOrders.length} registradas</span>
+          <span className="muted">
+            {readAccess.orders ? `${visibleOrders.length} registradas` : 'Lectura restringida'}
+          </span>
         </div>
-        <OrderList
-          orders={visibleOrders}
-          events={orderEvents}
-          onTransition={transitionOrder}
-          canTransition={canCreateOrders}
-        />
+        {readAccess.orders ? (
+          <OrderList
+            orders={visibleOrders}
+            events={orderEvents}
+            onTransition={transitionOrder}
+            canTransition={canCreateOrders}
+            canReadBicycleInfo={readAccess.bicycles}
+          />
+        ) : (
+          <p className="empty-state">
+            Tu sesión no tiene permiso para consultar órdenes (<code>orders.read</code>).
+          </p>
+        )}
       </section>
       <section
         id="workshop-reception"
@@ -537,6 +564,10 @@ export function App() {
             <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
               Tu sesión actual no tiene la capability <code>orders.write</code>.
             </p>
+          ) : !readAccess.customers ? (
+            <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
+              Para seleccionar un cliente necesitas el permiso <code>customers.read</code>.
+            </p>
           ) : (
             <OrderQuickIntake customers={visibleCustomers} onCreateOrder={createOrder} />
           )}
@@ -547,7 +578,8 @@ export function App() {
           conflicts={conflicts.filter(
             (row) =>
               row.organization_id === currentUser.organization_id &&
-              row.location_id === currentUser.location_id,
+              row.location_id === currentUser.location_id &&
+              canReadConflict(currentUser.capabilities, row),
           )}
           onRefresh={async () => {
             await refreshConflicts()

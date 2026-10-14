@@ -229,6 +229,10 @@ textarea {
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
+.workshop-metrics dd.metric-restricted {
+  font-size: 1rem;
+  line-height: 2.6;
+}
 .primary-button,
 .secondary-button {
   display: inline-flex;

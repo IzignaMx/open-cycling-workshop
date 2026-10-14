@@ -184,6 +184,13 @@ test('sync scope keys isolate organization and location cursors', async () => {
       error_message: 'stale version',
     },
     '2026-08-07T08:00:00.000Z',
+    {
+      mutation_id: 'mutation-1',
+      entity_id: 'customer-1',
+      entity_type: 'customer',
+      organization_id: 'org-1',
+      location_id: 'loc-1',
+    },
   )
   assert.equal(conflict.organization_id, 'org-1')
   assert.equal(conflict.location_id, 'loc-1')

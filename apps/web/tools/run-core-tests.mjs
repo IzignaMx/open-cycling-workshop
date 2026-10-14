@@ -46,6 +46,7 @@ try {
     'tests/orders/order-model.test.mjs',
     'tests/auth/session.test.mjs',
     'tests/auth/view-generation.test.mjs',
+    'tests/auth/workshop-read-access.test.mjs',
     'tests/personalization/preferences.test.mjs',
     'tests/customers/local-customer.test.mjs',
     'tests/sync/conflict-center.test.mjs',

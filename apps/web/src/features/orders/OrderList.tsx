@@ -7,6 +7,7 @@ export interface OrderListProps {
   orders: readonly LocalServiceOrder[]
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
+  canReadBicycleInfo: boolean
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
 }
 
@@ -15,10 +16,12 @@ function OrderRecord({
   events,
   onTransition,
   canTransition,
+  canReadBicycleInfo,
 }: {
   order: LocalServiceOrder
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
+  canReadBicycleInfo: boolean
   onTransition: OrderListProps['onTransition']
 }) {
   const [busy, setBusy] = useState(false)
@@ -54,7 +57,7 @@ function OrderRecord({
         <strong>{order.reported_problem}</strong>
         <span className="muted">
           Prioridad {order.priority} · versión {order.version}
-          {order.bicycle_id ? ' · con bicicleta' : ''}
+          {canReadBicycleInfo && order.bicycle_id ? ' · con bicicleta' : ''}
         </span>
       </div>
       <div className="order-state">
@@ -107,7 +110,13 @@ function OrderRecord({
   )
 }
 
-export function OrderList({ orders, events, onTransition, canTransition }: OrderListProps) {
+export function OrderList({
+  orders,
+  events,
+  onTransition,
+  canTransition,
+  canReadBicycleInfo,
+}: OrderListProps) {
   const [query, setQuery] = useState('')
   const filtered = orders.filter((order) =>
     `${order.reported_problem} ${order.order_id} ${ORDER_STATE_LABELS[order.state] ?? order.state}`
@@ -153,6 +162,7 @@ export function OrderList({ orders, events, onTransition, canTransition }: Order
                 events={events.filter((event) => event.order_id === order.order_id)}
                 onTransition={onTransition}
                 canTransition={canTransition}
+                canReadBicycleInfo={canReadBicycleInfo}
               />
             ))}
           </ul>

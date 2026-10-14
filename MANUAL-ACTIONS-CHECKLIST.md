@@ -400,3 +400,10 @@ These entries do not close existing physical/manual V0.1 gates or authorize depl
 - Shared organization/workshop branding is still pending; the current logo is an
   explicitly personal, device-local override. No operator should treat it as
   organization-wide branding or assume cross-device synchronization.
+
+- Administrative rollout still needs offline-permission freshness and safe cache
+  revocation/resnapshot with pending-mutation reconciliation. Presentation read
+  gates preserve stored data and do not secure IndexedDB against a device owner.
+- Legacy conflicts whose entity type was hardcoded remain stored with hidden details.
+  Safe provenance reconciliation/recovery is pending; never infer their kind from
+  the legacy customer label or discard the records as a shortcut.
