@@ -33,6 +33,13 @@ function response(body = wire(), options = {}) {
     url: `${realm}/auth/context?selected_location_id=loc`,
     headers: new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' }),
     json: async () => body,
+    body: new ReadableStream({
+      async start(controller) {
+        const value = options.json ? await options.json() : body
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(value)))
+        controller.close()
+      },
+    }),
     ...options,
   }
 }
@@ -407,4 +414,18 @@ test('supported advertisement is preserved with provenance but transport alone n
   assert.equal(result.context.policyRevision, 'ocwp-access-baseline-2')
   assert.equal(result.state, 'BASELINE_REQUIRED')
   assert.ok(Object.isFrozen(result.context))
+})
+
+test('context reads enforce streamed byte limit before parsing or retaining a response', async () => {
+  let cancelled = false
+  const stream = new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode(' '.repeat(16385)))
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+  await assert.rejects(request(setup(async () => response(wire(), { body: stream }))))
+  assert.equal(cancelled, true)
 })

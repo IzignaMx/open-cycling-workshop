@@ -1,3 +1,4 @@
+import { BoundedHttpError, readBoundedJson, cancelResponse } from './bounded-http.js'
 import { validateVerifiedContext } from './context.js'
 import type { ContextRequestIdentity } from './server-context.js'
 import {
@@ -43,57 +44,17 @@ export class BaselineTransportError extends Error {
 function reject(code: BaselineErrorCode = 'invalid_response'): never {
   throw new BaselineTransportError(code)
 }
-/** Count streamed bytes before decoding/parsing, irrespective of Content-Length. */
+/** Compatibility name for the initial-baseline transport's bounded reader. */
 export async function readBoundedBaselineJson(
   response: Response,
   limit = BASELINE_RESPONSE_LIMIT,
 ): Promise<unknown> {
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > BASELINE_RESPONSE_LIMIT) return reject()
-  const stream = response.body
-  if (!stream) return reject()
-  const reader = stream.getReader()
-  let completed = false
   try {
-    const length = response.headers.get('content-length')
-    if (
-      length !== null &&
-      (!/^\d+$/.test(length) || !Number.isSafeInteger(Number(length)) || Number(length) > limit)
-    )
-      return reject()
-    const decoder = new TextDecoder('utf-8', { fatal: true })
-    let bytes = 0,
-      text = ''
-    for (;;) {
-      const next = await reader.read().catch(() => reject('network_error'))
-      if (next.done) {
-        completed = true
-        break
-      }
-      bytes += next.value.byteLength
-      if (bytes > limit) return reject()
-      text += decoder.decode(next.value, { stream: true })
-    }
-    text += decoder.decode()
-    return JSON.parse(text) as unknown
+    return await readBoundedJson(response, limit)
   } catch (error) {
-    if (error instanceof BaselineTransportError) throw error
-    return reject()
-  } finally {
-    if (!completed) {
-      try {
-        await reader.cancel()
-      } catch {
-        /* no raw stream errors escape */
-      }
-    }
-    reader.releaseLock()
-  }
-}
-async function cancelResponse(response: Response): Promise<void> {
-  try {
-    await response.body?.cancel()
-  } catch {
-    /* Do not expose stream exceptions. */
+    throw new BaselineTransportError(
+      error instanceof BoundedHttpError ? error.code : 'invalid_response',
+    )
   }
 }
 const paths: Record<BaselineKind, string> = {
