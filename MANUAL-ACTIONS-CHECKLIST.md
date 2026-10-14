@@ -2,6 +2,12 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+> **2026-10-14 update:** The historical summary below does not qualify new
+> increments. The bounded access-administration API has separate exact-head
+> PostgreSQL/upgrade and browser-isolation rollout gates in the
+> [current operator section](#2026-10-14--local-account-administration-operator-gates).
+> Neither a complete MVP nor a production/release qualification is claimed.
+
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
 > **RESUMEN EJECUTIVO DE ACCIONES MANUALES PENDIENTES (2026-09-01).** Todo lo automatizable está probado y en verde (V0.1 completo salvo físico; V0.2 Increment 1 completo; Increment 2 en curso). Lo único que avanza este proyecto ahora requiere manos humanas, en este orden de prioridad:
@@ -386,3 +392,132 @@ These entries do not close existing physical/manual V0.1 gates or authorize depl
       DCO passed. The exact-three conflict assertions remain intact. Subsequent
       base/evidence reconciliation commits require their own exact-head CI;
       see the dedicated sync-chaos setup document and current PR #24 checks.
+
+## 2026-10-14 · Local account administration operator gates
+
+Scope: server/API-only local users, role snapshots and locations. Design and
+acceptance are recorded in the
+[administration ADR](docs/02-technical-architecture/2026-10-14-access-administration.md)
+and [increment specification](docs/10-spec-development/2026-10-14-access-administration.md).
+These unchecked items are conditional installation/qualification work, not
+evidence of a problem in a deployed database or authority to modify one.
+
+### Integration and exact-head evidence
+
+- [ ] Verify the prerequisite PR #26 sync read-authorization fix is integrated
+      before delivering the dependent administration increment. Its local base
+      is `0a9c935`; do not infer merge status from a local checkout. PR #25
+      runtime/bootstrap and theme changes are independent.
+- [ ] Run exact-head hosted PostgreSQL 18.x tests for empty database → head and
+      representative `0007` → `0008` preservation. Prove tenant FKs, audit
+      UPDATE/DELETE/TRUNCATE rejection, mutation/audit rollback, first-owner and
+      last-owner races, stale versions and actor revocation while waiting for
+      the organization lock. Use only isolated `_test`/`_e2e` databases and
+      record exact SHA, run/artifact link, versions, counts and failures/skips.
+      Local SQLite evidence cannot close the PostgreSQL lock/migration gate;
+      the current local execution environment has no server/Docker runtime.
+- [x] Record local implementation static/full-test/OpenAPI/generated-client
+      evidence and independent review: 670 Python passed, 59 documented skips,
+      21 aggregate checks passed, zero failures, five environment blockers.
+      See the increment specification for the scope and reviewed fixes. This
+      checkpoint is based on `0a9c935`; prerequisite reconciliation and exact-head
+      hosted PostgreSQL evidence remain separate unchecked gates above.
+
+### Safe conditional upgrade to identity migration 0008
+
+1. Confirm the selected installation, configured database and application image
+   versions. Use the existing secret-injection mechanism; do not paste a
+   credential-bearing database URL into commands, tickets or this checklist.
+   Inspect current Alembic revision and verify a single chain:
+   `0007 → 0008_identity_administration`. Future quote persistence is `0009`
+   following `0008`; do not create an empty reservation or rewrite history.
+2. Take a pre-upgrade backup with the supported tooling, verify it, and prove a
+   restore into an isolated instance before relying on it. Record safe metadata
+   and a recovery plan that accounts for changes after the backup.
+3. Arrange a coordinated maintenance/read-only window for server writes and
+   drain active writers before the migration. Preserve browser data and pending
+   local mutations. This increment does not introduce a maintenance-mode switch
+   or automate deployment; use the installation's supported operating process.
+4. With the intended `OCWP_DATABASE_URL` already securely configured, run the
+   migration from `services/platform`, using the pinned project environment:
+
+   ```sh
+   uv run alembic current
+   uv run alembic upgrade head
+   uv run alembic current
+   ```
+
+   Confirm the candidate's expected head and readiness before resuming writes.
+   Do not accidentally use the example URL in `alembic.ini` or another project's
+   database. Running with `--sql` is not proof of migration success.
+
+5. If migration 0008 reports invalid legacy `session_version` values, keep
+   server writes stopped, preserve the verified backup and investigate the
+   affected identities. Review an explicit history-preserving reconciliation
+   and session-revocation plan before retrying. Do not normalize versions
+   blindly, delete users/audit/history, disable constraints/triggers or mark the
+   revision applied without running it. Migration 0007's independent inventory
+   guard remains in force.
+6. Verify existing account IDs, organization/location, active state, grant
+   snapshots, password hashes and session versions are unchanged by migration;
+   new `is_owner` values are false and account `version` values are 1. Check the
+   audit table/guards and owner-scope/positive-version constraints. Keep raw
+   credentials and private account data out of evidence artifacts.
+
+- [ ] Record backup/restore, maintenance window, migration and preservation
+      evidence for the first actual supported installation upgrade.
+- [ ] Record post-upgrade health, existing workshop-account login and API smoke
+      results. No real-install migration is performed by this source increment.
+
+Do not automatically downgrade schema 0008: removing the audit table/owner
+metadata discards security history. Prefer a schema-compatible application
+rollback or a separately reviewed forward fix/restore. Preserve audit and
+post-backup work; do not bypass immutability guards to make rollback easier.
+
+### Explicit first-owner setup, only when an operator elects to enable it
+
+The migration does not promote the bootstrap user. The existing
+`ocwpctl bootstrap admin` workflow remains unchanged and location-bound. After
+the upgrade is qualified, an authorized local operator can create a separate
+organization-wide owner using the existing installation configuration:
+
+```text
+ocwpctl access create-first-owner --organization-id ORGANIZATION_ID --username OWNER_USERNAME --display-name OWNER_DISPLAY_NAME --password-file PASSWORD_FILE
+```
+
+- Replace placeholders with the verified organization and a new unique account.
+  Prepare the password file using an approved protected local mechanism; limit
+  file access to the operator/runtime. Never place the password in shell
+  arguments/history, command output, logs, tickets or repository files.
+- The command creates a distinct account with `is_owner = true`, null location
+  and all implemented concrete capabilities. It does not promote, rename,
+  widen or reset the existing bootstrap account.
+- It refuses if **any** owner record already exists in that organization, even
+  inactive. A refusal is not permission to delete owner records, clear owner
+  flags or rerun bootstrap. Existing owner credential loss requires a separately
+  reviewed recovery path; this command is not recovery/rebootstrap.
+- Verify one success audit and a new-owner API login without exposing secrets.
+  Confirm an accidental repeat refuses and the original workshop account
+  retains its scope. Handle the password file with the installation's approved
+  secret-retention/disposal procedure after successful setup.
+- [ ] Record explicit setup and API smoke evidence only if a real operator
+      chooses to run this command. It has not been invoked against an actual
+      installation by this source increment.
+
+### End-user rollout gate: browser isolation and permission changes
+
+- [ ] Isolate cached data by authenticated user, capability snapshot and scope;
+      prove user switching and grant/scope contraction cannot expose another
+      user's previously downloaded data. Server revocation alone is insufficient.
+- [ ] Define and prove authorization-epoch cursor reset/resnapshot/backfill for
+      grant/scope expansion so older newly permitted records are not skipped.
+      Preserve and explicitly reconcile pending mutations across account,
+      permission and location changes, offline/reload and reconnect. Never
+      clear IndexedDB or discard pending writes as the normal recovery path.
+- [ ] Implement and qualify the organization-wide workshop selector before
+      offering owner navigation in the PWA. Until then, organization-wide
+      owners are API-only. This increment changes no App/Dexie/Compose/theme
+      behavior and is not a complete administration UI or full MVP.
+
+Physical Windows/Android, accessibility, broader security/session and all other
+unproven release gates above remain open on their own evidence.
