@@ -2,11 +2,19 @@ import type { ConflictRecord } from '../../local/types.js'
 import { buildConflictCenterItems } from './conflict-center-model.js'
 
 export interface ConflictCenterProps {
-  conflicts: readonly ConflictRecord[]
+  conflicts?: readonly ConflictRecord[]
+  issues?: readonly {
+    mutationId: string
+    entityId: string
+    entityType: string
+    errorMessage: string | null
+    state: string
+    errorCode: string | null
+  }[]
   onRefresh(): void | Promise<void>
 }
 
-export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
+export function ConflictCenter({ conflicts = [], issues = [], onRefresh }: ConflictCenterProps) {
   const items = buildConflictCenterItems(conflicts)
 
   return (
@@ -33,7 +41,32 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
         </button>
       </div>
 
-      {items.length === 0 ? (
+      {issues.length > 0 ? (
+        <ul aria-label="Trabajo conservado">
+          {issues.map((issue) => (
+            <li key={issue.mutationId}>
+              <strong>
+                {issue.state === 'held_recovery'
+                  ? 'Recuperación pendiente'
+                  : issue.state === 'held_integrity'
+                    ? 'Integridad pendiente'
+                    : issue.entityType === 'customer'
+                      ? 'Cliente con conflicto'
+                      : issue.entityType === 'bicycle'
+                        ? 'Bicicleta con conflicto'
+                        : 'Orden de servicio con conflicto'}
+              </strong>
+              <p>ID: {issue.entityId}</p>
+              {issue.errorMessage ? <p>{issue.errorMessage}</p> : null}
+              <p>
+                Operación {issue.mutationId} · {issue.state}
+                {issue.errorCode ? ` · ${issue.errorCode}` : ''}. El original se conserva.
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {items.length === 0 && issues.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-[var(--ocwp-color-border)] p-4 text-sm text-[var(--ocwp-color-muted)]">
           No hay incidencias visibles para tus permisos actuales.
         </p>

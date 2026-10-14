@@ -15,6 +15,7 @@ export interface SessionUserSnapshot {
 /** Noncredential reload proof. The kernel validates every field transactionally. */
 export interface SessionAdmission {
   format: 1
+  datasetIncarnation: string
   sessionBindingId: string
   owner: {
     deviceGeneration: number
@@ -77,17 +78,44 @@ export class SessionStore {
           ? parsed.bindingId
           : null
       const candidate = parsed.admission as SessionAdmission | null | undefined
-      // Unknown proof remains in storage, but is never forwarded as admission.
-      const admission =
+      // Unknown fields never enter durable admission metadata.
+      const owner = candidate?.owner
+      const admission: SessionAdmission | null =
         bindingId &&
         candidate?.format === 1 &&
+        Object.keys(candidate).length === 5 &&
         candidate.sessionBindingId === bindingId &&
         typeof candidate.binding === 'string' &&
-        candidate.owner &&
-        Number.isSafeInteger(candidate.owner.deviceGeneration)
-          ? structuredClone(candidate)
+        candidate.binding.length <= 16384 &&
+        typeof candidate.datasetIncarnation === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+          candidate.datasetIncarnation,
+        ) &&
+        owner &&
+        Object.keys(owner).length === 5 &&
+        Number.isSafeInteger(owner.deviceGeneration) &&
+        owner.deviceGeneration >= 0 &&
+        [owner.tabAttemptId, owner.principalKey, owner.partitionId, owner.authorizationEpoch].every(
+          (value) => typeof value === 'string' && value.length > 0 && value.length <= 2048,
+        )
+          ? {
+              format: 1,
+              sessionBindingId: bindingId,
+              binding: candidate.binding,
+              datasetIncarnation: candidate.datasetIncarnation,
+              owner: { ...owner },
+            }
           : null
-      const user = parsed.user && isUserSnapshot(parsed.user) ? structuredClone(parsed.user) : null
+      const user =
+        parsed.user && isUserSnapshot(parsed.user)
+          ? {
+              user_id: parsed.user.user_id,
+              organization_id: parsed.user.organization_id,
+              location_id: parsed.user.location_id,
+              display_name: parsed.user.display_name,
+              capabilities: [...parsed.user.capabilities],
+            }
+          : null
       if (user) {
         Object.freeze(user.capabilities)
         Object.freeze(user)

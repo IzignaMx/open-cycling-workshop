@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -9,7 +8,6 @@ import {
   type KeyboardEvent,
 } from 'react'
 
-import { db } from '../local/db.js'
 import { PALETTES, THEMES, presentationTokens } from './catalog.js'
 import { prepareLocalLogo } from './logo.js'
 import {
@@ -17,17 +15,23 @@ import {
   type PreferenceScope,
   type PresentationPreferences,
 } from './preferences.js'
-import { PreferenceRepository } from './repository.js'
+import type { PreferenceRepository } from './repository.js'
 
 interface WorkshopShellProps {
   scope: PreferenceScope
+  repository: PreferenceRepository
   userName: string
   canCreateOrders: boolean
   children: ReactNode
 }
 
-export function WorkshopShell({ scope, userName, canCreateOrders, children }: WorkshopShellProps) {
-  const repository = useMemo(() => new PreferenceRepository(db.presentationPreferences), [])
+export function WorkshopShell({
+  scope,
+  repository,
+  userName,
+  canCreateOrders,
+  children,
+}: WorkshopShellProps) {
   const [preferences, setPreferences] = useState<PresentationPreferences>({
     ...DEFAULT_PREFERENCES,
   })
