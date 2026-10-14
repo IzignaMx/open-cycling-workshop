@@ -28,6 +28,7 @@ export function completedMetadata(
     capabilities: [...context.capabilities],
     authorization_epoch: context.authorizationEpoch,
     policy_revision: context.policyRevision,
+    dataset_incarnation: context.datasetIncarnation,
     verified_at: context.verifiedAt,
     offline_until: context.offlineUntil,
     snapshot_protocol: context.snapshotProtocol,
@@ -35,6 +36,7 @@ export function completedMetadata(
   return {
     format: 1,
     binding: contextKey(context),
+    datasetIncarnation: context.datasetIncarnation,
     origin: ticket,
     owner: ticket,
     requestId,

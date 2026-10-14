@@ -76,6 +76,7 @@ export class BaselineTransactions {
       const baseline: BaselineMetadata = {
         format: 1,
         binding: contextKey(context),
+        datasetIncarnation: context.datasetIncarnation,
         origin: ticket,
         owner: ticket,
         requestId,

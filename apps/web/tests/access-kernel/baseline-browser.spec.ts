@@ -213,3 +213,66 @@ test('isolated real-server null-protocol staging survives lost commit response a
     expect(snapshot.requests.every((request) => request.bearerMatches)).toBe(true)
   }
 })
+
+test('isolated actual floor-1 server admits ordinary adapter and coordinator with matching incarnation proof', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const h = await window.kernelHarness.openSupportedBaselineQualification(
+      `isolated-supported-baseline-test-${crypto.randomUUID()}`,
+    )
+    try {
+      const customer = await h.createCustomer()
+      let outcome = await h.start()
+      const phases = [outcome.state]
+      for (let step = 0; step < 30 && outcome.state === 'PROGRESSED'; step += 1) {
+        outcome = await h.step()
+        phases.push(outcome.state)
+      }
+      const completed = await h.snapshot()
+      const reuse = await h.reverify()
+      return {
+        customer,
+        context: h.context,
+        initialState: h.initialState,
+        phases,
+        outcome,
+        completed,
+        reuse,
+      }
+    } finally {
+      h.db.close()
+    }
+  })
+  expect(result.initialState).toBe('BASELINE_REQUIRED')
+  expect(result.context.snapshotProtocol).toBe('baseline-v1')
+  expect(result.context.policyRevision).toBe('ocwp-access-baseline-2')
+  expect(result.context.datasetIncarnation).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  )
+  expect(result.outcome.state).toBe('READY')
+  expect(result.completed.control?.state).toBe('READY')
+  expect(result.completed.partition?.baseline?.phase).toBe('active')
+  expect(result.completed.partition?.baseline?.datasetIncarnation).toBe(
+    result.context.datasetIncarnation,
+  )
+  expect(result.completed.context?.datasetIncarnation).toBe(result.context.datasetIncarnation)
+  expect(result.completed.records.some((row) => row.entityId === result.customer.customer_id)).toBe(
+    true,
+  )
+  expect(result.completed.observations.map((value) => value.path)).toEqual([
+    'start',
+    'validate-activation',
+  ])
+  for (const observation of result.completed.observations) {
+    expect(observation.snapshotProtocol).toBe('baseline-v1')
+    expect(observation.datasetIncarnation).toBe(result.context.datasetIncarnation)
+    expect(observation.policyRevision).toBe('ocwp-access-baseline-2')
+  }
+  expect(result.completed.journalCount).toBe(0)
+  expect(result.completed.credentialsPersisted).toBe(false)
+  expect(result.reuse.state).toBe('READY')
+  expect(result.reuse.ticket.partitionId).toBe(result.completed.partition?.partitionId)
+})

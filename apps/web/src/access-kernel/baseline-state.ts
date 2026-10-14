@@ -4,6 +4,7 @@ import {
   validateBaselineResponse,
 } from './baseline-wire.js'
 import { contextKey, principalKey, validateVerifiedContext } from './context.js'
+import { convertServerContext } from './server-context.js'
 import { canonicalJson } from './operations.js'
 import type { CachePartition, ContextTicket, VerifiedAccessContext } from './types.js'
 
@@ -17,6 +18,8 @@ export interface BaselineRequest {
 export interface BaselineMetadata {
   format: 1
   binding: string
+  /** Explicit provenance for the complete retained baseline/continuation proof. */
+  datasetIncarnation: string
   origin: ContextTicket
   owner: ContextTicket
   requestId: string
@@ -34,6 +37,7 @@ export interface BaselineMetadata {
 const keys = [
   'format',
   'binding',
+  'datasetIncarnation',
   'origin',
   'owner',
   'requestId',
@@ -98,54 +102,23 @@ function token(value: unknown): value is string {
   )
 }
 function storedContext(value: unknown, expected: VerifiedAccessContext): VerifiedAccessContext {
-  const raw = object(value, [
-    'protocol',
-    'principal',
-    'account_location_id',
-    'selected_location_id',
-    'capabilities',
-    'authorization_epoch',
-    'policy_revision',
-    'verified_at',
-    'offline_until',
-    'snapshot_protocol',
-  ])
-  const principal = object(raw.principal, ['api_realm', 'organization_id', 'user_id'])
-  const id = (value: unknown): string => {
-    if (typeof value !== 'string' || !value || [...value].length > 36 || value.includes('\0'))
-      throw new Error('Invalid stored context identity')
-    return value
-  }
-  if (
-    raw.protocol !== 1 ||
-    principal.api_realm !== null ||
-    !Array.isArray(raw.capabilities) ||
-    raw.capabilities.some(
-      (grant) =>
-        typeof grant !== 'string' || !/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(grant),
-    ) ||
-    typeof raw.authorization_epoch !== 'string' ||
-    raw.authorization_epoch.length > 256 ||
-    typeof raw.policy_revision !== 'string' ||
-    (raw.snapshot_protocol !== null && raw.snapshot_protocol !== 'baseline-v1')
-  )
+  if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid original context schema')
-  const context: VerifiedAccessContext = {
-    protocol: 1,
-    principal: {
-      apiRealm: expected.principal.apiRealm,
-      organizationId: id(principal.organization_id),
-      userId: id(principal.user_id),
+  // Reuse the live closed parser at the original verification time: retained
+  // evidence cannot weaken policy, incarnation, epoch, realm or timestamp rules.
+  const verifiedAt = canonicalBaselineTimestamp((value as Record<string, unknown>).verified_at)
+  const context = convertServerContext(
+    value,
+    {
+      ...expected.principal,
+      selectedLocationId: expected.selectedLocationId,
+      deviceGeneration: 0,
+      tabAttemptId: 'retained-evidence',
+      sessionHandle: 'retained-evidence',
+      expectedAuthorizationEpoch: expected.authorizationEpoch,
     },
-    accountLocationId: raw.account_location_id === null ? null : id(raw.account_location_id),
-    selectedLocationId: id(raw.selected_location_id),
-    capabilities: raw.capabilities as string[],
-    authorizationEpoch: raw.authorization_epoch,
-    policyRevision: raw.policy_revision,
-    verifiedAt: canonicalBaselineTimestamp(raw.verified_at),
-    offlineUntil: canonicalBaselineTimestamp(raw.offline_until),
-    snapshotProtocol: raw.snapshot_protocol,
-  }
+    Date.parse(verifiedAt),
+  )
   // Validate the original bounded lease at its own verification time. Retained
   // evidence never renews a lease, and initial completion can outlive start expiry.
   validateVerifiedContext(context, Date.parse(context.verifiedAt))
@@ -160,11 +133,13 @@ export function validateBaselineMetadata(
   partition: CachePartition,
   context: VerifiedAccessContext,
 ): BaselineMetadata {
+  validateVerifiedContext(context, Date.parse(context.verifiedAt))
   const value = partition.baseline
   object(value, keys)
   if (
     !value ||
     value.format !== 1 ||
+    value.datasetIncarnation !== context.datasetIncarnation ||
     value.binding !== contextKey(context) ||
     partition.principalKey !== principalKey(context.principal) ||
     partition.locationId !== context.selectedLocationId ||

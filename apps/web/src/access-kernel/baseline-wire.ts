@@ -13,10 +13,11 @@ export interface BaselineWireContext {
   selected_location_id: string
   capabilities: string[]
   authorization_epoch: string
-  policy_revision: 'ocwp-access-baseline-1'
+  policy_revision: 'ocwp-access-baseline-2'
+  dataset_incarnation: string
   verified_at: string
   offline_until: string
-  snapshot_protocol: null
+  snapshot_protocol: null | 'baseline-v1'
 }
 export interface BaselineRecord {
   entity_type: 'customer' | 'bicycle' | 'service_order'

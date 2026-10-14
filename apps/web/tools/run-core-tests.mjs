@@ -39,6 +39,7 @@ try {
   run(process.execPath, [
     '--test',
     'tests/access-kernel/context.test.mjs',
+    'tests/access-kernel/cutover-context.test.mjs',
     'tests/access-kernel/server-context.test.mjs',
     'tests/access-kernel/baseline-wire.test.mjs',
     'tests/access-kernel/baseline-transport.test.mjs',

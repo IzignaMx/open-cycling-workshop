@@ -26,7 +26,7 @@ export interface BaselineOutcome {
   retryAt?: number
 }
 /** One bounded HTTP step per call. Scheduling is explicit; no timers or hidden loops.
- * Current actual null-advertised contexts cannot enter this ordinary coordinator.
+ * Null-advertised contexts cannot enter this ordinary coordinator.
  */
 export function createBaselineCoordinator(options: BaselineCoordinatorOptions) {
   let sequence = 0
@@ -116,8 +116,8 @@ export function createBaselineCoordinator(options: BaselineCoordinatorOptions) {
       })
       if (!captured.current()) return result(captured, 'HELD', { reason: 'stale_request' })
       if (request.kind === 'activation') {
-        // The actual converter remains null-only; the supported-protocol contract
-        // change is separately gated. Never overwrite null with baseline-v1.
+        // Require the exact closed server context again at activation.
+        // Never overwrite a null advertisement with baseline-v1.
         if (!('context' in response)) throw new Error('Invalid activation response')
         const fresh = convertBaselineContext(response.context, captured.identity, options.now())
         await options.kernel.activateBaseline(

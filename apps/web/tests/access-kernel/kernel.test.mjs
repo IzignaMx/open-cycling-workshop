@@ -14,8 +14,9 @@ function context(userId = 'A', overrides = {}) {
     accountLocationId: 'loc',
     selectedLocationId: 'loc',
     capabilities: ['customers.read', 'customers.write', 'sync.push'],
-    authorizationEpoch: `${userId}-epoch`,
-    policyRevision: 'read-v1',
+    authorizationEpoch: `${userId}-epoch`.padEnd(43, '_'),
+    policyRevision: 'ocwp-access-baseline-2',
+    datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
     verifiedAt: new Date(NOW).toISOString(),
     offlineUntil: new Date(NOW + 3_600_000).toISOString(),
     snapshotProtocol: 'baseline-v1',
@@ -68,7 +69,7 @@ async function verified(kernel, value = context()) {
   return kernel.acceptVerifiedContext(attempt, value)
 }
 // Synthetic supported-protocol completion proof for kernel unit tests only.
-// The actual null-advertised server cannot activate this ordinary path.
+// Actual supported-server negotiation is qualified separately.
 async function completedBaseline(db, kernel, value = context()) {
   const initial = await verified(kernel, value)
   await db.cachePartitions.update(initial.ticket.partitionId, {
@@ -290,7 +291,7 @@ test('read-only/write-only/grant changes and unknown entities deny by default', 
   )
   const changed = await verified(
     kernel,
-    context('A', { authorizationEpoch: 'revoked', capabilities: ['sync.push'] }),
+    context('A', { authorizationEpoch: 'revoked'.padEnd(43, '_'), capabilities: ['sync.push'] }),
   )
   assert.equal(changed.state, 'BASELINE_REQUIRED')
   await assert.rejects(kernel.listDispatchable(changed.ticket, 10), /baseline|ready/i)
@@ -577,18 +578,22 @@ test('same-author pending work after a new completed epoch is visible exactly wh
   const { db, kernel } = await setup(t)
   const first = await completedBaseline(db, kernel)
   await kernel.commitLocalCommand(first, command())
-  const next = await completedBaseline(db, kernel, context('A', { authorizationEpoch: 'A-next' }))
+  const next = await completedBaseline(
+    db,
+    kernel,
+    context('A', { authorizationEpoch: 'A-next'.padEnd(43, '_') }),
+  )
   const visible = await kernel.readEntity(next, 'customer', 'customer-shared')
   assert.equal(visible.optimistic.display_name, 'Private A')
   assert.equal(visible.optimisticStatus, 'pending')
   const batch = await kernel.listDispatchable(next, 10)
   assert.deepEqual(batch.operations[0].envelope, command().envelope)
-  assert.equal(batch.operations[0].authoredUnderEpoch, 'A-epoch')
+  assert.equal(batch.operations[0].authoredUnderEpoch, 'A-epoch'.padEnd(43, '_'))
   const revoked = await completedBaseline(
     db,
     kernel,
     context('A', {
-      authorizationEpoch: 'A-revoked',
+      authorizationEpoch: 'A-revoked'.padEnd(43, '_'),
       capabilities: ['customers.read', 'sync.push'],
     }),
   )

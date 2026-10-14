@@ -18,6 +18,8 @@ export interface VerifiedAccessContext {
   capabilities: readonly string[]
   authorizationEpoch: string
   policyRevision: string
+  /** Explicit server provenance; never inferred for pre-cutover contexts. */
+  datasetIncarnation: string
   verifiedAt: string
   offlineUntil: string
   snapshotProtocol: 'baseline-v1' | null

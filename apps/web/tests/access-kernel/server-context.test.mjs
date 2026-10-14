@@ -19,7 +19,8 @@ const wire = () => ({
   selected_location_id: 'loc',
   capabilities: ['customers.read'],
   authorization_epoch: 'a'.repeat(43),
-  policy_revision: 'ocwp-access-baseline-1',
+  policy_revision: 'ocwp-access-baseline-2',
+  dataset_incarnation: '0199ba00-0000-7000-8000-000000000001',
   verified_at: new Date(now).toISOString(),
   offline_until: new Date(now + 3600000).toISOString(),
   snapshot_protocol: null,
@@ -122,9 +123,9 @@ for (const [name, mutate] of [
     },
   ],
   [
-    'premature activation',
+    'unknown snapshot protocol',
     (v) => {
-      v.snapshot_protocol = 'baseline-v1'
+      v.snapshot_protocol = 'baseline-v2'
     },
   ],
   [
@@ -397,3 +398,13 @@ for (const grant of ['users..read', 'users.credentials.*', '.users.read', 'users
   test(`concrete grant grammar rejects ${grant}`, async () => {
     await assert.rejects(request(setup(async () => response({ ...wire(), capabilities: [grant] }))))
   })
+
+test('supported advertisement is preserved with provenance but transport alone never activates', async () => {
+  const body = { ...wire(), snapshot_protocol: 'baseline-v1' }
+  const result = await request(setup(async () => response(body)))
+  assert.equal(result.context.snapshotProtocol, 'baseline-v1')
+  assert.equal(result.context.datasetIncarnation, body.dataset_incarnation)
+  assert.equal(result.context.policyRevision, 'ocwp-access-baseline-2')
+  assert.equal(result.state, 'BASELINE_REQUIRED')
+  assert.ok(Object.isFrozen(result.context))
+})

@@ -1,4 +1,4 @@
-import { validateVerifiedContext } from './context.js'
+import { isDatasetIncarnation, validateVerifiedContext } from './context.js'
 import type { VerifiedAccessContext, VerificationAttempt } from './types.js'
 
 /** Routing expectation only; never a substitute for server authentication. */
@@ -84,6 +84,7 @@ export function convertServerContext(
     'capabilities',
     'authorization_epoch',
     'policy_revision',
+    'dataset_incarnation',
     'verified_at',
     'offline_until',
     'snapshot_protocol',
@@ -91,8 +92,9 @@ export function convertServerContext(
   const principal = record(body.principal, ['api_realm', 'organization_id', 'user_id'])
   if (
     body.protocol !== 1 ||
-    body.policy_revision !== 'ocwp-access-baseline-1' ||
-    body.snapshot_protocol !== null ||
+    body.policy_revision !== 'ocwp-access-baseline-2' ||
+    !isDatasetIncarnation(body.dataset_incarnation) ||
+    (body.snapshot_protocol !== null && body.snapshot_protocol !== 'baseline-v1') ||
     principal.api_realm !== null ||
     !id(principal.organization_id) ||
     !id(principal.user_id) ||
@@ -124,9 +126,10 @@ export function convertServerContext(
     capabilities: Object.freeze([...body.capabilities] as string[]),
     authorizationEpoch: body.authorization_epoch,
     policyRevision: body.policy_revision,
+    datasetIncarnation: body.dataset_incarnation,
     verifiedAt: instant(body.verified_at),
     offlineUntil: instant(body.offline_until),
-    snapshotProtocol: null,
+    snapshotProtocol: body.snapshot_protocol,
   }
   validateVerifiedContext(context, now)
   return Object.freeze(context)
