@@ -3,16 +3,18 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.admin_schemas import ChangePasswordRequest
 from cycling_workshop.identity.administration import AdministrationService
-from cycling_workshop.identity.dependencies import principal_from_request
+from cycling_workshop.identity.dependencies import effective_principal, principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
 from cycling_workshop.identity.schemas import CurrentUserResponse, LoginRequest, LoginResponse
 from cycling_workshop.identity.security import PasswordService, SessionTokenService
+from cycling_workshop.tenancy.models import OrganizationRecord
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -52,18 +54,33 @@ def current_user(
     principal: Annotated[Principal, Depends(principal_from_request)],
     session: Annotated[Session, Depends(get_session)],
 ) -> CurrentUserResponse:
+    # Serialize the current-state read with administration, using the same org
+    # first lock order. The dependency's earlier session is not a fresh snapshot
+    # after waiting behind a revocation or scope/grant change.
+    organization = session.scalar(
+        select(OrganizationRecord)
+        .where(OrganizationRecord.id == principal.organization_id)
+        .with_for_update()
+    )
     account = SqlAlchemyUserRepository(session).get(
         user_id=principal.user_id,
         organization_id=principal.organization_id,
+        for_update=True,
     )
-    if account is None or not account.is_active:
+    if organization is None or account is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session")
+    try:
+        effective = effective_principal(principal, account)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
+        ) from exc
     return CurrentUserResponse(
-        user_id=account.user_id,
-        organization_id=account.organization_id,
-        location_id=account.location_id,
+        user_id=effective.user_id,
+        organization_id=effective.organization_id,
+        location_id=effective.location_id,
         display_name=account.display_name,
-        capabilities=sorted(account.capabilities),
+        capabilities=sorted(effective.capabilities),
     )
 
 

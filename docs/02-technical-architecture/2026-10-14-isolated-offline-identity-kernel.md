@@ -1,9 +1,11 @@
 # ADR · Isolated identity-bound offline kernel
 
-Status: accepted for the bounded isolated implementation; local checks recorded,
-independent/hosted qualification pending.
+Status: accepted for the bounded isolated implementation; independent review and
+first-head hosted qualification recorded. Main-29 reconciliation requires fresh
+combined qualification; production activation remains blocked.
 Date: 2026-10-14.
-Base: PR #28 head `1ab3554d` (structural themes plus access administration).
+Initial base: PR #28 head `1ab3554d` (structural themes plus access administration).
+Reconciliation: actual main #29 `f87205157e298f5c1c7c3f08d024fe822d84582b`.
 
 ## Context and scope
 
@@ -189,8 +191,9 @@ fixtures and real-browser execution must be identified explicitly in evidence.
 an existing v4-only `OcwpDatabase` instance to open a native50 database and write
 the legacy queue. A negative test expecting a lower-version rejection failed;
 the retained regression records the actual unsafe compatibility behavior. A
-separate native-browser journey must verify this result on hosted Chromium.
-Schema version alone is therefore not a writer fence. Before activation, review
+separate native-browser journey confirmed the same result on hosted Chromium
+in PR #30 run `38559830979` (eight kernel cases passed). Schema version alone is
+therefore not a writer fence. Before activation, review
 an isolated new database name together with explicit service-worker/client
 protocol fencing and a no-mixed-writers installation procedure. These are future
 architecture options, not implemented mitigation or a claim that a hostile old
@@ -274,11 +277,10 @@ unavoidable offline revocation window remain explicit residual risks.
 
 ## Evidence
 
-Implementation, regression red/green, migration, static, aggregate, independent
-review and any hosted/browser results are **pending** until recorded for the
-actual tested source in the
-[increment record](../10-spec-development/2026-10-14-isolated-offline-identity-kernel.md).
-The Node suite uses real Dexie with the `fake-indexeddb` emulator; this is not
-real-browser evidence. A dedicated browser harness must have its execution and
-results recorded separately. No activation, PostgreSQL, hosted or physical-device
-evidence is implied here.
+The [increment record](../10-spec-development/2026-10-14-isolated-offline-identity-kernel.md)
+separates independent review, local aggregate/emulator evidence and first-head
+hosted native-browser proof by exact source/tree. The Node suite uses real Dexie
+with `fake-indexeddb`; its broader fixture coverage is distinct from the eight
+native browser cases. Main-29 combined qualification remains a new gate. No
+production activation, new baseline/server protocol or physical-device proof is
+implied by these isolated results.

@@ -1,12 +1,17 @@
 # Isolated offline identity kernel · 2026-10-14
 
-Status: `implemented_pending_evidence`; local tests pass, independent and
-hosted/browser qualification pending.
+Status: `first_head_hosted_verified_reconciliation_pending`; implementation and
+independent review complete for the isolated boundary. Production activation is
+blocked by the integration gates below.
 Branch: `feat/isolated-offline-identity-kernel`.
-Base: PR #28 head `1ab3554d`, combining structural themes with the verified
-access-administration prerequisite. Initial implementation checkpoint: `0f35443ca33328aaedee156772df0b76f2f67e0f`,
-tree `6cb7164fdaec0a7cffab2ffefe4bef3ce2d7fda9`; reviewed corrections and final
-exact-head evidence are pending.
+Initial base: PR #28 head `1ab3554d`. First reviewed local head:
+`1d57c0955c2480868124ea618d7eac739737cc6b`; identical published head:
+`668a18f5cf16fc44ce9f4ee24498774ad7049b46`; tree:
+`22ef13dd0fa1b1983a1d4d58bb64738d27e9682c`.
+Reconciliation uses the published ancestry and true-merges actual main #29
+`f87205157e298f5c1c7c3f08d024fe822d84582b`; kernel source stays unchanged and
+server source exactly matches that main checkpoint. Fresh combined review/qualification is separate
+from the first-head evidence below.
 
 ## Bounded delivery
 
@@ -36,25 +41,26 @@ Alembic `0008` and quote PostgreSQL `0009` are unchanged.
 
 ## Acceptance and evidence ledger
 
-The local checkpoint below is measured on the branch working tree before its
-implementation commit; exact-head/hosted evidence remains separately pending. A fixture exercising ready-state internals is not evidence
-of a production baseline or live browser isolation.
+Evidence below belongs to the first reviewed tree named above. Reconciliation
+with main #29 does not relabel that evidence as a fresh combined run. A fixture
+exercising ready-state internals is not evidence of a production baseline or live
+browser isolation.
 
-| Acceptance                     | Required proof                                                                                                                   | Current evidence                        |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Production boundary unchanged  | Source/contract review; existing Golden Slice regression                                                                         | Node checkpoint; native browser pending |
-| New contexts fail closed       | `BASELINE_REQUIRED`, no legacy projection/cursor fallback, no normal activation shortcut                                         | Node checkpoint; native browser pending |
-| Lossless additive v5           | Supported legacy layouts with nonempty queue/conflicts/events/preferences/logos and unknown fields; exact equality after upgrade | Node checkpoint; native browser pending |
-| Same-workshop author isolation | Distinct principals with identical organization/location/grants cannot read or dispatch each other's journal/cache/event data    | Node checkpoint; native browser pending |
-| Transactional fencing          | Stale reads, commands and ACKs after context/epoch/generation switch reject; atomic rollback prevents partial writes             | Node checkpoint; native browser pending |
-| Immutable commands and history | Original envelope survives success, retry, rejection and reload; journal/delivery/event writes are atomic                        | Node checkpoint; native browser pending |
-| Dispatch and dependency safety | Current-author/current-capability selection, unchanged IDs/payloads, dependent holds, independent progress                       | Node checkpoint; native browser pending |
-| ACK validation                 | Foreign/missing/mismatched IDs, contradictory duplicates, invalid status/version and stale batches acknowledge nothing           | Node checkpoint; native browser pending |
-| Legacy recovery boundary       | No inferred author from login/actor fields, no automatic replay/claim/delete, preserved unknown data                             | Node checkpoint; native browser pending |
-| Presentation continuity        | Eight existing stores/indexes retained; personal appearance/logo scope unchanged                                                 | Node checkpoint; native browser pending |
-| Failure and compatibility      | Abort/quota/versionchange/reload cases; evidence distinguishes fake storage from real browser                                    | Node checkpoint; native browser pending |
-| Future v6 preservation         | Explicit future-schema fixture, if implemented; reservation alone is not migration proof                                         | Node checkpoint; native browser pending |
-| Independent review             | Scope, source invariants, recovery claims and evidence limits reviewed                                                           | Node checkpoint; native browser pending |
+| Acceptance                     | Required proof                                                                                                                   | Current evidence                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Production boundary unchanged  | Source/contract review; existing Golden Slice regression                                                                         | Source review; unchanged production PWA 23/23 twice                                   |
+| New contexts fail closed       | `BASELINE_REQUIRED`, no legacy projection/cursor fallback, no normal activation shortcut                                         | Node tests; native two-tab fixture uses explicit baseline seeding                     |
+| Lossless additive v5           | Supported legacy layouts with nonempty queue/conflicts/events/preferences/logos and unknown fields; exact equality after upgrade | Node exact-all-store fixtures; native queue/preferences preservation at five versions |
+| Same-workshop author isolation | Distinct principals with identical organization/location/grants cannot read or dispatch each other's journal/cache/event data    | Node tests and native A/B two-tab fixture                                             |
+| Transactional fencing          | Stale reads, commands and ACKs after context/epoch/generation switch reject; atomic rollback prevents partial writes             | Node tests; native stale command/ACK fencing                                          |
+| Immutable commands and history | Original envelope survives success, retry, rejection and reload; journal/delivery/event writes are atomic                        | Node tests; native original journal preservation                                      |
+| Dispatch and dependency safety | Current-author/current-capability selection, unchanged IDs/payloads, dependent holds, independent progress                       | Node tests; no native backlog-performance claim                                       |
+| ACK validation                 | Foreign/missing/mismatched IDs, contradictory duplicates, invalid status/version and stale batches acknowledge nothing           | Node malformed-response tests; native stale ACK case                                  |
+| Legacy recovery boundary       | No inferred author from login/actor fields, no automatic replay/claim/delete, preserved unknown data                             | Node tests; native no-attribution migration cases                                     |
+| Presentation continuity        | Eight existing stores/indexes retained; personal appearance/logo scope unchanged                                                 | Node all-store fixtures; native logo preservation; unchanged PWA suite                |
+| Failure and compatibility      | Abort/quota/versionchange/reload cases; evidence distinguishes fake storage from real browser                                    | Node quota/versionchange; native abort rollback and old-writer blocker                |
+| Future v6 preservation         | Explicit future-schema fixture, if implemented; reservation alone is not migration proof                                         | Fixture-only emulator proof; no native v6 implementation                              |
+| Independent review             | Scope, source invariants, recovery claims and evidence limits reviewed                                                           | Clean final review; focused 60/60 and harness checks independently passed             |
 
 Traceability: FR-IAM-002/004/006/008; OFF-001/003/005–009/012;
 NFR-004/005/010/014; SEC-002/003; QA INV-LOCAL-001/GATE-LOCAL-001. Later
@@ -78,21 +84,23 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   v3/native30 and v4/native40 all preserve exact rows on v5/native50. Abort and
   simulated quota rollback, retry, versionchange close and a fixture-only future
   v6/native60 additive store preserve journals/preferences. Node tests use real Dexie with the `fake-indexeddb` emulator,
-  not a browser. A dedicated real-browser harness has separate pending evidence.
+  not a browser. The dedicated real-browser harness has separate first-head evidence below.
 - Real frontend, offline fallback and isolated browser-harness typechecks pass;
   ESLint and isolated Vite harness build pass. PWA build passes with the original
-  production entrypoint unchanged. Fresh final formatting/aggregate is pending.
+  production entrypoint unchanged. Exact local aggregate at `1d57c095` passed
+  21 checks with zero failures and five environment blockers.
 - Eight separate native-browser journeys are collected and typechecked, including
   real two-tab fencing, historical schema upgrades, aborted upgrade and the
   observed old-bundle blocker. They run through `pnpm --filter @ocwp/web test:kernel-browser`
   in hosted CI separately from the unchanged existing PWA journeys. Local
   execution is blocked by managed Chromium URLBlocklist policy; no alternate
   browser/flags or policy bypass was attempted.
-- Existing Golden Slice and other browser journeys: pending for this source.
+- Existing Golden Slice and other browser journeys: first-head hosted 23/23
+  passed twice; final combined source needs its own hosted run.
 - Working-tree aggregate: 755 Python tests passed and 60 explained local skips;
   OpenAPI/generated client, runtime HTTP smoke and Python static checks pass.
   An intermediate run had one formatting failure while the new fixture was being
-  formatted. It is corrected; fresh final aggregate is pending. PostgreSQL URL,
+  formatted. The exact-head rerun above verified its correction. PostgreSQL URL,
   Docker, psql, managed Chromium navigation and destructive browser-E2E database
   configuration remain five explicit environment blockers.
 - Independent review reproduced two projection-continuity bugs and an unbounded
@@ -106,8 +114,11 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   artifacts so later production E2E cannot erase isolated-kernel evidence.
   A second review added transitive implicit-aggregate dependency checks and
   bounded reverse projection pages with older-eligible fallback, each observed
-  red before its fix. Final re-review is pending.
-- Exact final commit/tree and hosted run/artifact links: pending.
+  red before its fix. Final independent review at `1d57c095` was clean, with
+  60/60 focused tests, harness typecheck/build, eight-case discovery and
+  source/test checksums independently verified.
+- Exact first-head commit/tree and hosted run/artifact links: recorded below;
+  new combined reconciliation evidence remains separate.
 - New server/PostgreSQL behavior: not implemented or qualified by this increment.
 - Actual installation migration, recovery, production activation and physical
   Windows/Android qualification: not performed.
@@ -117,13 +128,64 @@ be relabelled as proof of this new v5 boundary. Test discovery is not execution;
 static or fake-table evidence does not establish real IndexedDB transactions,
 multiple browser tabs, PWA upgrade behavior or PostgreSQL concurrency.
 
+## First-head hosted qualification
+
+PR #30 head `668a18f5cf16fc44ce9f4ee24498774ad7049b46` was tested at GitHub
+merge checkout `cd5dd014f8db365156f7372332f240e74c37d833`, whose parents are
+main #28 `675fe209fa0b038156ba0c57c44f520b2e2de376` and that PR head. The
+checkout and head both resolve to tree `22ef13dd0fa1b1983a1d4d58bb64738d27e9682c`,
+verified by fetching the Git objects, identical to the independently reviewed
+local tree. These results do not include later main #29 server changes.
+
+- CI [38559830979](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830979):
+  qualification **27/27 passed**, no blockers; Python **812 passed, 3 skipped**;
+  frontend **158 passed** and API client **1 passed**. Skips are one missing
+  matching-major PostgreSQL client restore case and two dialect-specific cases;
+  the separate runtime drill below covers its own PostgreSQL 18 restore path.
+- Native Chromium **8/8 passed**, with zero skipped/flaky/unexpected and retry 0
+  for every case: native1/10/20/30/40 preservation, two-tab fencing, upgrade-abort
+  rollback and the old-v4-writer compatibility blocker. This is real execution,
+  not test discovery. Node-only quota/full-all-store and future-v6 fixture claims
+  remain distinct.
+- Unchanged production PWA **23/23 passed twice**, plus **10/10** explicit
+  baseline/reconnect repetitions with retries disabled. The PWA still uses v4.
+- Runtime [38559830844](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830844):
+  **11 checks passed**, including fresh stack, Caddy/offline/reconnect/two-browser
+  convergence, persistence and PostgreSQL 18 backup/restore; three ARM64 image
+  builds passed. Physical hardware was explicitly not tested.
+- Security [38559831014](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559831014)
+  and DCO [38559830900](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830900)
+  passed. Existing hosted 100k IndexedDB benchmark passed at 38,978.1 ms write /
+  99.8 ms count-and-sample read; this is not kernel-backlog/device qualification.
+
+Downloaded artifacts were ZIP-integrity checked and SHA-256 matched GitHub:
+
+| Artifact                                                                                                            | ID          | SHA-256                                                            |
+| ------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| [Isolated kernel](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830979/artifacts/11891389212) | 11891389212 | `8129954009b42a5a3bd92c971f912e97d5b9b2bc7af39558540afbc3b5dba1aa` |
+| [Production PWA](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830979/artifacts/11891204257)  | 11891204257 | `03a5efc83b5d904ff1f89f13dcf0cadd184d39e0a7f8c00ab46bac32dd293a14` |
+| [Qualification](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830979/artifacts/11891829021)   | 11891829021 | `a3df750b7d25e43436e60bda4c655364bb2114ee5ad4578f13af676c5000cb4d` |
+| [Runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38559830844/artifacts/11891083912)         | 11891083912 | `c29f3f37171a999f98ec3fd71f1438530b640a348b81cf82db4153ab7c620ba9` |
+
+## Main-29 reconciliation boundary
+
+The actual-main merge preserves PR #29's same-shape effective `/auth/me`,
+server-attributed new transition events and receipt tuple validation. Those
+prerequisites do not supply the kernel's verified context/epoch/lease, complete
+baseline or original-author/full-payload receipt binding. No server behavior is
+reimplemented by this client increment. Kernel source/tests and production
+client source remain byte-identical to the first-head tree; combined source
+qualification and independent reconciliation review must be recorded for the
+new exact commit before publication/merge readiness is claimed.
+
 ## Demonstrated old-bundle compatibility risk
 
 The test expecting a v4-only Dexie constructor to reject native50 failed. Dexie
 4.4.4/emulated IndexedDB opens that database and can still write its legacy queue.
 The replacement test records that behavior as an activation blocker; it does not
-claim the compatibility problem is fixed. A dedicated native-browser test awaits
-hosted execution. The ADR requires explicit old-bundle/client-protocol fencing
+claim the compatibility problem is fixed. The unchanged native-browser test
+confirmed the same reopen/write behavior in the hosted run above. The ADR
+requires explicit old-bundle/client-protocol fencing
 and consideration of a separate database name before production integration.
 No mitigation is activated in this increment, and unchanged v4 Golden Slice
 legacy-replay behavior remains historical production behavior, not a v5 guarantee.

@@ -383,6 +383,17 @@ Add durable evidence below instead of editing completed checklist history away.
 See [MVP acceptance plan](docs/10-spec-development/2026-10-14-local-workshop-mvp.md).
 These entries do not close existing physical/manual V0.1 gates or authorize deployment.
 
+## Effective identity/sync hardening: malformed legacy identities
+
+- If a previously queued operation or stored receipt contains blank/whitespace
+  identity fields, the hardened sync service returns a permanent conflict. Keep
+  the queue, receipt and original business/event history intact for reviewed
+  reconciliation. Do not clear IndexedDB, delete the receipt, substitute a
+  normalized ID or retry under a new mutation ID as an automatic workaround.
+- This is a conditional recovery boundary, not evidence that a real installation
+  has malformed data or a new setup step for canonical IDs. See the
+  [scope and evidence](docs/10-spec-development/2026-10-14-effective-identity-sync-authority.md).
+
 ## 2026-10-14 · Sync chaos setup regression
 
 - [x] Verify the corrected large-batch setup and deterministic regression on
@@ -568,11 +579,14 @@ and [evidence record](docs/10-spec-development/2026-10-14-isolated-offline-ident
 These open items do not authorize deployment or imply an actual installation has
 been migrated. Existing checked evidence remains historical.
 
-- [ ] Record exact-head isolated kernel/migration tests, independent review and
-      fresh aggregate results, including every failure/skip/blocker. Distinguish
-      fixture or fake IndexedDB tests from real browser/PWA execution. Preserve
-      the existing Golden Slice; do not turn a globally blocked application into
-      a passing replacement test.
+- [x] Record the first reviewed tree `22ef13dd` / published head `668a18f5`:
+      independent 60/60 focused tests; hosted CI `38559830979` passed 27 checks,
+      eight isolated native cases, 23 production PWA cases twice and ten sync
+      repetitions. Artifact links/digests and all explicit skips are in the
+      evidence record; fake IndexedDB coverage remains identified separately.
+- [ ] Requalify the exact combined source after true-merging actual main #29
+      `f8720515`. First-head evidence above is not proof of the later server
+      prerequisite integration. Preserve the existing Golden Slice.
 - [ ] Before production activation, integrate effective authenticated context,
       bounded offline eligibility, reconnect revalidation and a complete
       authorized baseline with ordered handoff. Include historical direct-REST
@@ -605,16 +619,17 @@ been migrated. Existing checked evidence remains historical.
       recipient/security design.
 
 - [ ] Resolve the demonstrated old-bundle compatibility blocker before activation:
-      Dexie 4.4.4/emulated IndexedDB lets a v4-only constructor open native50 and
-      write the legacy queue. Verify the separate native-browser regression on
-      hosted Chromium, then qualify explicit old-bundle/client-protocol fencing
+      Dexie 4.4.4 with both emulated and native Chromium IndexedDB lets a v4-only
+      constructor open native50 and write the legacy queue. Hosted run
+      `38559830979` confirmed this blocker. Qualify explicit old-bundle/client-protocol fencing
       and a no-mixed-writers procedure. A lower schema declaration is not a fence.
       A separate database name is a design option awaiting reviewed integration,
       not protection implemented here.
 
 All eight existing stores, personal appearance and device-local logos pass the
-exact-value emulator migrations; native-browser/installation evidence remains
-pending. Future quote
+exact-value emulator migrations; the first-head native cases additionally prove
+queue/preferences preservation. Actual installation and broader native failure/
+device qualification remain pending. Future quote
 stores reserve v6 after the isolated v5 kernel; no v6 migration is implemented.
 PostgreSQL administration `0008` and quote reservation `0009` remain unchanged.
 No credentials, new server/wire contracts, physical-device evidence or actual

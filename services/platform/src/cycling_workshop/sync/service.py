@@ -22,6 +22,7 @@ from cycling_workshop.sync.domain import (
     ChangePage,
     MutationEnvelope,
     MutationResult,
+    SyncApplicationContext,
     SyncConflict,
 )
 from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
@@ -95,11 +96,40 @@ class SyncService:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def apply(self, mutation: MutationEnvelope) -> MutationResult:
+    def apply(
+        self, mutation: MutationEnvelope, *, context: SyncApplicationContext | None = None
+    ) -> MutationResult:
+        # Domain constructors may trim/collapse IDs. Reject ambiguous identity
+        # strings before lookup or effects instead of storing a receipt that an
+        # identical raw envelope cannot safely replay. Do not normalize aliases.
+        identities = (
+            mutation.mutation_id,
+            mutation.organization_id,
+            mutation.location_id,
+            mutation.entity_id,
+        )
+        if any(
+            not value or any(character.isspace() for character in value) for value in identities
+        ):
+            raise SyncConflict(
+                "mutation identity fields must be nonblank and contain no whitespace"
+            )
         existing_receipt = self._session.get(MutationReceiptRecord, mutation.mutation_id)
         if existing_receipt is not None:
-            if existing_receipt.organization_id != mutation.organization_id:
-                raise SyncConflict("mutation id already belongs to another organization")
+            if (
+                existing_receipt.organization_id,
+                existing_receipt.location_id,
+                existing_receipt.entity_type,
+                existing_receipt.entity_id,
+                existing_receipt.operation,
+            ) != (
+                mutation.organization_id,
+                mutation.location_id,
+                mutation.entity_type,
+                mutation.entity_id,
+                mutation.operation,
+            ):
+                raise SyncConflict("mutation id already belongs to another envelope")
             return MutationResult(
                 mutation_id=existing_receipt.mutation_id,
                 status="applied",
@@ -112,7 +142,7 @@ class SyncService:
         elif mutation.entity_type == "bicycle":
             applied = self._apply_bicycle(mutation)
         elif mutation.entity_type == "service_order":
-            applied = self._apply_service_order(mutation)
+            applied = self._apply_service_order(mutation, context=context)
         else:
             raise SyncConflict(f"unsupported entity type: {mutation.entity_type}")
 
@@ -321,7 +351,9 @@ class SyncService:
             payload=_bicycle_payload(updated),
         )
 
-    def _apply_service_order(self, mutation: MutationEnvelope) -> _Applied:
+    def _apply_service_order(
+        self, mutation: MutationEnvelope, *, context: SyncApplicationContext | None
+    ) -> _Applied:
         customers = SqlAlchemyCustomerRepository(self._session)
         bicycles = SqlAlchemyBicycleRepository(self._session)
         repository = SqlAlchemyServiceOrderRepository(self._session)
@@ -399,14 +431,16 @@ class SyncService:
         if not isinstance(transition, dict):
             raise SyncConflict("unsupported order update: expected a transition payload")
         action = transition.get("action")
-        actor_id = transition.get("actor_id")
         note = transition.get("note")
-        if not isinstance(action, str) or not isinstance(actor_id, str):
-            raise SyncConflict("transition requires action and actor_id")
+        if not isinstance(action, str):
+            raise SyncConflict("transition requires action")
+        if context is None:
+            raise SyncConflict("transition requires authenticated actor context")
         try:
             result = existing.transition(
                 action,
-                actor_id=actor_id,
+                # Legacy transition.actor_id is accepted but is not authority.
+                actor_id=context.actor_id,
                 note=note if isinstance(note, str) else None,
                 now=_as_utc(mutation.occurred_at),
             )

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
-from cycling_workshop.sync.domain import MutationEnvelope, SyncConflict
+from cycling_workshop.sync.domain import MutationEnvelope, SyncApplicationContext, SyncConflict
 from cycling_workshop.sync.schemas import (
     ChangeItemResponse,
     ChangePageResponse,
@@ -71,7 +71,8 @@ def push_mutations(
                             base_version=item.base_version,
                             occurred_at=item.occurred_at,
                             payload=item.payload,
-                        )
+                        ),
+                        context=SyncApplicationContext(actor_id=principal.user_id),
                     )
                 results.append(
                     MutationResultResponse(

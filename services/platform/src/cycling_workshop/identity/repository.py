@@ -55,11 +55,15 @@ class SqlAlchemyUserRepository:
         record = self._session.scalar(statement)
         return self._to_domain(record) if record is not None else None
 
-    def get(self, *, user_id: str, organization_id: str) -> UserAccount | None:
+    def get(
+        self, *, user_id: str, organization_id: str, for_update: bool = False
+    ) -> UserAccount | None:
         statement: Select[tuple[UserRecord]] = select(UserRecord).where(
             UserRecord.id == user_id,
             UserRecord.organization_id == organization_id,
         )
+        if for_update:
+            statement = statement.with_for_update().execution_options(populate_existing=True)
         record = self._session.scalar(statement)
         return self._to_domain(record) if record is not None else None
 
