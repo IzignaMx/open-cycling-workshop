@@ -249,3 +249,55 @@ test('cloned online reload loses exact owner CAS without verification tug-of-war
   await loser.runtime.checkLease()
   assert.equal(loser.server.calls.length, before)
 })
+
+test('live durable takeover blanks the previous tab without stealing the new session back', async (t) => {
+  const first = setup(t)
+  await first.runtime.start()
+  await login(first.runtime)
+  const second = setup(t, { name: first.name })
+  await second.runtime.start()
+  await login(second.runtime, 'B')
+  await until(
+    () => first.runtime.getSnapshot().phase === 'held',
+    'old tab did not observe takeover',
+  )
+  assert.equal(first.runtime.getSnapshot().customers.length, 0)
+  await first.runtime.checkLease()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.deepEqual(
+    second.runtime.getSnapshot().customers.map((row) => row.display_name),
+    ['Private B'],
+  )
+})
+
+test('late context verification from A cannot reinstall data after B completes', async (t) => {
+  const server = api()
+  let release, reached
+  const barrier = new Promise((resolve) => {
+    reached = resolve
+  })
+  const original = server.fetch
+  server.fetch = async (url, init) => {
+    if (
+      new URL(url).pathname.endsWith('/auth/context') &&
+      init.headers.Authorization === 'Bearer token-A'
+    ) {
+      reached()
+      await new Promise((resolve) => {
+        release = resolve
+      })
+    }
+    return original(url, init)
+  }
+  const f = setup(t, { server })
+  const pending = f.runtime.login({ organization_id: 'org', username: 'A', password: 'synthetic' })
+  await barrier
+  await login(f.runtime, 'B')
+  release()
+  await pending
+  assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
+  assert.deepEqual(
+    f.runtime.getSnapshot().customers.map((row) => row.display_name),
+    ['Private B'],
+  )
+})
