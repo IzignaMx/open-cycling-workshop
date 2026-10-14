@@ -112,6 +112,15 @@ jobs:
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/direct
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/direct
         run: pnpm --filter @ocwp/web test:e2e
+      - name: Upload direct browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-direct-${{ github.sha }}
+          path: |
+            apps/web/test-results/direct/
+            apps/web/playwright-report/direct/
+          if-no-files-found: warn
       - name: Repeat sync and order baseline journeys without retries
         env:
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/retry-free-repeat
@@ -145,15 +154,6 @@ jobs:
           name: v0.1-qualification
           path: artifacts/v0.1-qualification.json
           if-no-files-found: error
-      - name: Upload direct browser screenshots and traces
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-e2e-direct-${{ github.sha }}
-          path: |
-            apps/web/test-results/direct/
-            apps/web/playwright-report/direct/
-          if-no-files-found: warn
       - name: Upload retry-free-repeat browser screenshots and traces
         if: always()
         uses: actions/upload-artifact@v4

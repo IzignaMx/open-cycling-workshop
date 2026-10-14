@@ -178,3 +178,14 @@ Gitleaks logged a Git ownership error and zero scanned commits/bytes; pip-audit
 was not explicitly supplied the project graph. This coverage defect is tracked
 in the separate security-scan correction; no green badge substitutes for actual
 history and locked-dependency coverage evidence.
+
+### Direct browser evidence availability
+
+The existing always-run direct-browser upload now immediately follows direct
+E2E, before either repetition gate and the always-run qualification verifier.
+This removes qualification's delay before publishing direct failure screenshots
+and traces. Its artifact name, paths and upload settings are unchanged, with
+exactly one upload; all test, repetition and qualification steps are preserved.
+The workflow-order contract was observed RED on the former order and GREEN
+after the move. This is local ordering evidence, not a browser-failure fix or
+hosted upload/runtime qualification.
