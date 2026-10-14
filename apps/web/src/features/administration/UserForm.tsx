@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type FormEvent, type ChangeEvent } from 'react'
+import { isConfirmedDraftRevision } from './draft-revision.js'
 import type { UserDraft, UserResponse } from './contracts.js'
 import {
   canAdminister,
@@ -49,6 +50,11 @@ export function UserForm({
   )
   const [username, setUsername] = useState('')
   const [dirty, setDirty] = useState(false)
+  const revision = useRef(0)
+  function markEdited() {
+    revision.current++
+    setDirty(true)
+  }
   const [reviewed, setReviewed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const initialSecret = useSecret(controller)
@@ -77,7 +83,7 @@ export function UserForm({
   const unknown = draft.capabilities.filter((grant) => !catalog.capabilities.includes(grant))
   function change(values: Partial<UserDraft>) {
     setDraft((previous) => ({ ...previous, ...values }))
-    setDirty(true)
+    markEdited()
     setReviewed(false)
   }
   function cancel() {
@@ -94,10 +100,21 @@ export function UserForm({
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         if (snapshot.busy || !valid || !subordinate || (security && !reviewed)) return
+        const submittedRevision = revision.current
+        const submittedGeneration = snapshot.generation
+        setDirty(true)
+        const settle = (receipt: unknown) => {
+          if (
+            form.current &&
+            controller.getSnapshot().generation === submittedGeneration &&
+            isConfirmedDraftRevision(receipt, submittedRevision, revision.current)
+          )
+            setDirty(false)
+        }
         if (row) {
           if (patch) {
             takeSecret(initialSecret)
-            void controller.updateUser(row, patch)
+            void controller.updateUser(row, patch).then(settle)
           }
         } else {
           const password = takeSecret(initialSecret)
@@ -109,14 +126,16 @@ export function UserForm({
             return
           }
           setError(null)
-          void controller.createUser({
-            username: normalized,
-            display_name: draft.display_name.trim(),
-            location_id: draft.location_id,
-            capabilities: [...draft.capabilities],
-            is_owner: draft.is_owner,
-            password,
-          })
+          void controller
+            .createUser({
+              username: normalized,
+              display_name: draft.display_name.trim(),
+              location_id: draft.location_id,
+              capabilities: [...draft.capabilities],
+              is_owner: draft.is_owner,
+              password,
+            })
+            .then(settle)
         }
       }}
     >
@@ -140,7 +159,7 @@ export function UserForm({
             value={username}
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
               setUsername(event.currentTarget.value)
-              setDirty(true)
+              markEdited()
             }}
             autoComplete="off"
             aria-describedby={error ? 'administration-user-error' : undefined}
@@ -170,7 +189,7 @@ export function UserForm({
               type="password"
               autoComplete="new-password"
               maxLength={2048}
-              onInput={() => setDirty(true)}
+              onInput={markEdited}
             />
           </label>
           <p id="administration-initial-secret-help">
@@ -288,9 +307,10 @@ export function UserForm({
             <input
               type="checkbox"
               checked={reviewed}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                markEdited()
                 setReviewed(event.currentTarget.checked)
-              }
+              }}
             />
             Confirmo el cambio de seguridad
           </label>

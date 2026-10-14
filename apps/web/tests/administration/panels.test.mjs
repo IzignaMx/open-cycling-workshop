@@ -61,7 +61,8 @@ test('role journeys select the exact accessible combobox instead of wrapped opti
   const text = readFileSync(new URL('../../e2e/administration.spec.ts', import.meta.url), 'utf8')
   assert.equal(/getByLabel\('Rol'/.test(text), false)
   assert.equal(
-    [...text.matchAll(/getByRole\('combobox', \{ name: 'Rol', exact: true \}\)/g)].length,
+    [...text.matchAll(/getByRole\('combobox', \{ name: 'Rol', exact: true \}\)\.selectOption/g)]
+      .length,
     3,
   )
   assert.match(text, /selectOption\('TechnicalAdmin'\)/)
@@ -81,7 +82,7 @@ test('workshop metrics and compact header reflow intrinsically at narrow availab
   assert.match(compact, /\.workshop-navigation\s*\{[^}]*display: flex;[^}]*flex-wrap: wrap;/s)
   assert.match(compact, /\.workshop-navigation\s*\{[^}]*flex-direction: row;/s)
   assert.match(compact, /\.workshop-identity\s*\{[^}]*flex: 1 1 13rem;/s)
-  assert.match(compact, /repeat\(auto-fit, minmax\(min\(100%, 8rem\), 1fr\)\)/)
+  assert.match(compact, /repeat\(auto-fit, minmax\(min\(100%, 9rem\), 1fr\)\)/)
   assert.match(compact, /\.settings-trigger\s*\{[^}]*max-width: 100%;/s)
   assert.doesNotMatch(css, /zoom\s*:/)
 })

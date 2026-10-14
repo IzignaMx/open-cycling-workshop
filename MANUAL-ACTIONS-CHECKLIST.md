@@ -20,13 +20,14 @@ are historical requests for evidence, subsequently satisfied for this exact
 baseline. They do not mean those main38 checks remain unexecuted. Actual
 installation changes, real-operator recovery, physical Windows/Android and manual
 screen-reader evidence remain open. Cross-built ARM64 images are not hardware
-qualification. The new administration source is a separate candidate: its first
-native browser run failed 13 cases; the second run passed 41 of 43 cases.
-Two exact wrapped-label fixture lookups still blocked user/grant and complete
-visual-state journeys. Their semantic combobox correction awaits a new exact-tree
-browser/visual run. Actual enlarged captures also exposed fragmented operational
-KPI/header labels; intrinsic reflow and full-word geometry assertions await
-that same native/visual qualification. No full MVP, production installation or release certification
+qualification. The new administration source is a separate candidate. Its third native run
+still passed 41 of 43 cases: role selection and severe enlarged KPI/header reflow
+were corrected, but a successful-create dirty flag and an expanded-label focus
+lookup failed later assertions. Actual review also found minor navigation word
+fragmentation and state contamination in the nominal twenty-image matrix. Current
+receipt/revision guards and explicitly isolated scene fixtures await a new
+exact-tree native run and pixel review. Prior images are diagnostic, not complete
+visual-state qualification. No full MVP, production installation or release certification
 is claimed.
 
 > **Historical pre-main38 2026-10-14 update:** The historical summary below does not qualify new

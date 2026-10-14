@@ -21,7 +21,6 @@ export function SessionPanel({ controller, snapshot }: ConnectedProps) {
           if (!reviewed || snapshot.busy) return
           const oldValue = takeSecret(current),
             newValue = takeSecret(next)
-          setDirty(false)
           setReviewed(false)
           if (!validatePassword(oldValue, true) || !validatePassword(newValue)) {
             setError('Introduce la contraseña actual y una nueva de 12 a 1024 caracteres.')

@@ -10,13 +10,13 @@ const actor = {
   display_name: 'Actor',
   capabilities: ['users.read', 'locations.read', 'locations.create'],
 }
-function setup(http = {}) {
-  let state = { phase: 'connected', user: actor, generation: 1, message: null },
+function setup(http = {}, user = actor) {
+  let state = { phase: 'connected', user, generation: 1, message: null },
     listeners = new Set(),
     current = true
   const capture = {
     token: 'synthetic',
-    user: actor,
+    user,
     apiRealm: 'http://localhost/api',
     signal: new AbortController().signal,
     isCurrent: () => current,
@@ -293,4 +293,107 @@ test('matching suspended 401 clears the session instead of retaining a refused t
   assert.equal(invalidated, 'invalid_session')
   assert.equal(completed, null)
   controller.dispose()
+})
+const writer = {
+  ...actor,
+  capabilities: [...actor.capabilities, 'users.write', 'users.grants.write'],
+}
+const createInput = {
+  username: 'new',
+  display_name: 'New',
+  location_id: null,
+  capabilities: [],
+  password: 'synthetic-password',
+}
+async function writerSetup(http = {}) {
+  const env = setup(
+    { roles: async () => ({ capabilities: writer.capabilities, roles: [] }), ...http },
+    writer,
+  )
+  await env.controller.loadCatalog()
+  return env
+}
+test('only the exact successful current create and update return confirmed receipts', async () => {
+  const { controller } = await writerSetup({
+    createUser: async () => row,
+    updateUser: async () => ({ ...row, version: 2 }),
+  })
+  assert.equal(await controller.createUser(createInput), 'confirmed')
+  assert.equal(
+    await controller.updateUser(row, { expected_version: 1, display_name: 'Changed' }),
+    'confirmed',
+  )
+  controller.dispose()
+})
+test('stale success and duplicate submit never return a confirmed receipt', async () => {
+  let resolve,
+    calls = 0
+  const { controller, invalidate } = await writerSetup({
+    createUser: () => {
+      calls++
+      return new Promise((r) => (resolve = r))
+    },
+  })
+  const first = controller.createUser(createInput)
+  assert.equal(await controller.createUser(createInput), undefined)
+  assert.equal(calls, 1)
+  invalidate()
+  resolve(row)
+  assert.equal(await first, undefined)
+  controller.dispose()
+})
+test('refused uncertain and unauthorized creates never return confirmed receipts', async () => {
+  for (const failure of [
+    new AdministrationHttpError('stale_user_version', 409),
+    new AdministrationHttpError('capability_denied', 403),
+    new Error('unconfirmed'),
+  ]) {
+    const { controller } = await writerSetup({
+      createUser: async () => {
+        throw failure
+      },
+    })
+    assert.equal(await controller.createUser(createInput), undefined)
+    controller.dispose()
+  }
+  let calls = 0
+  const { controller } = setup({
+    createUser: async () => {
+      calls++
+      return row
+    },
+  })
+  assert.equal(await controller.createUser(createInput), undefined)
+  assert.equal(calls, 0)
+  controller.dispose()
+})
+test('success-publication and busy-cleanup invalidation suppress the receipt', async () => {
+  for (const when of ['success', 'cleanup']) {
+    const { controller, invalidate } = await writerSetup({ createUser: async () => row })
+    const unsubscribe = controller.subscribe(() => {
+      const snapshot = controller.getSnapshot()
+      if (snapshot.result === 'success' && (when === 'success' || !snapshot.busy)) invalidate()
+    })
+    assert.equal(await controller.createUser(createInput), undefined)
+    unsubscribe()
+    controller.dispose()
+  }
+})
+test('self closure and name rebind invalidation never produce form receipts', async () => {
+  const { controller, runtime, invalidate } = await writerSetup({
+    logoutAll: async () => {},
+    updateUser: async () => ({ ...row, user_id: writer.user_id, version: 2 }),
+  })
+  runtime.updateAccountName = () => invalidate()
+  assert.equal(
+    await controller.updateUser(
+      { ...row, user_id: writer.user_id },
+      { expected_version: 1, display_name: 'Changed' },
+    ),
+    undefined,
+  )
+  controller.dispose()
+  const self = setup({ logoutAll: async () => {} })
+  assert.equal(await self.controller.logoutAll(), undefined)
+  self.controller.dispose()
 })

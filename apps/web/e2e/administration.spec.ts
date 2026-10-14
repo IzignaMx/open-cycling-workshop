@@ -1,5 +1,12 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Dialog,
+  type Page,
+  type TestInfo,
+} from '@playwright/test'
 import type { UserResponse } from '@ocwp/api-client'
 import { kernelSnapshot, PASSWORD, waitForReady } from './helpers/authenticated-workshop.js'
 
@@ -178,7 +185,20 @@ test('creates a user and replaces that individual permission snapshot without ch
   expect((await created).status()).toBe(201)
   await expect(form.getByLabel('Contraseña inicial', { exact: true })).toHaveValue('')
   await expectSecretNotPersisted(page, PASSWORD)
-  await form.getByRole('button', { name: 'Descartar cambios de usuario', exact: true }).click()
+  await expect(form).toHaveAttribute('data-dirty', 'false')
+  const unexpectedDialogs: string[] = []
+  const rejectUnexpectedDialog = (dialog: Dialog) => {
+    unexpectedDialogs.push(dialog.message())
+    void dialog.dismiss()
+  }
+  page.on('dialog', rejectUnexpectedDialog)
+  try {
+    await form.getByRole('button', { name: 'Descartar cambios de usuario', exact: true }).click()
+    await expect(form).toHaveCount(0)
+    expect(unexpectedDialogs).toEqual([])
+  } finally {
+    page.off('dialog', rejectUnexpectedDialog)
+  }
   const ownerToken = await token(request, f)
   let target = (await users(request, ownerToken)).find((u) => u.username === username)!
   expect(target.capabilities).toEqual([])
@@ -465,7 +485,13 @@ async function expectReadableWorkshopSummary(page: Page) {
       context.font = style.font
       const text = element.textContent?.trim() ?? ''
       const longestWordWidth = Math.max(
-        ...text.split(/\s+/).map((word) => context.measureText(word).width),
+        ...text
+          .split(/\s+/)
+          .map(
+            (word) =>
+              context.measureText(word).width +
+              Math.max(0, word.length - 1) * (parseFloat(style.letterSpacing) || 0),
+          ),
       )
       const availableWidth =
         element.getBoundingClientRect().width / zoom -
@@ -478,16 +504,25 @@ async function expectReadableWorkshopSummary(page: Page) {
     const identity = document.querySelector('.workshop-identity strong')!
     const range = document.createRange()
     range.selectNodeContents(identity)
-    return { labels, identityLines: range.getClientRects().length }
+    const navigationLines = Array.from(document.querySelectorAll('.workshop-links a')).map(
+      (link) => {
+        const range = document.createRange()
+        range.selectNodeContents(link)
+        return { text: link.textContent, lines: range.getClientRects().length }
+      },
+    )
+    return { labels, identityLines: range.getClientRects().length, navigationLines }
   })
   expect(layout.labels).toHaveLength(11) // four metrics, identity, settings, five links
   for (const label of layout.labels) {
-    expect(
-      label.availableWidth + 1,
-      `readable complete words: ${label.text}`,
-    ).toBeGreaterThanOrEqual(label.longestWordWidth)
+    expect(label.availableWidth, `readable complete words: ${label.text}`).toBeGreaterThanOrEqual(
+      label.longestWordWidth,
+    )
   }
   expect(layout.identityLines, 'OCWP identity must remain on one readable line').toBe(1)
+  for (const link of layout.navigationLines) {
+    expect(link.lines, `single-word navigation label stays intact: ${link.text}`).toBe(1)
+  }
 }
 test('administration preserves mounted drafts across all themes with narrow reflow and accessible controls', async ({
   page,
@@ -562,6 +597,7 @@ test('administration preserves mounted drafts across all themes with narrow refl
     .getByRole('form', { name: 'Crear ubicación', exact: true })
     .getByRole('button', { name: 'Crear ubicación', exact: true })
   await expect(create).toBeFocused()
+  const createHandle = await create.elementHandle()
   const box = await create.boundingBox()
   expect(box!.width).toBeGreaterThanOrEqual(44)
   expect(box!.height).toBeGreaterThanOrEqual(44)
@@ -625,7 +661,11 @@ test('administration preserves mounted drafts across all themes with narrow refl
   )
   const expandedPath = info.outputPath('administration-expanded-labels-320.png')
   await prepareFullPageCapture(page)
-  await expect(create).toBeFocused()
+  expect(
+    await createHandle!.evaluate(
+      (element) => element.isConnected && document.activeElement === element,
+    ),
+  ).toBe(true)
   await page.screenshot({ path: expandedPath, fullPage: true })
   await info.attach('administration-expanded-labels-320', {
     path: expandedPath,
@@ -789,8 +829,19 @@ async function captureAdministration(page: Page, info: TestInfo, name: string) {
       .evaluateAll((inputs) => inputs.every((input) => (input as HTMLInputElement).value === '')),
   ).toBe(true)
   const path = info.outputPath(`${name}.png`)
-  await page.locator('.administration-panel').screenshot({ path })
+  await prepareFullPageCapture(page)
+  await page.screenshot({ path, fullPage: true })
   await info.attach(name, { path, contentType: 'image/png' })
+}
+
+async function acceptExactDiscard(page: Page, action: () => Promise<unknown>) {
+  const dialogEvent = page.waitForEvent('dialog')
+  const clicked = action()
+  const dialog = await dialogEvent
+  expect(dialog.type()).toBe('confirm')
+  expect(dialog.message()).toBe('¿Descartar los cambios sin guardar?')
+  await dialog.accept()
+  await clicked
 }
 
 test('UI visual states: each theme captures directory, editor, security review, error and uncertain result', async ({
@@ -803,8 +854,6 @@ test('UI visual states: each theme captures directory, editor, security review, 
   await loginAccount(page, f)
   await page.getByRole('button', { name: 'Taller administración A', exact: true }).click()
   await waitForReady(page)
-  await openAdministration(page)
-  await loadUsers(page)
   await page.route(`**/api/v1/admin/users/${target.user_id}`, (route) =>
     route.fulfill({
       status: 409,
@@ -816,6 +865,28 @@ test('UI visual states: each theme captures directory, editor, security review, 
     route.request().method() === 'POST' ? route.abort('failed') : route.continue(),
   )
   for (const [index, theme] of THEMES.entries()) {
+    if (index > 0) {
+      // The previous scene explicitly discarded only synthetic unsent drafts.
+      // Normal navigation resets volatile view state without touching any journal.
+      await page.reload()
+      await expect(
+        page.locator('[data-runtime-state="SELECTOR"], [data-runtime-state="READY"]'),
+      ).toBeVisible()
+      const selection = page.getByRole('button', { name: 'Taller administración A', exact: true })
+      if (await selection.isVisible()) await selection.click()
+      await waitForReady(page)
+    }
+    await openAdministration(page)
+    await loadUsers(page)
+    const panel = page.getByRole('region', { name: 'Administración', exact: true })
+    const form = page.getByRole('form', { name: `Editar usuario ${target.username}`, exact: true })
+    const row = page.getByRole('article', { name: `Usuario ${target.username}`, exact: true })
+    const locationName = page.getByLabel('Nombre de ubicación', { exact: true })
+    await expect(row).toBeVisible()
+    await expect(form).toHaveCount(0)
+    await expect(panel.locator('[data-dirty="true"]')).toHaveCount(0)
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await expect(locationName).toHaveValue('')
     await page.getByRole('button', { name: 'Personalización', exact: true }).click()
     const choice = page.getByRole('radio', { name: new RegExp(theme) })
     await choice.focus()
@@ -823,27 +894,54 @@ test('UI visual states: each theme captures directory, editor, security review, 
     await expect(choice).toBeFocused()
     await choice.press('Escape')
     await expect(page.getByRole('button', { name: 'Personalización', exact: true })).toBeFocused()
+    await expect(choice).toBeChecked()
+    await expect(page.locator('.workshop-shell')).toHaveAttribute(
+      'data-theme',
+      ['banco', 'plano', 'ritmo', 'noche'][index],
+    )
     await captureAdministration(page, info, `admin-${index}-directory`)
     await page
       .getByRole('article', { name: `Usuario ${target.username}`, exact: true })
       .getByRole('button', { name: 'Editar usuario', exact: true })
       .click()
-    const form = page.getByRole('form', { name: `Editar usuario ${target.username}`, exact: true })
     await form.getByLabel('Nombre visible', { exact: true }).fill('Borrador visual')
+    await expect(form.getByLabel('Nombre visible', { exact: true })).toHaveValue('Borrador visual')
+    await expect(form.getByRole('combobox', { name: 'Rol', exact: true })).toHaveValue(
+      'TechnicalAdmin',
+    )
+    await expect(form.getByLabel('Confirmo el cambio de seguridad', { exact: true })).toHaveCount(0)
+    await expect(panel.getByRole('alert')).toHaveCount(0)
     await captureAdministration(page, info, `admin-${index}-editor`)
     await form.getByRole('combobox', { name: 'Rol', exact: true }).selectOption('Viewer')
     await form.getByLabel('Confirmo el cambio de seguridad', { exact: true }).check()
+    await expect(form.getByRole('combobox', { name: 'Rol', exact: true })).toHaveValue('Viewer')
+    await expect(form.getByLabel('Confirmo el cambio de seguridad', { exact: true })).toBeChecked()
+    await expect(panel.getByRole('alert')).toHaveCount(0)
     await captureAdministration(page, info, `admin-${index}-security-review`)
     await form.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText('La cuenta cambió')
     await captureAdministration(page, info, `admin-${index}-version-error`)
-    await form.getByRole('button', { name: 'Descartar cambios de usuario', exact: true }).click()
+    await expect(form).toHaveAttribute('data-dirty', 'true')
+    await acceptExactDiscard(page, () =>
+      form.getByRole('button', { name: 'Descartar cambios de usuario', exact: true }).click(),
+    )
+    await expect(form).toHaveCount(0)
     await page.getByLabel('Nombre de ubicación', { exact: true }).fill('Resultado visual incierto')
     await page
       .getByRole('form', { name: 'Crear ubicación', exact: true })
       .getByRole('button', { name: 'Crear ubicación', exact: true })
       .click()
     await expect(page.getByRole('alert')).toContainText('Resultado sin confirmar')
+    await expect(form).toHaveCount(0)
+    await expect(locationName).toHaveValue('Resultado visual incierto')
+    await expect(page.getByRole('form', { name: 'Crear ubicación', exact: true })).toHaveAttribute(
+      'data-dirty',
+      'true',
+    )
     await captureAdministration(page, info, `admin-${index}-unknown-result`)
+    await acceptExactDiscard(page, () =>
+      page.getByRole('button', { name: 'Cerrar administración', exact: true }).click(),
+    )
+    await expect(page.getByRole('heading', { name: 'Mi sesión', exact: true })).toHaveCount(0)
   }
 })

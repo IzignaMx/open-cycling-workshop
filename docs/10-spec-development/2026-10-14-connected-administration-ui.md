@@ -202,3 +202,64 @@ contract check passed. Full browser collection remains **43 cases in nine files*
 collection is not execution. Independent source review closed the measured-label
 count and inherited compact flex-direction issues before handoff. No local native
 browser, PostgreSQL or physical-device execution is claimed for this correction.
+
+## Third hosted result: confirmed drafts and isolated visual scenes
+
+Head `b9f5b435998b3c150e9a8247e4bc72b5c2bdc440`, tree
+`32a7822e899515b76b23ac47cb2435efedb43605`, ran in CI
+[38641877744](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38641877744)
+as merge `fd7d9f75132f1d6d52b8eede270edfc2f738f50d`. Verified direct artifact
+11931620940, SHA256
+`a6d42ef3f7fae04fbce9516e2683457c63e883de307e3a41c94c7af6bb2a9d0a`, reports
+**41 passed, two failed, zero flaky/skipped**. The exact role selection now works:
+user creation returned 201 and the created identity/grants were read back. The
+journey subsequently failed opening its editor because the successful create
+form retained a historical dirty flag and remained mounted after the discard
+click. Source behavior plus the retained-form snapshot support unattended
+confirmation dismissal; credential-safe traces do not directly record that dialog.
+The second failure occurred only after deliberate label expansion: a focus
+assertion still selected the control by its original unexpanded accessible name.
+
+Retained user create/edit, location-create and targeted-security forms now use a
+local edit revision and a per-command `confirmed` receipt. A receipt is returned
+only for a current non-self successful command, rechecked after success hooks,
+status publication and busy cleanup. Refused, uncertain, unauthorized, duplicate,
+stale and self-invalidating completions cannot clean a draft. A form additionally
+requires its original mounted instance, current feature generation and unchanged
+submitted edit revision before becoming clean. Newer input is never overwritten;
+immutable reviewed user versions are not rebased. Self-password suspension owns
+unmount/invalidation; submission no longer prematurely marks that form clean.
+There is no new persisted receipt/session store or retained credential material.
+The real create journey now explicitly asserts the successful form is clean,
+closes without a dialog, and continues existing permission/actor checks. The
+expanded-label focus check uses the original connected element handle.
+
+All four enlarged-layout automated geometry checks passed in that native run.
+Actual pixel review confirmed readable KPI and identity layouts, but identified
+an isolated final letter in the Administración navigation item. The intrinsic
+navigation minimum is now 9rem; single-word navigation labels must occupy one
+native text Range line. Canvas comparisons no longer allow a one-pixel deficit
+and include letter spacing. New exact-tree pixels remain required.
+
+The visual-state journey passed assertions but its nominal twenty filenames did
+**not** prove twenty independent states: later directory captures retained the
+prior editor, review selection, location draft and uncertain-result banner. Two
+directory/uncertain pairs were byte-identical. The fixture now explicitly accepts
+the exact discard prompt for deliberately unsent/refused synthetic drafts,
+closes administration and uses ordinary reload/reverification for each next
+theme. No browser storage or journal is deleted. Before named captures it asserts
+clean directory state or the specific editor, role, review, error and location
+draft state. Credential-empty screenshots are full-page captures from document
+origin, avoiding the element-scroll fixed skip-link overlay seen in those images.
+The prior twenty captures are retained as diagnostic evidence, not accepted as
+complete state coverage. Expanded-label capture and the corrected scene matrix
+remain pending on the next native run and actual pixel review.
+
+Local verification for this correction: **661 core tests passed, zero skipped**;
+focused draft/panel checks passed 12 tests and controller checks passed 21.
+Whole-repository ESLint/Prettier, real/offline TypeScript, strict affected E2E
+compilation, production Vite/PWA build and repository contract passed. The full
+browser suite still collects **43 cases across nine files**. Receipt refusal,
+uncertainty, stale completion, single-flight rejection and synchronous
+publication/cleanup invalidation are tested independently of source-only form
+composition checks. None of those checks is a new native browser result.

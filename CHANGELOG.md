@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Confirmed administration drafts and visual scene isolation
+
+- Mark retained administration drafts clean only after an exact current confirmed
+  receipt for their unchanged local revision; preserve newer edits and uncertainty.
+- Verify independent themed visual states, intact navigation words and preserved
+  focus after label expansion. The prior 41/43 native result remains diagnostic;
+  exact corrected native and pixel qualification is still pending.
+
 ## Unreleased · Administration role locators and enlarged-layout readability
 
 - Target the exact accessible role combobox in three administration journeys.

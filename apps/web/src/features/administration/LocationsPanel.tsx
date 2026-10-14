@@ -1,4 +1,5 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react'
+import { useRef, useState, type FormEvent, type ChangeEvent } from 'react'
+import { isConfirmedDraftRevision } from './draft-revision.js'
 import { hasCapability } from './model.js'
 import { discardDraft, type ConnectedProps } from './controls.js'
 
@@ -6,6 +7,9 @@ const MAX_DIRECTORY_PAGES = 64
 
 export function LocationsPanel({ controller, snapshot }: ConnectedProps) {
   const [name, setName] = useState('')
+  const [dirty, setDirty] = useState(false)
+  const revision = useRef(0)
+  const form = useRef<HTMLFormElement>(null)
   const [cursors, setCursors] = useState<string[]>([])
   const actor = snapshot.account.user!
   const canRead = hasCapability(actor, 'locations.read', snapshot.catalog ?? undefined)
@@ -76,12 +80,23 @@ export function LocationsPanel({ controller, snapshot }: ConnectedProps) {
       )}
       {canCreate && (
         <form
+          ref={form}
           aria-label="Crear ubicación"
-          data-dirty={name !== ''}
+          data-dirty={dirty}
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault()
             if (!name.trim() || snapshot.busy) return
-            void controller.createLocation(name.trim())
+            const submittedRevision = revision.current
+            const submittedGeneration = snapshot.generation
+            setDirty(true)
+            void controller.createLocation(name.trim()).then((receipt) => {
+              if (
+                form.current &&
+                controller.getSnapshot().generation === submittedGeneration &&
+                isConfirmedDraftRevision(receipt, submittedRevision, revision.current)
+              )
+                setDirty(false)
+            })
           }}
         >
           <label>
@@ -89,9 +104,11 @@ export function LocationsPanel({ controller, snapshot }: ConnectedProps) {
             <input
               required
               value={name}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                revision.current++
                 setName(event.currentTarget.value)
-              }
+                setDirty(true)
+              }}
               maxLength={320}
             />
           </label>
@@ -105,7 +122,11 @@ export function LocationsPanel({ controller, snapshot }: ConnectedProps) {
             type="button"
             disabled={!name}
             onClick={() => {
-              if (discardDraft()) setName('')
+              if (!dirty || discardDraft()) {
+                revision.current++
+                setName('')
+                setDirty(false)
+              }
             }}
           >
             Descartar ubicación

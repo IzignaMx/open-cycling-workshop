@@ -285,7 +285,7 @@ export class AdministrationController {
       allow?: (source: AccountCapture) => boolean
       success?: (value: T, source: AccountCapture) => void
     } = {},
-  ) {
+  ): Promise<'confirmed' | undefined> {
     if (this.#command) return
     let source: AccountCapture
     try {
@@ -300,6 +300,7 @@ export class AdministrationController {
     this.#command = true
     this.publish({ busy: true, message: null, result: 'idle' })
     let suspended = false
+    let confirmed = false
     try {
       if (options.self) {
         source = await this.runtime.suspendAccountCommand(this.runtimeCapture(source))
@@ -319,6 +320,7 @@ export class AdministrationController {
           result: 'success',
           message: 'Operación confirmada. Actualiza la lista para consultar el estado actual.',
         })
+      confirmed = source.isCurrent()
     } catch (error) {
       if (!source.isCurrent()) return
       const definite =
@@ -357,6 +359,8 @@ export class AdministrationController {
       this.#command = false
       if (source.isCurrent()) this.publish({ busy: false })
     }
+    // Publication and cleanup listeners may synchronously invalidate this admission.
+    return confirmed && source.isCurrent() ? 'confirmed' : undefined
   }
   private targetAllowed(
     source: AccountCapture,
@@ -421,7 +425,7 @@ export class AdministrationController {
     const target = structuredClone(row),
       value = structuredClone(patch),
       actor = this.#snapshot.account.user
-    if (!actor) return Promise.resolve()
+    if (!actor) return Promise.resolve(undefined)
     return this.command((source, http) => http.updateUser(source, target.user_id, value), {
       self: isSelfSecurityChange(actor, target, value),
       allow: (source) =>

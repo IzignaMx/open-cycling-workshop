@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type FormEvent, type ChangeEvent } from 'react'
+import { isConfirmedDraftRevision } from './draft-revision.js'
 import type { UserResponse } from './contracts.js'
 import { canAdminister, hasCapability, validatePassword } from './model.js'
 import {
@@ -23,6 +24,12 @@ function UserSecurity({
     form.current?.querySelector<HTMLInputElement>('input')?.focus()
   }, [])
   const [reviewed, setReviewed] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const revision = useRef(0)
+  function markEdited() {
+    revision.current++
+    setDirty(true)
+  }
   const [error, setError] = useState<string | null>(null)
   return (
     <form
@@ -32,11 +39,22 @@ function UserSecurity({
           ? `Restablecer contraseña de ${row.username}`
           : `Revocar sesiones de ${row.username}`
       }
-      data-dirty="true"
+      data-dirty={dirty}
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         if (!reviewed || snapshot.busy) return
         setReviewed(false)
+        const submittedRevision = revision.current
+        const submittedGeneration = snapshot.generation
+        setDirty(true)
+        const settle = (receipt: unknown) => {
+          if (
+            form.current &&
+            controller.getSnapshot().generation === submittedGeneration &&
+            isConfirmedDraftRevision(receipt, submittedRevision, revision.current)
+          )
+            setDirty(false)
+        }
         if (action === 'reset') {
           const password = takeSecret(secret)
           if (!validatePassword(password)) {
@@ -44,10 +62,10 @@ function UserSecurity({
             return
           }
           setError(null)
-          void controller.resetPassword(row, password)
+          void controller.resetPassword(row, password).then(settle)
         } else {
           takeSecret(secret)
-          void controller.revokeSessions(row)
+          void controller.revokeSessions(row).then(settle)
         }
       }}
     >
@@ -66,6 +84,7 @@ function UserSecurity({
           Nueva contraseña del usuario
           <input
             ref={secret}
+            onInput={markEdited}
             aria-describedby={error ? 'administration-reset-error' : undefined}
             type="password"
             autoComplete="new-password"
@@ -78,9 +97,10 @@ function UserSecurity({
         <input
           type="checkbox"
           checked={reviewed}
-          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            markEdited()
             setReviewed(event.currentTarget.checked)
-          }
+          }}
         />
         Confirmo el cambio de seguridad
       </label>
@@ -102,6 +122,7 @@ function UserSecurity({
 const MAX_DIRECTORY_PAGES = 64
 
 export function UsersPanel({ controller, snapshot }: ConnectedProps) {
+  const section = useRef<HTMLElement>(null)
   const [active, setActive] = useState('all')
   const [editorInstance, setEditorInstance] = useState(0)
   const [cursors, setCursors] = useState<string[]>([])
@@ -114,7 +135,7 @@ export function UsersPanel({ controller, snapshot }: ConnectedProps) {
   const catalog = snapshot.catalog
   const has = (capability: string) => hasCapability(actor, capability, catalog ?? undefined)
   function open(next: typeof editor) {
-    if (!editor || discardDraft()) {
+    if (!editor || !section.current?.querySelector('[data-dirty="true"]') || discardDraft()) {
       returnFocus.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null
       setEditorInstance((previous) => previous + 1)
@@ -132,7 +153,7 @@ export function UsersPanel({ controller, snapshot }: ConnectedProps) {
     })
   }
   return (
-    <section aria-labelledby="administration-users">
+    <section ref={section} aria-labelledby="administration-users">
       <h2 id="administration-users">Usuarios y permisos</h2>
       {!has('users.read') ? (
         <p>No tienes permiso para consultar usuarios.</p>

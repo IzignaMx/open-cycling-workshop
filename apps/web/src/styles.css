@@ -851,7 +851,7 @@ body {
   .workshop-links,
   [data-theme='plano'] .workshop-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
     flex: 1 0 100%;
     min-width: 0;
     gap: 6px;
