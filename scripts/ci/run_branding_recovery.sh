@@ -33,6 +33,22 @@ export PATH="$client_dir:$PATH"
 pg_dump --version | grep -E '\(PostgreSQL\) 18\.'
 pg_restore --version | grep -E '\(PostgreSQL\) 18\.'
 test -n "${OCWP_TEST_DATABASE_URL:-}"
+# pytest creates its explicit basetemp, but not a missing parent. Preserve
+# existing permissions and reject untrusted paths before basetemp cleanup.
+uv run python - <<'PREPARE'
+from pathlib import Path
+
+from scripts.database.branding_bundle import _directory
+
+with _directory(Path.cwd()):
+    parent = Path("artifacts")
+    parent.mkdir(mode=0o700, exist_ok=True)
+    with _directory(parent):
+        base = parent / "branding-recovery"
+        if base.exists() or base.is_symlink():
+            with _directory(base):
+                pass
+PREPARE
 export BRANDING_RECOVERY_STARTED_NS="$(date +%s%N)"
 uv run pytest -q tests/operations/test_branding_recovery_postgres.py \
   --basetemp=artifacts/branding-recovery
