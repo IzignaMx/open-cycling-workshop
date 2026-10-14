@@ -270,3 +270,16 @@ def test_normal_service_requires_transaction_owned_admission_but_fixture_path_is
             with pytest.raises(RuntimeError, match="transaction-owned"):
                 service.apply(mutation, context=replace(context, admitted_session_id=-1))
             assert service.apply(mutation, context=context).status == "applied"
+
+
+def test_receipt_result_contract_rejects_unknown_unbounded_error_codes() -> None:
+    from cycling_workshop.sync.schemas import MutationResultResponse
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        MutationResultResponse(
+            mutation_id="synthetic",
+            status="conflict",
+            entity_id="synthetic",
+            error_code="unbounded_unknown_code",
+        )

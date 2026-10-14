@@ -7,12 +7,18 @@ from typing import Literal
 
 EntityType = Literal["customer", "bicycle", "service_order"]
 MutationOperation = Literal["create", "update"]
+SyncErrorCode = Literal[
+    "sync_conflict",
+    "legacy_receipt_unverified",
+    "receipt_integrity_conflict",
+    "receipt_proof_conflict",
+]
 
 
 class SyncConflict(RuntimeError):
     """A mutation cannot be merged automatically without risking data loss."""
 
-    def __init__(self, message: str, *, error_code: str = "sync_conflict") -> None:
+    def __init__(self, message: str, *, error_code: SyncErrorCode = "sync_conflict") -> None:
         super().__init__(message)
         self.error_code = error_code
 
