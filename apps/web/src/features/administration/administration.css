@@ -1,0 +1,133 @@
+.administration-panel {
+  color: var(--ocwp-color-ink);
+  background: var(--ocwp-color-canvas);
+  padding: clamp(12px, 3vw, 32px);
+  overflow-wrap: anywhere;
+  min-width: 0;
+  line-height: 1.55;
+}
+.administration-panel *,
+.administration-panel *::before,
+.administration-panel *::after {
+  box-sizing: border-box;
+}
+.administration-panel header,
+.administration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.administration-panel h1,
+.administration-panel h2,
+.administration-panel h3 {
+  line-height: 1.25;
+}
+.administration-panel button,
+.administration-panel input,
+.administration-panel select {
+  min-height: 48px;
+  max-width: 100%;
+  color: inherit;
+  background: var(--ocwp-color-surface, Canvas);
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font: inherit;
+}
+.administration-panel button {
+  cursor: pointer;
+  margin: 4px 8px 4px 0;
+  white-space: normal;
+}
+.administration-panel button[type='submit'] {
+  min-height: 56px;
+  font-weight: 700;
+}
+.administration-panel button:disabled,
+.administration-panel input:disabled,
+.administration-panel select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.administration-panel :focus-visible {
+  outline: 3px solid var(--ocwp-color-focus, Highlight);
+  outline-offset: 3px;
+}
+.administration-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block: 12px;
+}
+.administration-panel .administration-check {
+  flex-direction: row;
+  align-items: center;
+  min-height: 48px;
+  gap: 12px;
+}
+.administration-panel input[type='checkbox'] {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+}
+.administration-panel fieldset {
+  min-width: 0;
+  margin-block: 16px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 12px;
+}
+.administration-panel form {
+  margin-block: 20px;
+  padding: clamp(12px, 2vw, 24px);
+  border: 1px solid currentColor;
+  border-radius: 8px;
+}
+.administration-panel [role='alert'] {
+  border-inline-start: 4px solid currentColor;
+  padding: 12px;
+  font-weight: 600;
+}
+.administration-context {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.administration-context dt {
+  font-weight: 700;
+}
+.administration-context dd {
+  margin: 0;
+}
+.administration-sections {
+  display: grid;
+  gap: 24px;
+}
+.administration-sections > section {
+  border-block-start: 1px solid currentColor;
+  padding-block-start: 12px;
+  min-width: 0;
+}
+.administration-user-list {
+  display: grid;
+  gap: 12px;
+}
+.administration-user-list article {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 16px;
+}
+@media (max-width: 480px) {
+  .administration-panel button {
+    width: 100%;
+    margin-inline: 0;
+  }
+}
+@media (forced-colors: active) {
+  .administration-panel button:disabled {
+    color: GrayText;
+    opacity: 1;
+  }
+}

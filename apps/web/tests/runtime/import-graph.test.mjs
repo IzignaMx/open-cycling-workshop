@@ -37,4 +37,18 @@ test('actual production value-import graph never loads old singleton or legacy s
   visit(path.join(root, 'main.tsx'))
   assert.ok(seen.has(path.join(root, 'runtime/controller.ts')))
   assert.ok(seen.has(path.join(root, 'personalization/WorkshopShell.tsx')))
+  assert.ok(seen.has(path.join(root, 'features/administration/AdministrationPanel.tsx')))
+  assert.ok(seen.has(path.join(root, 'features/administration/controller.ts')))
+  assert.ok(seen.has(path.join(root, 'features/administration/transport.ts')))
+})
+
+test('administration owns no credential store or durable offline writer', () => {
+  for (const file of ['controller.ts', 'transport.ts', 'model.ts', 'contracts.ts']) {
+    const source = readFileSync(path.join(root, 'features/administration', file), 'utf8')
+    assert.doesNotMatch(
+      source,
+      /new SessionStore|localStorage|sessionStorage|indexedDB|new Dexie|local\/db|sync\/http-transport/,
+    )
+    assert.doesNotMatch(source, /setInterval|navigator\.onLine|backgroundSync/)
+  }
 })

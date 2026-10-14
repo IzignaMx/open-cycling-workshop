@@ -180,6 +180,7 @@ export function WorkshopShell({
           <a href="#workshop-orders">Órdenes</a>
           <a href="#workshop-reception">Recepción</a>
           <a href="#workshop-issues">Incidencias</a>
+          <a href="#workshop-administration">Administración</a>
         </nav>
         <div className="workshop-user">
           <span>

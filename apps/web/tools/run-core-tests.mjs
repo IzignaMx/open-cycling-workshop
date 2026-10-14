@@ -25,6 +25,7 @@ const outputs = [
   new URL('../.tmp-personalization/', import.meta.url),
   new URL('../.tmp-kernel/', import.meta.url),
   new URL('../.tmp-runtime/', import.meta.url),
+  new URL('../.tmp-administration/', import.meta.url),
 ]
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
@@ -38,6 +39,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.runtime-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.administration-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
     'tests/access-kernel/context.test.mjs',
@@ -58,6 +60,11 @@ try {
     'tests/access-kernel/incremental-coordinator.test.mjs',
     'tests/access-kernel/push-runtime.test.mjs',
     'tests/runtime/controller.test.mjs',
+    'tests/runtime/account-access.test.mjs',
+    'tests/administration/model.test.mjs',
+    'tests/administration/transport.test.mjs',
+    'tests/administration/controller.test.mjs',
+    'tests/administration/panels.test.mjs',
     'tests/runtime/issues.test.mjs',
     'tests/runtime/transport.test.mjs',
     'tests/runtime/reachability-probe.test.mjs',
