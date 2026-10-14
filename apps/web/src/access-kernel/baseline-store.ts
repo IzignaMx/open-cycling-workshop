@@ -145,12 +145,8 @@ export class BaselineTransactions {
         ].includes(baseline.hold.reason)
       )
         throw new Error('Fresh baseline required after terminal hold')
-      if (
-        baseline.phase !== 'activation_pending' &&
-        baseline.expiresAt &&
-        Date.parse(baseline.expiresAt) <= this.now()
-      )
-        throw new Error('Fresh baseline required after expiry')
+      // Local phase can lag a server-completed family after a lost response.
+      // Replay the exact pending request; only authenticated server 410 proves expiry.
       // Only fresh verification changes ownership; a different bound context cannot resume.
       if (control.state !== 'BASELINE_REQUIRED')
         throw new Error('Fresh verification required to resume')

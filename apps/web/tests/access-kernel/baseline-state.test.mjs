@@ -608,3 +608,56 @@ test('quota and transaction-abort storage holds resume unchanged staging only af
     assert.equal(recovered.hold, null)
   }
 })
+
+test('reload after baseline deadline preserves last delta request for a server-completed lost response', async (t) => {
+  const f = await staged(t)
+  await commitNext(f, page(f.start, 'scan-0', 'finalize-0', [], 'scan_complete'))
+  await commitNext(f, {
+    protocol: 1,
+    baseline_id: f.start.baseline_id,
+    authorization_epoch: protocolContext.authorizationEpoch,
+    predecessor: 'finalize-0',
+    continuation: 'delta-0',
+  })
+  const lastRequest = (await f.store.pending(f.ticket)).baseline.next
+  // The server may have completed delta-0 before its baseline deadline while its
+  // response was lost. Only the server knows that phase and retained family expiry.
+  const later = NOW + 31 * 60 * 1000
+  const renewed = {
+    ...protocolContext,
+    verifiedAt: new Date(later).toISOString(),
+    offlineUntil: new Date(later + 3600000).toISOString(),
+  }
+  const kernel = new AccessKernel(f.db, { now: () => later, newId: () => crypto.randomUUID() })
+  const accepted = await kernel.acceptVerifiedContext(
+    await kernel.beginVerification('resume-lost-complete'),
+    renewed,
+  )
+  const store = new BaselineTransactions(
+    f.db,
+    () => later,
+    () => crypto.randomUUID(),
+  )
+  await store.resume(accepted.ticket)
+  assert.deepEqual((await store.pending(accepted.ticket)).baseline.next, lastRequest)
+  const identity = {
+    ...f.identity,
+    deviceGeneration: accepted.ticket.deviceGeneration,
+    tabAttemptId: accepted.ticket.tabAttemptId,
+    sessionHandle: 'renewed-session',
+  }
+  await store.commit(
+    accepted.ticket,
+    lastRequest,
+    {
+      ...page(f.start, 'delta-0', 'checkpoint-replay', [], 'complete'),
+      completion: {
+        baseline_id: f.start.baseline_id,
+        authorization_epoch: protocolContext.authorizationEpoch,
+        checkpoint: 'checkpoint-replay',
+      },
+    },
+    identity,
+  )
+  assert.equal((await store.pending(accepted.ticket)).baseline.phase, 'activation_pending')
+})

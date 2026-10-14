@@ -83,7 +83,9 @@ an empty completion page; this is handled without skipping values.
 Reload requires fresh online verification before resuming incomplete staging.
 Only equivalent realm/principal/location/epoch/policy/account location/concrete
 grants may rebind ownership; original request/evidence and progress remain.
-Changed authority requires a fresh partition. Terminal expiry/integrity failures
+Changed authority requires a fresh partition. A pending last delta can replay
+after the old scan deadline if the server already completed and retained its
+family; local phase cannot decide that outcome. Recorded server expiry/integrity failures
 cannot be resumed as if their checkpoint were valid. Initial activation and
 subsequent incremental consumption are distinct: this slice does not implement
 ongoing incremental runs or production offline-reload admission.

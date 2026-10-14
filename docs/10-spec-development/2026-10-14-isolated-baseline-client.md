@@ -106,4 +106,30 @@ records survive. Client executable source and tests remain byte-identical to the
 reviewed client head; incoming backend source remains identical to actual main35.
 Union local qualification passed 21 checks with zero failures and five explicit
 environment blockers: Python 1240 passed/154 skipped; frontend 323 passed/zero
-skips. Independent source comparison remains required before publication.
+skips. Independent source comparison confirmed the intended parent identities.
+
+## Post-merge lost-completion recovery correction
+
+A local catching_up phase cannot prove that the server is still incomplete: the
+server may have completed its final delta before baseline expiry while that
+response was lost. On reload after the old baseline deadline, fresh equivalent
+verification now preserves and submits the exact pending delta request; the
+server's retained-family state and authenticated 410 outcome decide validity.
+No deadline is extended, checkpoint guessed, or fresh request/partition allocated.
+An already recorded terminal expiry/integrity hold still requires a new baseline.
+
+This is a separately reviewed correction after the unchanged-source merge
+`fea71fce9a02f0abbaeff9911275bb8d45e466c7`, not an undocumented merge resolution.
+The client regression first failed with the local expiry inference and now passes.
+The actual FastAPI checkpoint-family test additionally replays the original
+final-delta predecessor after 31 minutes and proves byte-identical completion and
+checkpoint, before any incremental progression. This adds a server regression
+assertion only; backend executable source stays identical to main35.
+
+Corrected frontend core: 324 passed, zero skips; independent focused suite:
+226 passed, zero skips. Final union aggregate: 21 passed, zero failures and the
+same five explicit environment blockers; Python 1240 passed/154 skipped.
+Real/offline TypeScript, ESLint/format and focused server regression pass.
+Independent actual-server completion loss, exact replay after 31 minutes and
+Dexie reload/resume to activation_pending also pass. Native hosted proof remains
+pending and no actual null-protocol context can activate ordinarily.
