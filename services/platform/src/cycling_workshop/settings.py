@@ -30,6 +30,7 @@ class Settings:
     log_level: str = "INFO"
     auth_secret: str = _DEFAULT_DEV_SECRET
     cutover_enabled: bool = False
+    branding_asset_root: str = "./var/branding-assets"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -52,4 +53,5 @@ class Settings:
             log_level=os.getenv("OCWP_LOG_LEVEL", "INFO").upper(),
             auth_secret=auth_secret,
             cutover_enabled=os.getenv("OCWP_CUTOVER_ENABLED", "false") == "true",
+            branding_asset_root=os.getenv("OCWP_BRANDING_ASSET_ROOT", "./var/branding-assets"),
         )

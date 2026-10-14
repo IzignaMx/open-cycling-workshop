@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from cycling_workshop.identity.roles import concrete_capabilities
+
 
 @dataclass(frozen=True, slots=True)
 class Principal:
@@ -30,5 +32,5 @@ def authorize(
         and principal.location_id != location_id
     ):
         raise PermissionError("location scope denied")
-    if capability not in principal.capabilities and "*" not in principal.capabilities:
+    if capability not in concrete_capabilities(principal.capabilities):
         raise PermissionError(f"missing capability: {capability}")

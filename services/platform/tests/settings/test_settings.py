@@ -14,3 +14,10 @@ def test_settings_reads_auth_secret_from_file(monkeypatch, tmp_path: Path) -> No
     settings = Settings.from_env()
 
     assert settings.auth_secret == "file-secret-that-is-long-enough-for-production-1234567890"
+
+
+def test_branding_assets_have_a_dedicated_configurable_private_root(monkeypatch) -> None:
+    monkeypatch.delenv("OCWP_BRANDING_ASSET_ROOT", raising=False)
+    assert Settings.from_env().branding_asset_root == "./var/branding-assets"
+    monkeypatch.setenv("OCWP_BRANDING_ASSET_ROOT", "/var/lib/ocwp/branding-assets")
+    assert Settings.from_env().branding_asset_root == "/var/lib/ocwp/branding-assets"

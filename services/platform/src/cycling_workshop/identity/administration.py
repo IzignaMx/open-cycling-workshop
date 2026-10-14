@@ -22,7 +22,11 @@ from cycling_workshop.identity.cutover import (
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.repository import normalize_username
-from cycling_workshop.identity.roles import CAPABILITIES, concrete_capabilities
+from cycling_workshop.identity.roles import (
+    CAPABILITIES,
+    LEGACY_WILDCARD_CAPABILITIES,
+    concrete_capabilities,
+)
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.tenancy.models import LocationRecord
@@ -191,6 +195,8 @@ class AdministrationService:
         if user is None:
             raise ApiError(404, "user_not_found", "user not found")
         self.check_location(principal, user.location_id)
+        if not set(user.capabilities) <= CAPABILITIES | {"*"}:
+            raise denied()
         self.check_grants(principal, concrete_capabilities(user.capabilities))
         if user.is_owner and not actor.is_owner:
             raise denied()
@@ -220,7 +226,17 @@ class AdministrationService:
         active = payload.is_active if "is_active" in changes else user.is_active
         self.check_location(principal, location)
         self.check_grants(principal, concrete_capabilities(grants))
-        if owner and (location is not None or grants != CAPABILITIES):
+        preserving_established_owner = (
+            user.is_owner
+            and user.location_id is None
+            and not changes & {"role", "capabilities", "location_id", "is_owner"}
+            and concrete_capabilities(user.capabilities) >= LEGACY_WILDCARD_CAPABILITIES
+        )
+        if (
+            owner
+            and not preserving_established_owner
+            and (location is not None or grants != CAPABILITIES)
+        ):
             raise ApiError(
                 422, "invalid_owner", "owners require organization scope and all capabilities"
             )
@@ -241,7 +257,8 @@ class AdministrationService:
         if payload.display_name is not None:
             user.display_name = payload.display_name
         user.location_id = location
-        user.capabilities = sorted(grants)
+        if changes & {"role", "capabilities"}:
+            user.capabilities = sorted(grants)
         assert owner is not None and active is not None  # schema rejects explicit nulls
         user.is_owner, user.is_active = owner, active
         if any(

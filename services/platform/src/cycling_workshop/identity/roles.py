@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from types import MappingProxyType
+
 BUSINESS_CAPABILITIES = frozenset(
     {
         "customers.read",
@@ -27,28 +30,70 @@ ADMIN_CAPABILITIES = frozenset(
         "locations.create",
     }
 )
-CAPABILITIES = BUSINESS_CAPABILITIES | ADMIN_CAPABILITIES
+# This literal snapshot is immutable. Never derive wildcard authority from a
+# growing catalog: existing accounts and old tokens must acquire no new grants.
+LEGACY_WILDCARD_CAPABILITIES = frozenset(
+    {
+        "customers.read",
+        "customers.write",
+        "bicycles.read",
+        "bicycles.write",
+        "orders.read",
+        "orders.write",
+        "inventory.read",
+        "inventory.write",
+        "sync.pull",
+        "sync.push",
+        "users.read",
+        "users.write",
+        "users.grants.write",
+        "users.sessions.revoke",
+        "users.credentials.reset",
+        "locations.read",
+        "locations.create",
+    }
+)
+BRANDING_CAPABILITIES = frozenset({"branding.read", "branding.write"})
+CAPABILITIES = LEGACY_WILDCARD_CAPABILITIES | BRANDING_CAPABILITIES
+LEGACY_ROLE_BUNDLES: Mapping[str, frozenset[str]] = MappingProxyType(
+    {
+        "Owner": LEGACY_WILDCARD_CAPABILITIES,
+        "Administrator": LEGACY_WILDCARD_CAPABILITIES - {"locations.create"},
+        "Manager": BUSINESS_CAPABILITIES | {"locations.read"},
+        "Mechanic": BUSINESS_CAPABILITIES - {"customers.write", "inventory.write"}
+        | {"locations.read"},
+        "Reception": BUSINESS_CAPABILITIES - {"inventory.write"} | {"locations.read"},
+        "Sales": BUSINESS_CAPABILITIES - {"orders.write", "inventory.write"} | {"locations.read"},
+        "Viewer": frozenset(
+            {
+                "customers.read",
+                "bicycles.read",
+                "orders.read",
+                "inventory.read",
+                "sync.pull",
+                "locations.read",
+            }
+        ),
+        "TechnicalAdmin": frozenset(),
+    }
+)
+
+
+# New clients select these starter snapshots and submit explicit literals.
 ROLE_BUNDLES: dict[str, frozenset[str]] = {
-    "Owner": CAPABILITIES,
-    "Administrator": CAPABILITIES - {"locations.create"},
-    "Manager": BUSINESS_CAPABILITIES | {"locations.read"},
-    "Mechanic": BUSINESS_CAPABILITIES - {"customers.write", "inventory.write"} | {"locations.read"},
-    "Reception": BUSINESS_CAPABILITIES - {"inventory.write"} | {"locations.read"},
-    "Sales": BUSINESS_CAPABILITIES - {"orders.write", "inventory.write"} | {"locations.read"},
-    "Viewer": frozenset(
-        {
-            "customers.read",
-            "bicycles.read",
-            "orders.read",
-            "inventory.read",
-            "sync.pull",
-            "locations.read",
-        }
-    ),
-    "TechnicalAdmin": frozenset(),
+    name: grants
+    | (
+        {"branding.read", "branding.write"}
+        if name in {"Owner", "Administrator"}
+        else {"branding.read"}
+        if name != "TechnicalAdmin"
+        else set()
+    )
+    for name, grants in LEGACY_ROLE_BUNDLES.items()
 }
 
 
 def concrete_capabilities(values: frozenset[str] | list[str]) -> frozenset[str]:
-    """Resolve legacy wildcard authority only over the implemented catalog."""
-    return CAPABILITIES if "*" in values else frozenset(values)
+    """Resolve known explicit literals plus the fixed historical wildcard set."""
+    literals = frozenset(values) & CAPABILITIES
+    return literals | LEGACY_WILDCARD_CAPABILITIES if "*" in values else literals

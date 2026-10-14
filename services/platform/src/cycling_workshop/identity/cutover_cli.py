@@ -21,10 +21,13 @@ from cycling_workshop.tenancy.models import OrganizationRecord
 
 
 def require_cutover_schema(session: Session) -> None:
-    """This binary qualifies one explicit migration head, not guessed compatibility."""
+    """Accept only the qualified cutover head and its additive branding successor."""
     if not inspect(session.connection()).has_table("alembic_version"):
         raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
-    if list(session.scalars(text("SELECT version_num FROM alembic_version"))) != ["0010"]:
+    if list(session.scalars(text("SELECT version_num FROM alembic_version"))) not in (
+        ["0010"],
+        ["0011"],
+    ):
         raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import (
     BaseModel,
@@ -14,7 +14,7 @@ from pydantic import (
 )
 from pydantic.json_schema import SkipJsonSchema
 
-from cycling_workshop.identity.roles import CAPABILITIES, ROLE_BUNDLES
+from cycling_workshop.identity.roles import CAPABILITIES, LEGACY_ROLE_BUNDLES
 
 NON_NUL_PATTERN = r"^[^\x00]*$"
 
@@ -43,9 +43,9 @@ class GrantSelection(StrictRequest):
         if (self.role is None) == (self.capabilities is None):
             raise ValueError("choose exactly one role or capability snapshot")
         if self.role is not None:
-            if self.role not in ROLE_BUNDLES:
+            if self.role not in LEGACY_ROLE_BUNDLES:
                 raise ValueError("unknown role")
-            return ROLE_BUNDLES[self.role]
+            return LEGACY_ROLE_BUNDLES[self.role]
         grants = frozenset(self.capabilities or [])
         if not grants <= CAPABILITIES:
             raise ValueError("only implemented concrete capabilities may be granted")
@@ -129,6 +129,12 @@ class RoleResponse(BaseModel):
 class RoleCatalogResponse(BaseModel):
     roles: list[RoleResponse]
     capabilities: list[str]
+
+
+class RoleCatalogV2Response(RoleCatalogResponse):
+    model_config = ConfigDict(extra="forbid")
+    catalog_version: Literal[2]
+    legacy_wildcard_capabilities: list[str] = Field(min_length=17, max_length=17)
 
 
 class CreateLocationRequest(StrictRequest):

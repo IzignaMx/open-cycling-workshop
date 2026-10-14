@@ -6,7 +6,7 @@ import jwt
 import pytest
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
-from cycling_workshop.identity.roles import CAPABILITIES
+from cycling_workshop.identity.roles import LEGACY_WILDCARD_CAPABILITIES
 from cycling_workshop.identity.security import SessionTokenService
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 from test_auth_api import build_client
@@ -31,7 +31,7 @@ def context_client(account_grants, token_grants, *, location="loc-1", ttl=timede
 @pytest.mark.parametrize(
     ("account", "token", "expected"),
     [
-        (["*"], ["*"], sorted(CAPABILITIES)),
+        (["*"], ["*"], sorted(LEGACY_WILDCARD_CAPABILITIES)),
         (["*"], ["customers.read"], []),
         (["customers.read"], ["*"], []),
         (["*", "customers.read"], ["customers.read"], ["customers.read"]),

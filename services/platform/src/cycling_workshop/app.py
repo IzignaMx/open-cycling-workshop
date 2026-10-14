@@ -13,6 +13,8 @@ from cycling_workshop.api.errors import install_error_handlers
 from cycling_workshop.api.middleware import configure_logging, install_request_context
 from cycling_workshop.api.schemas import HealthReadyResponse, HealthUnavailableResponse
 from cycling_workshop.bicycles.router import router as bicycles_router
+from cycling_workshop.branding.http import BrandingBodyLimit, branding_path
+from cycling_workshop.branding.router import router as branding_router
 from cycling_workshop.customers.router import router as customers_router
 from cycling_workshop.db.registry import register_models
 from cycling_workshop.identity.admin_router import router as administration_router
@@ -48,6 +50,7 @@ def create_app(
     app.state.session_factory = session_factory
     app.state.session_tokens = SessionTokenService(secret=settings.auth_secret)
     app.state.baseline_codec = BaselineCodec(settings.auth_secret)
+    app.add_middleware(BrandingBodyLimit)
     app.add_middleware(BaselineBodyLimit)
     app.add_middleware(MutationBodyProofMiddleware)
     install_error_handlers(app)
@@ -90,6 +93,8 @@ def create_app(
                 "/api/v1/sync/mutations",
             }
             or path.startswith("/api/v1/admin/")
+            or path.startswith("/api/v2/admin/")
+            or branding_path(request.url.path)
             or (
                 path.startswith("/api/v1/service-orders/")
                 and len(path.split("/")) == 6
@@ -116,6 +121,7 @@ def create_app(
     app.include_router(context_router)
     app.include_router(identity_router)
     app.include_router(administration_router)
+    app.include_router(branding_router)
     app.include_router(customers_router)
     app.include_router(bicycles_router)
     app.include_router(service_orders_router)

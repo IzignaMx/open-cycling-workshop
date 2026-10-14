@@ -19,8 +19,8 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 
-@pytest.fixture
-def installation(tmp_path, monkeypatch):
+@pytest.fixture(params=["0010", "0011"])
+def installation(tmp_path, monkeypatch, request):
     url = f"sqlite+pysqlite:///{tmp_path / 'cutover.sqlite3'}"
     engine = create_engine(url)
     monkeypatch.delenv("OCWP_DATABASE_URL", raising=False)
@@ -29,7 +29,7 @@ def installation(tmp_path, monkeypatch):
     config = Config(str(root / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     config.set_main_option("sqlalchemy.url", url)
-    command.upgrade(config, "0010")
+    command.upgrade(config, request.param)
     with Session(engine) as session:
         session.add_all([OrganizationRecord(id=name, name=name) for name in ("org", "other")])
         session.flush()
@@ -211,7 +211,7 @@ def test_cutover_cli_refuses_fallback_database_configuration(monkeypatch, capsys
     assert json.loads(capsys.readouterr().out)["error"] == "database_configuration_required"
 
 
-@pytest.mark.parametrize("revision", [None, "0009", "0011"])
+@pytest.mark.parametrize("revision", [None, "0009", "0012"])
 def test_operator_refuses_unqualified_schema_without_effects(installation, revision):
     engine, settings = installation
     with engine.begin() as connection:

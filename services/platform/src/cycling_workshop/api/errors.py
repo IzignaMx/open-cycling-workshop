@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from cycling_workshop.api.middleware import request_id_var
+from cycling_workshop.branding.http import branding_path
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -22,7 +23,11 @@ def install_error_handlers(app: FastAPI) -> None:
     async def handle_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        del request
+        if branding_path(request.url.path):
+            # Thousands of unknown small keys can amplify a bounded request into
+            # a multi-megabyte validation envelope. This private profile boundary
+            # returns one bounded safe diagnostic, without names or image data.
+            return JSONResponse(status_code=422, content={"detail": "Invalid branding request"})
         # Pydantic's input/context may contain plaintext credentials, even with
         # SecretStr or hide_input_in_errors. Never serialize or log either.
         return JSONResponse(

@@ -38,7 +38,7 @@ def install_request_context(app: FastAPI) -> None:
     async def request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
         # Do not copy arbitrary user-controlled text into identity audit history.
         sensitive = request.url.path.startswith(
-            ("/api/v1/auth/", "/api/v1/admin/", "/api/v1/locations")
+            ("/api/v1/auth/", "/api/v1/admin/", "/api/v2/admin/", "/api/v1/locations")
         )
         request_id = (
             None if sensitive else request.headers.get("X-Request-ID")
