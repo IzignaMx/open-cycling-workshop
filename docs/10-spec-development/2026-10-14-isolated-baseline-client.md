@@ -94,3 +94,16 @@ success does not close this gate. Exact final-head hosted evidence is pending.
   restore/session, legacy recovery, physical-device and accessibility gates.
 
 Do not infer installation or production rollout authority from source tests.
+
+## Main35 reconciliation
+
+True-merge actual main35 `68933a7c61c9ed13a5f5634f3f9c3df69154f22d`
+(tree `957fb12edf0c3f0afcb93e89fc748ce68a4544c2`). Preserve the original reviewed
+client head `257e75744d0b18d1ac943b153db727c69e6cc026` and tree
+`68aa6c98632f4b6d4394afa47f51bbcec86d777a` as historical evidence. Only shared
+changelog, checklist and execution-state additions conflicted; both progress
+records survive. Client executable source and tests remain byte-identical to the
+reviewed client head; incoming backend source remains identical to actual main35.
+Union local qualification passed 21 checks with zero failures and five explicit
+environment blockers: Python 1240 passed/154 skipped; frontend 323 passed/zero
+skips. Independent source comparison remains required before publication.

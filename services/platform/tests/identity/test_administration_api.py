@@ -733,8 +733,10 @@ def test_audit_failure_rolls_back_user_mutation(db: Fixture):
 
     event.listen(IdentityAuditRecord, "before_insert", fail_audit)
     try:
-        with pytest.raises(RuntimeError, match="synthetic audit"):
-            db.create()
+        response = db.create()
+        assert response.status_code == 500
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json() == {"detail": "internal server error"}
     finally:
         event.remove(IdentityAuditRecord, "before_insert", fail_audit)
     with db.factory() as session:

@@ -72,20 +72,34 @@ def create_app(
         return HealthReadyResponse(environment=settings.environment)
 
     @app.middleware("http")
-    async def context_no_store(request: Request, call_next: RequestResponseEndpoint) -> Response:
-        is_context = request.url.path.rstrip("/") == "/api/v1/auth/context" or baseline_path(
-            request.url.path
+    async def private_no_store(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        path = request.url.path.rstrip("/")
+        is_context = path == "/api/v1/auth/context" or baseline_path(request.url.path)
+        is_private = (
+            is_context
+            or path
+            in {
+                "/api/v1/auth/login",
+                "/api/v1/auth/me",
+                "/api/v1/auth/logout-all",
+                "/api/v1/auth/change-password",
+                "/api/v1/admin",
+                "/api/v1/locations",
+            }
+            or path.startswith("/api/v1/admin/")
         )
         try:
             response = await call_next(request)
         except Exception:
-            if not is_context:
+            if not is_private:
                 raise
             # Keep unexpected failures generic, without leaking driver/session
-            # details or allowing shared caches to retain a context response.
-            logging.getLogger(__name__).error("authenticated context request failed")
+            # details or allowing caches to retain a private response.
+            logging.getLogger(__name__).error(
+                "authenticated context request failed" if is_context else "identity request failed"
+            )
             response = JSONResponse(status_code=500, content={"detail": "internal server error"})
-        if is_context:
+        if is_private:
             response.headers["Cache-Control"] = "no-store"
         return response
 
