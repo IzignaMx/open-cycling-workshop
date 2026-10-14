@@ -21,8 +21,12 @@ baseline. They do not mean those main38 checks remain unexecuted. Actual
 installation changes, real-operator recovery, physical Windows/Android and manual
 screen-reader evidence remain open. Cross-built ARM64 images are not hardware
 qualification. The new administration source is a separate candidate: its first
-native browser run failed 13 cases and the corrected exact-tree browser/visual gate
-is still pending. No full MVP, production installation or release certification
+native browser run failed 13 cases; the second run passed 41 of 43 cases.
+Two exact wrapped-label fixture lookups still blocked user/grant and complete
+visual-state journeys. Their semantic combobox correction awaits a new exact-tree
+browser/visual run. Actual enlarged captures also exposed fragmented operational
+KPI/header labels; intrinsic reflow and full-word geometry assertions await
+that same native/visual qualification. No full MVP, production installation or release certification
 is claimed.
 
 > **Historical pre-main38 2026-10-14 update:** The historical summary below does not qualify new

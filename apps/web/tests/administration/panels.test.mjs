@@ -56,3 +56,32 @@ test('directory history stops at 64 pages without silently dropping previous cur
     assert.match(text, /Límite de 64 páginas/)
   }
 })
+
+test('role journeys select the exact accessible combobox instead of wrapped option label text', () => {
+  const text = readFileSync(new URL('../../e2e/administration.spec.ts', import.meta.url), 'utf8')
+  assert.equal(/getByLabel\('Rol'/.test(text), false)
+  assert.equal(
+    [...text.matchAll(/getByRole\('combobox', \{ name: 'Rol', exact: true \}\)/g)].length,
+    3,
+  )
+  assert.match(text, /selectOption\('TechnicalAdmin'\)/)
+  assert.equal([...text.matchAll(/selectOption\('Viewer'\)/g)].length, 2)
+})
+
+test('workshop metrics and compact header reflow intrinsically at narrow available widths', () => {
+  const css = readFileSync(new URL('../../src/styles.css', import.meta.url), 'utf8')
+  const metrics = [...css.matchAll(/\.workshop-metrics\s*\{([^}]+)\}/g)].map((match) => match[1])
+  assert.ok(
+    metrics.some((rule) => /repeat\(auto-fit, minmax\(min\(100%, 12rem\), 1fr\)\)/.test(rule)),
+  )
+  assert.ok(metrics.every((rule) => !/grid-template-columns:\s*repeat\([24],/.test(rule)))
+  const compact = css
+    .split('@media (max-width: 1023px) {')[1]
+    .split('@media (max-width: 639px) {')[0]
+  assert.match(compact, /\.workshop-navigation\s*\{[^}]*display: flex;[^}]*flex-wrap: wrap;/s)
+  assert.match(compact, /\.workshop-navigation\s*\{[^}]*flex-direction: row;/s)
+  assert.match(compact, /\.workshop-identity\s*\{[^}]*flex: 1 1 13rem;/s)
+  assert.match(compact, /repeat\(auto-fit, minmax\(min\(100%, 8rem\), 1fr\)\)/)
+  assert.match(compact, /\.settings-trigger\s*\{[^}]*max-width: 100%;/s)
+  assert.doesNotMatch(css, /zoom\s*:/)
+})

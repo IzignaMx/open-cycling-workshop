@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Administration role locators and enlarged-layout readability
+
+- Target the exact accessible role combobox in three administration journeys.
+  Preserve role values and security assertions after the second hosted run
+  passed 41 of 43 cases; complete native and visual qualification remains pending.
+- Reflow operational metrics and the compact header from actual available width,
+  preventing fragmented words under CSS enlargement while preserving theme DOM.
+  Add four-theme complete-word/identity geometry checks and stable full-page capture.
+
 ## Unreleased · Connected administration browser corrections
 
 - Preserve the native fetch receiver for administration requests; keep exact

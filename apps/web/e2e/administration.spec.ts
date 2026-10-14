@@ -170,7 +170,7 @@ test('creates a user and replaces that individual permission snapshot without ch
   await form.getByLabel('Nombre de usuario', { exact: true }).fill(username)
   await form.getByLabel('Nombre visible', { exact: true }).fill('Cuenta sintética creada')
   await form.getByLabel('Contraseña inicial', { exact: true }).fill(PASSWORD)
-  await form.getByLabel('Rol', { exact: true }).selectOption('TechnicalAdmin')
+  await form.getByRole('combobox', { name: 'Rol', exact: true }).selectOption('TechnicalAdmin')
   const created = page.waitForResponse(
     (r) => r.url().endsWith('/api/v1/admin/users') && r.request().method() === 'POST',
   )
@@ -190,7 +190,7 @@ test('creates a user and replaces that individual permission snapshot without ch
     .click()
   const edit = page.getByRole('form', { name: `Editar usuario ${username}`, exact: true })
   await edit.getByLabel('Nombre visible', { exact: true }).fill('Nombre revisado')
-  await edit.getByLabel('Rol', { exact: true }).selectOption('Viewer')
+  await edit.getByRole('combobox', { name: 'Rol', exact: true }).selectOption('Viewer')
   await edit.getByLabel('Confirmo el cambio de seguridad', { exact: true }).check()
   const patched = page.waitForResponse(
     (r) => r.url().endsWith(`/admin/users/${target.user_id}`) && r.request().method() === 'PATCH',
@@ -441,6 +441,54 @@ test('grant bundle alone never permits protected owner administration', async ({
 })
 
 const THEMES = ['Banco de trabajo', 'Plano técnico', 'Ritmo modular', 'Turno nocturno']
+async function prepareFullPageCapture(page: Page) {
+  // A translated fixed skip link can appear above a scrolled viewport in a
+  // stitched full-page image. Capture from the document origin without blurring.
+  await page.evaluate(() => window.scrollTo(0, 0))
+  const skip = page.getByRole('link', { name: 'Saltar al contenido', exact: true })
+  await expect(skip).not.toBeFocused()
+  expect(
+    await skip.evaluate((element) => element.getBoundingClientRect().bottom),
+  ).toBeLessThanOrEqual(0)
+}
+async function expectReadableWorkshopSummary(page: Page) {
+  const layout = await page.evaluate(() => {
+    const zoom = Number(getComputedStyle(document.documentElement).zoom)
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')!
+    const labels = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '.workshop-metrics dt, .workshop-identity strong, .settings-trigger, .workshop-links a',
+      ),
+    ).map((element) => {
+      const style = getComputedStyle(element)
+      context.font = style.font
+      const text = element.textContent?.trim() ?? ''
+      const longestWordWidth = Math.max(
+        ...text.split(/\s+/).map((word) => context.measureText(word).width),
+      )
+      const availableWidth =
+        element.getBoundingClientRect().width / zoom -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight) -
+        parseFloat(style.borderLeftWidth) -
+        parseFloat(style.borderRightWidth)
+      return { text, availableWidth, longestWordWidth }
+    })
+    const identity = document.querySelector('.workshop-identity strong')!
+    const range = document.createRange()
+    range.selectNodeContents(identity)
+    return { labels, identityLines: range.getClientRects().length }
+  })
+  expect(layout.labels).toHaveLength(11) // four metrics, identity, settings, five links
+  for (const label of layout.labels) {
+    expect(
+      label.availableWidth + 1,
+      `readable complete words: ${label.text}`,
+    ).toBeGreaterThanOrEqual(label.longestWordWidth)
+  }
+  expect(layout.identityLines, 'OCWP identity must remain on one readable line').toBe(1)
+}
 test('administration preserves mounted drafts across all themes with narrow reflow and accessible controls', async ({
   page,
 }, info) => {
@@ -466,17 +514,46 @@ test('administration preserves mounted drafts across all themes with narrow refl
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true)
+      if (width === 320) await expectReadableWorkshopSummary(page)
       const accessibility = await new AxeBuilder({ page }).analyze()
       expect(
         accessibility.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? '')),
       ).toEqual([])
       const path = info.outputPath(`administration-theme-${index}-${width}.png`)
+      await prepareFullPageCapture(page)
       await page.screenshot({ path, fullPage: true })
       await info.attach(`administration-theme-${index}-${width}`, {
         path,
         contentType: 'image/png',
       })
     }
+    // CSS enlargement changes available layout width without changing viewport media queries.
+    await page.setViewportSize({ width: 640, height: 1000 })
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2'
+    })
+    expect(
+      await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        effectiveCssWidth:
+          window.innerWidth / Number(getComputedStyle(document.documentElement).zoom),
+        noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+      })),
+    ).toEqual({ innerWidth: 640, effectiveCssWidth: 320, noHorizontalOverflow: true })
+    await expectReadableWorkshopSummary(page)
+    expect(await handle!.evaluate((element) => element.isConnected)).toBe(true)
+    await expect(input).toHaveValue('Borrador de ubicación con texto ampliado')
+    const zoomThemePath = info.outputPath(`administration-theme-${index}-200-percent.png`)
+    await prepareFullPageCapture(page)
+    await page.screenshot({ path: zoomThemePath, fullPage: true })
+    await info.attach(`administration-theme-${index}-200-percent`, {
+      path: zoomThemePath,
+      contentType: 'image/png',
+    })
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '1'
+    })
+    await page.setViewportSize({ width: 320, height: 1000 })
   }
   await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
   await input.focus()
@@ -511,7 +588,10 @@ test('administration preserves mounted drafts across all themes with narrow refl
     noHorizontalOverflow: true,
   })
   await expect(create).toBeFocused()
+  await expectReadableWorkshopSummary(page)
   const zoomPath = info.outputPath('administration-forced-colors-200-percent.png')
+  await prepareFullPageCapture(page)
+  await expect(create).toBeFocused()
   await page.screenshot({ path: zoomPath, fullPage: true })
   await info.attach('administration-forced-colors-200-percent', {
     path: zoomPath,
@@ -544,6 +624,8 @@ test('administration preserves mounted drafts across all themes with narrow refl
     true,
   )
   const expandedPath = info.outputPath('administration-expanded-labels-320.png')
+  await prepareFullPageCapture(page)
+  await expect(create).toBeFocused()
   await page.screenshot({ path: expandedPath, fullPage: true })
   await info.attach('administration-expanded-labels-320', {
     path: expandedPath,
@@ -749,7 +831,7 @@ test('UI visual states: each theme captures directory, editor, security review, 
     const form = page.getByRole('form', { name: `Editar usuario ${target.username}`, exact: true })
     await form.getByLabel('Nombre visible', { exact: true }).fill('Borrador visual')
     await captureAdministration(page, info, `admin-${index}-editor`)
-    await form.getByLabel('Rol', { exact: true }).selectOption('Viewer')
+    await form.getByRole('combobox', { name: 'Rol', exact: true }).selectOption('Viewer')
     await form.getByLabel('Confirmo el cambio de seguridad', { exact: true }).check()
     await captureAdministration(page, info, `admin-${index}-security-review`)
     await form.getByRole('button', { name: 'Guardar cambios', exact: true }).click()

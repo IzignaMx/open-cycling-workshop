@@ -140,3 +140,65 @@ All **43 browser cases across 9 files** remain registered. No timeout, server
 permission, storage fence, original preservation assertion or credential-artifact
 safety control was relaxed. Final exact-source native execution and screenshot
 inspection remain pending; local checks do not close the failed browser gate.
+
+## Second hosted browser result and exact role locator correction
+
+Correction head `07617df9d91c8f2ef5d10972688d313817f00acb` (tree
+`6a4c7c002064e77871bf93f3b6f6c18f58c4519a`) ran in CI
+[38639134363](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38639134363),
+merge `d9cd401a0c23451fa08de3123d9a1036ec0f49ab`. Direct artifact 11929384786,
+SHA256 `1cc9fae4023828cfe8ace3de73af184c9cdebc380cab4037b454d298f41e3332`,
+reports **41 passed, two failed, zero flaky/skipped**. Original preservation and
+restricted-user isolation cases passed, as did actual administration transport,
+self-session/lifecycle and measured reflow journeys. This does not qualify the
+whole administration slice: user creation/grant replacement and the multi-theme
+visual-state journey still failed on initial attempt and retry.
+
+Both remaining waits target `getByLabel('Rol', { exact: true })`, although their
+accessible snapshots expose an enabled `combobox` named `Rol` with expected
+options. Inspection and an isolated execution of installed Playwright 1.62's
+`getElementLabels`/`elementText` confirm that matching the wrapping label includes
+nested option text. The fixture now uses a form-scoped exact accessible combobox
+name for all three role selections, including the later grant replacement.
+Selected role values, response checks, security review and actor-isolation
+assertions remain unchanged. This locator correction does not change production
+UI or permissions.
+A deterministic fixture-contract regression was observed RED then GREEN; this
+source check does not substitute for a new native run. All 43 cases remain;
+complete four-theme visual-state captures and final hosted closure are pending.
+
+### Observed enlarged-layout readability correction
+
+Actual full-resolution capture `administration-forced-colors-200-percent.png`
+showed four operational KPI columns squeezing words into single-letter fragments,
+and a cramped identity/header, despite passing no-horizontal-overflow assertions.
+A 640px viewport enlarged by CSS 200% leaves 320 CSS pixels for content while
+viewport media queries still see 640px. Readability was therefore not qualified
+by the earlier overflow result. Metrics now use intrinsic minimum-width auto-fit
+columns; the compact header wraps its identity/settings and gives navigation an
+intrinsic grid. This is available-width responsiveness, with no zoom detection,
+DOM remount, theme-token change or permission/session change.
+
+The existing four-theme journey now checks complete-word width for KPI, identity,
+settings and navigation labels and one-line OCWP identity at both true 320px and
+CSS 200%/effective 320px, retaining the original captures and adding one enlarged
+capture per theme. It continues to assert exact geometry, no overflow and mounted
+administration draft preservation. The forced-colors capture also checks these
+readability conditions. Full-page captures first scroll to document origin
+without blurring the focused control and assert the unfocused skip link remains
+above the viewport. This avoids including the translated fixed link at a stale
+scroll offset in a stitched full-page image; a genuine hidden-link geometry or
+focus failure will fail the journey. No production skip-link behavior changed.
+
+Intrinsic-layout source regressions were observed RED then GREEN. These are
+source checks; the expanded native assertions and actual screenshot inspection
+remain pending on the next exact published tree. CSS enlargement is not physical
+browser/device zoom or manual screen-reader qualification.
+
+Final local source checks for this bounded correction: **652 core tests passed**,
+eight panel/source regressions passed, whole-repository ESLint and Prettier,
+strict affected E2E compilation, production TypeScript/Vite/PWA build and repository
+contract check passed. Full browser collection remains **43 cases in nine files**;
+collection is not execution. Independent source review closed the measured-label
+count and inherited compact flex-direction issues before handoff. No local native
+browser, PostgreSQL or physical-device execution is claimed for this correction.
