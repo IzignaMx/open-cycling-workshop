@@ -101,6 +101,11 @@ jobs:
         run: uv run python scripts/e2e/prepare_e2e_database.py
       - name: Run browser E2E
         run: pnpm --filter @ocwp/web test:e2e
+      - name: Repeat sync baseline and reconnect journeys without retries
+        run: >-
+          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts
+          --grep 'baseline setup|large reconnect batch'
+          --repeat-each=5 --retries=0 --workers=1
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
       - name: Verify OpenAPI contract

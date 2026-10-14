@@ -402,3 +402,43 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_hosted_verification: pending
   quote_migration_reserved: 0008
   release_gates: unchanged
+
+sync_chaos_setup_barrier_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-sync-chaos-setup-barrier.md
+  status: verified
+  incident_ci_run: 38426124042
+  incident_job: 115395858982
+  incident: qualification_repeat_expected_three_queued_mutations_received_four_retry_passed
+  regression: held_indexeddb_completion_then_withheld_real_server_ack
+  hosted_red:
+    ci_run: 38541165450
+    job: 115775986709
+    head: 35118af37378bbf2b86c3d071b715ddd67b609d8
+    tested_merge: 3a9373383e3658cf44a411a0555dd40229d18048
+    result: baseline_readiness_resolved_with_pending_create_both_attempts_other_nine_journeys_passed
+    qualification_artifact: 11882193139
+  implementation: local_save_unique_customer_queue_zero_synced_and_server_version_one_barrier
+  remote_update: require_matching_mutation_and_entity_applied_at_version_two
+  repeat_gate: both_affected_journeys_five_times_each_zero_retries
+  local_qualification: partial_21_pass_zero_fail_five_environment_blockers
+  local_python_tests: 476_pass_eight_postgresql_skips
+  local_frontend_core_tests: 72_pass
+  local_e2e_static: strict_typecheck_and_discovery_passed_not_browser_execution
+  hosted_green_checkpoint:
+    head: 01f7c5e013655d23732e83eb6f71387e866ff925
+    tested_merge: 9c510a78503033ad38dd094d3a8149d13522177b
+    tree_equals_head: 7b3ea97007a2a5031048b0ad19e41a288c277b82
+    ci_run: 38542610878
+    job: 115780814286
+    initial_browser_suite: 10_passed_zero_flakes
+    retry_free_repeat_gate: 10_passed_five_each_zero_retries
+    qualification_browser_repeat: 10_passed_zero_flakes
+    qualification_artifact: 11883580431_passed_27_checks_zero_blockers
+    python_tests: 378_passed_zero_skips
+    security_run: 38542610839_passed
+    dco_run: 38542610803_passed
+  reconciliation_base: 98394826884020d9de2498cab551120087dd5334
+  reconciliation_scope: preserve_merged_inventory_pr22_quote_pr23_with_unchanged_sync_code
+  current_head_evidence: exact_head_ci_required_on_pr24_after_reconciliation
+  independent_review: no_defects_targeted_checks_independently_passed
+  release_gates: unchanged

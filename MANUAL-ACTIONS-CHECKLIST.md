@@ -361,3 +361,15 @@ Add durable evidence below instead of editing completed checklist history away.
 - See `docs/02-technical-architecture/2026-10-13-inventory-command-atomicity.md`.
   This is a conditional operational boundary, not evidence that deployed data
   contains duplicates. Existing physical-device qualification remains open.
+
+## 2026-10-14 · Sync chaos setup regression
+
+- [x] Verify the corrected large-batch setup and deterministic regression on
+      hosted CI. PR #24 red run 38541165450 reproduces the legacy readiness
+      helper resolving with a pending create. Green checkpoint 01f7c5e, run
+      38542610878, passed all ten browser journeys, ten retry-free repetitions
+      (five per affected journey), and a further ten-journey qualification pass.
+      Artifact 11883580431 passed all 27 checks with zero blockers. Security and
+      DCO passed. The exact-three conflict assertions remain intact. Subsequent
+      base/evidence reconciliation commits require their own exact-head CI;
+      see the dedicated sync-chaos setup document and current PR #24 checks.
