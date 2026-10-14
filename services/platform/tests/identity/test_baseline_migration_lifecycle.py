@@ -65,7 +65,7 @@ def test_baseline_downgrade_refuses_retained_proof_without_schema_or_history_los
     identity_migration_database,
 ):
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0009")
     org, location = _seed_tenant(engine)
     user = _user(org, location_id=location)
     _insert(engine, "users", user)
@@ -109,7 +109,7 @@ def test_postgres_downgrade_lock_observes_concurrent_insert_before_emptiness_che
     config, engine = identity_migration_database
     if engine.dialect.name != "postgresql":
         pytest.skip("Access-exclusive migration serialization requires PostgreSQL")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0009")
     org, location = _seed_tenant(engine)
     user = _user(org, location_id=location)
     _insert(engine, "users", user)

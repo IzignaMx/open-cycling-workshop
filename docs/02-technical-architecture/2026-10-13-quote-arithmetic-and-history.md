@@ -101,5 +101,6 @@ framework or runtime dependency is required.
 ## Persistence reservation update · 2026-10-14
 
 Bounded authoritative server baselines use additive migration 0009 after 0008.
-The unimplemented quote persistence reservation moves to 0010 after 0009.
+Server cutover implements 0010 after 0009. The unimplemented quote persistence
+reservation moves to 0011 after 0010.
 This does not create, run or rewrite quote migrations or change quote arithmetic.

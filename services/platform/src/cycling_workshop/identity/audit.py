@@ -38,7 +38,8 @@ class IdentityAuditRecord(Base):
             ondelete="RESTRICT",
         ),
         CheckConstraint(
-            "target_type IN ('user', 'location')", name="ck_identity_audit_target_type"
+            "target_type IN ('user', 'location', 'organization')",
+            name="ck_identity_audit_target_type",
         ),
         CheckConstraint(
             "target_type = 'user' OR target_id IS NULL", name="ck_identity_audit_target_reference"
