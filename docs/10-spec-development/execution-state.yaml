@@ -679,3 +679,23 @@ structural_workshop_themes_2026_10_14:
   corrected_hosted_evidence: pending_exact_color_web_first_assertions_unchanged_product_source
   exact_head_hosted_ci: pending
   release_gates: unchanged_physical_windows_android_screen_reader_and_manual_qualification
+
+ordered_change_feed_prerequisite_2026_10_14:
+  status: implemented_pending_evidence
+  branch: fix/ordered-change-feed
+  base: 675fe209fa0b038156ba0c57c44f520b2e2de376
+  adr: docs/02-technical-architecture/2026-10-14-ordered-change-feed.md
+  supported_projections: [customer, bicycle, service_order]
+  writer_boundary: organization_row_lock_before_domain_and_receipt_reads_through_commit
+  authorization: existing_administration_lock_actor_refresh_after_wait_then_operation_authorize
+  atomic_effects: domain_order_events_receipt_feed_outbox_same_transaction
+  local_rest_red: four_successful_rest_mutations_produced_zero_feed_rows_before_fix
+  local_authorization_red: twenty_failures_with_new_writer_refresh_removed
+  local_python_tests: 780_passed_70_skipped_including_ten_new_postgresql_cases
+  postgres_ordering: pending_no_local_database_configured
+  static_and_contracts: ruff_mypy_openapi_generated_client_repository_green
+  independent_review: no_introduced_findings_52_functional_tests_passed_ten_pg_skipped
+  pr29_integration: preserve_authenticated_context_identity_and_receipt_envelope_hardening
+  nonclaims: no_baseline_no_client_activation_no_inventory_or_quote_projection_no_historical_backfill
+  rollout_gate: all_server_writers_upgraded_plus_future_real_mixed_client_fence
+  release_gates: unchanged

@@ -1,0 +1,77 @@
+# ADR: serialize supported projection writers per organization
+
+Status: implemented, independently reviewed; PostgreSQL evidence pending.
+
+## Context and invariant
+
+Foundation ADR-007, OFF-001/003/005–009 and server reauthorization require
+atomic domain changes and discoverable incremental continuity. Customer,
+bicycle and service-order REST creates and order transitions currently bypass
+`sync_changes`. PostgreSQL sequences allocate before commit, so concurrent
+writers can commit cursor N+1 before N and permanently hide N behind a reader's
+cursor. Sequential/SQLite tests cannot establish this concurrency property.
+
+## Decision and bounded plan
+
+1. Observe failing REST-to-feed tests, plus deterministic PostgreSQL tests for
+   same-organization ordering, rollback, independent organizations and revocation
+   while waiting (local PostgreSQL unavailable; hosted proof remains required).
+2. Hold the existing organization's row lock before supported domain reads,
+   mutation receipt lookup, writes and cursor allocation, until caller commit or
+   rollback. Use the same lock as account administration. At HTTP write entry,
+   refresh persisted actor/session/grants after the lock wait, then authorize
+   the operation again. Preserve the token's effective restriction.
+3. Centralize projection serialization and feed/outbox append without committing;
+   direct REST and sync share it. Domain rows, order events, receipts, feed and
+   outbox succeed or roll back in the same transaction. Per-mutation savepoints
+   remain supported; push owns the organization lock outside its savepoints.
+4. Keep numeric v1 feed and REST schemas unchanged. No migration or client
+   activation is introduced. Test exact projections, rollback and single append.
+
+Organization-level serialization deliberately trades parallel write throughput
+within one organization for a simple commit-order guarantee. Other organizations
+remain independent; global numeric cursor gaps are valid because pulls always
+filter one organization. SQLite remains a functional surrogate only. Future
+writers/imports/deletes/transfers must adopt the lock and feed protocol before
+being called projection-compatible. Transactions must acquire organization
+before entity/actor locks; multi-organization write transactions are unsupported.
+
+## Nonclaims and rollout
+
+Historical REST-only data still requires an authoritative baseline; replay from
+zero cannot backfill it. Inventory, quotes and full historical order timelines
+are not complete offline projections. No baseline protocol, cache context or
+production IndexedDB activation is delivered. All API writers must run the new
+server version before ordered continuity is relied upon; old server writers are
+not fenced by this change. Old browser bundles can reopen newer IndexedDB and
+write legacy stores: a schema version is not a mixed-client writer fence.
+Multi-user activation and physical/browser qualification remain gated.
+
+## Evidence
+
+- Observed REST regression before implementation: all four HTTP writes succeeded,
+  but the change feed returned no rows. Fixed test validates each full projection,
+  one outbox append per write, and the single order event.
+- Removing the new HTTP writer refresh reproduced 20 stale-authority failures;
+  restored implementation passes all five entrypoints across session revocation,
+  deactivation, grant contraction and location change.
+- Injected post-feed failures prove rollback for all three REST create paths and
+  order transition, including domain rows/event/feed/outbox.
+- Final local Python suite: 780 passed, 70 skipped. Ten new PostgreSQL cases
+  skipped because `OCWP_TEST_DATABASE_URL` is unset; no SQL concurrency red/green
+  proof is claimed. They cover ordered commit/rollback, other organizations,
+  refreshed grants/session/location/active state, mixed REST/sync, identical
+  concurrent replay and HTTP grant revocation during a server-observed lock wait.
+- Ruff check/format, mypy (77 source files), OpenAPI, generated TypeScript client,
+  repository contract and diff whitespace checks passed. No public schema changed.
+- Independent review found no introduced correctness/security defects, then
+  reran 52 focused tests successfully with ten PostgreSQL skips. Runtime signoff
+  remains conditional on hosted PostgreSQL qualification of the integrated tree.
+- Source inventory found only the direct routers and `SyncService` writing the
+  supported domain records; inventory reads service orders but does not mutate
+  them. No inventory/quote projection completeness is implied.
+
+Integrating PR29 must preserve its authenticated application context, identity
+validation and full receipt-envelope checks. This bounded branch deliberately
+starts at `675fe209fa0b038156ba0c57c44f520b2e2de376`; those separate changes are
+not claimed present here. No production deployment or client activation ran.

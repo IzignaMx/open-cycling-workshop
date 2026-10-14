@@ -13,6 +13,8 @@ from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.sync.projections import bicycle_payload
+from cycling_workshop.sync.writes import append_change, lock_writer
 
 router = APIRouter(tags=["bicycles"])
 
@@ -42,12 +44,16 @@ def create_bicycle(
     principal: Annotated[Principal, Depends(require_capability("bicycles.write"))],
     session: Annotated[Session, Depends(get_session)],
 ) -> BicycleResponse:
-    authorize(
-        principal,
-        capability="bicycles.write",
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-    )
+    principal = lock_writer(session, principal)
+    try:
+        authorize(
+            principal,
+            capability="bicycles.write",
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     customers = SqlAlchemyCustomerRepository(session)
     if (
         customers.get(customer_id=payload.customer_id, organization_id=principal.organization_id)
@@ -67,6 +73,17 @@ def create_bicycle(
     )
     repository = SqlAlchemyBicycleRepository(session)
     repository.add(bicycle)
+    append_change(
+        session,
+        organization_id=bicycle.organization_id,
+        location_id=bicycle.location_id,
+        entity_type="bicycle",
+        entity_id=bicycle.bicycle_id,
+        operation="create",
+        entity_version=bicycle.version,
+        occurred_at=bicycle.updated_at,
+        payload=bicycle_payload(bicycle),
+    )
     session.commit()
     return _response(bicycle)
 
