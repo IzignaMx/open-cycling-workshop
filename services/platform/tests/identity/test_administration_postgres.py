@@ -23,6 +23,7 @@ from cycling_workshop.api.errors import ApiError
 from cycling_workshop.app import create_app
 from cycling_workshop.identity.admin_cli import create_first_owner
 from cycling_workshop.identity.audit import IdentityAuditRecord
+from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.roles import CAPABILITIES
 from cycling_workshop.identity.security import PasswordService
@@ -517,6 +518,49 @@ def test_actor_authority_is_reloaded_after_organization_lock_wait(
         1,
     )
     assert target_user.password_hash == before_target.password_hash
+    assert db.audits() == []
+
+
+@pytest.mark.parametrize("change", ["session", "deactivate", "scope", "grants", "widen"])
+def test_current_user_revalidates_after_organization_lock_wait(
+    administration_postgres: AdministrationPostgres, change: str
+) -> None:
+    db = administration_postgres
+    actor = db.seed(capabilities=frozenset({"customers.read", "sync.pull"}))
+    token = db.app.state.session_tokens.issue(
+        Principal(actor, db.organization_id, db.location_id, frozenset({"customers.read"}))
+    )
+    request = HttpCommand("GET", "/api/v1/auth/me", {"Authorization": f"Bearer {token}"})
+    with db.factory() as blocker, ThreadPoolExecutor(max_workers=1) as executor:
+        db.lock_organization(blocker)
+        future = executor.submit(db.request, request)
+        try:
+            waiting = db.wait_for_lock_waiters([future])
+            assert len(waiting) == 1, "Current-user read must wait behind administration"
+            account = blocker.get(UserRecord, actor)
+            assert account is not None
+            if change == "session":
+                account.session_version += 1
+            elif change == "deactivate":
+                account.is_active = False
+            elif change == "scope":
+                account.location_id = db.other_location_id
+            elif change == "grants":
+                account.capabilities = []
+            else:
+                account.capabilities = sorted(CAPABILITIES)
+            blocker.commit()
+        finally:
+            blocker.rollback()
+        response = future.result(timeout=25)
+
+    if change in {"session", "deactivate", "scope"}:
+        assert response.status_code == 401
+        assert response.json()["detail"] == "invalid session"
+    else:
+        assert response.status_code == 200
+        assert response.json()["capabilities"] == ([] if change == "grants" else ["customers.read"])
+        assert response.json()["location_id"] == db.location_id
     assert db.audits() == []
 
 
