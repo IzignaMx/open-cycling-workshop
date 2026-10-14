@@ -436,7 +436,7 @@ inventory_quote_integration_2026_10_14:
 access_administration_2026_10_14:
   document: docs/10-spec-development/2026-10-14-access-administration.md
   adr: docs/02-technical-architecture/2026-10-14-access-administration.md
-  status: implemented_hosted_checkpoint_passed_pending_final_head_ci
+  status: merged_hosted_verified_operator_and_browser_rollout_pending
   requirements:
     [
       FR-IAM-001,
@@ -469,7 +469,7 @@ access_administration_2026_10_14:
   prerequisite_python_baseline: 492_passed_8_postgresql_skips
   initial_tdd_red: 22_failed_missing_api_404
   original_checkpoint: 670_python_passed_59_skipped_72_frontend_core_passed
-  final_tree_verification: main26_merge_changed_no_files_before_evidence_update_new_head_ci_required
+  final_tree_verification: final_head_efe42eb7_passed_and_merged_59ad7e9
   python_suite: 755_passed_60_skipped_59_unavailable_postgresql_1_sqlite_truncate_not_applicable
   focused_http: 98_passed
   first_owner_cli: 10_passed
@@ -486,7 +486,7 @@ access_administration_2026_10_14:
   qualification_artifact: ocw-access-admin-reconciled-qualification.json
   fixture_safety: loopback_test_e2e_no_url_query_no_libpq_redirects_cleared_app_url_and_url_file_owned_schemas
   postgresql_local: blocked_no_server_or_docker_runtime
-  hosted_verification: initial_exact_tree_checkpoint_passed_final_integration_head_ci_required
+  hosted_verification: initial_checkpoint_and_final_integration_head_passed
   hosted_pr: https://github.com/IzignaMx/open-cycling-workshop/pull/27
   hosted_head: 0c37d46ffd24bc787716fe7b068f4ca02e3cc348
   hosted_merge_ref: ca2f9695be85fc7de8e90bada9f216718ee2a7db
@@ -503,6 +503,14 @@ access_administration_2026_10_14:
   hosted_runtime_checks: 11_passed_including_pg18_4_backup_restore_and_secret_free_logs
   hosted_arm64: all_three_images_built_physical_hardware_unverified
   hosted_security_dco: passed
+  final_hosted_head: efe42eb7ad27b10068cb9f0ee61bd8b21fd7d962
+  final_hosted_ci: 38552076814
+  final_hosted_qualification_artifact: 11886948706
+  final_hosted_result: 812_python_30_browser_27_checks_passed
+  final_hosted_runtime: 38552076701
+  final_hosted_runtime_artifact: 11886678534
+  final_hosted_runtime_result: 11_docker_checks_and_three_arm64_image_builds_passed
+  merged_main: 59ad7e96ee1f32308a63ffa9248b528685a5221c
   main_reconciliation_review: no_defect_no_source_contract_changes_prior_tree_artifacts_and_logs_verified
   main_reconciliation_local_replay: 755_passed_60_skipped_21_checks_passed_five_local_environment_blockers
   operational_actions: verified_backup_no_server_writes_migration_review_invalid_legacy_versions_if_blocked
@@ -611,3 +619,48 @@ sync_chaos_setup_barrier_2026_10_13:
   merged_main: 192c46c1c8cb0c6d0a1d6c949dc851236726d473
   independent_review: no_defects_targeted_checks_independently_passed
   release_gates: unchanged
+
+structural_workshop_themes_2026_10_14:
+  status: implemented_pending_evidence
+  branch: feat/structural-workshop-themes
+  reconciliation_base: 59ad7e96ee1f32308a63ffa9248b528685a5221c
+  dependency: pr26_authorization_and_pr27_server_administration_merged_main
+  base: 98394826884020d9de2498cab551120087dd5334
+  document: docs/10-spec-development/2026-10-14-structural-workshop-themes.md
+  adr: docs/02-technical-architecture/2026-10-14-structural-workshop-themes.md
+  themes: [banco, plano, ritmo, noche]
+  default_theme: banco
+  persistence: additive_dexie_v4_personal_appearance_org_user_and_local_logo_org_user_location
+  shared_organization_branding: pending_not_implemented
+  quote_offline_schema_reservation: v5
+  focused_tests: 11_personalization_5_session_guard_4_read_display_4_conflict_provenance_passed
+  frontend_core_tests: 98_passed
+  local_qualification: partial_21_passed_zero_failures_5_environment_blockers
+  local_python_tests: 755_passed_60_documented_local_skips
+  static_and_pwa_build: passed
+  browser_cases: 13_added_23_total_collected_not_executed_locally
+  local_browser: blocked_managed_url_policy_respected
+  independent_review: reported_findings_fixed_re_review_16_focused_tests_and_real_offline_typechecks_passed
+  read_display_guards: explicit_entity_reads_fail_closed_preserve_cache_and_queue_focused_review_passed
+  combined_proof_source_head: fa076ace16a55411d654f74138e9da4bfb98863c
+  administration_pr27: included_from_main_identity_0008_quote_0009_preserved
+  combined_main27_qualification: 21_passed_zero_failures_five_environment_blockers_98_frontend_tests
+  conflict_provenance: queued_mutation_identity_verified_legacy_details_hidden_records_preserved_independent_22_test_review_passed
+  offline_permission_freshness_cache_revocation_resnapshot: pending_admin_rollout
+  first_hosted_head: f943f8bd982f69ec95ee5a48bd3c1bdc1b127d92
+  first_hosted_ci: run_38551340262_failed_17_of_22_browser_cases_passed_twice
+  first_hosted_runtime_security_dco: passed_including_three_arm64_builds
+  first_hosted_visual_review: twelve_viewports_reviewed_narrow_nav_and_monogram_defects_found
+  second_hosted_head: 1ab3554d990e0869bcbae88515549c47d39f20e8
+  second_hosted_ci: run_38553639997_passed_27_checks_812_python_98_frontend_54_browser_executions
+  second_hosted_artifacts: qualification_11887584318_browser_11887599369_runtime_11888315475
+  second_hosted_infrastructure_retries: unchanged_arm_web_cache_503_and_trivy_database_mirror_404_then_passed
+  second_hosted_visual_review: shared_button_utilities_refresh_wrapping_and_forced_colors_active_text_defects_found
+  third_hosted_head: ac2be4827a270a872be2e6528b5699ca5d02b01b
+  third_hosted_ci: run_38555698599_failed_direct_22_of_23_aggregate_23_of_23_observed_color_transition_flake
+  third_hosted_artifacts: browser_11890422559_qualification_11889947695_runtime_11890561786
+  third_hosted_runtime_security_dco: first_attempt_passed
+  third_hosted_visual_review: shared_buttons_refresh_and_forced_colors_restored_in_aggregate_captures
+  corrected_hosted_evidence: pending_exact_color_web_first_assertions_unchanged_product_source
+  exact_head_hosted_ci: pending
+  release_gates: unchanged_physical_windows_android_screen_reader_and_manual_qualification

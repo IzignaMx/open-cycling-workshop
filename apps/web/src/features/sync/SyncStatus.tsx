@@ -8,14 +8,21 @@ export function SyncStatus({ state }: SyncStatusProps) {
   const presentation = syncStatusPresentation(state)
   return (
     <section
+      data-tone={
+        state === 'synced'
+          ? 'success'
+          : state === 'error'
+            ? 'danger'
+            : state === 'offline' || state === 'conflict'
+              ? 'warning'
+              : 'info'
+      }
       aria-live="polite"
       aria-label="Estado de sincronización"
-      className="rounded-xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-4"
+      className="sync-banner"
     >
       <strong className="block">{presentation.label}</strong>
-      <span className="mt-1 block text-sm leading-6 text-[var(--ocwp-color-muted)]">
-        {presentation.detail}
-      </span>
+      <span className="sync-detail">{presentation.detail}</span>
     </section>
   )
 }

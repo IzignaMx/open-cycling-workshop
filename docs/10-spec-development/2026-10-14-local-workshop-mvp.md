@@ -49,6 +49,13 @@ Traceability: FR-INV-007/008 and inventory ledger invariants. Supplier → draft
 
 Traceability: FR-WL-001..006, ACC-009 and UX sections 15–16. Persist validated organization BrandProfile, logo/contact/name and light/dark/high-contrast presets; protect operational colors and focus/error semantics. Include export/import, offline read availability and contrast checks. UI configuration, not source edits, is the acceptance boundary.
 
+The structural-theme subincrement implements four personal compositions, twelve
+palettes, surface schemes, touch mode and an explicitly personal local raster
+logo. See [scope and evidence](2026-10-14-structural-workshop-themes.md).
+This is not completion of Increment E: organization/workshop-wide BrandProfile,
+server-authorized editing, contact/name, shared logo persistence, export/import
+and synchronization remain pending. Physical/manual accessibility is unqualified.
+
 ## Increment F: migration and physical qualification
 
 Before moving real data: identify laptop/target architecture, Raspberry model/RAM, 64-bit OS, SSD capacity, network, backup destination and power resilience. Run measured load and restore drills on the actual target. Retain the old installation until restored identities/counts and business workflows are verified. Drain or explicitly preserve all local mutation queues before changing origins; browser IndexedDB is origin-bound and not transferred by a PostgreSQL dump. Move filesystem assets and configuration separately, validate checksums, and retain encrypted off-device backup. Record measured RPO/RTO, not estimates presented as evidence.

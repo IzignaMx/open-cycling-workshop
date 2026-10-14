@@ -48,7 +48,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           onChange={(event: ChangeEvent<HTMLInputElement>) =>
             setDisplayName(event.currentTarget.value)
           }
-          className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
+          className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="name"
         />
       </label>
@@ -58,7 +58,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           type="email"
           value={email}
           onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.currentTarget.value)}
-          className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
+          className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="email"
         />
       </label>
@@ -68,7 +68,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           inputMode="tel"
           value={phone}
           onChange={(event: ChangeEvent<HTMLInputElement>) => setPhone(event.currentTarget.value)}
-          className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3"
+          className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="tel"
         />
       </label>

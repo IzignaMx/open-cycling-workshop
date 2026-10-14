@@ -159,3 +159,122 @@ test('DexieSyncStore rejects a pulled customer payload from another scope before
   )
   assert.equal(await store.getCursor(), 5)
 })
+
+test('persisted order/bicycle conflict provenance cannot expose details to a customer-only reader', async () => {
+  const { canReadConflict } = await import('../../.tmp-auth/src/auth/workshop-read-access.js')
+  for (const [entityType, capability] of [
+    ['service_order', 'orders.read'],
+    ['bicycle', 'bicycles.read'],
+    ['customer', 'customers.read'],
+  ]) {
+    const database = fakeDb()
+    database.mutationQueue.values[0].entity_type = entityType
+    const store = new DexieSyncStore(database, { organizationId: 'org-1', locationId: 'loc-1' })
+    await store.recordConflicts([
+      {
+        mutation_id: 'm1',
+        status: 'conflict',
+        entity_id: 'customer-m1',
+        entity_version: null,
+        error_code: 'sync_conflict',
+        error_message: 'private entity conflict',
+      },
+    ])
+    const conflict = database.conflicts.values[0]
+    assert.equal(canReadConflict(['customers.read'], conflict), entityType === 'customer')
+    assert.equal(canReadConflict([capability], conflict), true)
+    assert.equal(conflict.entity_type, entityType)
+    assert.equal(conflict.entity_type_source, 'queued_mutation')
+    assert.equal(
+      database.mutationQueue.values.some((row) => row.mutation_id === 'm1'),
+      false,
+    )
+    assert.equal(database.mutationQueue.values.length, 2)
+  }
+})
+
+test('conflict result scope or entity mismatch preserves its queued mutation', async () => {
+  for (const changes of [
+    { entity_id: 'wrong' },
+    { organization_id: 'org-2' },
+    { location_id: 'loc-2' },
+  ]) {
+    const database = fakeDb()
+    Object.assign(database.mutationQueue.values[0], changes)
+    const before = structuredClone(database.mutationQueue.values)
+    const store = new DexieSyncStore(database, { organizationId: 'org-1', locationId: 'loc-1' })
+    await assert.rejects(
+      () =>
+        store.recordConflicts([
+          {
+            mutation_id: 'm1',
+            status: 'conflict',
+            entity_id: 'customer-m1',
+            entity_version: null,
+            error_code: 'sync_conflict',
+            error_message: 'private conflict',
+          },
+        ]),
+      /does not match/,
+    )
+    assert.deepEqual(database.mutationQueue.values, before)
+    assert.deepEqual(database.conflicts.values, [])
+  }
+})
+
+test('missing queued source retains original legacy conflict and never exposes its ambiguous type', async () => {
+  const { canReadConflict } = await import('../../.tmp-auth/src/auth/workshop-read-access.js')
+  const database = fakeDb()
+  const original = {
+    mutation_id: 'already-recorded',
+    entity_type: 'customer',
+    entity_id: 'original',
+    reason: 'possibly an order conflict',
+  }
+  database.conflicts.values.push(original)
+  const before = structuredClone(database.mutationQueue.values)
+  const store = new DexieSyncStore(database, { organizationId: 'org-1', locationId: 'loc-1' })
+  await store.recordConflicts(
+    ['already-recorded', 'missing'].map((mutation_id) => ({
+      mutation_id,
+      status: 'conflict',
+      entity_id: 'untrusted',
+      entity_version: null,
+      error_code: 'sync_conflict',
+      error_message: 'replacement',
+    })),
+  )
+  assert.deepEqual(database.conflicts.values, [original])
+  assert.deepEqual(database.mutationQueue.values, before)
+  assert.equal(canReadConflict(['customers.read'], original), false)
+  assert.equal(canReadConflict(['*'], original), false)
+  assert.equal(canReadConflict(['*'], { ...original, entity_type_source: 'unrecognized' }), false)
+})
+
+test('unknown queued entity keeps its pending work and cannot obtain trusted conflict provenance', async () => {
+  const { canReadConflict } = await import('../../.tmp-auth/src/auth/workshop-read-access.js')
+  const database = fakeDb()
+  database.mutationQueue.values[0].entity_type = 'future_entity'
+  const before = structuredClone(database.mutationQueue.values)
+  const store = new DexieSyncStore(database, { organizationId: 'org-1', locationId: 'loc-1' })
+  await assert.rejects(
+    () =>
+      store.recordConflicts([
+        {
+          mutation_id: 'm1',
+          status: 'conflict',
+          entity_id: 'customer-m1',
+          entity_version: null,
+          error_code: 'sync_conflict',
+          error_message: 'future issue',
+        },
+      ]),
+    /unknown queued conflict entity/,
+  )
+  assert.deepEqual(database.mutationQueue.values, before)
+  assert.deepEqual(database.conflicts.values, [])
+  assert.equal(
+    canReadConflict(['*'], { entity_type: 'future_entity', entity_type_source: 'queued_mutation' }),
+    false,
+  )
+})

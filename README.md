@@ -146,3 +146,13 @@ The additive [local runtime](docs/07-operations/2026-10-14-local-runtime.md) and
 and pending hosted qualification; existing development instructions are not a production installation
 claim. Pending inventory/quote PRs are tracked separately from main. Physical-device
 and manual release gates remain open.
+
+### Personal presentation themes (implementation pending hosted qualification)
+
+Personalización offers Banco de trabajo (default), Plano técnico, Ritmo modular
+and Turno nocturno with shared operations, twelve palettes and touch controls.
+Appearance is saved per user and organization on this browser/device. A PNG/JPEG
+logo is an optional personal local view for the active location, available offline;
+it does not change the identity seen by other users. Shared workshop branding
+and cross-device preference synchronization are still pending. See the
+[theme scope and evidence](docs/10-spec-development/2026-10-14-structural-workshop-themes.md).

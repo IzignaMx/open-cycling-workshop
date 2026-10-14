@@ -57,7 +57,8 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
     }
   }
 
-  const inputClass = 'min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3'
+  const inputClass =
+    'min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3'
 
   return (
     <form onSubmit={submit} className="grid gap-4" aria-describedby="order-intake-status">
@@ -93,7 +94,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
             setReportedProblem(event.currentTarget.value)
           }
-          className="min-h-11 rounded-lg border border-[var(--ocwp-color-border)] bg-white px-3 py-2"
+          className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3 py-2"
         />
       </label>
       <label className="grid gap-1">

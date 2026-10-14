@@ -8,6 +8,8 @@ import { hasCapability } from './auth/capabilities.js'
 import { LoginForm } from './auth/LoginForm.js'
 import { shouldClearSessionAfterAuthError } from './auth/session-policy.js'
 import { SessionStore } from './auth/session.js'
+import { SessionViewGeneration } from './auth/view-generation.js'
+import { canReadConflict, workshopReadAccess } from './auth/workshop-read-access.js'
 import { BicycleLocalRepository } from './features/bicycles/repository.js'
 import { CustomerQuickCreate } from './features/customers/CustomerQuickCreate.js'
 import { CustomerLocalRepository } from './features/customers/repository.js'
@@ -19,6 +21,8 @@ import { ConflictCenter } from './features/sync/ConflictCenter.js'
 import { SyncStatus } from './features/sync/SyncStatus.js'
 import type { SyncVisualState } from './features/sync/status-model.js'
 import { db } from './local/db.js'
+import { WorkshopShell } from './personalization/WorkshopShell.js'
+import { preferenceScopeKey } from './personalization/preferences.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from './local/service-order-types.js'
 import type { ConflictRecord } from './local/types.js'
 import { SyncCoordinator } from './sync/coordinator.js'
@@ -34,6 +38,8 @@ import { syncScopeKey } from './sync/scope.js'
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
 
 interface CustomerRow {
+  organization_id: string
+  location_id: string
   customer_id: string
   display_name: string
 }
@@ -43,6 +49,7 @@ export function App() {
   const bicycleRepository = useMemo(() => new BicycleLocalRepository(db), [])
   const orderRepository = useMemo(() => new ServiceOrderLocalRepository(db), [])
   const sessionStore = useMemo(() => new SessionStore(window.sessionStorage), [])
+  const viewGeneration = useMemo(() => new SessionViewGeneration(), [])
   const api = useMemo(
     () =>
       new ApiClient({
@@ -66,7 +73,12 @@ export function App() {
     }
     return null
   })
-  const [lastCustomer, setLastCustomer] = useState<string | null>(null)
+  const [lastCustomer, setLastCustomer] = useState<{
+    displayName: string
+    userId: string
+    organizationId: string
+    locationId: string
+  } | null>(null)
   const [localCustomers, setLocalCustomers] = useState<CustomerRow[]>([])
   const [orders, setOrders] = useState<LocalServiceOrder[]>([])
   const [orderEvents, setOrderEvents] = useState<LocalServiceOrderEvent[]>([])
@@ -94,6 +106,7 @@ export function App() {
   }, [sessionStore, syncScope])
 
   const refreshConflicts = useCallback(async (): Promise<ConflictRecord[]> => {
+    const ticket = viewGeneration.capture(currentUser)
     // Every path awaits before setState so effects can invoke this without a
     // synchronous state update cascading inside the effect body.
     const pending = syncScope
@@ -103,13 +116,16 @@ export function App() {
           .toArray()
       : Promise.resolve<ConflictRecord[]>([])
     const items = await pending
+    if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return []
     setConflicts(items)
     return items
-  }, [syncScope])
+  }, [syncScope, currentUser, sessionStore, viewGeneration])
 
   const refreshWorkshopData = useCallback(async (): Promise<void> => {
+    const ticket = viewGeneration.capture(currentUser)
     // Await-first so effects can call this without synchronous setState.
     if (!syncScope) {
+      if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
       setLocalCustomers([])
       setOrders([])
       setOrderEvents([])
@@ -123,7 +139,12 @@ export function App() {
         .then((rows) =>
           rows
             .filter((row) => row.location_id === syncScope.locationId)
-            .map((row) => ({ customer_id: row.customer_id, display_name: row.display_name })),
+            .map((row) => ({
+              customer_id: row.customer_id,
+              display_name: row.display_name,
+              organization_id: row.organization_id,
+              location_id: row.location_id,
+            })),
         ),
       db.serviceOrders
         .where('organization_id')
@@ -136,13 +157,16 @@ export function App() {
         ),
       db.serviceOrderEvents.toArray(),
     ])
+    if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
     setLocalCustomers(customers)
     setOrders(orderRows)
     setOrderEvents(eventRows)
-  }, [syncScope])
+  }, [syncScope, currentUser, sessionStore, viewGeneration])
 
   const runSync = useCallback(async () => {
     if (!coordinator) return
+    const ticket = viewGeneration.capture(currentUser)
+    if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
 
     // Attempt the real transport even when navigator.onLine claims offline:
     // the browser signal is unreliable and the transport classifies network
@@ -151,16 +175,21 @@ export function App() {
     setSyncState('syncing')
     try {
       const result = await coordinator.runOnce({ online: true })
+      if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
       const storedConflicts = await refreshConflicts()
+      if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
       setSyncState(result.conflicts > 0 || storedConflicts.length > 0 ? 'conflict' : 'synced')
       setRetryAttempt(0)
     } catch (error) {
+      if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
       if (error instanceof SyncTransportOfflineError) {
         setSyncState('offline')
         return
       }
       if (error instanceof SyncTransportError && error.status === 401) {
+        viewGeneration.advance()
         sessionStore.clear()
+        setAuthBusy(false)
         setCurrentUser(null)
         setAuthMessage(
           'La sesión expiró. Tus cambios locales siguen guardados. Inicia sesión para sincronizarlos.',
@@ -170,7 +199,7 @@ export function App() {
       // error: local changes are safe and the queue retries on reconnect.
       setSyncState(navigator.onLine ? 'error' : 'offline')
     }
-  }, [coordinator, refreshConflicts, sessionStore])
+  }, [coordinator, refreshConflicts, sessionStore, currentUser, viewGeneration])
 
   useEffect(() => {
     const snapshot = sessionStore.getSnapshot()
@@ -178,19 +207,30 @@ export function App() {
     if (!navigator.onLine) return
 
     let cancelled = false
+    const ticket = viewGeneration.capture(snapshot.user)
     void api
       .me()
       .then((user) => {
-        if (cancelled) return
+        if (
+          cancelled ||
+          !viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)
+        )
+          return
         sessionStore.setUser(user)
         setCurrentUser(user)
         setAuthMessage(null)
       })
       .catch((error: unknown) => {
-        if (cancelled) return
+        if (
+          cancelled ||
+          !viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)
+        )
+          return
         const status = error instanceof ApiError ? error.status : null
         if (shouldClearSessionAfterAuthError(status)) {
+          viewGeneration.advance()
           sessionStore.clear()
+          setAuthBusy(false)
           setCurrentUser(null)
           setAuthMessage('La sesión expiró. Inicia sesión nuevamente.')
         } else if (snapshot.user) {
@@ -201,7 +241,7 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [api, sessionStore])
+  }, [api, sessionStore, viewGeneration])
 
   useEffect(() => {
     const online = () => void runSync()
@@ -248,43 +288,52 @@ export function App() {
   }, [currentUser, refreshConflicts, refreshWorkshopData, runSync])
 
   async function login(input: LoginRequest) {
+    const generation = viewGeneration.advance()
     setAuthBusy(true)
     setAuthMessage(null)
     try {
       const loginResponse = await api.login(input)
+      if (!viewGeneration.isGenerationCurrent(generation)) return
       sessionStore.setToken(loginResponse.access_token)
       const user = await api.me()
+      if (!viewGeneration.isGenerationCurrent(generation)) return
       sessionStore.setUser(user)
       setCurrentUser(user)
     } catch (error) {
+      if (!viewGeneration.isGenerationCurrent(generation)) return
       sessionStore.clear()
       setCurrentUser(null)
       if (error instanceof ApiError && error.status === 401)
         throw new Error('Credenciales inválidas')
       throw error
     } finally {
-      setAuthBusy(false)
+      if (viewGeneration.isGenerationCurrent(generation)) setAuthBusy(false)
     }
   }
 
   function logoutLocal() {
+    viewGeneration.advance()
     sessionStore.clear()
     setCurrentUser(null)
     setConflicts([])
+    setAuthBusy(false)
     setLastCustomer(null)
     setSyncState(navigator.onLine ? 'local' : 'offline')
     setAuthMessage(null)
   }
 
   async function revokeSessions() {
+    const ticket = viewGeneration.capture(currentUser)
     setAuthBusy(true)
     try {
       await api.logoutAll()
-      logoutLocal()
+      if (viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) logoutLocal()
     } catch {
+      if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
       setAuthMessage('No se pudieron revocar las sesiones remotas. Puedes cerrar sólo esta sesión.')
     } finally {
-      setAuthBusy(false)
+      if (viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null))
+        setAuthBusy(false)
     }
   }
 
@@ -297,6 +346,7 @@ export function App() {
     brand: string | null
     model: string | null
   }): Promise<void> {
+    const ticket = viewGeneration.capture(currentUser)
     const scope = syncScope
     if (!scope) throw new Error('Se requiere una ubicación activa')
     let bicycleId: string | null = null
@@ -320,14 +370,17 @@ export function App() {
       accessories: input.accessories,
       priority: input.priority,
     })
+    if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
     setSyncState(navigator.onLine ? 'local' : 'offline')
     await refreshWorkshopData()
     void runSync()
   }
 
   async function transitionOrder(order: LocalServiceOrder, action: OrderAction): Promise<void> {
-    if (!currentUser) return
+    if (!currentUser || !hasCapability(currentUser.capabilities, 'orders.write')) return
+    const ticket = viewGeneration.capture(currentUser)
     await orderRepository.applyTransition(order, action, { actorId: currentUser.user_id })
+    if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null)) return
     setSyncState(navigator.onLine ? 'local' : 'offline')
     await refreshWorkshopData()
     void runSync()
@@ -353,70 +406,121 @@ export function App() {
     )
   }
 
+  const readAccess = workshopReadAccess(currentUser.capabilities)
   const canCreateCustomers =
     Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'customers.write')
   const canCreateOrders =
     Boolean(currentUser.location_id) && hasCapability(currentUser.capabilities, 'orders.write')
 
+  const preferenceScope = {
+    organizationId: currentUser.organization_id,
+    userId: currentUser.user_id,
+    locationId: currentUser.location_id,
+  }
+  // Gate cached content by current identity and explicit reads before rendering.
+  // This never deletes local rows/queued work and is not offline cache revocation.
+  const visibleCustomers = localCustomers.filter(
+    (row) =>
+      readAccess.customers &&
+      row.organization_id === currentUser.organization_id &&
+      row.location_id === currentUser.location_id,
+  )
+  const visibleOrders = orders.filter(
+    (row) =>
+      readAccess.orders &&
+      row.organization_id === currentUser.organization_id &&
+      row.location_id === currentUser.location_id,
+  )
+  const visibleLastCustomer =
+    readAccess.customers &&
+    lastCustomer?.userId === currentUser.user_id &&
+    lastCustomer.organizationId === currentUser.organization_id &&
+    lastCustomer.locationId === currentUser.location_id
+      ? lastCustomer.displayName
+      : null
+  const activeOrders = visibleOrders.filter(
+    (order) => !['CLOSED', 'CANCELLED', 'REJECTED'].includes(order.state),
+  )
+
   return (
-    <main className="mx-auto grid min-h-screen max-w-5xl gap-8 px-5 py-8 md:grid-cols-[1fr_22rem]">
-      <section className="grid content-start gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--ocwp-color-muted)]">
-          <span>V0.1 · local-first bootstrap</span>
-          <span>
-            Sesión:{' '}
-            <strong className="text-[var(--ocwp-color-text)]">{currentUser.display_name}</strong>
+    <WorkshopShell
+      key={preferenceScopeKey(preferenceScope, 'logo')}
+      scope={preferenceScope}
+      userName={currentUser.display_name}
+      canCreateOrders={canCreateOrders}
+    >
+      <SyncStatus state={syncState} />
+      {authMessage ? (
+        <p role="status" className="workshop-notice">
+          {authMessage}
+        </p>
+      ) : null}
+      {visibleLastCustomer ? (
+        <p role="status" className="workshop-notice">
+          Último cliente local: <strong>{visibleLastCustomer}</strong>
+        </p>
+      ) : null}
+      <dl className="workshop-metrics" aria-label="Resumen local del taller">
+        <div>
+          <dt>Órdenes activas</dt>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders ? activeOrders.length : 'Sin acceso'}
+          </dd>
+        </div>
+        <div>
+          <dt>Listas para entrega</dt>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders
+              ? visibleOrders.filter((order) => order.state === 'READY').length
+              : 'Sin acceso'}
+          </dd>
+        </div>
+        <div>
+          <dt>Esperan refacción</dt>
+          <dd className={!readAccess.orders ? 'metric-restricted' : undefined}>
+            {readAccess.orders
+              ? visibleOrders.filter((order) => order.state === 'WAITING_FOR_PARTS').length
+              : 'Sin acceso'}
+          </dd>
+        </div>
+        <div>
+          <dt>Clientes locales</dt>
+          <dd className={!readAccess.customers ? 'metric-restricted' : undefined}>
+            {readAccess.customers ? visibleCustomers.length : 'Sin acceso'}
+          </dd>
+        </div>
+      </dl>
+      <section id="workshop-orders" className="orders-workspace" aria-labelledby="orders-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Cola local</p>
+            <h2 id="orders-title">Órdenes de servicio</h2>
+          </div>
+          <span className="muted">
+            {readAccess.orders ? `${visibleOrders.length} registradas` : 'Lectura restringida'}
           </span>
         </div>
-        <div className="grid gap-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--ocwp-color-accent-strong)]">
-            {defaultBrand.shortName}
+        {readAccess.orders ? (
+          <OrderList
+            orders={visibleOrders}
+            events={orderEvents}
+            onTransition={transitionOrder}
+            canTransition={canCreateOrders}
+            canReadBicycleInfo={readAccess.bicycles}
+          />
+        ) : (
+          <p className="empty-state">
+            Tu sesión no tiene permiso para consultar órdenes (<code>orders.read</code>).
           </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl">
-            Operación de taller que no se detiene cuando falla Internet.
-          </h1>
-          <p className="max-w-2xl text-lg leading-8 text-[var(--ocwp-color-muted)]">
-            Los clientes se guardan primero en este dispositivo. La sincronización ocurre después y
-            nunca convierte una operación local válida en un error por una caída de red.
-          </p>
-        </div>
-        <SyncStatus state={syncState} />
-        {authMessage ? (
-          <p
-            role="status"
-            className="rounded-xl border border-[var(--ocwp-color-border)] p-4 text-sm"
-          >
-            {authMessage}
-          </p>
-        ) : null}
-        {lastCustomer ? (
-          <div
-            className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4"
-            role="status"
-          >
-            Último cliente local: <strong>{lastCustomer}</strong>
-          </div>
-        ) : null}
-        <div className="flex flex-wrap gap-3">
-          <Button type="button" onClick={() => void runSync()}>
-            Sincronizar ahora
-          </Button>
-          <Button type="button" onClick={logoutLocal}>
-            Cerrar esta sesión
-          </Button>
-          <Button
-            type="button"
-            disabled={authBusy || !navigator.onLine}
-            onClick={() => void revokeSessions()}
-          >
-            Revocar todas las sesiones
-          </Button>
-        </div>
+        )}
       </section>
-
-      <aside className="grid content-start gap-5">
-        <section className="rounded-2xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-5 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold">Alta rápida</h2>
+      <section
+        id="workshop-reception"
+        className="reception-workspace"
+        aria-label="Recepción del taller"
+      >
+        <section className="workshop-panel" aria-labelledby="customer-create-title">
+          <h2 id="customer-create-title">Alta rápida</h2>
           {!currentUser.location_id ? (
             <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
               Este usuario no tiene una ubicación activa. Selecciona o asigna una ubicación antes de
@@ -429,6 +533,7 @@ export function App() {
           ) : (
             <CustomerQuickCreate
               onCreate={async (input) => {
+                const ticket = viewGeneration.capture(currentUser)
                 const locationId = currentUser.location_id
                 if (!locationId) throw new Error('Se requiere una ubicación activa')
                 const customer = await repository.create({
@@ -436,7 +541,14 @@ export function App() {
                   locationId,
                   ...input,
                 })
-                setLastCustomer(customer.display_name)
+                if (!viewGeneration.isCurrent(ticket, sessionStore.getSnapshot()?.user ?? null))
+                  return
+                setLastCustomer({
+                  displayName: customer.display_name,
+                  userId: currentUser.user_id,
+                  organizationId: currentUser.organization_id,
+                  locationId,
+                })
                 setSyncState(navigator.onLine ? 'local' : 'offline')
                 await refreshWorkshopData()
                 void runSync()
@@ -444,30 +556,60 @@ export function App() {
             />
           )}
         </section>
-        <section
-          aria-labelledby="order-intake-title"
-          className="rounded-2xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-5 shadow-sm"
-        >
-          <h2 id="order-intake-title" className="mb-4 text-xl font-semibold">
+        <section aria-labelledby="order-intake-title" className="workshop-panel">
+          <h2 id="order-intake-title" tabIndex={-1}>
             Nueva orden de servicio
           </h2>
           {!canCreateOrders ? (
             <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
               Tu sesión actual no tiene la capability <code>orders.write</code>.
             </p>
+          ) : !readAccess.customers ? (
+            <p className="text-sm leading-6 text-[var(--ocwp-color-muted)]">
+              Para seleccionar un cliente necesitas el permiso <code>customers.read</code>.
+            </p>
           ) : (
-            <OrderQuickIntake customers={localCustomers} onCreateOrder={createOrder} />
+            <OrderQuickIntake customers={visibleCustomers} onCreateOrder={createOrder} />
           )}
-          <h3 className="mt-6 text-lg font-semibold">Órdenes</h3>
-          <OrderList orders={orders} events={orderEvents} onTransition={transitionOrder} />
         </section>
+      </section>
+      <section id="workshop-issues" aria-label="Incidencias de sincronización">
         <ConflictCenter
-          conflicts={conflicts}
+          conflicts={conflicts.filter(
+            (row) =>
+              row.organization_id === currentUser.organization_id &&
+              row.location_id === currentUser.location_id &&
+              canReadConflict(currentUser.capabilities, row),
+          )}
           onRefresh={async () => {
             await refreshConflicts()
           }}
         />
-      </aside>
-    </main>
+      </section>
+      <section className="workshop-panel session-actions" aria-label="Sesión y sincronización">
+        <div>
+          <h2>Sesión y sincronización</h2>
+          <p className="muted">
+            Tus datos operativos y sus permisos son los mismos en los cuatro temas.
+          </p>
+        </div>
+        <Button type="button" onClick={() => void runSync()}>
+          Sincronizar ahora
+        </Button>
+        <Button type="button" onClick={logoutLocal}>
+          Cerrar esta sesión
+        </Button>
+        <Button
+          type="button"
+          disabled={authBusy || !navigator.onLine}
+          onClick={() => void revokeSessions()}
+        >
+          Revocar todas las sesiones
+        </Button>
+      </section>
+      <footer className="workshop-footer">
+        OCWP · Local first · Los cambios pendientes se conservan en este dispositivo.
+      </footer>
+    </WorkshopShell>
   )
 }

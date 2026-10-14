@@ -1,8 +1,8 @@
 # Local users, roles and workshop administration: bounded server increment
 
-Status: implemented with an initial hosted PostgreSQL 18.4 checkpoint. The
-prerequisite is merged; final integration/evidence revisions require their own
-exact-head CI. This is not a declaration of release qualification.
+Status: merged at `59ad7e96ee1f32308a63ffa9248b528685a5221c` after final
+exact-head hosted qualification. Real-installation and browser administration
+rollout gates remain open; this is not a declaration of release qualification.
 
 ## Scope and traceability
 
@@ -243,6 +243,20 @@ its tree was verified identical to the PR head and reviewed local implementation
   local environment blockers remain. Independent review inspected ancestry,
   five evidence documents, hosted/local artifacts and CI logs, finding no
   regression or evidence discrepancy. Repository/format/diff checks also pass.
+
+### Final hosted qualification and merge
+
+Final PR #27 head `efe42eb7ad27b10068cb9f0ee61bd8b21fd7d962` passed
+[CI 38552076814](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38552076814),
+Security, DCO and
+[Local runtime 38552076701](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38552076701).
+Qualification artifact `11886948706` records 27 passing checks, 812 Python tests
+passed with the same three explained skips, and 30 successful browser executions
+(10 direct, 10 retry-free repeats, 10 qualification). Runtime artifact `11886678534`
+records 11 passing Docker/runtime checks; all three ARM64 image builds passed.
+The final head was integrated as main `59ad7e96ee1f32308a63ffa9248b528685a5221c`.
+This closes the final-head hosted integration gate above, while leaving the
+real-installation and browser authorization/cache rollout requirements below open.
 
 Required PostgreSQL coverage includes simultaneous last-owner removals,
 first-owner races, actor revocation while waiting for the organization lock,
