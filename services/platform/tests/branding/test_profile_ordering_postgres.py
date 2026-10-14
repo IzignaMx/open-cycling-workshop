@@ -6,9 +6,11 @@ from datetime import UTC, datetime, timedelta
 from threading import Event
 
 import pytest
+from cycling_workshop.branding.models import WorkshopBrandProfileRecord
 from cycling_workshop.branding.service import BrandingService
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.security import SessionTokenService
+from sqlalchemy import select
 from test_administration_postgres import AdministrationPostgres, HttpCommand
 from test_administration_postgres import administration_postgres as administration_postgres
 from test_context_postgres import _lock_barrier, _wait_at_barrier
@@ -48,13 +50,24 @@ def test_branding_expiry_during_observed_real_lock_wait(administration_postgres,
     assert response.headers["cache-control"] == "no-store"
     assert db.snapshot() == before
     assert db.audits() == []
+    with db.factory() as session:
+        assert list(session.scalars(select(WorkshopBrandProfileRecord))) == []
 
 
 def test_branding_read_first_holds_authority_until_its_snapshot_completes(
-    administration_postgres, monkeypatch
+    administration_postgres, monkeypatch, tmp_path
 ):
     db = administration_postgres
     actor, headers, path = prepare(db)
+    db.app.state.settings = replace(
+        db.app.state.settings, branding_asset_root=str(tmp_path / "logos")
+    )
+    png = (
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVR4nGNQCbD7DwADAAGyeEyo+gAAAABJRU5ErkJggg=="
+    )
+    saved = db.request(HttpCommand("PUT", path, headers, {**PAYLOAD, "logo_png_base64": png}))
+    assert saved.status_code == 200 and saved.json()["logo_state"] == "available"
     administrator = db.seed(owner=True)
     admin_headers = {**db.headers(administrator), "X-OCWP-Write-Protocol": "1"}
     entered, release = Event(), Event()
@@ -85,7 +98,9 @@ def test_branding_read_first_holds_authority_until_its_snapshot_completes(
             assert not read.done()
         finally:
             release.set()
-        assert read.result(timeout=25).status_code == 200
+        coherent = read.result(timeout=25)
+        assert coherent.status_code == 200
+        assert coherent.json() == saved.json()
         assert revoke.result(timeout=25).status_code == 200
     assert db.request(HttpCommand("GET", path, headers)).status_code == 401
 

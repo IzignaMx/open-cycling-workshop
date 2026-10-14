@@ -461,7 +461,7 @@ export function WorkshopShell({
             <button type="button" onClick={onRefreshBranding}>
               Actualizar marca compartida
             </button>
-            <a href="#workshop-shared-branding" onClick={closeSettings}>
+            <a href="#workshop-administration" onClick={closeSettings}>
               Consultar o editar la marca del taller
             </a>
           </section>
