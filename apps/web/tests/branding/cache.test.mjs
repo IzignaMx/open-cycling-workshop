@@ -258,3 +258,22 @@ test('cache corruption is a visible persistence error and does not authorize or 
   await assert.rejects(repo.write(ticket, ctx, profile({ version: 2 }), NOW), /provenance invalid/)
   assert.deepEqual(await db.brandingSnapshots.get(ticket.partitionId), corrupt)
 })
+
+test('kernel-issued remembered admission permits offline cache reload without inferring an owner', async (t) => {
+  const { setup, completedBaseline } = await import('../access-kernel/client-fixture.mjs')
+  const { AccessKernel } = await import('../../.tmp-kernel/src/access-kernel/kernel.js')
+  const { db, kernel } = await setup(t)
+  const ctx = context()
+  const ticket = await completedBaseline(db, kernel, ctx)
+  const repo = new BrandingSnapshotRepository(db)
+  assert.equal(await repo.write(ticket, ctx, withLogo(), NOW), true)
+  const admission = await kernel.rememberSession(ticket, 'session-branding-binding')
+  const reloaded = new AccessKernel(db, { now: () => NOW, newId: () => crypto.randomUUID() })
+  const offline = await reloaded.resumeOffline(admission, 'reloaded-tab')
+  assert.deepEqual(await repo.read(offline.ticket, offline.context, NOW), withLogo())
+  assert.equal(await repo.read(ticket, ctx, NOW), null)
+  assert.equal(
+    await repo.write(offline.ticket, offline.context, withLogo({ version: 2 }), NOW),
+    false,
+  )
+})
