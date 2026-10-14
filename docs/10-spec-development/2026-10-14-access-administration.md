@@ -18,10 +18,12 @@ administration and complete end-user permission UX remain outside this slice.
 Normative design: [administration ADR](../02-technical-architecture/2026-10-14-access-administration.md),
 Foundation ADR-013, Security/Privacy §§7–10 and §18, Operations §§31–36.
 
-Dependency: PR #26 change-feed read authorization, local base `0a9c935`, must be
-integrated before this dependent increment. PR #25 runtime/bootstrap and visual
-theme work are independent; this slice does not claim their completion. The
-approved sequence prioritizes access administration before the remaining quote
+Dependency: PR #26 change-feed read authorization must be integrated before
+this dependent increment. The local branch is reconciled onto its published
+`833bf6e` head, which includes PR #25 runtime/bootstrap merged at `0342799` and
+the migration target-isolation fixes. PR #26 merge/hosted status remains a
+separate gate; visual/theme work is independent. The approved sequence
+prioritizes access administration before the remaining quote
 workflow: identity migration `0008` follows `0007`, and future quote persistence
 is reserved as `0009`, following `0008`. Preserve one linear migration history.
 
@@ -145,7 +147,8 @@ ocwpctl access create-first-owner --organization-id ORGANIZATION_ID --username O
 
 ## Verification and evidence
 
-Local implementation checkpoint on the branch based at `0a9c935`:
+Historical implementation checkpoint on the branch based at `0a9c935`
+(before runtime/prerequisite reconciliation):
 
 - Full Python suite: **670 passed, 59 skipped**. The skips are 58 PostgreSQL
   cases unavailable in this environment and one PostgreSQL-only TRUNCATE case
@@ -173,9 +176,32 @@ Local implementation checkpoint on the branch based at `0a9c935`:
   That policy was respected. No browser execution is claimed.
 - No PostgreSQL server or Docker runtime is available locally. SQLite and SQL
   compilation are surrogate checks, not row-lock/migration runtime evidence.
-- Exact-head hosted PostgreSQL 18.x qualification and reconciliation with the
-  final prerequisite remain pending. Earlier PR/release results do not qualify
-  the new migration or lock semantics. No real installation was modified.
+- At this checkpoint, prerequisite reconciliation and exact-head hosted
+  PostgreSQL 18.x qualification remained pending. No real installation was
+  modified. The following checkpoint supersedes the local suite totals.
+
+Reconciled local checkpoint at `a077243f0c115647646f124bd9219350e2e2ff01`,
+based on published PR #26 head `833bf6e21017ce4e513291621515502f22256a72`:
+
+- Full Python suite: **755 passed, 60 skipped** (59 unavailable PostgreSQL
+  cases and one SQLite-inapplicable PostgreSQL TRUNCATE case).
+- Frontend core: **74 passed**; API-client core: one passed. All **21** locally
+  available aggregate checks pass with zero failures and the same five
+  environment blockers. Evidence: `ocw-access-admin-reconciled-qualification.json`.
+- Ruff lint/format (148 files), mypy (75 source files), repository/OpenAPI/
+  generated TypeScript contracts, TypeScript checks, ESLint, Prettier and the
+  production PWA build pass.
+- Independent reconciliation review found no defect. Administration source,
+  migration, tests and contracts were byte-identical to the reviewed checkpoint.
+  Targeted integration/regression suites passed **134 tests**, with 53 skips.
+  A synthetic file-only database URL containing a percent sign successfully
+  completed Alembic head and first-owner CLI setup with secret-free output.
+- The merged runtime file-backed URL resolver and raw-URL Alembic escaping are
+  preserved. Migration fixtures clear both application URL inputs; historical
+  inventory assertions remain pinned to `0007`. No PWA/Compose files changed.
+- PR #26 merge verification and exact-head hosted PostgreSQL 18.x qualification
+  remain pending. Earlier PR/release results do not qualify the new migration
+  or lock semantics. No real installation was modified.
 
 Required PostgreSQL coverage includes simultaneous last-owner removals,
 first-owner races, actor revocation while waiting for the organization lock,

@@ -405,9 +405,10 @@ evidence of a problem in a deployed database or authority to modify one.
 ### Integration and exact-head evidence
 
 - [ ] Verify the prerequisite PR #26 sync read-authorization fix is integrated
-      before delivering the dependent administration increment. Its local base
-      is `0a9c935`; do not infer merge status from a local checkout. PR #25
-      runtime/bootstrap and theme changes are independent.
+      before delivering the dependent administration increment. Its reconciled
+      local base is published PR #26 head `833bf6e`, including merged runtime
+      PR #25 (`0342799`) and migration target-isolation fixes. Do not infer
+      PR #26 merge status from a local checkout; theme changes are independent.
 - [ ] Run exact-head hosted PostgreSQL 18.x tests for empty database → head and
       representative `0007` → `0008` preservation. Prove tenant FKs, audit
       UPDATE/DELETE/TRUNCATE rejection, mutation/audit rollback, first-owner and
@@ -417,11 +418,12 @@ evidence of a problem in a deployed database or authority to modify one.
       Local SQLite evidence cannot close the PostgreSQL lock/migration gate;
       the current local execution environment has no server/Docker runtime.
 - [x] Record local implementation static/full-test/OpenAPI/generated-client
-      evidence and independent review: 670 Python passed, 59 documented skips,
-      21 aggregate checks passed, zero failures, five environment blockers.
-      See the increment specification for the scope and reviewed fixes. This
-      checkpoint is based on `0a9c935`; prerequisite reconciliation and exact-head
-      hosted PostgreSQL evidence remain separate unchecked gates above.
+      evidence and independent reconciliation review at `a077243`: 755 Python
+      passed, 60 documented skips, 74 frontend core passed, 21 aggregate checks
+      passed, zero failures and five environment blockers. The local branch
+      is reconciled onto `833bf6e`; PR #26 merge verification and exact-head
+      hosted PostgreSQL evidence remain separate unchecked gates above. See
+      the increment specification for the historical checkpoint and review scope.
 
 ### Safe conditional upgrade to identity migration 0008
 

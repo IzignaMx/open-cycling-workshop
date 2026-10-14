@@ -96,10 +96,13 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Integration
 
-- Access administration depends on PR #26 sync read authorization (local base
-  `0a9c935`), whose merge/hosted status must be verified separately. PR #25
-  runtime/bootstrap and theme work remain independent. Local implementation
-  evidence does not replace exact-head hosted PostgreSQL qualification.
+- Access administration is locally reconciled onto PR #26 sync read
+  authorization head `833bf6e`, including merged runtime PR #25 (`0342799`) and
+  migration target-isolation fixes. PR #26 merge/hosted status must still be
+  verified separately. Local verification passed 755 Python tests (60 skips),
+  74 frontend core tests and 21 aggregate checks; independent reconciliation
+  review found no defect. Exact-head hosted PostgreSQL qualification and
+  browser account/grant/scope cache reconciliation remain separate gates.
 - PR #22 inventory API integrated on 2026-10-14 after fresh independent code review
   and exact-head CI/Security/DCO. Quote Task 4 passed combined-tree CI
   and independent review and was integrated through PR #23; no complete quote workflow or stable release is claimed.
