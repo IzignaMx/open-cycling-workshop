@@ -87,6 +87,7 @@ def create_app(
                 "/api/v1/auth/change-password",
                 "/api/v1/admin",
                 "/api/v1/locations",
+                "/api/v1/sync/mutations",
             }
             or path.startswith("/api/v1/admin/")
             or (
