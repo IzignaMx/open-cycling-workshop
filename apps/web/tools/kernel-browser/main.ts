@@ -1,3 +1,9 @@
+import { BrandingSnapshotRepository } from '../../src/branding/cache.js'
+import { PreferenceRepository } from '../../src/personalization/repository.js'
+import {
+  copyOwnedLegacyPreferences,
+  inspectLegacyWork,
+} from '../../src/runtime/legacy-preservation.js'
 import { createKernelDatabase } from '../../src/access-kernel/database.js'
 import { seedLegacyFixture } from './legacy-fixture.js'
 import { OcwpDatabase } from '../../src/local/db.js'
@@ -9,6 +15,10 @@ import { openSupportedBaselineQualification } from './supported-baseline-qualifi
 
 // This entrypoint is built only by the separate browser-test config, never the PWA.
 const harness = {
+  BrandingSnapshotRepository,
+  PreferenceRepository,
+  copyOwnedLegacyPreferences,
+  inspectLegacyWork,
   createKernelDatabase,
   AccessKernel,
   OcwpDatabase,
