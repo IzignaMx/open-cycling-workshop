@@ -16,6 +16,22 @@ export const LOCATION_ID = '00000000-0000-7000-8000-000000000002'
 export const USER_ID = '00000000-0000-7000-8000-000000000003'
 export const SECOND_LOCATION_ID = '00000000-0000-7000-8000-000000000004'
 export const PASSWORD = 'ocwp-e2e-password'
+export interface WorkshopIdentity {
+  username: string
+  userId: string
+  locationId: string | null
+}
+export const WORKSHOP_CAPABILITIES = [
+  'customers.read',
+  'bicycles.read',
+  'orders.read',
+  'sync.pull',
+  'customers.write',
+  'bicycles.write',
+  'orders.write',
+  'sync.push',
+]
+
 export type JournalOperation = OwnedOperation & { authoredDatasetIncarnation: string }
 export interface KernelSnapshot {
   version: number
@@ -135,7 +151,8 @@ export async function waitForReady(page: Page) {
     .toBe(true)
 }
 
-export async function login(page: Page, username = 'e2e-admin', workshop?: string) {
+export async function login(page: Page, identity: WorkshopIdentity | string, workshop?: string) {
+  const username = typeof identity === 'string' ? identity : identity.username
   await page.goto('/')
   await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
   await page.getByLabel('Usuario', { exact: true }).fill(username)
@@ -151,6 +168,11 @@ export async function login(page: Page, username = 'e2e-admin', workshop?: strin
   expect(snapshot.context.policyRevision).toBe('ocwp-access-baseline-2')
   expect(snapshot.context.datasetIncarnation).toBeTruthy()
   expect(snapshot.context.principal.organizationId).toBe(ORGANIZATION_ID)
+  if (typeof identity !== 'string') {
+    expect(snapshot.context.principal.userId).toBe(identity.userId)
+    expect(snapshot.context.accountLocationId).toBe(identity.locationId)
+    if (identity.locationId) expect(snapshot.context.selectedLocationId).toBe(identity.locationId)
+  }
   await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
 }
 
@@ -271,24 +293,42 @@ export async function pendingMutationCount(page: Page) {
 }
 
 /** Deterministic post-commit notification barrier, not a manufactured transaction or sleep. */
-export async function holdJournalCompletion(page: Page) {
-  await page.evaluate(() => {
+export async function holdJournalCompletion(
+  page: Page,
+  expected: { entityType: 'customer' | 'service_order'; payloadKey: string; value: string },
+) {
+  await page.evaluate((expected) => {
     const prototype = IDBTransaction.prototype
     const descriptor = Object.getOwnPropertyDescriptor(prototype, 'oncomplete')!
-    const gate = { held: false, release: () => {} }
+    const originalAdd = IDBObjectStore.prototype.add
+    const matchingTransactions = new WeakSet<IDBTransaction>()
+    const restore = () => {
+      Object.defineProperty(prototype, 'oncomplete', descriptor)
+      IDBObjectStore.prototype.add = originalAdd
+    }
+    const gate = { held: false, release: restore }
     Object.assign(window, { journalCompletionGate: gate })
+    // Kernel transactions include the whole store set, even for dispatch selection.
+    // Mark the actual target command write, not the next unrelated transaction.
+    IDBObjectStore.prototype.add = function (...args: Parameters<IDBObjectStore['add']>) {
+      const result = originalAdd.apply(this, args)
+      const row = args[0] as
+        { entityType?: string; envelope?: { payload?: Record<string, unknown> } } | undefined
+      if (
+        this.name === 'operationJournal' &&
+        row?.entityType === expected.entityType &&
+        row.envelope?.payload?.[expected.payloadKey] === expected.value
+      )
+        matchingTransactions.add(this.transaction)
+      return result
+    }
     Object.defineProperty(prototype, 'oncomplete', {
       configurable: true,
       get: descriptor.get,
       set(callback: (this: IDBTransaction, event: Event) => void) {
         descriptor.set!.call(this, function (this: IDBTransaction, event: Event) {
-          if (
-            this.mode === 'readwrite' &&
-            this.objectStoreNames.contains('operationJournal') &&
-            this.objectStoreNames.contains('operationDelivery') &&
-            this.objectStoreNames.contains('operationEvents')
-          ) {
-            Object.defineProperty(prototype, 'oncomplete', descriptor)
+          if (matchingTransactions.has(this)) {
+            restore()
             gate.held = true
             gate.release = () => {
               gate.release = () => {}
@@ -298,7 +338,7 @@ export async function holdJournalCompletion(page: Page) {
         })
       },
     })
-  })
+  }, expected)
 }
 export async function releaseJournalCompletion(page: Page) {
   await page.evaluate(() =>
@@ -315,21 +355,40 @@ export async function waitForJournalBarrier(page: Page) {
   )
 }
 
-export async function createScopedUser(request: APIRequestContext, capabilities: string[]) {
+/** One real synthetic principal per case/retry/repetition; shared only within that case.
+ * Completed server baseline families retain their per-user capacity for eight hours.
+ * The setup owner uses only auth/context/admin APIs, never baseline admission.
+ */
+export async function createCaseIdentity(
+  request: APIRequestContext,
+  options: { capabilities?: string[]; locationId?: string | null } = {},
+): Promise<WorkshopIdentity> {
   const token = await apiLogin(request, 'e2e-owner')
-  const username = `e2e-browser-${crypto.randomUUID()}`
+  const username = `e2e-case-${crypto.randomUUID()}`
+  const locationId = options.locationId === undefined ? LOCATION_ID : options.locationId
   const response = await request.post('/api/v1/admin/users', {
     headers: await writeHeaders(request, token),
     data: {
       username,
       display_name: username,
-      location_id: LOCATION_ID,
+      location_id: locationId,
       password: PASSWORD,
-      capabilities,
+      capabilities: options.capabilities ?? WORKSHOP_CAPABILITIES,
     },
   })
   expect(response.status(), await response.text()).toBe(201)
-  return { username, userId: ((await response.json()) as { user_id: string }).user_id }
+  const user = (await response.json()) as {
+    user_id: string
+    username: string
+    location_id: string | null
+  }
+  expect(user.username).toBe(username)
+  expect(user.location_id).toBe(locationId)
+  return { username, userId: user.user_id, locationId }
+}
+
+export async function createScopedUser(request: APIRequestContext, capabilities: string[]) {
+  return createCaseIdentity(request, { capabilities })
 }
 
 /** Inspect a previously admitted partition after a hold without choosing a replacement. */

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   holdJournalCompletion,
   kernelSnapshot,
@@ -33,7 +34,8 @@ test('duplicate mutation delivery applies exactly once and preserves the journal
   request,
   browser,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   const name = `Cliente Caos Duplicado ${crypto.randomUUID()}`
   const token = await sessionToken(page)
   let originalBody = '',
@@ -112,7 +114,7 @@ test('duplicate mutation delivery applies exactly once and preserves the journal
     const second = await browser.newContext()
     try {
       const other = await second.newPage()
-      await login(other)
+      await login(other, identity)
       expect(
         (await kernelSnapshot(other)).records.filter((item) => item.entityId === original.entityId),
       ).toHaveLength(1)
@@ -125,8 +127,9 @@ test('duplicate mutation delivery applies exactly once and preserves the journal
   }
 })
 
-test('temporary server failure retries with backoff and converges', async ({ page }) => {
-  await login(page)
+test('temporary server failure retries with backoff and converges', async ({ page, request }) => {
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   let failures = 0
   const attempts: Array<{ body: string; at: number }> = []
   await page.route('**/api/v1/sync/mutations', async (route) => {
@@ -159,10 +162,16 @@ test('temporary server failure retries with backoff and converges', async ({ pag
 
 test('baseline setup rejects stale synced state and a withheld create acknowledgement', async ({
   page,
+  request,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   const name = `Cliente Barrera Base ${crypto.randomUUID()}`
-  await holdJournalCompletion(page)
+  await holdJournalCompletion(page, {
+    entityType: 'customer',
+    payloadKey: 'display_name',
+    value: name,
+  })
   let releaseAck = () => {}
   const ackGate = new Promise<void>((resolve) => {
     releaseAck = resolve
@@ -210,7 +219,8 @@ test('large reconnect batch keeps every valid operation when one mutation confli
   page,
   request,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   const runId = crypto.randomUUID()
   await page.context().setOffline(true)
   const a = await createCustomer(page, `Cliente Lote Valido A ${runId}`)

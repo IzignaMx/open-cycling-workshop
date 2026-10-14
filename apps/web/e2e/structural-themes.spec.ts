@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
+  createCaseIdentity,
+  WORKSHOP_CAPABILITIES,
   DATABASE,
   kernelSnapshot,
   login,
@@ -258,8 +260,13 @@ test.describe('touch and narrow reflow', () => {
 
 test('personal logo survives offline, follows its workshop, and never another user', async ({
   page,
+  request,
 }) => {
-  await login(page, 'e2e-owner', 'Taller E2E')
+  const identity = await createCaseIdentity(request, {
+    locationId: null,
+    capabilities: [...WORKSHOP_CAPABILITIES, 'locations.read'],
+  })
+  await login(page, identity, 'Taller E2E')
   await openSettings(page)
   await page.getByLabel('Archivo de logo local').setInputFiles({
     name: 'unsafe.svg',
@@ -302,7 +309,8 @@ test('personal logo survives offline, follows its workshop, and never another us
   await waitForReady(page)
   await expect(page.locator('.workshop-logo')).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
-  await login(page, 'e2e-other')
+  const otherIdentity = await createCaseIdentity(request)
+  await login(page, otherIdentity)
   await expect(page.locator('.workshop-logo')).toHaveCount(0)
   await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'banco')
 })
@@ -402,7 +410,7 @@ test("same-workshop restricted user cannot render another reader's cached data o
   }
   expect((await kernelSnapshot(page)).journal).toHaveLength(0)
   await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
-  await login(page, fixture.username)
+  await login(page, fixture)
   expect((await kernelSnapshot(page)).journal).toEqual(original.journal)
   await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('')
   await expect(page.getByLabel('Problema reportado')).toHaveValue('')
@@ -484,10 +492,15 @@ test('shared login button keeps its production styling, keyboard focus and disab
 
 test('real selector, baseline progress and server upgrade hold remain keyboard accessible', async ({
   page,
+  request,
 }, info) => {
+  const identity = await createCaseIdentity(request, {
+    locationId: null,
+    capabilities: [...WORKSHOP_CAPABILITIES, 'locations.read'],
+  })
   await page.goto('/')
   await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
-  await page.getByLabel('Usuario', { exact: true }).fill('e2e-owner')
+  await page.getByLabel('Usuario', { exact: true }).fill(identity.username)
   await page.getByLabel('Contraseña', { exact: true }).fill('ocwp-e2e-password')
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
   await expect(page.locator('[data-runtime-state="SELECTOR"]')).toBeVisible()
@@ -526,6 +539,7 @@ test('real selector, baseline progress and server upgrade hold remain keyboard a
     releaseBaseline()
     await waitForReady(page)
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+    expect((await kernelSnapshot(page)).context.principal.userId).toBe(identity.userId)
     const originalPartition = (await kernelSnapshot(page)).partition.partitionId
     let refusalHeld = false
     await page.route('**/api/v1/sync/mutations', async (route) => {

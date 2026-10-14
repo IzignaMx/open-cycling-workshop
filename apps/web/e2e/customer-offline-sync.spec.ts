@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   kernelSnapshot,
   login,
@@ -14,12 +15,14 @@ import {
 
 test('customer persists offline, syncs after reconnect, and converges in a second browser context', async ({
   browser,
+  request,
 }) => {
+  const identity = await createCaseIdentity(request)
   const first = await browser.newContext()
   const second = await browser.newContext()
   try {
     const page = await first.newPage()
-    await login(page)
+    await login(page, identity)
     const initial = await kernelSnapshot(page)
     // These rows predate floor-1 activation and were created through REST, not sync.
     expect(initial.records).toEqual(
@@ -61,6 +64,9 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await waitForReady(page)
+    await expect(
+      page.getByRole('heading', { name: 'Órdenes de servicio', exact: true }),
+    ).toBeVisible()
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
     await revealCustomer(page, name)
     const restored = await kernelSnapshot(page)
@@ -92,7 +98,7 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
     ).toBe(true)
 
     const otherPage = await second.newPage()
-    await login(otherPage)
+    await login(otherPage, identity)
     await revealCustomer(otherPage, name)
     const other = await kernelSnapshot(otherPage)
     expect(other.records.find((row) => row.entityId === original.entityId)).toMatchObject({

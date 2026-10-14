@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   holdJournalCompletion,
   kernelSnapshot,
@@ -21,7 +22,8 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   request,
   browser,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   const runId = crypto.randomUUID()
   const problem = `Falla de frenos delanteros ${runId}`
   const token = await sessionToken(page)
@@ -135,7 +137,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   const second = await browser.newContext()
   try {
     const other = await second.newPage()
-    await login(other)
+    await login(other, identity)
     const confirmed = (await kernelSnapshot(other)).records.find(
       (item) => item.entityId === originalOrder.entityId,
     )
@@ -156,7 +158,8 @@ test('order baseline rejects stale synced state, withheld create and withheld ac
   page,
   request,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   const runId = crypto.randomUUID()
   const problem = `Orden barrera ${runId}`
   const token = await sessionToken(page)
@@ -165,7 +168,11 @@ test('order baseline rejects stale synced state, withheld create and withheld ac
   await waitForConfirmed(page, customer)
   await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
   await fillIntake(page, customer.entityId, problem)
-  await holdJournalCompletion(page)
+  await holdJournalCompletion(page, {
+    entityType: 'service_order',
+    payloadKey: 'reported_problem',
+    value: problem,
+  })
   let releaseCreate = () => {},
     releaseAck = () => {}
   const createGate = new Promise<void>((resolve) => {

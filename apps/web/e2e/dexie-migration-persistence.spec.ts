@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   kernelSnapshot,
   LOCATION_ID,
@@ -154,7 +155,8 @@ test('raw v1 legacy evidence and late old-tab additions remain exact, unknown an
   })
   // Supersedes the unsafe expectation that a new login claims/replays old v1 work.
   // Known-author unchanged-ID replay across reload is covered in sync-chaos.
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   await expect(page.getByText(/Hay datos de una versión anterior/)).toBeVisible()
   await expect(page.locator('body')).not.toContainText('Cliente legado privado sin autor')
   await expect(page.locator('body')).not.toContainText('Conflicto legado privado')
@@ -215,18 +217,23 @@ test('raw v1 legacy evidence and late old-tab additions remain exact, unknown an
   expect(await rawEvidence(page)).toEqual(afterLate)
   expect((await kernelSnapshot(page)).journal).toEqual([fresh])
   await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
-  await login(page, 'e2e-other')
+  const otherIdentity = await createCaseIdentity(request)
+  await login(page, otherIdentity)
   await expect(page.locator('body')).not.toContainText('Cliente legado privado sin autor')
   expect((await kernelSnapshot(page)).journal).toHaveLength(0)
   expect(await rawEvidence(page)).toEqual(afterLate)
 })
 
-test('fresh authenticated login leaves an absent legacy database absent', async ({ page }) => {
+test('fresh authenticated login leaves an absent legacy database absent', async ({
+  page,
+  request,
+}) => {
   await page.goto('/')
   expect(
     await page.evaluate(async () => (await indexedDB.databases()).some((db) => db.name === 'ocwp')),
   ).toBe(false)
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   expect(
     await page.evaluate(async () => (await indexedDB.databases()).some((db) => db.name === 'ocwp')),
   ).toBe(false)

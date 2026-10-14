@@ -80,7 +80,7 @@ export async function seedWorkshop(
     for (const action of actions)
       await post(`service-orders/${order.order_id}/transitions`, { action }, 200)
   }
-  await login(page, username)
+  await login(page, { username, userId, locationId })
   expect((await kernelSnapshot(page)).context.selectedLocationId).toBe(locationId)
   if (capabilities.includes('orders.read')) {
     await expect(page.locator('.order-card')).toHaveCount(4)

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   kernelSnapshot,
   login,
@@ -16,7 +17,8 @@ for (const entityType of ['bicycle', 'service_order'] as const) {
     page,
     request,
   }) => {
-    await login(page)
+    const identity = await createCaseIdentity(request)
+    await login(page, identity)
     const customer = await createCustomer(page, `Original scoped customer ${crypto.randomUUID()}`)
     await waitForApplied(page, customer.mutationId)
     await waitForConfirmed(page, customer)

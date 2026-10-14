@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  createCaseIdentity,
   createCustomer,
   kernelSnapshot,
   login,
@@ -13,7 +14,8 @@ test('competing customer create conflicts visibly, preserves immutable history a
   page,
   request,
 }) => {
-  await login(page)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
   await page.context().setOffline(true)
   const name = `Cliente Conflicto E2E ${crypto.randomUUID()}`
   const original = await createCustomer(page, name)
