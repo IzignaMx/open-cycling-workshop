@@ -49,8 +49,11 @@ server remains the authority for capabilities, transitions and organization scop
 ## Persistence and authority boundary
 
 Dexie schema 4 adds only `presentationPreferences: key`. Existing stores, records,
-indexes and queued mutations are untouched. The quote/offline plan now reserves
-schema 5, rather than silently colliding with this addition.
+indexes and queued mutations are untouched. The original quote/offline schema 5
+reservation is superseded by the later
+[isolated identity-kernel ADR](2026-10-14-isolated-offline-identity-kernel.md): the
+kernel uses isolated v5 and future quote stores reserve v6. Production theme
+persistence remains v4 until the separately gated kernel/baseline activation.
 
 Two disjoint record kinds use collision-safe JSON keys:
 
