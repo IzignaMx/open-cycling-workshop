@@ -1655,3 +1655,134 @@ test('account verification cannot rebind a previously stale operational source a
   assert.notEqual(f.runtime.getAccountSnapshot().phase, 'connected')
   assert.deepEqual(f.runtime.getSnapshot().customers, [])
 })
+function brandedApi(grants = ['branding.read'], handle) {
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    if (url.endsWith('/branding')) {
+      server.calls.push(new URL(url).pathname)
+      if (handle) return handle(url, init)
+      return response(url, {
+        schema_version: 1,
+        organization_id: 'org',
+        location_id: 'loc',
+        dataset_incarnation: incarnation,
+        version: 1,
+        display_name: 'Shared workshop',
+        palette_id: 'arcilla',
+        logo_state: 'none',
+        logo: null,
+        logo_diagnostic: null,
+        updated_at: new Date(NOW).toISOString(),
+        updated_by: 'A',
+      })
+    }
+    const value = await (await original(url, init)).json()
+    if (Array.isArray(value.capabilities)) value.capabilities.push(...grants)
+    if (value.context?.capabilities) value.context.capabilities.push(...grants)
+    return response(url, value)
+  }
+  return server
+}
+test('admitted runtime fetches shared brand and reloads exact cache offline without new journal entries', async (t) => {
+  const first = setup(t, { server: brandedApi() })
+  await login(first.runtime)
+  await until(
+    () => first.runtime.branding.getSnapshot().profile?.version === 1,
+    'branding not published',
+  )
+  assert.equal(first.runtime.branding.getSnapshot().profile.display_name, 'Shared workshop')
+  assert.equal(await first.database.brandingSnapshots.count(), 1)
+  assert.equal(await first.database.operationJournal.count(), 0)
+  first.runtime.dispose()
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: brandedApi(),
+  })
+  await second.runtime.start()
+  await until(
+    () => second.runtime.branding.getSnapshot().profile?.version === 1,
+    'offline branding not restored',
+  )
+  assert.equal(second.runtime.branding.getSnapshot().cached, true)
+  assert.equal(second.server.calls.length, 0)
+  const logout = second.runtime.logout()
+  assert.equal(second.runtime.branding.getSnapshot().profile, null)
+  await logout
+})
+test('runtime read requires explicit literal, and held lease hides previously accepted branding', async (t) => {
+  for (const grants of [[], ['branding.write']]) {
+    const f = setup(t, { server: brandedApi(grants) })
+    await login(f.runtime)
+    assert.equal(f.runtime.branding.getSnapshot().profile, null)
+    assert.equal(
+      f.server.calls.some((path) => path.endsWith('/branding')),
+      false,
+    )
+    f.runtime.dispose()
+  }
+  const f = setup(t, { server: brandedApi() })
+  await login(f.runtime)
+  await until(() => f.runtime.branding.getSnapshot().profile !== null, 'branding not published')
+  f.env.now = NOW + 3600000
+  await f.runtime.checkLease()
+  assert.equal(f.runtime.branding.getSnapshot().profile, null)
+  assert.equal(f.runtime.getSnapshot().phase, 'held')
+})
+test('late branding body after logout cannot publish or acquire a new cache admission', async (t) => {
+  let release,
+    started = false
+  const f = setup(t, {
+    server: brandedApi(['branding.read'], (url) => {
+      started = true
+      return new Promise((resolve) => {
+        release = () =>
+          resolve(
+            response(url, {
+              schema_version: 1,
+              organization_id: 'org',
+              location_id: 'loc',
+              dataset_incarnation: incarnation,
+              version: 0,
+              display_name: 'Taller',
+              palette_id: 'bosque',
+              logo_state: 'none',
+              logo: null,
+              logo_diagnostic: null,
+              updated_at: null,
+              updated_by: null,
+            }),
+          )
+      })
+    }),
+  })
+  await login(f.runtime)
+  await until(() => started, 'branding request absent')
+  await f.runtime.logout()
+  release()
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  assert.equal(f.runtime.branding.getSnapshot().profile, null)
+  assert.equal(await f.database.brandingSnapshots.count(), 0)
+})
+test('current editor403 retires operational branding admission and cannot republish cached bytes offline', async (t) => {
+  const f = setup(t, { server: brandedApi() })
+  await login(f.runtime)
+  await until(() => f.runtime.branding.getSnapshot().profile !== null, 'brand missing')
+  await f.runtime.verifyAccount()
+  const captured = f.runtime.captureAccount()
+  f.runtime.invalidateBrandingAccount(captured, 403)
+  assert.equal(f.runtime.getSnapshot().phase, 'held')
+  assert.equal(f.runtime.branding.getSnapshot().profile, null)
+  await f.runtime.offline()
+  await f.runtime.branding.refresh(true)
+  assert.equal(f.runtime.branding.getSnapshot().profile, null)
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  f.runtime.dispose()
+  const reload = setup(t, { name: f.name, storage: f.storage, online: false, server: brandedApi() })
+  await reload.runtime.start()
+  await reload.runtime.branding.refresh(true)
+  assert.notEqual(reload.runtime.getSnapshot().phase, 'ready')
+  assert.equal(reload.runtime.branding.getSnapshot().profile, null)
+})

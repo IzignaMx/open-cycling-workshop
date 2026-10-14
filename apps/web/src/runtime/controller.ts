@@ -1,3 +1,9 @@
+import { BrandingSnapshotRepository } from '../branding/cache.js'
+import {
+  BrandingDisplayController,
+  type BrandingRuntimeCapture,
+} from '../features/branding/runtime.js'
+import { createBrandingTransport } from '../features/branding/transport.js'
 import { liveQuery } from 'dexie'
 import { AccessKernel } from '../access-kernel/kernel.js'
 import { principalKey } from '../access-kernel/context.js'
@@ -111,6 +117,7 @@ export class WorkshopController {
   readonly database: KernelDatabase
   readonly kernel: AccessKernel
   readonly sessionStore: SessionStore
+  readonly branding: BrandingDisplayController
   readonly repositories: WorkshopRepositories
   #snapshot = empty()
   #listeners = new Set<() => void>()
@@ -185,6 +192,60 @@ export class WorkshopController {
       kernel: this.kernel,
       transport: createPushTransport({ ...options, now: this.#now }),
     })
+    this.branding = new BrandingDisplayController({
+      capture: () => this.captureBranding(),
+      validate: async (source) => {
+        try {
+          await this.kernel.inspectSession(source.ticket, source.isCurrent)
+          return source.isCurrent()
+        } catch {
+          if (source.isCurrent()) this.held('verification_required')
+          return false
+        }
+      },
+      repository: new BrandingSnapshotRepository(this.database),
+      transport: createBrandingTransport(options),
+      now: this.#now,
+      refused: (source, status) => {
+        if (source.isCurrent()) {
+          if (status === 401) void this.logout()
+          else this.held('verification_required')
+        }
+      },
+    })
+  }
+  private captureBranding(): BrandingRuntimeCapture | null {
+    const source = this.#active
+    if (
+      !source ||
+      this.#disposed ||
+      this.#snapshot.phase !== 'ready' ||
+      !source.context.capabilities.includes('branding.read') ||
+      !source.isCurrent(source.identity)
+    )
+      return null
+    const network = this.#networkSequence,
+      online = this.#verifiedOnline
+    const current = () =>
+      !this.#disposed &&
+      this.#active === source &&
+      network === this.#networkSequence &&
+      this.#snapshot.phase === 'ready' &&
+      source.isCurrent(source.identity) &&
+      this.#now() >= this.#observedAt &&
+      this.#now() < Date.parse(source.context.offlineUntil)
+    if (!current()) return null
+    return Object.freeze({
+      token: source.bearerToken,
+      organizationId: source.context.principal.organizationId,
+      locationId: source.context.selectedLocationId,
+      datasetIncarnation: source.context.datasetIncarnation,
+      ticket: structuredClone(source.ticket),
+      context: structuredClone(source.context),
+      online,
+      binding: JSON.stringify([source.ticket, source.context, network, online]),
+      isCurrent: current,
+    })
   }
   getSnapshot = () => this.#snapshot
   getAccountSnapshot = () => this.#account
@@ -228,6 +289,11 @@ export class WorkshopController {
     })
     for (const listener of this.#accountListeners) listener()
     if (reason === 'invalid_session') void this.logout()
+  }
+  invalidateBrandingAccount(capture: AccountCapture, status: 401 | 403): void {
+    if (!this.#accountHandles.has(capture) || !capture.isCurrent()) return
+    if (status === 401) this.invalidateAccount(capture, 'invalid_session')
+    else this.held('verification_required')
   }
   private admitAccount(saved: SessionSnapshot) {
     if (
@@ -473,9 +539,11 @@ export class WorkshopController {
   }
   private publish(patch: Partial<WorkshopSnapshot>) {
     this.#snapshot = Object.freeze({ ...this.#snapshot, ...patch })
+    this.branding.reconcile()
     for (const listener of this.#listeners) listener()
   }
   private cancel() {
+    this.branding.clear()
     this.invalidateAccount()
     this.#locationPage++
     this.#observedReachable = false
@@ -1089,6 +1157,7 @@ export class WorkshopController {
     await this.verifyStored(saved, source.context.selectedLocationId, source.ticket)
   }
   async offline() {
+    this.branding.clear()
     this.invalidateAccount()
     this.#locationPage++
     if (!this.#verifiedOnline && this.#active && this.#snapshot.sync === 'offline') {
@@ -1111,6 +1180,7 @@ export class WorkshopController {
       await this.kernel.continueOffline(source.ticket)
       if (this.#active === source) {
         this.publish({ sync: 'offline' })
+        void this.branding.refresh(true)
         this.probeOffline(source)
       }
     } catch {
