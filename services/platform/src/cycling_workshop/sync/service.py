@@ -99,6 +99,21 @@ class SyncService:
     def apply(
         self, mutation: MutationEnvelope, *, context: SyncApplicationContext | None = None
     ) -> MutationResult:
+        # Domain constructors may trim/collapse IDs. Reject ambiguous identity
+        # strings before lookup or effects instead of storing a receipt that an
+        # identical raw envelope cannot safely replay. Do not normalize aliases.
+        identities = (
+            mutation.mutation_id,
+            mutation.organization_id,
+            mutation.location_id,
+            mutation.entity_id,
+        )
+        if any(
+            not value or any(character.isspace() for character in value) for value in identities
+        ):
+            raise SyncConflict(
+                "mutation identity fields must be nonblank and contain no whitespace"
+            )
         existing_receipt = self._session.get(MutationReceiptRecord, mutation.mutation_id)
         if existing_receipt is not None:
             if (

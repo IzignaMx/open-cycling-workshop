@@ -54,7 +54,10 @@ release versions follow the Engineering specification's SemVer policy.
 - Sync service-order transitions attribute new events to the authenticated
   submitter, ignoring legacy payload actor claims. Existing receipt replays must
   match the stored organization/location/entity/operation tuple; mismatches
-  become isolated conflicts. No receipt actor/digest or client-cache isolation is
+  become isolated conflicts. Blank or whitespace-containing envelope IDs are
+  rejected before effects so domain normalization cannot break identical retry;
+  malformed historical receipts remain preserved for explicit reconciliation.
+  No receipt actor/digest or client-cache isolation is
   claimed. See the [scope and evidence](docs/10-spec-development/2026-10-14-effective-identity-sync-authority.md).
 
 - Migration test setup excludes ambient application URLs and secret-file

@@ -381,6 +381,17 @@ Add durable evidence below instead of editing completed checklist history away.
 See [MVP acceptance plan](docs/10-spec-development/2026-10-14-local-workshop-mvp.md).
 These entries do not close existing physical/manual V0.1 gates or authorize deployment.
 
+## Effective identity/sync hardening: malformed legacy identities
+
+- If a previously queued operation or stored receipt contains blank/whitespace
+  identity fields, the hardened sync service returns a permanent conflict. Keep
+  the queue, receipt and original business/event history intact for reviewed
+  reconciliation. Do not clear IndexedDB, delete the receipt, substitute a
+  normalized ID or retry under a new mutation ID as an automatic workaround.
+- This is a conditional recovery boundary, not evidence that a real installation
+  has malformed data or a new setup step for canonical IDs. See the
+  [scope and evidence](docs/10-spec-development/2026-10-14-effective-identity-sync-authority.md).
+
 ## 2026-10-14 · Sync chaos setup regression
 
 - [x] Verify the corrected large-batch setup and deterministic regression on

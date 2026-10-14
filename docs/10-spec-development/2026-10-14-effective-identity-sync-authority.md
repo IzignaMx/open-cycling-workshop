@@ -1,7 +1,7 @@
 # Effective identity and sync authority prerequisite
 
-Status: implemented locally; exact-head hosted PostgreSQL/browser qualification
-and independent review are pending. This bounded security increment does not
+Status: implemented and independently reviewed locally; exact-head hosted
+PostgreSQL/browser qualification remains pending. This bounded security increment does not
 enable end-user permission administration or qualify a release.
 
 ## Scope and traceability
@@ -68,6 +68,22 @@ per-mutation `sync_conflict`, without a new business effect, timeline event,
 receipt, feed row or outbox event. Independent valid batch items still commit.
 The API's current grant and scope checks still precede receipt lookup.
 
+The service first rejects blank identity fields or any whitespace in mutation,
+organization, location or entity IDs. Bicycle/order constructors previously
+normalized such strings, so accepting a noncanonical envelope could store an
+applied identity different from the submitted identity and break an identical
+retry. Rejection happens before lookup or effects and remains a per-mutation
+conflict. IDs are not silently normalized or equated; this is not a new global
+UUID/version validator and does not change standalone domain constructors.
+
+Preexisting malformed receipts/history are retained exactly as stored. A
+malformed replay now conflicts without acknowledging or rewriting it. Do not
+automatically substitute a normalized ID, delete the receipt, mint a replacement
+mutation or rewrite history to bypass that conflict. Any affected pending client
+operation needs explicit history-preserving reconciliation; this increment does
+not implement an automatic recovery workflow or claim malformed legacy inputs
+are safely replayable. Valid historical same-tuple retries remain compatible.
+
 A matching tuple returns the original applied result exactly once. Receipt
 storage has no actor, payload digest, base version or original request timestamp.
 The implementation cannot compare or attest those values and does not invent
@@ -86,15 +102,23 @@ own design and evidence.
   implementation. All four previously unchecked tuple fields and missing
   trusted actor context failed. Existing cross-organization rejection and
   same-tuple payload/base-version compatibility already passed.
-- Focused final unit/API suite: **43 passed**. This includes three unchanged
+- Focused final unit/API suite: **81 passed**. This includes three unchanged
   authorization controls showing replay is denied after a grant, location or
   session change, plus preservation of standalone transition/domain semantics.
+- Independent review reproduced an accepted-input edge: an order ID padded to
+  the wire's 36-character length applied with a normalized ID, then an identical
+  retry conflicted. Before the corrective guard, **37 additional regressions
+  failed**; all 37 pass after it. They cover exact HTTP retry/batch isolation for
+  trailing-space/internal-tab/nonbreaking-space identities, each service-level
+  identity field and unchanged malformed legacy receipts. A further durable
+  test preserves every stored order/event/feed/receipt/outbox column on a
+  different authorized user's same-tuple changed-payload replay.
 - Five real PostgreSQL tests use the existing dedicated-target, isolated-schema
   administration fixture and observable `pg_stat_activity` lock waits. They
   cover session revocation, deactivation, incompatible location, grant removal
   and grant expansion while `/me` waits. Their runtime result remains pending
   until a configured PostgreSQL run; SQLite is not row-lock evidence.
-- Full Python suite: **787 passed, 65 skipped**. The skips are PostgreSQL-specific
+- Full Python suite: **825 passed, 65 skipped**. The skips are PostgreSQL-specific
   tests without a configured dedicated `OCWP_TEST_DATABASE_URL`, including the
   five new contention cases; they are not established by SQLite tests.
 - Aggregate local qualification: **21 checks passed, zero failures, five
@@ -108,8 +132,13 @@ own design and evidence.
 - The five aggregate blockers remain PostgreSQL integration, Docker, psql,
   managed-browser navigation for the IndexedDB benchmark, and browser E2E setup
   without its dedicated database. No browser-policy bypass was attempted.
-- Independent review and exact-head hosted CI/Security/DCO results are pending;
-  local build evidence does not substitute for PostgreSQL or browser execution.
+- Independent review confirmed the normalization correction with its own
+  37-failure pre-guard reproduction, 81-passing focused suite and full suite of
+  825 passed/65 PostgreSQL skips; no further
+  implementation defects were found. Review also checked current-user freshness,
+  actor attribution, strict tuple authorization and historical replay boundaries.
+- Exact-head hosted CI/Security/DCO results remain pending; local build evidence
+  does not substitute for PostgreSQL or browser execution.
 
 ## Compatibility, operations and limits
 
