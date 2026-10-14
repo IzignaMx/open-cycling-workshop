@@ -89,6 +89,11 @@ def create_app(
                 "/api/v1/locations",
             }
             or path.startswith("/api/v1/admin/")
+            or (
+                path.startswith("/api/v1/service-orders/")
+                and len(path.split("/")) == 6
+                and path.endswith("/events")
+            )
         )
         try:
             response = await call_next(request)
