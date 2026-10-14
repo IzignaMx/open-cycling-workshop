@@ -23,7 +23,7 @@ export class KernelDatabase extends OcwpDatabase {
   localMigrationState!: Table<LocalMigrationState, string>
 
   constructor(name: string) {
-    if (!name.trim() || name === 'ocwp')
+    if (typeof name !== 'string' || !name.trim() || name === 'ocwp')
       throw new Error('An isolated database name is required; production remains v4')
     super(name)
     this.version(5)
@@ -34,7 +34,8 @@ export class KernelDatabase extends OcwpDatabase {
         cacheRecords: '[partitionId+entityType+entityId], [partitionId+entityType]',
         operationJournal:
           'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId]',
-        operationDelivery: 'mutationId, state',
+        operationDelivery:
+          'mutationId, state, [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
         operationEvents: '++sequence, mutationId',
         localMigrationState: 'key',
       })

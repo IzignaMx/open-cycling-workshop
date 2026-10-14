@@ -135,3 +135,11 @@ jobs:
             apps/web/test-results/
             apps/web/playwright-report/
           if-no-files-found: warn
+      - name: Upload isolated kernel browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-kernel-browser-${{ github.sha }}
+          path: apps/web/.tmp-kernel-browser-results/
+          include-hidden-files: true
+          if-no-files-found: warn

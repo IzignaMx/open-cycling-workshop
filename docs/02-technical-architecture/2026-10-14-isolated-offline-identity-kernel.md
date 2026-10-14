@@ -38,7 +38,8 @@ Offline First, Local First and server-enforced least privilege.
 
 The isolated modules live under `apps/web/src/access-kernel/`: `types.ts` defines
 local records/tickets, `context.ts` handles pure context validation/state,
-`operations.ts` handles canonical envelopes/result validation, `database.ts`
+`operations.ts` handles canonical envelopes/result validation, `projection.ts`
+composes explicitly labelled pending/unconfirmed views, `database.ts`
 provides `createKernelDatabase(name)`, and `kernel.ts` exposes `AccessKernel`.
 The v5 factory requires an explicitly selected isolated database. It is not the
 application singleton and must not upgrade a user's production `ocwp` database
@@ -104,6 +105,26 @@ and lost-acknowledgement recovery use the original operation ID and unchanged
 payload/base version. An entity's existence or higher version does not prove a
 particular queued operation applied. A future explicit resolution must be a new
 operation linked to preserved history, not a rewrite of the rejected command.
+
+An applied ACK does not fabricate a server projection. Until a validated
+confirmed version covers it, the read model retains the author's local overlay
+with `optimisticStatus: applied_awaiting_projection`. It yields to authoritative
+projection data when that version arrives. Old-epoch work remains immutable and
+can be composed/replayed only for the same author/scope under the current verified
+capabilities and completed baseline; rejected/held dependency chains stay hidden
+from the operational overlay while their evidence remains available through the
+read-gated journal API.
+
+Dispatch scans at most 100 candidate delivery-metadata rows per call, using an
+indexed author/scope/eligibility/local-sequence range and a durable scan position
+that wraps/revisits deferred work. Numeric eligibility flags are valid IndexedDB
+key components. Indexed earliest-unresolved aggregate checks preserve ordering,
+and attempt/generation indexes validate batch membership without origin-wide
+inflight scans. Applied/rejected lifetime payloads are not scanned during normal
+dispatch. Projection reads query only pending metadata and the latest applied
+version beyond confirmed coverage, loading needed immutable payloads lazily;
+large unresolved backlogs and dependency graphs still need the separate device
+performance qualification. No journal garbage collection is introduced.
 
 The dispatcher captures its context and batch. Result validation checks requested
 mutation IDs, entity identity, status/schema, plausible versions and captured

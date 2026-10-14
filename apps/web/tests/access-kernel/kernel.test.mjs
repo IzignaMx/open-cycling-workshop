@@ -533,3 +533,216 @@ test('confirmed projections are partitioned and their payload scope/version is v
   const b = await completedBaseline(db, kernel, context('B'))
   assert.equal(await kernel.readEntity(b, 'customer', 'customer-shared'), undefined)
 })
+
+test('applied ACK preserves an explicitly unconfirmed projection until server-version coverage', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command())
+  const batch = await kernel.listDispatchable(ticket, 10)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'operation-A',
+        entity_id: 'customer-shared',
+        status: 'applied',
+        entity_version: 1,
+      },
+    ],
+  })
+  const awaiting = await kernel.readEntity(ticket, 'customer', 'customer-shared')
+  assert.equal(awaiting.optimistic.display_name, 'Private A')
+  assert.equal(awaiting.confirmed, undefined)
+  assert.equal(awaiting.optimisticStatus, 'applied_awaiting_projection')
+  db.close()
+  await db.open()
+  assert.deepEqual(await kernel.readEntity(ticket, 'customer', 'customer-shared'), awaiting)
+  const confirmed = { ...command().optimistic, display_name: 'Server normalized value' }
+  await db.cacheRecords.add({
+    partitionId: ticket.partitionId,
+    entityType: 'customer',
+    entityId: 'customer-shared',
+    version: 1,
+    payload: confirmed,
+  })
+  const covered = await kernel.readEntity(ticket, 'customer', 'customer-shared')
+  assert.deepEqual(covered.confirmed, confirmed)
+  assert.equal(covered.optimistic, undefined)
+  assert.equal(covered.optimisticStatus, undefined)
+  assert.equal(await db.operationJournal.count(), 1)
+})
+
+test('same-author pending work after a new completed epoch is visible exactly when replay-eligible', async (t) => {
+  const { db, kernel } = await setup(t)
+  const first = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(first, command())
+  const next = await completedBaseline(db, kernel, context('A', { authorizationEpoch: 'A-next' }))
+  const visible = await kernel.readEntity(next, 'customer', 'customer-shared')
+  assert.equal(visible.optimistic.display_name, 'Private A')
+  assert.equal(visible.optimisticStatus, 'pending')
+  const batch = await kernel.listDispatchable(next, 10)
+  assert.deepEqual(batch.operations[0].envelope, command().envelope)
+  assert.equal(batch.operations[0].authoredUnderEpoch, 'A-epoch')
+  const revoked = await completedBaseline(
+    db,
+    kernel,
+    context('A', {
+      authorizationEpoch: 'A-revoked',
+      capabilities: ['customers.read', 'sync.push'],
+    }),
+  )
+  assert.equal(await kernel.readEntity(revoked, 'customer', 'customer-shared'), undefined)
+  assert.deepEqual((await kernel.listDispatchable(revoked, 10)).operations, [])
+  assert.equal((await db.operationDelivery.get('operation-A')).state, 'held_authorization')
+})
+
+test('rejected parent suppresses its dependent overlay before a new dispatch attempt', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command())
+  const child = command('child', 'child-entity')
+  child.dependsOn = ['operation-A']
+  await kernel.commitLocalCommand(ticket, child)
+  const batch = await kernel.listDispatchable(ticket, 10)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'operation-A',
+        entity_id: 'customer-shared',
+        status: 'conflict',
+        entity_version: null,
+        error_code: 'sync_conflict',
+        error_message: 'stale',
+      },
+    ],
+  })
+  assert.equal(await kernel.readEntity(ticket, 'customer', 'child-entity'), undefined)
+  assert.equal(await db.operationJournal.count(), 2)
+})
+
+test('dispatcher work is bounded independently of retained applied journal history', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command('sample'))
+  const sample = await db.operationJournal.get('sample')
+  const metadata = await db.operationDelivery.get('sample')
+  await db.operationDelivery.update('sample', { state: 'applied', dispatchable: 0, unresolved: 0 })
+  const journals = [],
+    deliveries = []
+  for (let index = 0; index < 1001; index++) {
+    const id = `historical-${index}`
+    journals.push({ ...sample, mutationId: id, localSequence: index + 2 })
+    deliveries.push({
+      ...metadata,
+      mutationId: id,
+      localSequence: index + 2,
+      state: 'applied',
+      dispatchable: 0,
+      unresolved: 0,
+    })
+  }
+  await db.operationJournal.bulkAdd(journals)
+  await db.operationDelivery.bulkAdd(deliveries)
+  await db.deviceControl.update('device', { localSequence: 1002 })
+  let journalReads = 0,
+    deliveryReads = 0
+  db.operationJournal.hook('reading', (row) => {
+    journalReads++
+    return row
+  })
+  db.operationDelivery.hook('reading', (row) => {
+    deliveryReads++
+    return row
+  })
+  assert.deepEqual((await kernel.listDispatchable(ticket, 1)).operations, [])
+  assert.equal(journalReads, 0)
+  assert.equal(deliveryReads, 0)
+})
+
+test('bounded dispatch scan makes progress past backoff without changing per-aggregate order', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  for (let index = 0; index < 105; index++) {
+    const id = `backoff-${index}`
+    await kernel.commitLocalCommand(ticket, command(id, id))
+    await db.operationDelivery.update(id, { retryAt: NOW + 10_000 })
+  }
+  await kernel.commitLocalCommand(ticket, command('independent-ready', 'ready'))
+  let metadataReads = 0
+  db.operationDelivery.hook('reading', (row) => {
+    metadataReads++
+    return row
+  })
+  assert.deepEqual((await kernel.listDispatchable(ticket, 1)).operations, [])
+  assert.ok(metadataReads <= 100)
+  const renewed = await verified(kernel)
+  const next = await kernel.listDispatchable(renewed.ticket, 1)
+  assert.deepEqual(
+    next.operations.map((row) => row.mutationId),
+    ['independent-ready'],
+  )
+})
+
+test('projection reads do not load immutable history already covered by the confirmed version', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command())
+  const batch = await kernel.listDispatchable(ticket, 10)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'operation-A',
+        entity_id: 'customer-shared',
+        status: 'applied',
+        entity_version: 1,
+      },
+    ],
+  })
+  await db.cacheRecords.add({
+    partitionId: ticket.partitionId,
+    entityType: 'customer',
+    entityId: 'customer-shared',
+    version: 1,
+    payload: command().optimistic,
+  })
+  let journalReads = 0
+  db.operationJournal.hook('reading', (row) => {
+    journalReads++
+    return row
+  })
+  const view = await kernel.readEntity(ticket, 'customer', 'customer-shared')
+  assert.equal(view.optimistic, undefined)
+  assert.equal(journalReads, 0)
+})
+
+test('dispatch scan wraps back to deferred earlier work after backoff elapses', async (t) => {
+  const { db, kernel, setNow } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command('earlier', 'earlier-entity'))
+  await db.operationDelivery.update('earlier', { retryAt: NOW + 2000 })
+  await kernel.commitLocalCommand(ticket, command('ready', 'later-entity'))
+  const later = await kernel.listDispatchable(ticket, 1)
+  assert.deepEqual(
+    later.operations.map((row) => row.mutationId),
+    ['ready'],
+  )
+  await kernel.applyPushResult(ticket, later, {
+    results: [
+      { mutation_id: 'ready', entity_id: 'later-entity', status: 'applied', entity_version: 1 },
+    ],
+  })
+  setNow(NOW + 2000)
+  const earlier = await kernel.listDispatchable(ticket, 1)
+  assert.deepEqual(
+    earlier.operations.map((row) => row.mutationId),
+    ['earlier'],
+  )
+})
+
+test('optimistic version must describe the same original command version', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  const invalid = command()
+  invalid.optimistic.version = 999
+  await assert.rejects(kernel.commitLocalCommand(ticket, invalid), /version/i)
+  assert.equal(await db.operationJournal.count(), 0)
+})

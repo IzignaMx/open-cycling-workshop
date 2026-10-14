@@ -1,6 +1,7 @@
 import type { EntityType } from '../sync/types.js'
 import { retryPlan } from '../sync/retry-policy.js'
 import type { KernelDatabase } from './database.js'
+import { readProjection, replayableStates, heldDependencyStates } from './projection.js'
 import { contextKey, nextContextState, principalKey, validateVerifiedContext } from './context.js'
 import {
   canonicalJson,
@@ -8,7 +9,6 @@ import {
   operationIntact,
   requireCapability,
   validateCommand,
-  validateProjection,
   validateResults,
 } from './operations.js'
 import type {
@@ -33,14 +33,6 @@ interface Authorized {
   context: VerifiedAccessContext
   partition: CachePartition
 }
-const replayable = new Set(['pending', 'retryable', 'awaiting_confirmation'])
-const terminalDependency = new Set([
-  'rejected',
-  'held_authorization',
-  'held_dependency',
-  'held_integrity',
-  'held_retry',
-])
 
 /** No transport, token store or baseline activation API. Consumers must supply a verified
  * server context and finish the authoritative integration before production use.
@@ -76,6 +68,7 @@ export class AccessKernel {
       localSequence: 0,
       observedAt: this.dependencies.now(),
       dispatchAttemptId: null,
+      dispatchScanAfter: 0,
     }
   }
   private live(ticket: ContextTicket): boolean {
@@ -137,6 +130,7 @@ export class AccessKernel {
         await this.db.cachePartitions.put({ ...oldPartition, status: 'superseded' })
       if (!same) await this.db.cachePartitions.add(partition)
       await this.db.accessContexts.put({ partitionId: partition.partitionId, context })
+      if (!same) control.dispatchScanAfter = 0
       control.activePartitionId = partition.partitionId
       control.state = nextContextState(
         control.state,
@@ -316,6 +310,15 @@ export class AccessKernel {
       }
       await this.db.operationJournal.add(operation)
       await this.db.operationDelivery.add({
+        principalKey: operation.principalKey,
+        locationId: operation.locationId,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        localSequence: operation.localSequence,
+        dispatchable: 1,
+        unresolved: 1,
+        blocked: 0,
+        resultVersion: 0,
         mutationId: operation.mutationId,
         state: 'pending',
         attemptId: null,
@@ -333,31 +336,9 @@ export class AccessKernel {
 
   async readEntity(ticket: ContextTicket, entityType: EntityType, entityId: string) {
     ticket = structuredClone(ticket)
-    return this.run(ticket, false, async ({ context }) => {
-      requireCapability(context, entityCapability(entityType, 'read'))
-      const confirmed = await this.db.cacheRecords.get([ticket.partitionId, entityType, entityId])
-      if (confirmed) {
-        validateProjection(entityType, entityId, confirmed.payload, context)
-        if (confirmed.version !== confirmed.payload.version)
-          throw new Error('Confirmed projection version integrity mismatch')
-      }
-      const operations = await this.db.operationJournal
-        .where('[principalKey+locationId+entityType+entityId]')
-        .equals([ticket.principalKey, context.selectedLocationId, entityType, entityId])
-        .toArray()
-      let optimistic: Record<string, unknown> | undefined
-      for (const operation of operations.sort((a, b) => a.localSequence - b.localSequence)) {
-        const delivery = await this.db.operationDelivery.get(operation.mutationId)
-        if (
-          operation.authoredUnderEpoch === context.authorizationEpoch &&
-          operationIntact(operation) &&
-          delivery &&
-          (replayable.has(delivery.state) || delivery.state === 'inflight')
-        )
-          optimistic = operation.optimistic
-      }
-      return confirmed || optimistic ? { confirmed: confirmed?.payload, optimistic } : undefined
-    })
+    return this.run(ticket, false, ({ context }) =>
+      readProjection(this.db, ticket, context, entityType, entityId),
+    )
   }
 
   async readOperation(ticket: ContextTicket, mutationId: string) {
@@ -376,6 +357,19 @@ export class AccessKernel {
         delivery: await this.db.operationDelivery.get(mutationId),
         events: await this.db.operationEvents.where('mutationId').equals(mutationId).toArray(),
       }
+    })
+  }
+
+  private async putDelivery(delivery: OperationDelivery): Promise<void> {
+    await this.db.operationDelivery.put({
+      ...delivery,
+      dispatchable: replayableStates.has(delivery.state) || delivery.state === 'inflight' ? 1 : 0,
+      unresolved: delivery.state === 'applied' ? 0 : 1,
+      blocked: heldDependencyStates.has(delivery.state) ? 1 : 0,
+      resultVersion:
+        delivery.state === 'applied' && delivery.result?.status === 'applied'
+          ? delivery.result.entity_version
+          : 0,
     })
   }
 
@@ -404,25 +398,59 @@ export class AccessKernel {
         throw new Error('A dispatcher already owns the current attempt')
       const attemptId = this.dependencies.newId()
       const operations: OwnedOperation[] = []
-      const aggregates = new Map<string, OperationDelivery['state']>()
-      const owned = await this.db.operationJournal
-        .where('[principalKey+locationId]')
-        .equals([ticket.principalKey, context.selectedLocationId])
-        .toArray()
-      for (const operation of owned.sort((a, b) => a.localSequence - b.localSequence)) {
-        const delivery = await this.db.operationDelivery.get(operation.mutationId)
-        if (!delivery) throw new Error('Missing operation delivery state')
+      // Scan at most one bounded metadata page, never the immutable lifetime journal.
+      const candidates = (after: number) =>
+        this.db.operationDelivery
+          .where('[principalKey+locationId+dispatchable+localSequence]')
+          .between(
+            [ticket.principalKey, context.selectedLocationId, 1, after],
+            [ticket.principalKey, context.selectedLocationId, 1, Number.MAX_SAFE_INTEGER],
+            false,
+            true,
+          )
+          .limit(100)
+          .toArray()
+      let page = await candidates(control.dispatchScanAfter ?? 0)
+      if (!page.length && control.dispatchScanAfter) page = await candidates(0)
+      let scanAfter = 0
+      for (const delivery of page) {
+        scanAfter = delivery.localSequence
+        if (delivery.retryAt > this.dependencies.now()) continue
         if (delivery.state === 'inflight' && delivery.deviceGeneration !== ticket.deviceGeneration)
           delivery.state = 'awaiting_confirmation'
-        const aggregate = JSON.stringify([operation.entityType, operation.entityId])
-        const earlier = aggregates.get(aggregate)
-        if (delivery.state !== 'applied' && !earlier) aggregates.set(aggregate, delivery.state)
-        if (!replayable.has(delivery.state)) continue
+        if (!replayableStates.has(delivery.state)) continue
+        const operation = await this.db.operationJournal.get(delivery.mutationId)
+        if (
+          !operation ||
+          operation.principalKey !== ticket.principalKey ||
+          operation.locationId !== context.selectedLocationId ||
+          operation.entityType !== delivery.entityType ||
+          operation.entityId !== delivery.entityId ||
+          operation.localSequence !== delivery.localSequence
+        )
+          throw new Error('Invalid indexed operation delivery metadata')
+        const aggregatePrefix = [
+          ticket.principalKey,
+          context.selectedLocationId,
+          operation.entityType,
+          operation.entityId,
+          1,
+        ]
+        const first = await this.db.operationDelivery
+          .where('[principalKey+locationId+entityType+entityId+unresolved+localSequence]')
+          .between(
+            [...aggregatePrefix, 0],
+            [...aggregatePrefix, Number.MAX_SAFE_INTEGER],
+            true,
+            true,
+          )
+          .first()
+        const earlier = first && first.mutationId !== operation.mutationId ? first.state : undefined
         let held: OperationDelivery['state'] | null = null
         if (!operationIntact(operation)) held = 'held_integrity'
         else if (!context.capabilities.includes(entityCapability(operation.entityType, 'write')))
           held = 'held_authorization'
-        if (earlier && terminalDependency.has(earlier)) held = 'held_dependency'
+        if (earlier && heldDependencyStates.has(earlier)) held = 'held_dependency'
         let dependenciesPending = false
         for (const dependencyId of operation.dependsOn) {
           const parent = await this.db.operationJournal.get(dependencyId)
@@ -432,28 +460,22 @@ export class AccessKernel {
             parent.principalKey !== operation.principalKey ||
             parent.locationId !== operation.locationId ||
             !state ||
-            terminalDependency.has(state.state)
+            heldDependencyStates.has(state.state)
           )
             held = 'held_dependency'
           if (state?.state !== 'applied') dependenciesPending = true
         }
         if (held) {
-          aggregates.set(aggregate, held)
-          await this.db.operationDelivery.put({ ...delivery, state: held })
+          await this.putDelivery({ ...delivery, state: held })
           await this.event(operation.mutationId, 'held', attemptId, { reason: held })
           continue
         }
         // Earlier unresolved work blocks later work, including held work and backoff.
-        if (
-          dependenciesPending ||
-          earlier ||
-          delivery.retryAt > this.dependencies.now() ||
-          operations.length >= limit
-        ) {
-          await this.db.operationDelivery.put(delivery)
+        if (dependenciesPending || earlier || operations.length >= limit) {
+          await this.putDelivery(delivery)
           continue
         }
-        await this.db.operationDelivery.put({
+        await this.putDelivery({
           ...delivery,
           state: 'inflight',
           attemptId,
@@ -466,9 +488,13 @@ export class AccessKernel {
           envelopeCanonical: operation.envelopeCanonical,
         })
         operations.push(operation)
+        if (operations.length === limit) break
       }
-      if (operations.length)
-        await this.db.deviceControl.put({ ...control, dispatchAttemptId: attemptId })
+      await this.db.deviceControl.put({
+        ...control,
+        dispatchAttemptId: operations.length ? attemptId : null,
+        dispatchScanAfter: page.length < 100 && operations.length < limit ? 0 : scanAfter,
+      })
       return { ticket: structuredClone(ticket), attemptId, operations }
     })
   }
@@ -503,14 +529,11 @@ export class AccessKernel {
       ids.add(operation.mutationId)
       operations.push(operation)
     }
-    const all = await this.db.operationDelivery.where('state').equals('inflight').toArray()
-    if (
-      all.filter(
-        (row) =>
-          row.attemptId === batch.attemptId && row.deviceGeneration === ticket.deviceGeneration,
-      ).length !== operations.length
-    )
-      throw new Error('Invalid incomplete dispatch batch')
+    const count = await this.db.operationDelivery
+      .where('[attemptId+deviceGeneration+state]')
+      .equals([batch.attemptId, ticket.deviceGeneration, 'inflight'])
+      .count()
+    if (count !== operations.length) throw new Error('Invalid incomplete dispatch batch')
     return operations
   }
 
@@ -530,7 +553,7 @@ export class AccessKernel {
       } catch {
         for (const operation of operations) {
           const delivery = (await this.db.operationDelivery.get(operation.mutationId))!
-          await this.db.operationDelivery.put({ ...delivery, state: 'held_integrity' })
+          await this.putDelivery({ ...delivery, state: 'held_integrity' })
           await this.event(operation.mutationId, 'held', batch.attemptId, {
             reason: 'invalid_acknowledgement',
           })
@@ -540,7 +563,7 @@ export class AccessKernel {
       }
       for (const result of results) {
         const delivery = (await this.db.operationDelivery.get(result.mutation_id))!
-        await this.db.operationDelivery.put({
+        await this.putDelivery({
           ...delivery,
           state: result.status === 'applied' ? 'applied' : 'rejected',
           result,
@@ -571,7 +594,7 @@ export class AccessKernel {
             : plan.exhausted
               ? 'held_retry'
               : 'retryable'
-        await this.db.operationDelivery.put({
+        await this.putDelivery({
           ...delivery,
           state,
           retryAt: this.dependencies.now() + plan.delayMs,

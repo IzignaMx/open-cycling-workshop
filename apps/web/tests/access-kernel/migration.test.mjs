@@ -258,3 +258,9 @@ test('activation blocker: legacy v4 Dexie opens v5 and can still write sealed le
     await upgraded.delete()
   }
 })
+
+test('isolated database names must be primitive strings before native coercion', () => {
+  for (const name of [new String('ocwp'), { toString: () => 'ocwp' }, null, undefined, 7]) {
+    assert.throws(() => createKernelDatabase(name), /isolated|name/i)
+  }
+})

@@ -2,10 +2,19 @@ declare module 'dexie' {
   export interface Collection<T> {
     limit(value: number): Collection<T>
     toArray(): Promise<T[]>
+    first(): Promise<T | undefined>
+    reverse(): Collection<T>
+    count(): Promise<number>
   }
 
   export interface WhereClause<T> {
     equals(value: unknown): Collection<T>
+    between(
+      lower: unknown,
+      upper: unknown,
+      includeLower?: boolean,
+      includeUpper?: boolean,
+    ): Collection<T>
   }
 
   export interface Table<T, K = unknown> {

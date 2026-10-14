@@ -4,14 +4,16 @@ Status: `implemented_pending_evidence`; local tests pass, independent and
 hosted/browser qualification pending.
 Branch: `feat/isolated-offline-identity-kernel`.
 Base: PR #28 head `1ab3554d`, combining structural themes with the verified
-access-administration prerequisite. Exact implementation SHA/tree: pending.
+access-administration prerequisite. Initial implementation checkpoint: `0f35443ca33328aaedee156772df0b76f2f67e0f`,
+tree `6cb7164fdaec0a7cffab2ffefe4bef3ce2d7fda9`; reviewed corrections and final
+exact-head evidence are pending.
 
 ## Bounded delivery
 
 This increment adds an explicitly isolated Dexie v5 factory and identity-bound
 local kernel. The [ADR](../02-technical-architecture/2026-10-14-isolated-offline-identity-kernel.md)
 records the transactional boundary and future rollout requirements. The local
-modules are `apps/web/src/access-kernel/{types,context,operations,database,kernel}.ts`;
+modules are `apps/web/src/access-kernel/{types,context,operations,projection,database,kernel}.ts`;
 `createKernelDatabase(name)` and `AccessKernel` are the isolated entry points.
 
 Production `App`, the default `OcwpDatabase` singleton and the existing Golden
@@ -68,9 +70,9 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   regression passed after its correction. Migration rollback cases execute actual
   Dexie transactions in the emulator; they are not native browser proof.
 - Focused command: `node node_modules/typescript/bin/tsc -p apps/web/tsconfig.kernel-test.json --pretty false`
-  followed by `node --test apps/web/tests/access-kernel/*.test.mjs`: **49 passed**.
-- Integrated `node apps/web/tools/run-core-tests.mjs`: **147 passed** (98 existing
-  tests plus 49 kernel/context/migration regressions). The runner also typechecks
+  followed by `node --test apps/web/tests/access-kernel/*.test.mjs`: **58 passed**.
+- Integrated `node apps/web/tools/run-core-tests.mjs`: **156 passed** (98 existing
+  tests plus 58 kernel/context/migration regressions). The runner also typechecks
   the separate browser harness/config before running the Node tests.
 - Migration fixtures: raw native1 plus logical v1/native10, v2/native20,
   v3/native30 and v4/native40 all preserve exact rows on v5/native50. Abort and
@@ -93,7 +95,16 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   formatted. It is corrected; fresh final aggregate is pending. PostgreSQL URL,
   Docker, psql, managed Chromium navigation and destructive browser-E2E database
   configuration remain five explicit environment blockers.
-- Independent review and any corrections/retest: pending.
+- Independent review reproduced two projection-continuity bugs and an unbounded
+  lifetime-journal dispatch scan. Red→green fixes preserve explicitly labelled
+  applied-awaiting-authoritative-projection overlays, retain eligible same-author
+  old-epoch pending overlays, suppress rejected dependency chains and bound
+  dispatch to indexed 100-row metadata pages with durable revisit/wrap behavior.
+  Applied history no longer loads into dispatch, and authoritative-covered
+  immutable history is excluded from projection reads. The review also prompted
+  primitive-string database-name rejection and separate browser trace/report
+  artifacts so later production E2E cannot erase isolated-kernel evidence.
+  Final re-review is pending.
 - Exact final commit/tree and hosted run/artifact links: pending.
 - New server/PostgreSQL behavior: not implemented or qualified by this increment.
 - Actual installation migration, recovery, production activation and physical

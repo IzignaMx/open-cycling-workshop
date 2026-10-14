@@ -6,7 +6,8 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   workers: 1,
-  reporter: 'line',
+  outputDir: '.tmp-kernel-browser-results',
+  reporter: [['line'], ['json', { outputFile: '.tmp-kernel-browser-results/results.json' }]],
   use: { baseURL: 'http://127.0.0.1:5175', trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

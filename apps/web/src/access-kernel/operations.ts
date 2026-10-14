@@ -73,6 +73,8 @@ export function validateCommand(command: LocalCommand, context: VerifiedAccessCo
     throw new Error('Invalid command identity, scope or base version')
   }
   validateProjection(envelope.entity_type, envelope.entity_id, command.optimistic, context)
+  if (command.optimistic.version !== (envelope.base_version ?? 0) + 1)
+    throw new Error('Optimistic command version mismatch')
   if (
     new Set(command.dependsOn).size !== command.dependsOn.length ||
     command.dependsOn.some((id) => typeof id !== 'string' || !id || id === envelope.mutation_id)

@@ -50,6 +50,7 @@ export interface DeviceControl {
   localSequence: number
   observedAt: number
   dispatchAttemptId: string | null
+  dispatchScanAfter: number
 }
 export interface AccessContextRecord {
   partitionId: string
@@ -106,6 +107,15 @@ export type OperationState =
   | 'rejected'
   | 'applied'
 export interface OperationDelivery {
+  principalKey: string
+  locationId: string
+  entityType: EntityType
+  entityId: string
+  localSequence: number
+  dispatchable: 0 | 1
+  unresolved: 0 | 1
+  blocked: 0 | 1
+  resultVersion: number
   mutationId: string
   state: OperationState
   attemptId: string | null
