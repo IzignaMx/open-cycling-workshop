@@ -80,3 +80,38 @@ def test_writers_revalidate_stale_dependency_before_effects(kind, revocation) ->
     assert response.status_code == (403 if revocation == "grants" else 401)
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 1
+
+
+GRANT_SETS = [
+    frozenset(),
+    frozenset({"*"}),
+    frozenset({"customers.write"}),
+    frozenset({"customers.read", "customers.write"}),
+    frozenset({"*", "customers.write"}),
+]
+
+
+@pytest.mark.parametrize("token_grants", GRANT_SETS)
+@pytest.mark.parametrize("initial_account_grants", GRANT_SETS)
+@pytest.mark.parametrize("current_account_grants", GRANT_SETS)
+def test_waiting_writer_preserves_literal_intersection_matrix(
+    token_grants, initial_account_grants, current_account_grants
+) -> None:
+    from cycling_workshop.sync.writes import lock_writer
+
+    client = build_client()
+    # The ordinary HTTP dependency already narrowed token ∩ persisted account.
+    # An account change during the lock wait must not resolve wildcard semantics
+    # differently or restore grants removed by that first literal intersection.
+    incoming = Principal(
+        user_id="user-1",
+        organization_id="org-1",
+        location_id="loc-1",
+        capabilities=token_grants.intersection(initial_account_grants),
+    )
+    with client.app.state.session_factory() as session:
+        actor = session.get(UserRecord, "user-1")
+        actor.capabilities = sorted(current_account_grants)
+        session.commit()
+        refreshed = lock_writer(session, incoming)
+        assert refreshed.capabilities == incoming.capabilities.intersection(current_account_grants)

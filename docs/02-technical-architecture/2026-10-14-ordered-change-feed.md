@@ -20,7 +20,10 @@ cursor. Sequential/SQLite tests cannot establish this concurrency property.
    mutation receipt lookup, writes and cursor allocation, until caller commit or
    rollback. Use the same lock as account administration. At HTTP write entry,
    refresh persisted actor/session/grants after the lock wait, then authorize
-   the operation again. Preserve the token's effective restriction.
+   the operation again. Preserve the token's effective restriction and the HTTP
+   dependency's literal grant intersection: current persisted grants intersect
+   the already-narrowed incoming principal. Administration's wildcard expansion
+   is not adopted by operational writers.
 3. Centralize projection serialization and feed/outbox append without committing;
    direct REST and sync share it. Domain rows, order events, receipts, feed and
    outbox succeed or roll back in the same transaction. Per-mutation savepoints
@@ -57,7 +60,7 @@ Multi-user activation and physical/browser qualification remain gated.
   deactivation, grant contraction and location change.
 - Injected post-feed failures prove rollback for all three REST create paths and
   order transition, including domain rows/event/feed/outbox.
-- Final local Python suite: 780 passed, 70 skipped. Ten new PostgreSQL cases
+- Initial local Python suite: 780 passed, 70 skipped. Ten new PostgreSQL cases
   skipped because `OCWP_TEST_DATABASE_URL` is unset; no SQL concurrency red/green
   proof is claimed. They cover ordered commit/rollback, other organizations,
   refreshed grants/session/location/active state, mixed REST/sync, identical
@@ -75,3 +78,16 @@ Integrating PR29 must preserve its authenticated application context, identity
 validation and full receipt-envelope checks. This bounded branch deliberately
 starts at `675fe209fa0b038156ba0c57c44f520b2e2de376`; those separate changes are
 not claimed present here. No production deployment or client activation ran.
+
+### Literal authorization compatibility follow-up
+
+A 125-case token × initial-account × post-wait-account matrix exposed 24 failures
+when reusing administration's expanded wildcard grants unchanged. For example,
+incoming `{customers.write}` and newly persisted `{*}` retained write permission
+where HTTP literal intersection requires no grant. The incoming principal did
+bound semantic authority, but that was insufficient to preserve existing policy.
+`lock_writer` now keeps the audited organization/actor locking and session/scope
+checks while returning current actor literal grants intersected with the incoming
+principal. No administration policy changed. All 145 authority tests (125 matrix
+and 20 HTTP stale-dependency cases) pass after the fix. Final broad evidence is
+recorded in execution state; PostgreSQL remains pending.

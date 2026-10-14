@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 
 from sqlalchemy import select
@@ -34,8 +35,14 @@ def lock_writer(session: Session, principal: Principal) -> Principal:
     Administration already uses this same organization row, so revocation cannot
     commit between this refresh and the writer's transaction completion.
     """
-    _, effective = AdministrationService(session).lock_actor(principal)
-    return effective
+    actor, effective = AdministrationService(session).lock_actor(principal)
+    # Administration expands wildcard grants for its own policy. Operational
+    # HTTP authentication uses literal intersection; preserve that policy again
+    # after waiting, without restoring authority absent from the incoming snapshot.
+    return replace(
+        effective,
+        capabilities=frozenset(actor.capabilities).intersection(principal.capabilities),
+    )
 
 
 def append_change(

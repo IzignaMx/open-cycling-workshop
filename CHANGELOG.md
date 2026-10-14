@@ -6,7 +6,8 @@
   complete projection and outbox event as sync, atomically with domain changes.
 - Supported writers serialize per organization before domain reads and cursor
   allocation, sharing administration's lock; HTTP writes refresh actor/session
-  authority after waiting and enforce contracted grants/scope.
+  authority after waiting and enforce contracted grants/scope, preserving the
+  existing literal wildcard-intersection policy.
 - Existing numeric feed and REST contracts stay compatible. Historical REST-only
   records still need a baseline. This does not activate a multi-user offline
   cache, backfill inventory/quotes, or fence old server/browser writers.
