@@ -8,6 +8,7 @@ import {
 import {
   entityPage,
   operationPage,
+  issuePage,
   eventPage,
   type EntityPageOptions,
   type HistoryPageOptions,
@@ -868,6 +869,20 @@ export class AccessKernel {
       ticket,
       false,
       ({ context }) => entityPage(this.db, ticket, context, entityType, options),
+      current,
+    )
+  }
+  async listIssues(
+    ticket: ContextTicket,
+    options: HistoryPageOptions,
+    current: () => boolean = () => true,
+  ) {
+    ticket = structuredClone(ticket)
+    options = structuredClone(options)
+    return this.run(
+      ticket,
+      false,
+      ({ context }) => issuePage(this.db, ticket, context, options),
       current,
     )
   }

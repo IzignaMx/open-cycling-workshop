@@ -322,6 +322,26 @@ test('v5 to v6 adds pagination indices without attributing or rewriting any reta
     assert.deepEqual(await current.operationEvents.toArray(), [event])
     assert.ok(current.operationJournal.schema.idxByName['[principalKey+locationId+localSequence]'])
     assert.ok(current.operationEvents.schema.idxByName['[mutationId+sequence]'])
+    assert.ok(
+      current.operationDelivery.schema.idxByName[
+        '[principalKey+locationId+entityType+state+localSequence]'
+      ],
+    )
+    assert.ok(
+      current.operationDelivery.schema.idxByName[
+        '[principalKey+locationId+entityType+state+retryAt]'
+      ],
+    )
+    assert.deepEqual(
+      await current.operationDelivery
+        .where('[principalKey+locationId+entityType+state+localSequence]')
+        .between(
+          ['principal', 'location', 'customer', 'applied', 0],
+          ['principal', 'location', 'customer', 'applied', 99],
+        )
+        .toArray(),
+      [delivery],
+    )
     assert.equal(
       (await current.operationJournal.get('original')).authoredDatasetIncarnation,
       undefined,

@@ -83,6 +83,11 @@ isCurrent)` checks in one transaction: exact session binding and remembered
   Expiry/backward clock/takeover blanks an already-rendered view immediately;
   a stale timer cannot lock a replacement session. Do not wait for the next read
   or user click to hide expired cached data. Runtime and kernel use the same clock.
+- A disconnect invalidates captured push/delta continuations synchronously while
+  retaining the eligible offline session. Network-attempt generation is separate
+  from session ownership: late success or failure cannot ACK, defer or lock the
+  offline session. The original in-flight journal remains uncertain until genuine
+  reconnect verification rebinds ownership and retries the same immutable IDs.
 
 ## 2. Journal provenance, queries and local repositories
 
@@ -106,6 +111,19 @@ proposed `access-kernel/queries.ts` and `runtime/repositories.ts`; existing pure
   unique journal entity keys can supply bounded entity-ID enumeration; add an
   additive index only if needed and explicitly account for schema reservation.
   Recovery delivery/events queries are likewise author/read-grant bounded.
+- C uses logical IndexedDB v6 for author-scoped pagination; future quote stores
+  reserve v7. Its unpublished v6 schema also adds
+  `[principalKey+locationId+entityType+state+localSequence]` and
+  `[principalKey+locationId+entityType+state+retryAt]` delivery indices. The v5→v6
+  upgrade builds indices without rewriting journal, event, delivery or unknown
+  record fields. No earlier released schema declaration is changed.
+- Issue pages use a closed set of held/rejected/awaiting-confirmation states and
+  only currently readable entity types. At most 21 bounded metadata streams are
+  merged; only the requested page of immutable originals is materialized.
+  Separate bounded first-row probes establish global readable issue/pending
+  presence and the earliest retry deadline. An empty later page cannot claim
+  there are no issues, and an idle dispatch step cannot claim pending backoff work
+  is synchronized. The UI provides an explicit next-issues-page action.
 - Repositories accept a captured runtime ticket and derive all authority/scope.
   UI-supplied organization/user/location fields cannot grant authority. Strip old
   QueuedMutation delivery fields into an exact nine-field wire envelope.

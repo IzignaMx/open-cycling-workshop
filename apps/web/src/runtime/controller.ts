@@ -46,6 +46,9 @@ export interface WorkshopSnapshot {
   customerAfter: string | null
   orderAfter: string | null
   issueAfter: number | null
+  hasIssues: boolean
+  hasPending: boolean
+  nextRetryAt: number | null
   legacyPresent: boolean
   timelineMessage: string | null
   identityKey: string
@@ -66,6 +69,9 @@ const empty = (): WorkshopSnapshot => ({
   customerAfter: null,
   orderAfter: null,
   issueAfter: null,
+  hasIssues: false,
+  hasPending: false,
+  nextRetryAt: null,
   legacyPresent: false,
   timelineMessage: null,
   identityKey: '',
@@ -109,6 +115,7 @@ export class WorkshopController {
   #started = false
   #running = false
   #verifiedOnline = false
+  #networkSequence = 0
   #preferences: PreferenceRepository | null = null
   #observer: { unsubscribe(): void } | null = null
   readonly #now: () => number
@@ -161,6 +168,7 @@ export class WorkshopController {
   }
   private cancel() {
     this.#sequence++
+    this.#networkSequence++
     this.#context.invalidate()
     this.#baseline.invalidate()
     this.#incremental.invalidate()
@@ -590,8 +598,15 @@ export class WorkshopController {
   }
   async offline() {
     this.#verifiedOnline = false
+    this.#networkSequence++
+    this.#push.invalidate()
+    this.#incremental.invalidate()
+    this.#running = false
+    if (this.#timer !== null) clearTimeout(this.#timer)
+    this.#timer = null
     const source = this.#active
     if (!source) return
+    this.publish({ sync: 'offline' })
     try {
       await this.kernel.continueOffline(source.ticket)
       if (this.#active === source) this.publish({ sync: 'offline' })
@@ -677,6 +692,12 @@ export class WorkshopController {
             errorCode: row.delivery!.result?.error_code ?? null,
           })),
         issueAfter: issues.nextAfterSequence,
+        hasIssues: issues.hasIssues,
+        hasPending: issues.hasPending,
+        nextRetryAt: issues.nextRetryAt,
+        ...(issues.hasIssues && this.#snapshot.sync === 'synced'
+          ? { sync: 'conflict' as const }
+          : {}),
       })
     } catch {
       if (current()) this.held('storage_or_fence_failure')
@@ -702,6 +723,10 @@ export class WorkshopController {
           errorCode: row.delivery!.result?.error_code ?? null,
         })),
       issueAfter: page.nextAfterSequence,
+      hasIssues: page.hasIssues,
+      hasPending: page.hasPending,
+      nextRetryAt: page.nextRetryAt,
+      ...(page.hasIssues && this.#snapshot.sync === 'synced' ? { sync: 'conflict' as const } : {}),
     })
   }
   async createCustomer(input: {
@@ -784,10 +809,16 @@ export class WorkshopController {
     }
     this.#running = true
     this.publish({ sync: 'syncing' })
-    const current = () => this.#active === source && source.isCurrent(source.identity)
+    const networkSequence = this.#networkSequence
+    const current = () =>
+      this.#verifiedOnline &&
+      networkSequence === this.#networkSequence &&
+      this.#active === source &&
+      source.isCurrent(source.identity)
+    const networkSession = { ...source, isCurrent: current }
     try {
       const push = source.context.capabilities.includes('sync.push')
-        ? await this.#push.step(source)
+        ? await this.#push.step(networkSession)
         : { state: 'IDLE' }
       if (!current()) return
       if (push.state === 'HELD') {
@@ -796,7 +827,7 @@ export class WorkshopController {
         )
         return
       }
-      const delta = await this.#incremental.step(source)
+      const delta = await this.#incremental.step(networkSession)
       if (!current()) return
       if (delta.state === 'HELD' || delta.state === 'BASELINE_REQUIRED') {
         this.held(delta.reason ?? 'verification_required')
@@ -812,7 +843,15 @@ export class WorkshopController {
         this.publish({ sync: 'error' })
         this.schedule(
           () => this.sync(),
-          delta.retryAt === undefined ? 1000 : delta.retryAt - this.#now(),
+          Math.max(
+            1000,
+            Math.min(
+              ...[delta.retryAt, this.#snapshot.nextRetryAt]
+                .filter((value): value is number => typeof value === 'number')
+                .map((value) => value - this.#now()),
+              30000,
+            ),
+          ),
         )
         return
       }
@@ -820,11 +859,25 @@ export class WorkshopController {
         sync:
           delta.state === 'OFFLINE'
             ? 'offline'
-            : this.#snapshot.issues.length
+            : this.#snapshot.hasIssues
               ? 'conflict'
-              : 'synced',
+              : this.#snapshot.hasPending ||
+                  ['customers', 'bicycles', 'orders'].some(
+                    (entity) =>
+                      source.context.capabilities.includes(`${entity}.write`) &&
+                      !source.context.capabilities.includes(`${entity}.read`),
+                  )
+                ? this.#snapshot.nextRetryAt === null
+                  ? 'local'
+                  : 'error'
+                : 'synced',
       })
-      this.schedule(() => this.sync(), 30000)
+      this.schedule(
+        () => this.sync(),
+        this.#snapshot.nextRetryAt === null
+          ? 30000
+          : Math.max(1000, Math.min(30000, this.#snapshot.nextRetryAt - this.#now())),
+      )
     } catch {
       if (current()) this.held('storage_or_fence_failure')
     } finally {

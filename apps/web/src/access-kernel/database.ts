@@ -64,7 +64,7 @@ export class KernelDatabase extends OcwpDatabase {
       operationJournal:
         'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId], [principalKey+locationId+localSequence], [principalKey+locationId+entityType+entityId+localSequence]',
       operationDelivery:
-        'mutationId, state, [principalKey+locationId+localSequence], [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+        'mutationId, state, [principalKey+locationId+entityType+state+localSequence], [principalKey+locationId+entityType+state+retryAt], [principalKey+locationId+localSequence], [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
       operationEvents: '++sequence, mutationId, [mutationId+sequence]',
     })
     this.on('populate', (transaction) =>

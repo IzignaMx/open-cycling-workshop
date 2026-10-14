@@ -257,11 +257,15 @@ export function App({ runtime }: { runtime: WorkshopController }) {
           </section>
         </section>
         <section id="workshop-issues" aria-label="Incidencias de sincronización">
-          <ConflictCenter issues={state.issues} onRefresh={() => runtime.loadIssues()} />
+          <ConflictCenter
+            issues={state.issues}
+            hasIssues={state.hasIssues}
+            onRefresh={() => runtime.loadIssues()}
+          />
           {state.issueAfter !== null ? (
-            <p>
-              Se muestra una página de historial local. Puede haber más operaciones conservadas.
-            </p>
+            <Button type="button" onClick={() => void runtime.loadIssues(state.issueAfter!)}>
+              Más incidencias
+            </Button>
           ) : null}
         </section>
         <section className="workshop-panel session-actions" aria-label="Sesión y sincronización">

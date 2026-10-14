@@ -170,7 +170,7 @@ export class WorkshopRepositories {
   }
   async issues(source: BaselineSession, afterSequence?: number) {
     const c = this.capture(source)
-    return this.kernel.listOperations(
+    return this.kernel.listIssues(
       c.ticket,
       { limit: 50, ...(afterSequence === undefined ? {} : { afterSequence }) },
       c.current,

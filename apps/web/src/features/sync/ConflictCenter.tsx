@@ -3,6 +3,7 @@ import { buildConflictCenterItems } from './conflict-center-model.js'
 
 export interface ConflictCenterProps {
   conflicts?: readonly ConflictRecord[]
+  hasIssues?: boolean
   issues?: readonly {
     mutationId: string
     entityId: string
@@ -14,7 +15,12 @@ export interface ConflictCenterProps {
   onRefresh(): void | Promise<void>
 }
 
-export function ConflictCenter({ conflicts = [], issues = [], onRefresh }: ConflictCenterProps) {
+export function ConflictCenter({
+  conflicts = [],
+  issues = [],
+  hasIssues = false,
+  onRefresh,
+}: ConflictCenterProps) {
   const items = buildConflictCenterItems(conflicts)
 
   return (
@@ -68,7 +74,9 @@ export function ConflictCenter({ conflicts = [], issues = [], onRefresh }: Confl
       ) : null}
       {items.length === 0 && issues.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-[var(--ocwp-color-border)] p-4 text-sm text-[var(--ocwp-color-muted)]">
-          No hay incidencias visibles para tus permisos actuales.
+          {hasIssues
+            ? 'No hay incidencias en esta página. Usa Actualizar para volver al inicio.'
+            : 'No hay incidencias visibles para tus permisos actuales.'}
         </p>
       ) : (
         <ul className="mt-4 grid gap-3" aria-live="polite">
