@@ -483,6 +483,248 @@
         "title": "BicycleResponse",
         "type": "object"
       },
+      "BrandingLogoResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "byte_count": {
+            "maximum": 262144.0,
+            "minimum": 1.0,
+            "title": "Byte Count",
+            "type": "integer"
+          },
+          "height": {
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "mime_type": {
+            "const": "image/png",
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "png_base64": {
+            "anyOf": [
+              {
+                "maxLength": 349528,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Png Base64"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "width": {
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sha256",
+          "byte_count",
+          "width",
+          "height",
+          "mime_type",
+          "png_base64"
+        ],
+        "title": "BrandingLogoResponse",
+        "type": "object"
+      },
+      "BrandingProfileResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_incarnation": {
+            "format": "uuid",
+            "title": "Dataset Incarnation",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Location Id",
+            "type": "string"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrandingLogoResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "logo_diagnostic": {
+            "anyOf": [
+              {
+                "const": "asset_unavailable",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Diagnostic"
+          },
+          "logo_state": {
+            "enum": [
+              "none",
+              "available",
+              "unavailable"
+            ],
+            "title": "Logo State",
+            "type": "string"
+          },
+          "organization_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "palette_id": {
+            "enum": [
+              "bosque",
+              "arcilla",
+              "tinta",
+              "cobalto",
+              "petroleo",
+              "indigo",
+              "malva",
+              "frambuesa",
+              "jade",
+              "lima",
+              "hielo",
+              "lavanda"
+            ],
+            "title": "Palette Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "version": {
+            "minimum": 0.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "schema_version",
+          "organization_id",
+          "location_id",
+          "dataset_incarnation",
+          "version",
+          "display_name",
+          "palette_id",
+          "logo_state",
+          "logo",
+          "logo_diagnostic",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "BrandingProfileResponse",
+        "type": "object"
+      },
+      "BrandingPutRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "logo_png_base64": {
+            "anyOf": [
+              {
+                "maxLength": 349528,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Png Base64"
+          },
+          "palette_id": {
+            "enum": [
+              "bosque",
+              "arcilla",
+              "tinta",
+              "cobalto",
+              "petroleo",
+              "indigo",
+              "malva",
+              "frambuesa",
+              "jade",
+              "lima",
+              "hielo",
+              "lavanda"
+            ],
+            "title": "Palette Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "display_name",
+          "palette_id",
+          "logo_png_base64"
+        ],
+        "title": "BrandingPutRequest",
+        "type": "object"
+      },
       "ChangeItemResponse": {
         "properties": {
           "cursor": {
@@ -684,7 +926,7 @@
                 "items": {
                   "type": "string"
                 },
-                "maxItems": 17,
+                "maxItems": 19,
                 "type": "array"
               },
               {
@@ -1702,7 +1944,7 @@
                 "items": {
                   "type": "string"
                 },
-                "maxItems": 17,
+                "maxItems": 19,
                 "type": "array"
               },
               {
@@ -1946,6 +2188,47 @@
           "capabilities"
         ],
         "title": "RoleCatalogResponse",
+        "type": "object"
+      },
+      "RoleCatalogV2Response": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "catalog_version": {
+            "const": 2,
+            "title": "Catalog Version",
+            "type": "integer"
+          },
+          "legacy_wildcard_capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 17,
+            "minItems": 17,
+            "title": "Legacy Wildcard Capabilities",
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleResponse"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles",
+          "capabilities",
+          "catalog_version",
+          "legacy_wildcard_capabilities"
+        ],
+        "title": "RoleCatalogV2Response",
         "type": "object"
       },
       "RoleResponse": {
@@ -4265,6 +4548,168 @@
         ]
       }
     },
+    "/api/v1/locations/{location_id}/branding": {
+      "get": {
+        "operationId": "read_branding_api_v1_locations__location_id__branding_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "pattern": "^[^\\x00]*$",
+              "title": "Location Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandingProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Branding",
+        "tags": [
+          "branding"
+        ]
+      },
+      "put": {
+        "operationId": "put_branding_api_v1_locations__location_id__branding_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "pattern": "^[^\\x00]*$",
+              "title": "Location Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandingPutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandingProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Branding",
+        "tags": [
+          "branding"
+        ]
+      }
+    },
     "/api/v1/service-orders": {
       "post": {
         "operationId": "create_service_order_api_v1_service_orders_post",
@@ -5016,6 +5461,55 @@
         "summary": "Push Mutations",
         "tags": [
           "sync"
+        ]
+      }
+    },
+    "/api/v2/admin/roles": {
+      "get": {
+        "operationId": "roles_v2_api_v2_admin_roles_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleCatalogV2Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Roles V2",
+        "tags": [
+          "administration"
         ]
       }
     },
