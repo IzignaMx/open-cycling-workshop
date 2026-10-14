@@ -338,3 +338,26 @@ Add durable evidence below instead of editing completed checklist history away.
       and artifact IDs are recorded in the increment specification. The local
       Chromium policy block was respected. Physical-device qualification and
       TC-SYNC-003 server-restart evidence remain separate, unresolved gates.
+
+## Inventory API · Migration 0007 operator boundary
+
+- If migration 0007 reports duplicate reservation finalizations, stop inventory
+  writes, take a verified backup, and review the conflicting RELEASE/CONSUME
+  history before retrying. The migration deliberately blocks instead of
+  deleting or rewriting movements. Do not bypass the guard by removing rows.
+- Legacy standalone CONSUME entries are not automatically repaired: an existing
+  physical-issue ADJUST may be unlinked. Reconciliation needs operator evidence
+  and a reviewed history-preserving procedure.
+- See `docs/02-technical-architecture/2026-10-13-inventory-command-atomicity.md`.
+  This is a conditional operational boundary, not evidence that deployed data
+  contains duplicates. Existing physical-device qualification remains open.
+
+## 2026-10-14 · Sync chaos setup regression
+
+- [ ] Verify the corrected large-batch setup and deterministic regression on
+      hosted CI. Draft PR #24 red evidence is established: CI run 38541165450,
+      job 115775986709, diagnostic head 35118af. The original readiness helper
+      resolves while a real create remains queued. The fix preserves the exact
+      three-operation conflict scenario and adds five retry-free repetitions of
+      each affected journey. Green evidence remains pending; see the dedicated
+      sync-chaos setup document for the full incident and changelog.

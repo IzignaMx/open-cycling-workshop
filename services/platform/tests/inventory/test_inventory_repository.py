@@ -150,3 +150,34 @@ def test_repository_rejects_cross_tenant_product_reads() -> None:
         assert found.sku == "SKU-PRODUCT-1"
     finally:
         session.close()
+
+
+def test_finalized_reservation_lookup_uses_reference_ids_for_both_finalizers() -> None:
+    session = _build_session()
+    try:
+        _seed(session)
+        repository = SqlAlchemyInventoryRepository(session)
+        repository.add_product(_product("product-1"))
+        for kind in ("RELEASE", "CONSUME"):
+            reservation_id = f"reservation-{kind}"
+            repository.record(
+                _movement(reservation_id, "product-1", kind="RESERVE", quantity=2, order_id="o")
+            )
+            repository.record(
+                _movement(
+                    f"distinct-finalizer-{kind}",
+                    "product-1",
+                    kind=kind,
+                    quantity=2,
+                    order_id="o",
+                    reference=reservation_id,
+                )
+            )
+        session.commit()
+        for kind in ("RELEASE", "CONSUME"):
+            reservation_id = f"reservation-{kind}"
+            assert repository.released_reservation_ids(
+                organization_id="org-1", reference_movement_id=reservation_id
+            ) == [reservation_id]
+    finally:
+        session.close()

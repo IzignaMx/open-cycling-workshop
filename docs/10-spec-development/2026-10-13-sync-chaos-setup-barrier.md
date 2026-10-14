@@ -30,14 +30,57 @@ state. A readiness probe must reject that state. After releasing completion,
 the regression withholds the real server response and must reject readiness
 again until the create acknowledgement drains the queue.
 
-The initial diagnostic commit intentionally retains the old readiness helper
-so hosted CI can establish red evidence. Local Chromium navigation remains
+The initial diagnostic commit retained the old readiness helper so hosted CI
+could establish red evidence, now confirmed below. Local Chromium navigation remains
 blocked by managed policy; no bypass is attempted. PostgreSQL is unavailable
 locally, so runtime proof must come from hosted CI. Test discovery and static
 checks alone are not runtime verification.
 
+## Hosted red evidence · 2026-10-14
+
+- Draft PR #24 diagnostic head: `35118af37378bbf2b86c3d071b715ddd67b609d8`.
+- CI run `38541165450`, job `115775986709`; tested synthetic merge
+  `3a9373383e3658cf44a411a0555dd40229d18048`.
+- The regression failed at its first readiness probe: the promise **resolved**
+  with a customer ID instead of rejecting while the baseline create remained
+  pending. Both its initial attempt and retry failed identically; the other
+  nine browser journeys passed. The qualification repeat reproduced the failure.
+- Head and tested-merge trees both equal
+  `15f5b788c4c65b1c5a1084bc11f5beb19a8df00f`.
+- Qualification artifact: `11882193139`, overall failed as expected. This is
+  red regression evidence, not successful release qualification.
+
+## Corrective setup
+
+The common readiness helper now requires local-save completion, the unique
+baseline customer ID, an empty durable queue, the synchronized UI state, and
+server confirmation of that same customer at version 1. The negative regression
+probes require the specific local-save and queue-acknowledgement failures;
+unrelated exceptions cannot satisfy them. The withheld response is a real
+successful create ACK, verified as applied at version 1 before release.
+
+The out-of-band update must return the same mutation/customer IDs with applied
+status and entity version 2 before queuing the stale local update. The exact
+three-mutation assertion, queue drain, visible conflict and both independent
+valid creates remain required. Unique per-run names avoid reusing prior rows or
+feed entries during retries/repetitions.
+
+CI additionally repeats both affected journeys five times each with one worker
+and zero retries. This is bounded repeat evidence, not a claim that all possible
+browser schedules are covered. No assertion or timeout is weakened.
+
 ## Changelog and status
 
-- Added deterministic regression for stale sync text and withheld baseline ACK.
-- Extracted the existing readiness check without fixing it, for hosted red proof.
-- Status: investigation in progress; hosted red/green evidence pending.
+- Added a deterministic regression for stale sync text and withheld baseline ACK.
+- Replaced label-only readiness with durable local/server setup barriers.
+- Verified the remote update result before constructing the stale conflict.
+- Added unique scenario names and a retry-free CI repeat gate.
+- Initial independent review validated the transaction hook and suggested unique
+  names and specific rejection diagnostics; both suggestions are incorporated.
+- Status: implemented pending hosted green evidence; production code unchanged.
+- Local corrected-tree qualification after integrating inventory main `b1d3a5d`:
+  21 checks passed, zero failed, five environment blockers; Python 370 passed /
+  eight PostgreSQL skips, frontend core 72 passed, API client one passed, static
+  checks/contracts/typechecks/PWA build passed. Focused strict TypeScript compile
+  of the E2E spec passed; both normal and repeat-gate test discovery passed.
+  Discovery is not execution. Hosted corrected-tree browser proof is pending.
