@@ -108,8 +108,14 @@ def test_real_database_only_restore_drill(
     try:
         with source.begin() as connection:
             connection.execute(
-                text("INSERT INTO organizations (id,name) VALUES (:id,:name)"),
-                {"id": "synthetic-org", "name": "Restore drill workshop"},
+                text(
+                    "INSERT INTO organizations (id,name,dataset_incarnation) VALUES (:id,:name,:incarnation)"
+                ),
+                {
+                    "id": "synthetic-org",
+                    "name": "Restore drill workshop",
+                    "incarnation": "00000000-0000-4000-8000-000000000001",
+                },
             )
             # Identifier quoting is deliberate: count checks must not treat : as a bind.
             connection.exec_driver_sql('CREATE TABLE public.":odd""table" (value text)')
@@ -124,6 +130,12 @@ def test_real_database_only_restore_drill(
         with target.connect() as connection:
             assert connection.execute(text("SELECT name FROM organizations")).scalar_one() == (
                 "Restore drill workshop"
+            )
+            assert (
+                connection.execute(
+                    text("SELECT dataset_incarnation FROM organizations")
+                ).scalar_one()
+                == "00000000-0000-4000-8000-000000000001"
             )
         target.dispose()
         with pytest.raises(BackupError, match="not empty"):
