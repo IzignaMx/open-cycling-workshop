@@ -36,6 +36,7 @@ function id(value: unknown): value is string {
 }
 export interface CapturedRead {
   token: string
+  signal?: AbortSignal
   isCurrent(): boolean
 }
 export interface WorkshopLocation {
@@ -63,7 +64,9 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
     check: () => boolean,
   ): Promise<unknown> {
     const token = source?.token,
-      current = source?.isCurrent ?? check,
+      signal = source?.signal,
+      capturedCurrent = source?.isCurrent ?? check,
+      current = () => !signal?.aborted && capturedCurrent(),
       url = `${options.apiRealm}${path}`
     if (!current()) fail('stale_request')
     const headers: Record<string, string> = { Accept: 'application/json' }
@@ -78,6 +81,7 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
     try {
       response = await options.fetch(url, {
         method: serialized === undefined ? 'GET' : 'POST',
+        ...(signal ? { signal } : {}),
         headers,
         ...(serialized === undefined ? {} : { body: serialized }),
         credentials: 'omit',
@@ -89,7 +93,7 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       fail(current() ? 'network_error' : 'stale_request')
     }
     if (!current()) {
-      await cancelResponse(response)
+      void cancelResponse(response)
       fail('stale_request')
     }
     if (
@@ -109,19 +113,19 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
         ?.split(',')
         .some((v) => v.trim().toLowerCase() === 'no-store')
     ) {
-      await cancelResponse(response)
+      void cancelResponse(response)
       fail()
     }
     // An already received refusal cannot become offline authority if its body fails.
     if (!response.ok) {
-      await cancelResponse(response)
+      void cancelResponse(response)
       if (response.status === 401) fail('invalid_session')
       if (response.status === 403) fail('capability_denied')
       fail()
     }
     let value: unknown
     try {
-      value = await readBoundedJson(response, limit)
+      value = await readBoundedJson(response, limit, signal)
     } catch (error) {
       fail(
         error instanceof BoundedHttpError && error.code === 'network_error'

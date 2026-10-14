@@ -180,3 +180,101 @@ test('received refusal statuses cannot become a network failure through an inter
     )
   }
 })
+
+test('probe captures AbortSignal and refuses an already aborted request before bearer dispatch', async () => {
+  const abort = new AbortController()
+  let calls = 0
+  const transport = createRuntimeTransport({
+    apiRealm: realm,
+    fetch: async (url, init) => {
+      calls++
+      assert.equal(init.signal, abort.signal)
+      abort.abort()
+      return response(url, {})
+    },
+  })
+  const source = { ...auth, signal: abort.signal }
+  await assert.rejects(transport.me(source), (e) => e.code === 'stale_request')
+  await assert.rejects(transport.me(source), (e) => e.code === 'stale_request')
+  assert.equal(calls, 1)
+})
+for (const mode of ['401', '403', '409', 'headers', 'oversized'])
+  test(
+    `probe preserves terminal ${mode} even when body cancellation never settles`,
+    { timeout: 1000 },
+    async () => {
+      let canceled = 0
+      const transport = createRuntimeTransport({
+        apiRealm: realm,
+        fetch: async (url) => {
+          const r = new Response(
+            new ReadableStream({
+              start(controller) {
+                if (mode === 'oversized') controller.enqueue(new Uint8Array(20000))
+              },
+              cancel() {
+                canceled++
+                return new Promise(() => {})
+              },
+            }),
+            {
+              status: /^\d+$/.test(mode) ? Number(mode) : 200,
+              headers: {
+                'content-type': mode === 'headers' ? 'text/plain' : 'application/json',
+                'cache-control': 'no-store',
+              },
+            },
+          )
+          Object.defineProperty(r, 'url', { value: url })
+          return r
+        },
+      })
+      await assert.rejects(
+        transport.me({ ...auth, signal: new AbortController().signal }),
+        (e) =>
+          e.code ===
+          (mode === '401'
+            ? 'invalid_session'
+            : mode === '403'
+              ? 'capability_denied'
+              : 'invalid_response'),
+      )
+      assert.equal(canceled, 1)
+    },
+  )
+test(
+  'probe deadline aborts body consumption without turning it into parsed authority',
+  { timeout: 1000 },
+  async () => {
+    const abort = new AbortController()
+    let reading,
+      canceled = 0
+    const started = new Promise((resolve) => {
+      reading = resolve
+    })
+    const transport = createRuntimeTransport({
+      apiRealm: realm,
+      fetch: async (url) => {
+        const r = new Response(
+          new ReadableStream({
+            pull() {
+              reading()
+            },
+            cancel() {
+              canceled++
+              return new Promise(() => {})
+            },
+          }),
+          { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
+        )
+        Object.defineProperty(r, 'url', { value: url })
+        return r
+      },
+    })
+    const promise = transport.me({ ...auth, signal: abort.signal })
+    await started
+    abort.abort()
+    await assert.rejects(promise, (e) => ['network_error', 'stale_request'].includes(e.code))
+    assert.equal(canceled, 1)
+  },
+)
