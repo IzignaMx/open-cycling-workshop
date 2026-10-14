@@ -356,3 +356,19 @@ sync_pull_scope_integrity_2026_10_13:
   hosted_security_and_dco: passed
   independent_review: no_code_defects_traceability_corrections_applied
   release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
+
+local_workshop_mvp_2026_10_14:
+  status: implemented_pending_hosted_qualification
+  baseline: b1df504bfd7d7050ee915df0bd43c55d19811a3f
+  plan: docs/10-spec-development/2026-10-14-local-workshop-mvp.md
+  adr: docs/02-technical-architecture/2026-10-14-portable-local-runtime.md
+  scope: additive_local_compose_and_database_recovery
+  pending_independent_prs: [22, 23]
+  next_slice: audited_user_role_location_administration
+  hardware: raspberry_model_ram_storage_os_unknown
+  local_python_tests: 241_passed_2_live_postgresql_skips
+  frontend_core_tests: 74_passed
+  local_qualification: 21_passed_0_failed_5_environment_blockers
+  independent_review: complete_no_unresolved_findings_after_safety_fixes
+  qualification: pending_combined_final_tree_and_hosted_runtime
+  release: development_versions_retained_no_production_readiness_claim
