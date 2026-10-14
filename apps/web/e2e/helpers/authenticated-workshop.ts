@@ -340,7 +340,7 @@ export async function holdJournalCompletion(
     }
     Object.defineProperty(prototype, 'oncomplete', {
       configurable: true,
-      get: descriptor.get,
+      get: descriptor.get!,
       set(callback: (this: IDBTransaction, event: Event) => void) {
         descriptor.set!.call(this, function (this: IDBTransaction, event: Event) {
           if (matchingTransactions.has(this)) {

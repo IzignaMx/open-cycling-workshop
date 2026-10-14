@@ -87,6 +87,15 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
       - name: Run Python tests
         run: uv run pytest -q
+      - name: Prove asset-aware branding recovery with matching PostgreSQL 18 clients
+        run: bash scripts/ci/run_branding_recovery.sh
+      - name: Upload safe branding recovery proof only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branding-recovery-${{ github.sha }}
+          path: artifacts/branding-recovery/**/branding-recovery-evidence.json
+          if-no-files-found: error
       - name: Run real HTTP runtime smoke
         run: uv run python scripts/ci/runtime_http_smoke.py
       - name: Run frontend core tests
@@ -95,6 +104,8 @@ jobs:
         run: pnpm --filter @ocwp/api-client test:core
       - name: Run frontend real typecheck
         run: pnpm --filter @ocwp/web typecheck
+      - name: Typecheck branding browser qualification
+        run: pnpm --filter @ocwp/web exec tsc -p tsconfig.e2e-branding.json
       - name: Build PWA
         run: pnpm --filter @ocwp/web build
       - name: Reproduce pinned old App and service worker

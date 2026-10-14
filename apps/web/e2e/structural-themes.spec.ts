@@ -96,7 +96,7 @@ for (const theme of THEMES) {
     await seedWorkshop(page, request)
     if (theme.id === 'banco') await attachScreenshot(page, info, 'banco-default-desktop')
     const before = await operationalSnapshot(page)
-    expect(before.version).toBe(60)
+    expect(before.version).toBe(70)
     expect(before.journal).toHaveLength(1)
     expect(before.records.filter((row) => row.entityType === 'bicycle')).toHaveLength(1)
     await page.locator('.workshop-identity').focus()
