@@ -488,13 +488,29 @@ test('administration preserves mounted drafts across all themes with narrow refl
   const box = await create.boundingBox()
   expect(box!.width).toBeGreaterThanOrEqual(44)
   expect(box!.height).toBeGreaterThanOrEqual(44)
-  // CSS zoom is explicit reflow evidence, not a claim of physical browser/device zoom.
+  // Separate the already-asserted true 320px unzoomed viewport from CSS
+  // enlargement: 640px / 200% = 320 effective CSS pixels. This does not
+  // claim support at 160 CSS pixels or physical browser/device zoom.
+  await page.setViewportSize({ width: 640, height: 1000 })
   await page.evaluate(() => {
     document.documentElement.style.zoom = '2'
   })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  )
+  const zoomGeometry = await page.evaluate(() => {
+    const zoom = Number(getComputedStyle(document.documentElement).zoom)
+    return {
+      innerWidth: window.innerWidth,
+      zoom,
+      effectiveCssWidth: window.innerWidth / zoom,
+      noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+    }
+  })
+  expect(zoomGeometry).toEqual({
+    innerWidth: 640,
+    zoom: 2,
+    effectiveCssWidth: 320,
+    noHorizontalOverflow: true,
+  })
+  await expect(create).toBeFocused()
   const zoomPath = info.outputPath('administration-forced-colors-200-percent.png')
   await page.screenshot({ path: zoomPath, fullPage: true })
   await info.attach('administration-forced-colors-200-percent', {
@@ -503,6 +519,15 @@ test('administration preserves mounted drafts across all themes with narrow refl
   })
   await page.evaluate(() => {
     document.documentElement.style.zoom = '1'
+  })
+  await page.setViewportSize({ width: 320, height: 1000 })
+  expect(
+    await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      zoom: Number(getComputedStyle(document.documentElement).zoom),
+    })),
+  ).toEqual({ innerWidth: 320, zoom: 1 })
+  await page.evaluate(() => {
     // Synthetic label expansion is layout evidence, not a translation claim.
     for (const element of document.querySelectorAll(
       '.administration-panel h1, .administration-panel h2, .administration-panel button, .administration-panel label',

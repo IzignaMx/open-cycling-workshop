@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
+import { hasCustomerDraft } from '../draft-state.js'
 import { Button } from '@ocwp/ui'
 
 export interface CustomerQuickCreateProps {
@@ -39,7 +40,12 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4" aria-describedby="customer-create-status">
+    <form
+      onSubmit={submit}
+      className="grid gap-4"
+      aria-describedby="customer-create-status"
+      data-dirty={busy || hasCustomerDraft({ displayName, email, phone })}
+    >
       <label className="grid gap-1">
         <span className="font-medium">Nombre</span>
         <input

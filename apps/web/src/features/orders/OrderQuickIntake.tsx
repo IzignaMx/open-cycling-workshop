@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
+import { hasOrderDraft } from '../draft-state.js'
 import { Button } from '@ocwp/ui'
 import { normalizeOrderIntake } from './order-model.js'
 
@@ -18,6 +19,7 @@ export interface OrderQuickIntakeProps {
 
 export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeProps) {
   const [customerId, setCustomerId] = useState('')
+  const [retainedSelection, setRetainedSelection] = useState({ customerId: '', priority: 'normal' })
   const [reportedProblem, setReportedProblem] = useState('')
   const [intakeCondition, setIntakeCondition] = useState('')
   const [accessories, setAccessories] = useState('')
@@ -43,6 +45,9 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         model: withBicycle ? model : null,
       })
       await onCreateOrder(normalized)
+      // Customer and priority intentionally remain selected after a successful local save.
+      // They become clean defaults only here; a refused/failed save keeps the draft dirty.
+      setRetainedSelection({ customerId, priority })
       setReportedProblem('')
       setIntakeCondition('')
       setAccessories('')
@@ -61,7 +66,27 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
     'min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3'
 
   return (
-    <form onSubmit={submit} className="grid gap-4" aria-describedby="order-intake-status">
+    <form
+      onSubmit={submit}
+      className="grid gap-4"
+      aria-describedby="order-intake-status"
+      data-dirty={
+        busy ||
+        hasOrderDraft(
+          {
+            customerId,
+            priority,
+            reportedProblem,
+            intakeCondition,
+            accessories,
+            withBicycle,
+            brand,
+            model,
+          },
+          retainedSelection,
+        )
+      }
+    >
       <label className="grid gap-1">
         <span className="font-medium">Cliente</span>
         <select

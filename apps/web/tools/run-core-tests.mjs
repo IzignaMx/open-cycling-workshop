@@ -65,6 +65,7 @@ try {
     'tests/administration/transport.test.mjs',
     'tests/administration/controller.test.mjs',
     'tests/administration/panels.test.mjs',
+    'tests/administration/draft-state.test.mjs',
     'tests/runtime/issues.test.mjs',
     'tests/runtime/transport.test.mjs',
     'tests/runtime/reachability-probe.test.mjs',

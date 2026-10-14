@@ -238,7 +238,8 @@ export function createAdministrationTransport(options: { apiRealm: string; fetch
       const work = (async () => {
         let r: Response
         try {
-          r = await options.fetch(url, {
+          // Native browser fetch requires the global receiver, not this options object.
+          r = await options.fetch.call(globalThis, url, {
             method,
             headers,
             ...(serialized === undefined ? {} : { body: serialized }),

@@ -363,3 +363,23 @@ for (const status of [401, 403]) {
     )
   })
 }
+test('native fetch-compatible receiver is preserved for every connected administration request', async () => {
+  const calls = []
+  const transport = createAdministrationTransport({
+    apiRealm,
+    fetch: function (url, init) {
+      // Browsers reject an options object as the receiver of unbound window.fetch.
+      if (this !== globalThis) throw new TypeError('Illegal invocation')
+      calls.push(url)
+      const value = url.endsWith('/admin/roles')
+        ? { capabilities: ['users.read'], roles: [{ name: 'TechnicalAdmin', capabilities: [] }] }
+        : { items: [], next_cursor: null }
+      return Promise.resolve(response(url, value, init.method === 'POST' ? 204 : 200))
+    },
+  })
+  await transport.roles(capture)
+  await transport.users(capture)
+  await transport.locations(capture)
+  await transport.logoutAll(capture)
+  assert.equal(calls.length, 4)
+})

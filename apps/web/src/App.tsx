@@ -1,11 +1,5 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-  type FormEvent,
-} from 'react'
+import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
+import { hasUnsentForms } from './features/draft-state.js'
 import { AdministrationPanel } from './features/administration/AdministrationPanel.js'
 import { AdministrationController } from './features/administration/controller.js'
 import './features/administration/administration.css'
@@ -21,27 +15,21 @@ import type { WorkshopController } from './runtime/controller.js'
 
 export function App({ runtime }: { runtime: WorkshopController }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot)
-  const operationalDirty = useRef(false)
   const leaveWorkshop = (action: () => Promise<void>) => {
     if (
-      (operationalDirty.current ||
-        document.querySelector('#workshop-administration [data-dirty="true"]')) &&
+      hasUnsentForms(document) &&
       !window.confirm(
         '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
       )
     )
       return
-    operationalDirty.current = false
     void action()
   }
   const administration = useMemo(() => new AdministrationController(runtime), [runtime])
   useLayoutEffect(() => {
     administration.setLogoutGuard(
       () =>
-        !(
-          operationalDirty.current ||
-          document.querySelector('#workshop-administration [data-dirty="true"]')
-        ) ||
+        !hasUnsentForms(document) ||
         window.confirm(
           '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
         ),
@@ -84,7 +72,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
               <li key={location.location_id}>
                 <Button
                   type="button"
-                  onClick={() => void runtime.selectWorkshop(location.location_id)}
+                  onClick={() => leaveWorkshop(() => runtime.selectWorkshop(location.location_id))}
                 >
                   {location.name}
                 </Button>
@@ -167,18 +155,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
       userName={state.user.display_name}
       canCreateOrders={writeOrders}
     >
-      <div
-        data-runtime-state="READY"
-        data-selected-workshop={context.selectedLocationId}
-        onInputCapture={(event: FormEvent<HTMLDivElement>) => {
-          if (
-            !(event.currentTarget.ownerDocument.activeElement as HTMLElement).closest(
-              '.administration-panel',
-            )
-          )
-            operationalDirty.current = true
-        }}
-      >
+      <div data-runtime-state="READY" data-selected-workshop={context.selectedLocationId}>
         <SyncStatus state={state.sync} />
         {state.message ? (
           <p role="status" className="workshop-notice">

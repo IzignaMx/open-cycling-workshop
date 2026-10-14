@@ -2,7 +2,30 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
-> **2026-10-14 update:** The historical summary below does not qualify new
+## Current qualification summary · 2026-10-14
+
+The authoritative inherited source baseline is main38
+`79cb4055aeb34344f2182d77e244c8187e9bb71b`. Its authenticated client C **has
+executed and passed** exact postmerge CI/browser/native qualification in
+[38630382271](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382271),
+the eleven-check disposable runtime and isolated restore in
+[38630382283](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382283),
+and security in
+[38630382252](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382252).
+See `inherited_base_ci`, `inherited_base_runtime`, and `inherited_base_security`
+in the [current administration evidence](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
+Earlier C source-checkpoint notes and unchecked hosted browser/restore items below
+are historical requests for evidence, subsequently satisfied for this exact
+baseline. They do not mean those main38 checks remain unexecuted. Actual
+installation changes, real-operator recovery, physical Windows/Android and manual
+screen-reader evidence remain open. Cross-built ARM64 images are not hardware
+qualification. The new administration source is a separate candidate: its first
+native browser run failed 13 cases and the corrected exact-tree browser/visual gate
+is still pending. No full MVP, production installation or release certification
+is claimed.
+
+> **Historical pre-main38 2026-10-14 update:** The historical summary below does not qualify new
 > increments. The bounded access-administration API has separate exact-head
 > PostgreSQL/upgrade and browser-isolation rollout gates in the
 > [current operator section](#2026-10-14--local-account-administration-operator-gates).

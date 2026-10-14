@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Connected administration browser corrections
+
+- Preserve the native fetch receiver for administration requests; keep exact
+  captures and all request/refusal checks unchanged.
+- Guard navigation using current unsent form values rather than past input
+  activity, including selector transitions. Saved work no longer produces a
+  stale discard prompt; real drafts still require a deliberate decision.
+- Preserve all 43 browser journeys, explicitly test cancel/accept for private
+  drafts, and qualify 200% CSS zoom at the established 320 CSS-pixel reflow width.
+  Exact corrected native and visual evidence remains pending.
+
 ## Unreleased · Connected account administration
 
 - Add users/per-user permissions, location creation and self-session controls
