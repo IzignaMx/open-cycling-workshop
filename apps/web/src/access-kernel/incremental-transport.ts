@@ -35,7 +35,7 @@ export class IncrementalTransportError extends Error {
     readonly status: number | null = null,
     readonly retryAfterMs: number | null = null,
   ) {
-    super(`Baseline request failed: ${code}`)
+    super(`Incremental request failed: ${code}`)
     this.name = 'IncrementalTransportError'
   }
 }
@@ -86,7 +86,29 @@ function errorResponse(response: Response, value: unknown, now: number): Increme
     } else if (Object.keys(body).length === 1 && Object.hasOwn(body, 'detail')) {
       if (response.status === 401 && typeof body.detail === 'string') code = 'invalid_session'
       if (response.status === 403 && typeof body.detail === 'string') code = 'capability_denied'
-      if (response.status === 422 && Array.isArray(body.detail)) code = 'invalid_request'
+      if (
+        response.status === 422 &&
+        Array.isArray(body.detail) &&
+        body.detail.length > 0 &&
+        body.detail.length <= 100 &&
+        body.detail.every((item) => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+          const error = item as Record<string, unknown>
+          return (
+            Object.keys(error).length === 3 &&
+            ['loc', 'type', 'msg'].every((key) => Object.hasOwn(error, key)) &&
+            typeof error.type === 'string' &&
+            typeof error.msg === 'string' &&
+            Array.isArray(error.loc) &&
+            error.loc.every(
+              (part) =>
+                typeof part === 'string' ||
+                (typeof part === 'number' && Number.isSafeInteger(part)),
+            )
+          )
+        })
+      )
+        code = 'invalid_request'
     }
   }
   const retry = response.headers.get('retry-after')
@@ -227,6 +249,7 @@ export function createIncrementalTransport(options: IncrementalTransportOptions)
           return reject('stale_request')
         }
         if (
+          (response.ok && response.status !== 200) ||
           response.redirected ||
           response.url !== url ||
           response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() !==

@@ -248,3 +248,164 @@ test('stale hold cannot affect winning successor or device state', async (t) => 
   assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
   assert.equal((await f.db.deviceControl.get('device')).state, 'READY')
 })
+
+test('lease expiry inside the final transaction boundary rolls back rows and cursor', async (t) => {
+  const f = await setup(t)
+  let now = NOW
+  f.store = new IncrementalTransactions(f.db, () => now)
+  await f.store.pending(ticket)
+  const before = await f.db.cachePartitions.get('partition')
+  const expire = () => {
+    now = NOW + 3600000
+  }
+  f.db.cachePartitions.hook('updating', expire)
+  await assert.rejects(next(f, page('initial', 'next', 'complete', [row()])))
+  f.db.cachePartitions.hook('updating').unsubscribe(expire)
+  assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
+  assert.equal(await f.db.cacheRecords.count(), 0)
+})
+
+test('equal-version contradictions in the response fail even beneath a newer cached version', async (t) => {
+  const f = await setup(t)
+  await next(f, page('initial', 'newer', 'complete', [row(10)]))
+  const before = await f.db.cachePartitions.get('partition')
+  await assert.rejects(
+    next(f, page('newer', 'other', 'complete', [row(3), row(3, 'Contradiction')])),
+    /contradiction/,
+  )
+  assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
+})
+
+test('backward clock inside commit cannot reduce the durable observed time', async (t) => {
+  const f = await setup(t)
+  let now = NOW
+  f.store = new IncrementalTransactions(f.db, () => now)
+  await f.store.pending(ticket)
+  const before = await f.db.cachePartitions.get('partition'),
+    rollback = () => {
+      now = NOW - 1
+    }
+  f.db.cachePartitions.hook('updating', rollback)
+  await assert.rejects(next(f, page()))
+  f.db.cachePartitions.hook('updating').unsubscribe(rollback)
+  assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
+  assert.equal((await f.db.deviceControl.get('device')).observedAt, NOW)
+})
+for (const field of ['generation', 'tabAttemptId', 'activePartitionId'])
+  test(`durable ${field} fences an old page and hold`, async (t) => {
+    const f = await setup(t),
+      expected = (await f.store.pending(ticket)).incremental.next,
+      before = await f.db.cachePartitions.get('partition')
+    await f.db.deviceControl.update('device', { [field]: field === 'generation' ? 2 : 'other' })
+    await assert.rejects(f.store.commit(ticket, expected, page(), identity), /fenced/)
+    await assert.rejects(f.store.hold(ticket, expected, 'network_error', NOW + 4000), /fenced/)
+    assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
+  })
+
+import { createIncrementalCoordinator } from '../../.tmp-kernel/src/access-kernel/incremental-coordinator.js'
+import { createIncrementalTransport } from '../../.tmp-kernel/src/access-kernel/incremental-transport.js'
+test('lost response retries the identical durable body through transport and commits once', async (t) => {
+  const f = await setup(t)
+  let now = NOW
+  const store = new IncrementalTransactions(f.db, () => now),
+    calls = [],
+    response = page('initial', 'accepted', 'complete', [row(2)])
+  const transport = createIncrementalTransport({
+    apiRealm: context.principal.apiRealm,
+    now: () => now,
+    fetch: async (url, init) => {
+      calls.push({ url, body: init.body, token: init.headers.Authorization })
+      if (calls.length === 1) throw new TypeError('Lost after server committed')
+      const result = new Response(JSON.stringify(response), {
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      })
+      Object.defineProperty(result, 'url', { value: url })
+      return result
+    },
+  })
+  const coordinator = createIncrementalCoordinator({
+    kernel: {
+      pendingIncremental: store.pending.bind(store),
+      commitIncrementalPage: store.commit.bind(store),
+      retryIncremental: store.retry.bind(store),
+      holdIncremental: store.hold.bind(store),
+      disableIncrementalSession() {
+        throw new Error('Unexpected disable')
+      },
+    },
+    transport,
+    now: () => now,
+    random: () => 0,
+    online: () => true,
+  })
+  const input = { ticket, context, identity, bearerToken: 'original-token', isCurrent: () => true }
+  const failed = await coordinator.step(input)
+  assert.equal(failed.state, 'RETRY_LATER')
+  assert.equal((await f.db.cachePartitions.get('partition')).cursor, 'initial')
+  assert.equal(await f.db.cacheRecords.count(), 0)
+  now = failed.retryAt
+  assert.equal((await coordinator.step(input)).state, 'READY')
+  assert.deepEqual(calls[0], calls[1])
+  assert.equal((await f.db.cachePartitions.get('partition')).incremental.sequence, 1)
+  assert.equal(await f.db.cacheRecords.count(), 1)
+  assert.equal((await f.db.deviceControl.get('device')).state, 'READY')
+})
+
+test('exhausted safe local sequence cannot change projections or cursor', async (t) => {
+  const f = await setup(t)
+  await next(f, page())
+  const p = await f.db.cachePartitions.get('partition')
+  p.incremental.sequence = Number.MAX_SAFE_INTEGER
+  await f.db.cachePartitions.put(p)
+  await assert.rejects(next(f, page('next', 'never', 'complete', [row()])), /sequence exhausted/)
+  assert.deepEqual(await f.db.cachePartitions.get('partition'), p)
+  assert.equal(await f.db.cacheRecords.count(), 0)
+})
+
+for (const [name, corrupt] of [
+  [
+    'noncanonical next',
+    (i) => {
+      i.next.body = ' ' + i.next.body
+    },
+  ],
+  [
+    'wrong predecessor',
+    (i) => {
+      i.receipt.predecessor = 'wrong'
+    },
+  ],
+  [
+    'changed predecessor body',
+    (i) => {
+      i.receipt.requestBody = '{"continuation":"wrong","protocol":1}'
+    },
+  ],
+  [
+    'noncanonical receipt',
+    (i) => {
+      i.receipt.response = ' ' + i.receipt.response
+    },
+  ],
+  [
+    'completed receipt with null completion',
+    (i) => {
+      const r = JSON.parse(i.receipt.response)
+      r.completion = null
+      i.receipt.response = JSON.stringify(r)
+    },
+  ],
+  [
+    'unknown receipt field',
+    (i) => {
+      i.receipt.extra = true
+    },
+  ],
+])
+  test(`${name} cannot authorize cache reuse`, async (t) => {
+    const f = await setup(t)
+    await next(f, page())
+    const p = await f.db.cachePartitions.get('partition')
+    corrupt(p.incremental)
+    assert.equal(completedBaseline(p, context), false)
+  })

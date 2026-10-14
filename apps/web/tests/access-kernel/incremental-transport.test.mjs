@@ -182,3 +182,17 @@ test('oversized streamed response is rejected and canceled before parsing', asyn
   )
   assert.equal(cancelled, true)
 })
+
+test('unrecognized validation detail shape is not treated as a typed request refusal', async () => {
+  await assert.rejects(
+    setup(async () => response({ detail: [{ secret: 'PRIVATE' }] }, 422)).request(request()),
+    (error) => error.code === 'invalid_response',
+  )
+})
+
+test('unexpected successful status is rejected instead of treated as the page contract', async () => {
+  await assert.rejects(
+    setup(async () => response(page(), 201)).request(request()),
+    (error) => error.code === 'invalid_response',
+  )
+})

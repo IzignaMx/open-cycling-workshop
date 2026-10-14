@@ -13,7 +13,7 @@ import {
 } from './incremental-state.js'
 import { validateIncrementalResponse } from './incremental-wire.js'
 import type { ContextRequestIdentity } from './server-context.js'
-import type { ContextTicket } from './types.js'
+import type { ContextTicket, VerifiedAccessContext } from './types.js'
 
 /** Every projection and cursor transition is one fenced transaction; no HTTP here. */
 export class IncrementalTransactions {
@@ -32,6 +32,18 @@ export class IncrementalTransactions {
   }
   private check(ticket: ContextTicket, current: () => boolean) {
     if (!current() || !this.isCurrent(ticket)) throw new Error('Incremental session fenced')
+  }
+  private finalFence(
+    ticket: ContextTicket,
+    current: () => boolean,
+    context: VerifiedAccessContext,
+    observedAt: number,
+  ) {
+    this.check(ticket, current)
+    const now = this.now()
+    validateVerifiedContext(context, now)
+    if (!Number.isFinite(now) || now < observedAt)
+      throw new Error('Incremental clock moved backward')
   }
   private async fenced(ticket: ContextTicket, current: () => boolean) {
     this.check(ticket, current)
@@ -74,14 +86,14 @@ export class IncrementalTransactions {
   async pending(supplied: ContextTicket, current: () => boolean = () => true) {
     const ticket = structuredClone(supplied)
     return this.db.transaction('rw', this.tables(), async () => {
-      const { partition, context } = await this.fenced(ticket, current)
+      const { control, partition, context } = await this.fenced(ticket, current)
       if (!Object.hasOwn(partition, 'incremental')) {
         partition.incremental = initialIncrementalMetadata(partition, context)
         validateIncrementalMetadata(partition, context)
         await this.db.cachePartitions.put(partition)
       }
       const incremental = validateIncrementalMetadata(partition, context)
-      this.check(ticket, current)
+      this.finalFence(ticket, current, context, control.observedAt)
       return { context: structuredClone(context), incremental: structuredClone(incremental) }
     })
   }
@@ -120,7 +132,7 @@ export class IncrementalTransactions {
           incremental.receipt.predecessor === predecessor &&
           incremental.receipt.response === canonical
         ) {
-          this.check(ticket, current)
+          this.finalFence(ticket, current, context, control.observedAt)
           return 'replayed'
         }
         throw new Error('Stale incremental response')
@@ -130,9 +142,21 @@ export class IncrementalTransactions {
         throw new Error('Incremental sequence exhausted')
       // Validate the entire envelope before writes. Projection, receipt and successor
       // share rollback on quota, contradiction or credential replacement.
-      for (const raw of value.records) {
-        const record = validateBaselineRecord(raw, context),
-          key: [string, string, string] = [ticket.partitionId, record.entity_type, record.entity_id]
+      const records = value.records.map((raw) => validateBaselineRecord(raw, context))
+      const versions = new Map<string, string>()
+      for (const record of records) {
+        const key = canonicalJson([record.entity_type, record.entity_id, record.entity_version]),
+          payload = canonicalJson(record.payload)
+        if (versions.has(key) && versions.get(key) !== payload)
+          throw new Error('Equal-version incremental contradiction')
+        versions.set(key, payload)
+      }
+      for (const record of records) {
+        const key: [string, string, string] = [
+          ticket.partitionId,
+          record.entity_type,
+          record.entity_id,
+        ]
         const old = await this.db.cacheRecords.get(key)
         if (
           old &&
@@ -167,8 +191,9 @@ export class IncrementalTransactions {
       }
       validateBaselineMetadata(updated, context)
       await this.db.cachePartitions.put(updated)
-      await this.db.deviceControl.put({ ...control, state: 'READY', observedAt: this.now() })
-      this.check(ticket, current)
+      const observedAt = this.now()
+      await this.db.deviceControl.put({ ...control, state: 'READY', observedAt })
+      this.finalFence(ticket, current, context, Math.max(control.observedAt, observedAt))
       return 'committed'
     })
   }
@@ -195,8 +220,9 @@ export class IncrementalTransactions {
         incremental: { ...incremental, hold: null },
       }
       await this.db.cachePartitions.put(updated)
-      await this.db.deviceControl.put({ ...control, state: 'READY', observedAt: this.now() })
-      this.check(ticket, current)
+      const observedAt = this.now()
+      await this.db.deviceControl.put({ ...control, state: 'READY', observedAt })
+      this.finalFence(ticket, current, context, Math.max(control.observedAt, observedAt))
     })
   }
   async hold(
@@ -222,13 +248,14 @@ export class IncrementalTransactions {
       }
       validateIncrementalMetadata(updated, context)
       await this.db.cachePartitions.put(updated)
+      const observedAt = this.now()
       await this.db.deviceControl.put({
         ...control,
         state: reason === 'invalid_session' ? 'LOCKED' : 'HELD',
         dispatchAttemptId: null,
-        observedAt: this.now(),
+        observedAt,
       })
-      this.check(ticket, current)
+      this.finalFence(ticket, current, context, Math.max(control.observedAt, observedAt))
       return true
     })
   }
