@@ -10,7 +10,9 @@ COPY --from=uv /uv /uvx /bin/
 WORKDIR /app
 COPY services/platform /app/services/platform
 RUN uv pip install --system --no-cache /app/services/platform \
-    && useradd --system --uid 10001 --create-home --home-dir /home/ocwp ocwp
+    && groupadd --gid 10001 ocwp \
+    && useradd --system --uid 10001 --gid 10001 --create-home --home-dir /home/ocwp ocwp \
+    && install -d -m 0700 -o 10001 -g 10001 /var/lib/ocwp/branding-assets
 
 USER ocwp
 WORKDIR /app/services/platform

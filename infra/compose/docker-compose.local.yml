@@ -5,7 +5,7 @@ x-platform: &platform
   build:
     context: ../..
     dockerfile: infra/docker/platform.local.Dockerfile
-  environment:
+  environment: &platform-environment
     OCWP_ENVIRONMENT: production
     OCWP_DATABASE_URL_FILE: /run/secrets/database_url
     OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
@@ -61,10 +61,32 @@ services:
     command: ['alembic', 'upgrade', 'head']
     restart: 'no'
 
+  branding-assets-init:
+    <<: *platform
+    # Docker initializes a new volume from the image's private UID/GID 10001
+    # directory. Check it as the unprivileged runtime; never chown an old volume.
+    environment: {}
+    secrets: []
+    network_mode: none
+    volumes:
+      - branding_assets:/var/lib/ocwp/branding-assets
+    command:
+      - python
+      - -c
+      - "from pathlib import Path; from cycling_workshop.branding.assets import check_asset_root; check_asset_root(Path('/var/lib/ocwp/branding-assets'))"
+    restart: 'no'
+
   api:
     <<: *platform
+    environment:
+      <<: *platform-environment
+      OCWP_BRANDING_ASSET_ROOT: /var/lib/ocwp/branding-assets
+    volumes:
+      - branding_assets:/var/lib/ocwp/branding-assets
     networks: [app_net, data_net]
     depends_on:
+      branding-assets-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       migrate:
@@ -176,6 +198,7 @@ services:
     secrets: [database_url]
     networks: [data_net]
     volumes:
+      - branding_assets:/var/lib/ocwp/branding-assets:ro
       - type: bind
         source: ${OCWP_BACKUP_DIR:-./backups}
         target: /backups
@@ -189,6 +212,35 @@ services:
     command: ['--help']
     restart: 'no'
 
+  operations-restore:
+    image: ocwp-operations:${OCWP_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: infra/docker/operations.Dockerfile
+    profiles: ['branding-restore']
+    environment:
+      OCWP_RESTORE_DATABASE_URL_FILE: /run/secrets/database_url
+    secrets: [database_url]
+    networks: [data_net]
+    volumes:
+      # Use only in a fresh, isolated Compose project. The explicit restore
+      # command refuses populated SQL/assets; API later reads this same volume.
+      - branding_assets:/restore-branding-assets
+      - type: bind
+        source: ${OCWP_BACKUP_DIR:-./backups}
+        target: /backups
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    entrypoint: ['python', '-m', 'scripts.database.branding_bundle']
+    command: ['--help']
+    restart: 'no'
+
 networks:
   edge_net:
   app_net:
@@ -197,6 +249,7 @@ networks:
     internal: true
 
 volumes:
+  branding_assets:
   postgres_data:
   caddy_data:
   caddy_config:
