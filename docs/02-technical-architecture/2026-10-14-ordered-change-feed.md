@@ -74,10 +74,13 @@ Multi-user activation and physical/browser qualification remain gated.
   supported domain records; inventory reads service orders but does not mutate
   them. No inventory/quote projection completeness is implied.
 
-Integrating PR29 must preserve its authenticated application context, identity
-validation and full receipt-envelope checks. This bounded branch deliberately
-starts at `675fe209fa0b038156ba0c57c44f520b2e2de376`; those separate changes are
-not claimed present here. No production deployment or client activation ran.
+The initial bounded branch started at
+`675fe209fa0b038156ba0c57c44f520b2e2de376`. It was subsequently reconciled onto
+actual main after PR29, `f87205157e298f5c1c7c3f08d024fe822d84582b`, preserving its
+authenticated application context, identity validation and full receipt-envelope
+checks. The organization lock is acquired after pure identity validation and
+before receipt lookup; no domain reads precede it. `identity/router.py` remains
+unchanged from main29. No production deployment or client activation ran.
 
 ### Literal authorization compatibility follow-up
 
@@ -91,3 +94,9 @@ checks while returning current actor literal grants intersected with the incomin
 principal. No administration policy changed. All 145 authority tests (125 matrix
 and 20 HTTP stale-dependency cases) pass after the fix. Final broad evidence is
 recorded in execution state; PostgreSQL remains pending.
+
+Main29 reconciliation verification: full Python suite 975 passed, 75 skipped;
+Ruff full check/format, mypy (77 source files), OpenAPI/generated-client and
+repository contracts passed. The 75 skips include ten new ordering tests and
+pre-existing PostgreSQL/environment cases; real PostgreSQL acceptance remains
+pending hosted qualification. No browser execution was attempted locally.
