@@ -237,9 +237,13 @@ def test_context_unexpected_failure_is_sanitized_and_no_store():
 def test_context_unexpected_failure_rolls_back_and_logs_without_private_details(
     monkeypatch, caplog
 ):
+    import logging
+
     import cycling_workshop.identity.context as context_module
     from sqlalchemy import event
 
+    # Earlier in-process Alembic migrations disable existing application loggers.
+    monkeypatch.setattr(logging.getLogger("cycling_workshop.app"), "disabled", False)
     client, headers = context_client([], [])
     rolled_back = []
     event.listen(
