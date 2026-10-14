@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Offline reload and browser acceptance corrections
+
+- Admit retained offline reload after a genuine network failure even when the
+  browser online hint is stale, preserving exact session snapshots, ownership
+  fences and existing lease limits through publication. Received refusals never
+  become offline authority.
+- Observe pinned old-client protocol refusals through a bounded passive fixture
+  recorder correlated to the exact request; retain old bundle and queue checks.
+- Align accessible order locators, restricted-account local-only expectations and
+  temporary-error fixtures with actual production contracts. Independent source
+  reviews pass; integrated hosted browser and restore evidence remains pending.
+
 ## Unreleased · Audited Python dependency correction
 
 - Upgrade the compatible FastAPI/Starlette pair and PyJWT to bounded patched
