@@ -38,7 +38,7 @@ for (const nativeVersion of [1, 10, 20, 30, 40]) {
         await db.delete()
       }
     }, nativeVersion)
-    expect(result.nativeVersion).toBe(50)
+    expect(result.nativeVersion).toBe(60)
     expect(result.stores).toBe(16)
     expect(result.preserved).toEqual(result.original)
     expect(result.journalCount).toBe(0)
@@ -263,5 +263,84 @@ test('real IndexedDB records the old-bundle activation blocker without pretendin
       await candidate.delete()
     }
   })
-  expect(result).toEqual({ version: 50, legacyWrites: 1 })
+  expect(result).toEqual({ version: 60, legacyWrites: 1 })
+})
+
+test('real IndexedDB native50 to native60 preserves journal and unknown evidence exactly', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const name = `kernel-v5-upgrade-${crypto.randomUUID()}`
+    const old = new window.kernelHarness.OcwpDatabase(name)
+    old.version(5).stores({
+      deviceControl: 'key',
+      accessContexts: 'partitionId',
+      cachePartitions: 'partitionId, principalKey',
+      cacheRecords: '[partitionId+entityType+entityId], [partitionId+entityType]',
+      operationJournal:
+        'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId]',
+      operationDelivery:
+        'mutationId, state, [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+      operationEvents: '++sequence, mutationId',
+      localMigrationState: 'key',
+    })
+    const journal = {
+      mutationId: 'retained',
+      principalKey: 'author',
+      locationId: 'workshop',
+      entityType: 'customer',
+      entityId: 'customer',
+      localSequence: 7,
+      envelope: { unknown: [1, null, 'preserve'] },
+      future: { untouched: true },
+    }
+    const delivery = {
+      mutationId: 'retained',
+      principalKey: 'author',
+      locationId: 'workshop',
+      entityType: 'customer',
+      entityId: 'customer',
+      localSequence: 7,
+      state: 'applied',
+      unknown: { exact: true },
+    }
+    const event = {
+      sequence: 12,
+      mutationId: 'retained',
+      kind: 'result',
+      details: { unknown: [null, 7] },
+    }
+    await old.open()
+    const beforeVersion = old.backendDB().version
+    await old.table('operationJournal').add(journal)
+    await old.table('operationDelivery').add(delivery)
+    await old.table('operationEvents').add(event)
+    old.close()
+    const current = window.kernelHarness.createKernelDatabase(name)
+    try {
+      await current.open()
+      return {
+        beforeVersion,
+        afterVersion: current.backendDB().version,
+        original: { journal, delivery, event },
+        retained: {
+          journal: await current.operationJournal.get('retained'),
+          delivery: await current.operationDelivery.get('retained'),
+          event: await current.operationEvents.get(12),
+        },
+        indexed: Boolean(
+          current.operationJournal.schema.idxByName['[principalKey+locationId+localSequence]'],
+        ),
+      }
+    } finally {
+      current.close()
+      await current.delete()
+    }
+  })
+  expect(result.beforeVersion).toBe(50)
+  expect(result.afterVersion).toBe(60)
+  expect(result.retained).toEqual(result.original)
+  expect(result.retained.journal).not.toHaveProperty('authoredDatasetIncarnation')
+  expect(result.indexed).toBe(true)
 })

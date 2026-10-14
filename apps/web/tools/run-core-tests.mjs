@@ -64,6 +64,7 @@ try {
     'tests/pwa/navigation-policy.test.mjs',
     'tests/pwa/legacy-fixture.test.mjs',
     'tests/pwa/upgrade-fixture.test.mjs',
+    '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
     'tests/sync/retry-policy.test.mjs',
