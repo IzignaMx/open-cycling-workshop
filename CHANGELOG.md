@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Authenticated workshop client C
+
+- Compose genuine authenticated workshop admission, concrete workshop selection,
+  captured transports, bounded ongoing deltas and offline reload for the existing
+  customer/bicycle/order workflow in a distinct local database.
+- Preserve immutable incarnation-bound journals, recovery holds, all four themes
+  and exactly scoped preferences; never attribute or replay unknown legacy work.
+- Add real pinned old App/SW and disposable floor1 restore acceptance fixtures.
+  Source integration is pending exact-final-tree hosted/native qualification;
+  normal Compose remains opt-in disabled and no installation was activated. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
+
 ## Unreleased · Server cutover contract
 
 - Add forward-only migration0010, explicit organization compatibility floor and

@@ -7,7 +7,9 @@
 > PostgreSQL/upgrade and browser-isolation rollout gates in the
 > [current operator section](#2026-10-14--local-account-administration-operator-gates).
 > The [isolated identity-kernel rollout section](#2026-10-14--isolated-offline-identity-kernel-and-future-rollout)
-> adds future browser/baseline and legacy-recovery gates; production remains v4.
+> records historical browser/baseline and legacy-recovery gates. New C source
+> integrates a distinct authenticated database; its exact-head hosted/browser
+> and installation gates remain open in the C section below.
 > Neither a complete MVP nor a production/release qualification is claimed.
 
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
@@ -744,3 +746,27 @@ production activation is authorized or performed by this source increment. See
 See [server scope/evidence](docs/10-spec-development/2026-10-14-server-cutover-contract.md)
 and [operator procedure](docs/07-operations/2026-10-14-server-cutover.md). Physical
 device, screen-reader, real restore and broader product-scope gates are unchanged.
+
+## 2026-10-14 · Authenticated workshop client C gates
+
+- [ ] Qualify the exact integrated tree with genuine PostgreSQL/browser login,
+      complete baseline, ongoing checkpoint chain, offline reload, captured
+      push/ACK races, account/workshop switching and all four themes/accessibility.
+- [ ] Run the pinned real old App/SW journey: legacy-session 401, fresh-login old
+      transport 409, offline reload, actual SW update, preserved raw old data and
+      late old-tab edits. Reproducible built assets alone do not close this gate.
+- [ ] Run all eleven disposable runtime checks with floor1 backup/restore,
+      stopped writers, expected-incarnation rotation before restored API reopen,
+      stale session/checkpoint refusal and preserved pending recovery holds.
+- [ ] Before a separately authorized installation change, preserve local work
+      from every browser profile and verify backup/isolated restore; replace all
+      old server writers, opt in explicitly, and use forward-compatible recovery.
+      Never clear IndexedDB, infer authors, replay unknown legacy data or lower
+      compatibility floors. Normal Compose still defaults to disabled cutover.
+
+C uses the distinct `ocwp-authenticated-v1` database with additive schema6
+lookup indices. Future unimplemented quote-local stores reserve **v7**; prior
+v6 notes remain historical. Local emulator/unit/build evidence is not hosted
+SW/PG/restore or physical-device evidence. User/role CRUD administration UI and
+new domain breadth remain later increments. See the
+[C scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
