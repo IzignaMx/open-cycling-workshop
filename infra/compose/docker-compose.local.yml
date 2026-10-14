@@ -10,6 +10,8 @@ x-platform: &platform
     OCWP_DATABASE_URL_FILE: /run/secrets/database_url
     OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
     OCWP_LOG_LEVEL: INFO
+    # Opt-in only after the complete server/client composition is qualified.
+    OCWP_CUTOVER_ENABLED: ${OCWP_CUTOVER_ENABLED:-false}
   secrets:
     - database_url
     - auth_secret

@@ -29,13 +29,18 @@
             "title": "Capabilities",
             "type": "array"
           },
+          "dataset_incarnation": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "title": "Dataset Incarnation",
+            "type": "string"
+          },
           "offline_until": {
             "format": "date-time",
             "title": "Offline Until",
             "type": "string"
           },
           "policy_revision": {
-            "const": "ocwp-access-baseline-1",
+            "const": "ocwp-access-baseline-2",
             "title": "Policy Revision",
             "type": "string"
           },
@@ -55,8 +60,16 @@
             "type": "string"
           },
           "snapshot_protocol": {
-            "title": "Snapshot Protocol",
-            "type": "null"
+            "anyOf": [
+              {
+                "const": "baseline-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Protocol"
           },
           "verified_at": {
             "format": "date-time",
@@ -74,7 +87,8 @@
           "policy_revision",
           "verified_at",
           "offline_until",
-          "snapshot_protocol"
+          "snapshot_protocol",
+          "dataset_incarnation"
         ],
         "title": "AccessContextResponse",
         "type": "object"
@@ -1575,6 +1589,12 @@
           "error_code": {
             "anyOf": [
               {
+                "enum": [
+                  "sync_conflict",
+                  "legacy_receipt_unverified",
+                  "receipt_integrity_conflict",
+                  "receipt_proof_conflict"
+                ],
                 "type": "string"
               },
               {
@@ -2865,6 +2885,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "requestBody": {
@@ -2935,6 +2971,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -3007,6 +3059,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "requestBody": {
@@ -3078,6 +3146,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "requestBody": {
@@ -3136,6 +3220,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -3298,6 +3398,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "responses": {
@@ -3388,6 +3504,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -3505,6 +3637,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -3685,6 +3833,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "requestBody": {
@@ -3830,6 +3994,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -4029,6 +4209,22 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
           }
         ],
         "requestBody": {
@@ -4087,6 +4283,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -4275,6 +4487,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
             }
           }
         ],
@@ -4704,6 +4932,38 @@
       "post": {
         "operationId": "push_mutations_api_v1_sync_mutations_post",
         "parameters": [
+          {
+            "in": "header",
+            "name": "X-OCWP-Authorization-Epoch",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Authorization-Epoch"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-OCWP-Write-Protocol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Ocwp-Write-Protocol"
+            }
+          },
           {
             "in": "header",
             "name": "authorization",

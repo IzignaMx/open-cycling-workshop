@@ -95,7 +95,8 @@ Strict sync additionally requires one exact `X-OCWP-Authorization-Epoch` header
 and one selected location shared by the batch. Under the same org/actor barrier,
 compute current context and compare the supplied epoch before item savepoints.
 Missing/invalid/stale epoch or mixed locations is whole-response 409
-`authorization_context_changed`. No silent substitution. REST/admin require
+`authorization_context_changed`. No silent substitution. Epoch admission belongs to this HTTP batch boundary;
+any future alternate client ingress must reuse it. REST/admin require
 write protocol and fresh authority, not a workshop projection epoch.
 
 ## Immutable complete-command receipt proof
@@ -120,7 +121,8 @@ numbers. Keys have deterministic order, array order is preserved and primitive
 types remain distinct. Strict input rejects duplicate JSON keys, unknown envelope
 fields, coercion, unsafe/unrepresentable numbers and naive/numeric/sub-microsecond
 timestamps. Mutation bodies are byte-bounded before JSON parsing. Fixed golden
-vectors and exact representability rules accompany the implementation. SHA-256
+vectors and exact representability rules are in the
+[receipt proof contract](../10-spec-development/2026-10-14-command-receipt-proof.md). SHA-256
 supports equality only; authenticated actor and current authorization remain
 required. Protocol 0 cannot bypass proof by parser coercion of a bound command.
 
@@ -135,7 +137,7 @@ Fresh installs need this explicit activation before the future new PWA is usable
 
 Restore keeps API/edge/workers/all writers stopped. Upgrade/cutover a floor-0
 snapshot explicitly while isolated first. Recovery requires active floor 1,
-current schema and `--expected-incarnation UUID`; under lock exact-match CAS
+current schema (exact revision `0010` for this binary) and `--expected-incarnation UUID`; under lock exact-match CAS
 rotates to a new UUID and appends honest organization provenance (null target_id)
 atomically. Preserve credentials, grants, versions, receipts and business/journal
 history. Reusing the old precondition refuses without rotation or success audit.

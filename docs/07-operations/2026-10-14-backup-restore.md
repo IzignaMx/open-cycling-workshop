@@ -175,17 +175,33 @@ No hay rollback automático posterior a la confirmación de `pg_restore`.
    tiempos y resultado junto a la identidad del operador y release/digest exactos.
 2. Comprobar fotos/documentos y su almacenamiento externo si existen. Recuperar
    configuración y secretos por su procedimiento separado.
-3. Iniciar la misma release sobre la base restaurada, en otro puerto si comparte
-   laptop. Por ejemplo, configurar `OCWP_HTTP_PORT=18080` y arrancar `migrate api edge`
-   del proyecto de ensayo. Mantener worker/adaptadores externos detenidos hasta
-   revisar tareas/outbox pendientes, para evitar reejecuciones no deseadas.
-4. Comprobar `/health/ready`, login, lectura de clientes/bicicletas/órdenes y
-   límites de organización/ubicación. Revisar cantidades, estados y registros
-   sintéticos conocidos. Registrar el smoke realmente ejecutado; no inferirlo de
-   los conteos SQL.
-5. Preservar las colas IndexedDB. Si se recuperó un snapshot anterior al estado
-   que conocían los navegadores, mantener la sincronización detenida hasta revisar
-   cursores, pendientes y conflictos. No borrar IndexedDB ni iniciar replay ciego.
+3. Mantener API, edge, workers y todos los escritores detenidos. La base
+   restaurada no debe recibir peticiones ordinarias. Para el contrato de cutover
+   B, comprobar la revisión `0010` y el estado de la organización mediante
+   `ocwpctl cutover status --organization-id ID`, usando sólo el acceso a base
+   ya configurado de forma segura. Si el snapshot es anterior o tiene piso 0,
+   realizar la actualización y activación explícitas en aislamiento; no abrirlo
+   en modo que acepte sesiones legacy. Un binario anterior a B no es rollback
+   compatible. La migración 0010 nunca permite downgrade, ni en una base vacía.
+4. Antes de arrancar API/edge, ejecutar una sola recuperación con el valor
+   exacto registrado: `ocwpctl cutover recover --organization-id ID
+--expected-incarnation UUID`. Requiere piso 1 y revisión compatible; cambia
+   la encarnación de datos y conserva cuentas, contraseñas, permisos, versiones,
+   recibos e historial. No sustituirla por incrementar session_version: un
+   contador restaurado puede coincidir con un token emitido después del backup.
+   Si se pierde la respuesta, consultar status y su auditoría no secreta;
+   repetir la precondición vieja debe rechazar sin otra rotación. No reintentar
+   a ciegas usando una precondición nueva.
+5. Sólo después de la rotación, arrancar la API cualificada en la red aislada,
+   sin abrir edge al despacho ordinario. Comprobar rechazo de tokens y
+   checkpoints anteriores, login nuevo, contexto con nueva encarnación y
+   baseline nuevo, además de `/health/ready`, lecturas y límites de taller.
+   Registrar el smoke realmente ejecutado. Preservar todas las colas IndexedDB;
+   comandos antiguos o de procedencia desconocida requieren retención para
+   recuperación, incluidos los confirmados después del backup. No borrar
+   IndexedDB ni iniciar replay ciego. Abrir API/edge al uso ordinario sólo tras
+   estas comprobaciones y la cualificación del cliente integrado C. Mantener
+   workers/adaptadores detenidos hasta revisar tareas/outbox pendientes.
 6. Para el traslado definitivo, detener nuevas escrituras, sincronizar y confirmar
    pendientes cuando sea posible, hacer una generación final, copiarla completa
    a la Raspberry y verificar allí. Registrar pendientes que no pudieron converger.
