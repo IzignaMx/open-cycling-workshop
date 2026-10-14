@@ -6,6 +6,10 @@
   --ocwp-color-border: oklch(0.88 0.012 180);
   --ocwp-color-accent: oklch(0.46 0.09 178);
   --ocwp-color-accent-strong: oklch(0.37 0.08 178);
+  --ocwp-color-text: var(--ocwp-color-ink);
+  --ocwp-color-on-accent: #ffffff;
+  --ocwp-color-control-border: #65776e;
+  --ocwp-color-focus: #111827;
   --ocwp-color-danger: oklch(0.52 0.18 28);
   --ocwp-radius-sm: 0.5rem;
   --ocwp-radius-md: 0.875rem;

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": ".tmp-personalization",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/personalization/catalog.ts",
+    "src/personalization/preferences.ts",
+    "src/personalization/repository.ts",
+    "src/personalization/logo.ts"
+  ]
+}

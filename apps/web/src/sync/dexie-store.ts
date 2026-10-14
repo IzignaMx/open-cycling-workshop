@@ -140,10 +140,17 @@ export class DexieSyncStore implements SyncStore {
       this.database.mutationQueue,
       this.database.conflicts,
       async () => {
+        const acknowledged: string[] = []
         for (const result of results) {
-          await this.database.conflicts.put(buildScopedConflict(this.#scope, result, recordedAt))
+          const mutation = await this.database.mutationQueue.get(result.mutation_id)
+          // A concurrent sync may already have recorded this conflict. Preserve
+          // existing records (including ambiguous legacy rows); never relabel them.
+          if (!mutation) continue
+          const conflict = buildScopedConflict(this.#scope, result, recordedAt, mutation)
+          await this.database.conflicts.put(conflict)
+          acknowledged.push(result.mutation_id)
         }
-        await this.database.mutationQueue.bulkDelete(results.map((result) => result.mutation_id))
+        await this.database.mutationQueue.bulkDelete(acknowledged)
       },
     )
   }

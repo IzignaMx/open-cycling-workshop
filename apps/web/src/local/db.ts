@@ -1,10 +1,12 @@
 import Dexie, { type Table } from 'dexie'
 
+import type { PreferenceRecord } from '../personalization/repository.js'
 import type { LocalBicycle } from './bicycle-types.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from './service-order-types.js'
 import type { ConflictRecord, LocalCustomer, QueuedMutation, SyncStateRecord } from './types.js'
 
 export class OcwpDatabase extends Dexie {
+  presentationPreferences!: Table<PreferenceRecord, string>
   customers!: Table<LocalCustomer, string>
   mutationQueue!: Table<QueuedMutation, string>
   syncState!: Table<SyncStateRecord, string>
@@ -36,6 +38,8 @@ export class OcwpDatabase extends Dexie {
       serviceOrders: 'order_id, organization_id, location_id, customer_id, state, updated_at',
       serviceOrderEvents: 'event_id, order_id, organization_id, occurred_at',
     })
+    // Additive personal presentation store: no operational rows or queued changes are rewritten.
+    this.version(4).stores({ presentationPreferences: 'key' })
   }
 }
 

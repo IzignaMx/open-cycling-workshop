@@ -393,6 +393,27 @@ These entries do not close existing physical/manual V0.1 gates or authorize depl
       base/evidence reconciliation commits require their own exact-head CI;
       see the dedicated sync-chaos setup document and current PR #24 checks.
 
+## 2026-10-14 · Structural themes and personal presentation
+
+- [ ] Review hosted screenshots for Banco, Plano, Ritmo and Noche at desktop,
+      touch-tablet and 320px widths. Confirm the same data/actions remain
+      accessible and that layout changes are structural, not only palette swaps.
+- [ ] Run the existing physical Windows/Android and screen-reader protocols on
+      the four themes, including 200% zoom, glare and touch use. Numeric palette
+      checks and hosted Chromium/axe do not close these manual gates.
+- Local implementation evidence and exact hosted/review status are tracked in
+  `docs/10-spec-development/2026-10-14-structural-workshop-themes.md`.
+- Shared organization/workshop branding is still pending; the current logo is an
+  explicitly personal, device-local override. No operator should treat it as
+  organization-wide branding or assume cross-device synchronization.
+
+- Administrative rollout still needs offline-permission freshness and safe cache
+  revocation/resnapshot with pending-mutation reconciliation. Presentation read
+  gates preserve stored data and do not secure IndexedDB against a device owner.
+- Legacy conflicts whose entity type was hardcoded remain stored with hidden details.
+  Safe provenance reconciliation/recovery is pending; never infer their kind from
+  the legacy customer label or discard the records as a shortcut.
+
 ## 2026-10-14 · Local account administration operator gates
 
 Scope: server/API-only local users, role snapshots and locations. Design and
@@ -414,8 +435,11 @@ evidence of a problem in a deployed database or authority to modify one.
       Runtime run `38550525483` and artifact `11885889541` passed all 11 checks,
       including PostgreSQL 18.4 backup/restore. See the increment specification
       for the exact merge-ref/tree match and browser/ARM64 evidence.
-- [ ] Repeat exact-head hosted PostgreSQL 18.x tests after the final main/evidence
-      reconciliation. Cover empty database → head and
+- [x] Repeat exact-head hosted PostgreSQL 18.x tests after the final main/evidence
+      reconciliation: head `efe42eb7`, CI `38552076814`, artifact `11886948706`
+      passed all 27 checks, 812 Python tests and 30 browser executions. Runtime
+      `38552076701` / artifact `11886678534` passed 11 Docker checks and all three
+      ARM64 image builds. Integrated at main `59ad7e9`. Coverage includes empty database → head and
       representative `0007` → `0008` preservation. Prove tenant FKs, audit
       UPDATE/DELETE/TRUNCATE rejection, mutation/audit rollback, first-owner and
       last-owner races, stale versions and actor revocation while waiting for
@@ -427,8 +451,8 @@ evidence of a problem in a deployed database or authority to modify one.
       evidence and independent reconciliation review at `a077243`: 755 Python
       passed, 60 documented skips, 74 frontend core passed, 21 aggregate checks
       passed, zero failures and five environment blockers. The local branch
-      was reconciled onto `833bf6e`; subsequent main/evidence reconciliation
-      requires the separate final-head gate above. See
+      was reconciled onto `833bf6e`; the final-head gate above records the later
+      verified main/evidence reconciliation. See
       the increment specification for the historical checkpoint and review scope.
 
 ### Safe conditional upgrade to identity migration 0008
