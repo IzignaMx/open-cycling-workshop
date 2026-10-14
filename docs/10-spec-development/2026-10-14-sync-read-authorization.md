@@ -54,3 +54,23 @@ describes the bounded behavior and future permission-change resnapshot requireme
 No schema/data migration, credential changes, deployment, role-admin API or
 client-cache reset is included. Existing physical-device, PostgreSQL/browser,
 security, and operational release gates remain open where evidence is absent.
+
+## Reconciliation prerequisite: migration test targets
+
+The merged runtime added `OCWP_DATABASE_URL_FILE` resolution. Before rerunning
+the reconciled suite, the infrastructure SQLite test and both inventory migration
+fixtures now clear that fallback as well as the ordinary application URL. The
+PostgreSQL infrastructure test validates a loopback, query-free `_test`/`_e2e`
+database and temporarily pins its raw, percent-preserving URL for Alembic.
+The environment is restored even when migration setup fails. Rejections do not
+include URLs or credentials. The existing inventory concurrency fixture already
+pins its explicit test URL and is unchanged.
+
+The added no-network regression executes the actual fixture setup and Alembic
+environment, intercepting `engine_from_config` before connection. Isolated-schema
+setup/cleanup is recorded by synthetic engine doubles. Red: 18 failed, 1 passed.
+Green: 19 passed. This proves target selection and validation, not PostgreSQL
+migration execution. Production settings and Alembic URL resolution are unchanged.
+The reconciled Python suite passed 577 tests with 9 live-PostgreSQL skips; Ruff
+lint/format and the touched documentation formatting passed. PR #26 remains
+unmerged at this checkpoint and requires fresh exact-head hosted verification.

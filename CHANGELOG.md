@@ -41,6 +41,11 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Security
 
+- Migration test setup excludes ambient application URLs and secret-file
+  fallbacks. PostgreSQL infrastructure tests validate dedicated loopback targets
+  and pin the raw test URL during Alembic execution; no runtime resolver behavior
+  changed. No-network regressions cover target isolation and redacted rejection.
+
 - Sync pulls enforce the authenticated location when no location is requested
   and filter each known entity by its read capability before pagination. Unknown
   feed types are denied by default; see the
