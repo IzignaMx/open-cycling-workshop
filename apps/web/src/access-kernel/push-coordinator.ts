@@ -34,9 +34,7 @@ export function createPushCoordinator(options: {
       sequence++
       options.transport.invalidate()
     },
-    async step(
-      source: BaselineSession,
-    ): Promise<{
+    async step(source: BaselineSession): Promise<{
       state: 'IDLE' | 'APPLIED' | 'RETRY_LATER' | 'HELD'
       reason?: string
       count?: number

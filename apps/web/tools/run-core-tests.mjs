@@ -58,6 +58,7 @@ try {
     'tests/access-kernel/incremental-coordinator.test.mjs',
     'tests/access-kernel/push-runtime.test.mjs',
     'tests/runtime/controller.test.mjs',
+    'tests/runtime/issues.test.mjs',
     'tests/runtime/transport.test.mjs',
     'tests/runtime/import-graph.test.mjs',
     'tests/runtime/legacy-preservation.test.mjs',
