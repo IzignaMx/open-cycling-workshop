@@ -115,6 +115,62 @@ Runtime run `38551340068` and Security/DCO completed successfully for this first
 head. Runtime proof includes the real local stack and all three ARM64 image builds;
 it does not qualify physical ARM hardware or make the failed browser suite green.
 
+## Combined hosted checkpoint and full-page review
+
+PR #28 head `1ab3554d990e0869bcbae88515549c47d39f20e8` and tested merge
+`9fb49f64fbd106e0d1539d71c7c48695b6d90ae5` both resolve to tree
+`73bc2e41cf91c1b4134f1c3f14b2c72d55bc394b`. CI `38553639997`, job
+`115817310407`, completed successfully: 27 checks, zero blockers, 812 Python
+passed/three explained skips, 98 frontend tests, and 54 browser executions
+(22 direct, 10 retry-free sync repeats, 22 aggregate). Qualification artifact
+`11887584318` and browser artifact `11887599369` were downloaded and SHA-256
+verified. Runtime `38553639955` and Security `38553639964` also passed after
+unchanged, targeted infrastructure retries: ARM web cache export returned 503;
+Trivy database mirror returned 404 before scanning. No image build/scanner gate
+was disabled. Runtime artifact `11888315475` contains the real-stack evidence.
+
+Independent inspection of the full-page screenshots confirmed the corrected
+narrow navigation/monogram and found three remaining visual defects: shared UI
+Button utility styles were absent from the production CSS, Conflict Center's
+refresh label shrank/wrapped, and the active navigation label became unreadable
+in forced colors. Passing automation was therefore insufficient for completion.
+
+The next correction explicitly registers the shared workspace UI source using
+[Tailwind's supported source directive](https://tailwindcss.com/docs/detecting-classes-in-source-files),
+keeps the generic form-font reset in the base cascade layer, wraps the conflict
+header without shrinking its refresh button, and uses Canvas/LinkText with a
+Highlight border/underline for active high-contrast navigation. The three missing
+accent/on-accent/hover utility selectors were absent in the local production
+bundle before this change and present after rebuilding. Browser assertions now
+cover rendered fill/text/padding/radius/weight and 44/56px customer/order buttons,
+a separate login keyboard/busy-disabled journey, an unbroken refresh label and
+distinct forced-colors foreground/background. There are now 23 collected cases;
+the new tree still needs exact-head hosted execution and screenshot review.
+
+## Transition-aware browser assertion checkpoint
+
+Head `ac2be4827a270a872be2e6528b5699ca5d02b01b`, tested merge
+`779c9ac20152abe0eb9dfa998963f39a408de260`, matches tree
+`c9f8e4edd0a56a50970bb2eec5c51d28fd2d7316`. CI `38555698599` failed
+its direct browser run: 22/23 passed; Noche's new immediate computed-color
+assertion sampled a legitimate CSS transition before reaching the exact token.
+The first sample was `rgb(165, 199, 249)` instead of `rgb(166, 200, 250)`;
+the retry sampled foreground interpolation. The aggregate rerun passed all 23,
+but that does not erase the observed flake or the skipped sync-repeat gate.
+The correction uses normal web-first `toHaveCSS` assertions for the exact final
+foreground/background; login capture also waits for its exact focus-token outline
+color and requires the existing solid 2px outline. No product styles, timeout, color tolerance, geometry,
+font, focus or accessibility threshold is relaxed.
+
+Artifact `11890422559` contains the aggregate run's actual full-page desktop,
+tablet, 320px, settings, forced-colors and login captures. Its verified SHA-256 is
+`af050a319c9757183142d10361156c7f1cf1d78ec56d37ef48b452de36667c22`.
+Inspection confirms the restored shared buttons, unbroken refresh label and
+readable active high-contrast navigation in these captured states. A clean
+exact-head CI result remains pending. Runtime `38555698570` (artifact
+`11890561786`), Security and DCO passed on their first attempts for this head;
+the prior checkpoint's infrastructure retries remain historical evidence.
+
 ## Remaining work
 
 Shared organization/workshop branding, server persistence, permissioned editing

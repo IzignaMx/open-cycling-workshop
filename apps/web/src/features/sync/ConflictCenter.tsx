@@ -14,8 +14,8 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
       aria-labelledby="conflict-center-title"
       className="rounded-2xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-5"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="grid gap-1">
+      <div className="conflict-header">
+        <div className="conflict-heading grid gap-1">
           <h2 id="conflict-center-title" className="text-xl font-semibold">
             Centro de incidencias
           </h2>
@@ -27,7 +27,7 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
         <button
           type="button"
           onClick={() => void onRefresh()}
-          className="min-h-11 rounded-[var(--ocwp-radius-sm)] border border-[var(--ocwp-color-control-border)] px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-accent)]"
+          className="secondary-button conflict-refresh"
         >
           Actualizar
         </button>
