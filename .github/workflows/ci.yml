@@ -33,6 +33,8 @@ jobs:
       OCWP_AUTH_SECRET: ci-e2e-secret-0000000000000000000000000000000000
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Exact pre-cutover App/SW source remains available.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -95,6 +97,8 @@ jobs:
         run: pnpm --filter @ocwp/web typecheck
       - name: Build PWA
         run: pnpm --filter @ocwp/web build
+      - name: Reproduce pinned old App and service worker
+        run: node scripts/e2e/build_legacy_client.mjs artifacts/legacy-client --verify-reproducible
       - name: Verify isolated qualification helpers stay outside production
         run: node --test apps/web/tools/kernel-browser/check-production-isolation.mjs
       - name: Install Playwright Chromium
@@ -116,6 +120,13 @@ jobs:
           pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/order-lifecycle.spec.ts
           --grep 'baseline setup|large reconnect batch|order baseline|order lifecycle'
           --repeat-each=5 --retries=0 --workers=1
+      - name: Repeat authenticated handoff and lost-ACK fences without retries
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/cutover-repeat
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/cutover-repeat
+        run: >-
+          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/sync-scope-integrity.spec.ts
+          --grep 'lost|foreign|checkpoint|handoff' --repeat-each=3 --retries=0 --workers=1
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
       - name: Verify OpenAPI contract
@@ -168,4 +179,23 @@ jobs:
           name: isolated-kernel-browser-${{ github.sha }}
           path: apps/web/.tmp-kernel-browser-results/
           include-hidden-files: true
+          if-no-files-found: warn
+      - name: Upload pinned legacy App and SW provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinned-legacy-client-${{ github.sha }}
+          path: |
+            fixtures/legacy-client/manifest.json
+            artifacts/legacy-client/
+            artifacts/legacy-client-repeated/
+          if-no-files-found: error
+      - name: Upload authenticated cutover repetition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-cutover-repeat-${{ github.sha }}
+          path: |
+            apps/web/test-results/cutover-repeat/
+            apps/web/playwright-report/cutover-repeat/
           if-no-files-found: warn

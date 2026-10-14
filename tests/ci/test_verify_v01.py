@@ -188,3 +188,23 @@ def test_qualifier_browser_evidence_is_isolated_even_with_inherited_direct_paths
     assert browser[2]["PLAYWRIGHT_HTML_OUTPUT_DIR"] == str(web / "playwright-report/qualification")
     assert browser[1][-1] == "test"
     assert env == original
+
+
+def test_qualifier_requires_real_pinned_old_build_before_browser_setup(monkeypatch):
+    calls = []
+
+    def fake_run_check(name, command, *, env=None, cwd=None):
+        calls.append((name, command))
+        if "scripts/e2e/build_legacy_client.mjs" in command:
+            return MODULE.Check(name, "fail", "pinned dependency mismatch")
+        return MODULE.Check(name, "pass", "ok")
+
+    monkeypatch.setattr(MODULE, "run_check", fake_run_check)
+    checks, blockers = MODULE.browser_runtime_checks(
+        MODULE.Check("tool_pnpm", "pass", "ok"),
+        {"OCWP_E2E_DATABASE_URL": "postgresql://example.invalid/ocwp_e2e"},
+    )
+    assert not blockers
+    assert any(check.name == "pwa_build" and check.status == "fail" for check in checks)
+    assert any(check.name == "browser_e2e" and check.status == "fail" for check in checks)
+    assert not any(name in {"browser_e2e_prepare", "browser_e2e"} for name, _ in calls)

@@ -256,9 +256,24 @@ def browser_runtime_checks(
         compile_check = run_check("pwa_build", ["node", tsc_bin, "-b"], env=env, cwd=web)
         if compile_check.status != "pass":
             return Check("pwa_build", "fail", f"tsc -b failed: {compile_check.detail[-500:]}")
-        return run_check("pwa_build", ["node", vite_bin, "build"], env=env, cwd=web)
+        current = run_check("pwa_build", ["node", vite_bin, "build"], env=env, cwd=web)
+        if current.status != "pass":
+            return current
+        return run_check(
+            "pwa_build",
+            [
+                "node",
+                "scripts/e2e/build_legacy_client.mjs",
+                "artifacts/legacy-client",
+                "--verify-reproducible",
+            ],
+            env=env,
+        )
 
     checks.append(web_build())
+    if checks[-1].status != "pass":
+        checks.append(Check("browser_e2e", "fail", "current or pinned old PWA build failed"))
+        return checks, blockers
     database_url = env.get("OCWP_E2E_DATABASE_URL")
     if not database_url:
         blockers.append(
