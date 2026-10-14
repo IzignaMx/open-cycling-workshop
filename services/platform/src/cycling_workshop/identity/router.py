@@ -9,6 +9,13 @@ from sqlalchemy.orm import Session
 from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.admin_schemas import ChangePasswordRequest
 from cycling_workshop.identity.administration import AdministrationService
+from cycling_workshop.identity.cutover import (
+    WriteAdmission,
+    commit_admitted,
+    lock_compatibility,
+    validate_incarnation,
+    write_admission,
+)
 from cycling_workshop.identity.dependencies import effective_principal, principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
@@ -25,9 +32,11 @@ def login(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
 ) -> LoginResponse:
+    organization = lock_compatibility(session, payload.organization_id)
     account = SqlAlchemyUserRepository(session).get_by_username(
         organization_id=payload.organization_id,
         username=payload.username,
+        for_update=True,
     )
     if (
         account is None
@@ -44,6 +53,7 @@ def login(
             location_id=account.location_id,
             capabilities=account.capabilities,
             session_version=account.session_version,
+            dataset_incarnation=organization.dataset_incarnation,
         )
     )
     return LoginResponse(access_token=token)
@@ -51,6 +61,7 @@ def login(
 
 @router.get("/me", response_model=CurrentUserResponse)
 def current_user(
+    request: Request,
     principal: Annotated[Principal, Depends(principal_from_request)],
     session: Annotated[Session, Depends(get_session)],
 ) -> CurrentUserResponse:
@@ -61,6 +72,7 @@ def current_user(
         select(OrganizationRecord)
         .where(OrganizationRecord.id == principal.organization_id)
         .with_for_update()
+        .execution_options(populate_existing=True)
     )
     account = SqlAlchemyUserRepository(session).get(
         user_id=principal.user_id,
@@ -70,6 +82,12 @@ def current_user(
     if organization is None or account is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session")
     try:
+        validate_incarnation(organization, principal)
+        if (
+            principal.expires_at is None
+            or principal.expires_at <= request.app.state.session_tokens.now()
+        ):
+            raise ValueError("invalid session")
         effective = effective_principal(principal, account)
     except ValueError as exc:
         raise HTTPException(
@@ -88,9 +106,10 @@ def current_user(
 def logout_all(
     principal: Annotated[Principal, Depends(principal_from_request)],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> Response:
-    AdministrationService(session).logout_all(principal)
-    session.commit()
+    AdministrationService(session, admission).logout_all(principal)
+    commit_admitted(session, principal, admission)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -99,11 +118,12 @@ def change_password(
     payload: ChangePasswordRequest,
     principal: Annotated[Principal, Depends(principal_from_request)],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> Response:
-    AdministrationService(session).change_password(
+    AdministrationService(session, admission).change_password(
         principal,
         payload.current_password.get_secret_value(),
         payload.new_password.get_secret_value(),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

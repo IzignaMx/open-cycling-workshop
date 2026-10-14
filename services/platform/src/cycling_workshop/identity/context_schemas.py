@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from cycling_workshop.identity.admin_schemas import ScopeId
 
@@ -25,7 +25,10 @@ class AccessContextResponse(BaseModel):
     selected_location_id: ScopeId
     capabilities: list[str]
     authorization_epoch: str
-    policy_revision: Literal["ocwp-access-baseline-1"]
+    policy_revision: Literal["ocwp-access-baseline-2"]
     verified_at: datetime
     offline_until: datetime
-    snapshot_protocol: None
+    snapshot_protocol: Literal["baseline-v1"] | None
+    dataset_incarnation: str = Field(
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )

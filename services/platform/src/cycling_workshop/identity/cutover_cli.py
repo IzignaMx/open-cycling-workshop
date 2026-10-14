@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
 
 from cycling_workshop.api.errors import ApiError
@@ -18,6 +18,14 @@ from cycling_workshop.identity.cutover import lock_compatibility
 from cycling_workshop.settings import Settings
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.tenancy.models import OrganizationRecord
+
+
+def require_cutover_schema(session: Session) -> None:
+    """This binary qualifies one explicit migration head, not guessed compatibility."""
+    if not inspect(session.connection()).has_table("alembic_version"):
+        raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
+    if list(session.scalars(text("SELECT version_num FROM alembic_version"))) != ["0010"]:
+        raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
 
 
 def _state(organization: OrganizationRecord) -> dict[str, object]:
@@ -32,6 +40,7 @@ def cutover_status(settings: Settings, *, organization_id: str) -> dict[str, obj
     engine = build_engine(settings)
     try:
         with Session(engine) as session:
+            require_cutover_schema(session)
             organization = lock_compatibility(session, organization_id)
             audit = session.scalar(
                 select(IdentityAuditRecord)
@@ -83,6 +92,7 @@ def _change(
         with Session(engine) as session:
             if engine.dialect.name == "sqlite":
                 session.execute(text("BEGIN IMMEDIATE"))
+            require_cutover_schema(session)
             organization = lock_compatibility(session, organization_id)
             before = _state(organization)
             if expected_incarnation is None:

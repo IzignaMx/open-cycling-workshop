@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.events.outbox import enqueue_outbox
 from cycling_workshop.identity.administration import AdministrationService
+from cycling_workshop.identity.cutover import WriteAdmission
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.sync.models import ChangeRecord
 from cycling_workshop.tenancy.models import OrganizationRecord
@@ -29,20 +30,26 @@ def lock_organization(session: Session, organization_id: str) -> None:
         raise ApiError(401, "invalid_session", "invalid session")
 
 
-def lock_writer(session: Session, principal: Principal) -> Principal:
+def lock_writer(session: Session, principal: Principal, admission: WriteAdmission) -> Principal:
     """Reuse audited org→actor lock and refresh effective grants after waiting.
 
     Administration already uses this same organization row, so revocation cannot
     commit between this refresh and the writer's transaction completion.
     """
-    actor, effective = AdministrationService(session).lock_actor(principal)
+    if session.in_nested_transaction():
+        raise RuntimeError("writer admission must precede item savepoints")
+    actor, effective = AdministrationService(session, admission).lock_actor(principal)
     # Administration expands wildcard grants for its own policy. Operational
     # HTTP authentication uses literal intersection; preserve that policy again
     # after waiting, without restoring authority absent from the incoming snapshot.
-    return replace(
+    admitted = replace(
         effective,
         capabilities=frozenset(actor.capabilities).intersection(principal.capabilities),
     )
+    # The identity and transaction object are issued by this actual barrier.
+    # A bare Session ID or active transaction is not admission evidence.
+    session.info["ocwp_write_admission"] = (session.get_transaction(), admitted, admission)
+    return admitted
 
 
 def append_change(

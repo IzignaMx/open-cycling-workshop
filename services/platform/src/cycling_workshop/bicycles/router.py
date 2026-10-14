@@ -10,6 +10,7 @@ from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.bicycles.schemas import BicycleCreateRequest, BicycleResponse
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.db.dependencies import get_session
+from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.shared.ids import new_id
@@ -43,8 +44,9 @@ def create_bicycle(
     payload: BicycleCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("bicycles.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> BicycleResponse:
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     try:
         authorize(
             principal,
@@ -84,7 +86,7 @@ def create_bicycle(
         occurred_at=bicycle.updated_at,
         payload=bicycle_payload(bicycle),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return _response(bicycle)
 
 

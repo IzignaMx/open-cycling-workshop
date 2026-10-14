@@ -2,19 +2,20 @@
 
 import json
 from dataclasses import replace
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.cli import main
-from cycling_workshop.db.base import Base
-from cycling_workshop.db.registry import register_models
 from cycling_workshop.identity.audit import IdentityAuditRecord, append_audit
 from cycling_workshop.identity.cutover_cli import activate_cutover, cutover_status, recover_cutover
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.settings import Settings
 from cycling_workshop.tenancy.models import OrganizationRecord
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 
@@ -22,8 +23,13 @@ from sqlalchemy.orm import Session
 def installation(tmp_path, monkeypatch):
     url = f"sqlite+pysqlite:///{tmp_path / 'cutover.sqlite3'}"
     engine = create_engine(url)
-    register_models()
-    Base.metadata.create_all(engine)
+    monkeypatch.delenv("OCWP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    root = Path(__file__).resolve().parents[2]
+    config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "0010")
     with Session(engine) as session:
         session.add_all([OrganizationRecord(id=name, name=name) for name in ("org", "other")])
         session.flush()
@@ -203,3 +209,29 @@ def test_cutover_cli_refuses_fallback_database_configuration(monkeypatch, capsys
     monkeypatch.setattr("cycling_workshop.identity.cutover_cli.build_engine", reject_connection)
     assert main(["cutover", "status", "--organization-id", "org"]) == 1
     assert json.loads(capsys.readouterr().out)["error"] == "database_configuration_required"
+
+
+@pytest.mark.parametrize("revision", [None, "0009", "0011"])
+def test_operator_refuses_unqualified_schema_without_effects(installation, revision):
+    engine, settings = installation
+    with engine.begin() as connection:
+        if revision is None:
+            connection.execute(text("DROP TABLE alembic_version"))
+        else:
+            connection.execute(
+                text("UPDATE alembic_version SET version_num=:revision"), {"revision": revision}
+            )
+    with Session(engine) as session:
+        incarnation = session.get(OrganizationRecord, "org").dataset_incarnation
+    for action in (
+        lambda: cutover_status(settings, organization_id="org"),
+        lambda: activate_cutover(settings, organization_id="org"),
+        lambda: recover_cutover(settings, organization_id="org", expected_incarnation=incarnation),
+    ):
+        with pytest.raises(ApiError) as failure:
+            action()
+        assert failure.value.code == "cutover_schema_incompatible"
+    assert audit_rows(engine) == []
+    with Session(engine) as session:
+        org = session.get(OrganizationRecord, "org")
+        assert org.dataset_incarnation == incarnation and org.minimum_write_protocol == 0

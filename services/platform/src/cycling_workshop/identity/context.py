@@ -6,7 +6,7 @@ import base64
 import hashlib
 import json
 from datetime import timedelta
-from typing import Annotated, Final
+from typing import Annotated, Final, Literal
 
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
@@ -17,6 +17,11 @@ from cycling_workshop.api.errors import ApiError
 from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.admin_schemas import ScopeId
 from cycling_workshop.identity.context_schemas import AccessContextResponse, ContextPrincipal
+from cycling_workshop.identity.cutover import (
+    lock_compatibility,
+    validate_compatibility,
+    validate_incarnation,
+)
 from cycling_workshop.identity.dependencies import _extract_bearer, effective_principal
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
@@ -25,7 +30,7 @@ from cycling_workshop.identity.security import SessionTokenService, ValidatedSes
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-POLICY_REVISION: Final = "ocwp-access-baseline-1"
+POLICY_REVISION: Final = "ocwp-access-baseline-2"
 OFFLINE_LEASE = timedelta(hours=8)
 
 
@@ -38,7 +43,14 @@ def access_context(
 ) -> AccessContextResponse:
     service: SessionTokenService = request.app.state.session_tokens
     validated, effective = lock_context(session, service, authorization)
-    return build_context(session, service, validated, effective, selected_location_id)
+    return build_context(
+        session,
+        service,
+        validated,
+        effective,
+        selected_location_id,
+        cutover_enabled=request.app.state.settings.cutover_enabled,
+    )
 
 
 def lock_context(
@@ -50,11 +62,8 @@ def lock_context(
     except (jwt.InvalidTokenError, ValueError, TypeError, OverflowError) as exc:
         raise HTTPException(status_code=401, detail="invalid session") from exc
     original = validated.principal
-    organization = session.scalar(
-        select(OrganizationRecord)
-        .where(OrganizationRecord.id == original.organization_id)
-        .with_for_update()
-    )
+    organization = lock_compatibility(session, original.organization_id)
+    validate_incarnation(organization, original)
     account = SqlAlchemyUserRepository(session).get(
         user_id=original.user_id, organization_id=original.organization_id, for_update=True
     )
@@ -74,6 +83,8 @@ def build_context(
     validated: ValidatedSession,
     effective: Principal,
     selected_location_id: str | None,
+    *,
+    cutover_enabled: bool = False,
 ) -> AccessContextResponse:
     selected = selected_location_id if selected_location_id is not None else effective.location_id
     if selected is None:
@@ -92,8 +103,15 @@ def build_context(
     capabilities = sorted(
         CAPABILITIES if "*" in effective.capabilities else CAPABILITIES & effective.capabilities
     )
+    organization = validate_compatibility(
+        session.get(OrganizationRecord, effective.organization_id)
+    )
+    validate_incarnation(organization, effective)
+    snapshot_protocol: Literal["baseline-v1"] | None = (
+        "baseline-v1" if cutover_enabled and organization.minimum_write_protocol == 1 else None
+    )
     epoch_input = [
-        "ocwp-access-epoch-v1",
+        "ocwp-access-epoch-v2",
         None,
         effective.user_id,
         effective.organization_id,
@@ -101,6 +119,10 @@ def build_context(
         capabilities,
         effective.session_version,
         POLICY_REVISION,
+        organization.dataset_incarnation,
+        organization.minimum_write_protocol,
+        cutover_enabled,
+        snapshot_protocol,
     ]
     epoch = (
         base64.urlsafe_b64encode(
@@ -126,5 +148,6 @@ def build_context(
         policy_revision=POLICY_REVISION,
         verified_at=verified_at,
         offline_until=min(validated.expires_at, verified_at + OFFLINE_LEASE),
-        snapshot_protocol=None,
+        snapshot_protocol=snapshot_protocol,
+        dataset_incarnation=organization.dataset_incarnation,
     )

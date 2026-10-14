@@ -36,6 +36,7 @@ def service(
             request.app.state.session_tokens,
             request.app.state.baseline_codec,
             authorization,
+            cutover_enabled=request.app.state.settings.cutover_enabled,
         )
     except SQLAlchemyError as exc:
         session.rollback()

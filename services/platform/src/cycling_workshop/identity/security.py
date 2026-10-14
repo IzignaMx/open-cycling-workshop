@@ -4,6 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 import jwt
 from argon2 import PasswordHasher
@@ -73,6 +74,8 @@ class SessionTokenService:
             "exp": now + self._ttl,
             "jti": new_id(),
         }
+        if principal.dataset_incarnation is not None:
+            claims["di"] = principal.dataset_incarnation
         return jwt.encode(claims, self._secret, algorithm="HS256")
 
     def decode(self, token: str) -> Principal:
@@ -117,12 +120,21 @@ class SessionTokenService:
         location_id = claims.get("loc")
         if location_id is not None and not isinstance(location_id, str):
             raise jwt.InvalidTokenError("loc claim must be a string or null")
+        incarnation = claims.get("di")
+        if "di" in claims:
+            try:
+                if not isinstance(incarnation, str) or str(UUID(incarnation)) != incarnation:
+                    raise ValueError("invalid incarnation")
+            except (ValueError, TypeError, AttributeError) as exc:
+                raise jwt.InvalidTokenError("invalid incarnation") from exc
         principal = Principal(
             user_id=str(claims["sub"]),
             organization_id=str(claims["org"]),
             location_id=location_id,
             capabilities=frozenset(capabilities),
             session_version=int(claims.get("sv", 1)),
+            dataset_incarnation=incarnation,
+            expires_at=expires_at,
         )
 
         return ValidatedSession(principal=principal, expires_at=expires_at)

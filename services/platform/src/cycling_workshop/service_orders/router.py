@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.db.dependencies import get_session
+from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.service_orders.domain import (
@@ -53,8 +54,9 @@ def create_service_order(
     payload: ServiceOrderCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("orders.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> ServiceOrderResponse:
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     try:
         authorize(
             principal,
@@ -101,7 +103,7 @@ def create_service_order(
         occurred_at=order.updated_at,
         payload=order_payload(order),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return _response(order)
 
 
@@ -130,8 +132,9 @@ def transition_service_order(
     payload: OrderTransitionRequest,
     principal: Annotated[Principal, Depends(require_capability("orders.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> ServiceOrderResponse:
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     repository = SqlAlchemyServiceOrderRepository(session)
     order = repository.get(order_id=order_id, organization_id=principal.organization_id)
     if order is None:
@@ -166,7 +169,7 @@ def transition_service_order(
         occurred_at=result.order.updated_at,
         payload=order_payload(result.order),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return _response(result.order)
 
 

@@ -1,6 +1,7 @@
 """The current-user response describes authenticated authority, not raw grants."""
 
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from cycling_workshop.identity.dependencies import principal_from_request
@@ -74,6 +75,7 @@ def test_me_revalidates_persisted_state_after_dependency_authentication(change: 
     if change == "narrow":
         authenticated = replace(authenticated, location_id=None)
     # Model the earlier dependency snapshot without claiming SQLite lock evidence.
+    authenticated = replace(authenticated, expires_at=datetime.now(UTC) + timedelta(hours=1))
     client.app.dependency_overrides[principal_from_request] = lambda: authenticated
     with client.app.state.session_factory.begin() as session:
         account = session.get(UserRecord, "user-1")
