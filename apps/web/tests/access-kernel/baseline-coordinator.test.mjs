@@ -211,3 +211,41 @@ test('stale failed hold cannot disable a newer coordinator request', async () =>
   release()
   assert.equal((await first).reason, 'stale_request')
 })
+
+test('actual Dexie-wrapped quota remains a storage hold rather than terminal integrity failure', async () => {
+  const { default: Dexie } = await import('dexie')
+  const quota = new Dexie.QuotaExceededError('Private quota detail')
+  assert.equal(quota instanceof DOMException, false)
+  const f = fixture(null, {
+    kernel: {
+      commitBaselinePage: async () => {
+        throw quota
+      },
+    },
+  })
+  const outcome = await f.coordinator.step(f.input)
+  assert.equal(outcome.reason, 'storage_full')
+  assert.equal(f.holds[0][2], 'storage_full')
+  assert.ok(!JSON.stringify(outcome).includes('Private quota'))
+})
+
+test('native and Dexie transaction aborts preserve a resumable storage-aborted hold', async () => {
+  const { default: Dexie } = await import('dexie')
+  for (const error of [
+    new Dexie.AbortError('Private abort'),
+    new DOMException('Private abort', 'AbortError'),
+  ]) {
+    const f = fixture(null, {
+      kernel: {
+        commitBaselinePage: async () => {
+          throw error
+        },
+      },
+    })
+    const outcome = await f.coordinator.step(f.input)
+    assert.equal(outcome.reason, 'storage_aborted')
+    assert.equal(f.holds[0][2], 'storage_aborted')
+    assert.equal(f.holds[0][3], null)
+    assert.ok(!JSON.stringify(outcome).includes('Private abort'))
+  }
+})

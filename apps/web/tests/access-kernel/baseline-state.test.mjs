@@ -589,3 +589,22 @@ test('latest receipt duplicate requires original wire spelling even when timesta
   await assert.rejects(f.store.commit(f.ticket, request, changed, f.identity), /Stale/)
   assert.equal(await f.store.commit(f.ticket, request, response, f.identity), 'duplicate')
 })
+
+test('quota and transaction-abort storage holds resume unchanged staging only after fresh verification', async (t) => {
+  for (const reason of ['storage_full', 'storage_aborted']) {
+    const f = await staged(t)
+    const original = (await f.store.pending(f.ticket)).baseline
+    await f.store.hold(f.ticket, original.next, reason)
+    await assert.rejects(f.store.resume(f.ticket), /Fresh verification/)
+    const accepted = await f.kernel.acceptVerifiedContext(
+      await f.kernel.beginVerification(`recover-${reason}`),
+      protocolContext,
+    )
+    await f.store.resume(accepted.ticket)
+    const recovered = (await f.store.pending(accepted.ticket)).baseline
+    assert.deepEqual(recovered.next, original.next)
+    assert.equal(recovered.requestId, original.requestId)
+    assert.deepEqual(recovered.origin, original.origin)
+    assert.equal(recovered.hold, null)
+  }
+})

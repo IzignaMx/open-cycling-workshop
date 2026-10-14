@@ -138,12 +138,16 @@ export function createBaselineCoordinator(options: BaselineCoordinatorOptions) {
       return result(captured, 'PROGRESSED')
     } catch (error) {
       if (!captured.current()) return result(captured, 'HELD', { reason: 'stale_request' })
-      const code =
-        error instanceof BaselineTransportError
-          ? error.code
-          : error instanceof DOMException && error.name === 'QuotaExceededError'
+      const storageCode =
+        error instanceof DOMException || error instanceof Error
+          ? error.name === 'QuotaExceededError'
             ? 'storage_full'
-            : 'invalid_response'
+            : error.name === 'AbortError'
+              ? 'storage_aborted'
+              : null
+          : null
+      const code =
+        error instanceof BaselineTransportError ? error.code : (storageCode ?? 'invalid_response')
       const transient = [
         'network_error',
         'baseline_in_progress',

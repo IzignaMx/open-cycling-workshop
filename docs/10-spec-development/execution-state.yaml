@@ -878,8 +878,8 @@ isolated_baseline_client_2026_10_14:
   context_advertisement: null
   ordinary_null_behavior: baseline_required_zero_requests_no_activation_or_reuse
   schema: unchanged_v1_through_v5_additive_nonindexed_partition_format_1
-  local_focused: 222_passed_zero_skips_independent_review
-  local_frontend_core: 320_passed_zero_skips
+  local_focused: 225_passed_zero_skips
+  local_frontend_core: 323_passed_zero_skips
   local_python: 1107_passed_140_explicit_skips
   local_aggregate: 21_pass_zero_fail_five_explicit_environment_blockers
   actual_server_contract: five_response_kinds_three_entity_types_five_phase_resume_passed

@@ -141,6 +141,7 @@ export class BaselineTransactions {
           'cursor_invalid',
           'unsupported_protocol',
           'invalid_response',
+          'invalid_request',
         ].includes(baseline.hold.reason)
       )
         throw new Error('Fresh baseline required after terminal hold')

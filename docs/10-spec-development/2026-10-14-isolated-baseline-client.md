@@ -41,14 +41,17 @@ concrete multi-segment administration grants remain literal; and original start
 expiry is not incorrectly bounded by the earlier context verification timestamp.
 An actual-server 35-microsecond creation-time difference reproduces the last case.
 
-Current local checkpoint: independent review ran 222 focused access-kernel tests,
+Current local checkpoint: independent review ran 225 focused access-kernel tests,
 zero skips, and generated actual FastAPI responses for all five steps/all three
 entity types, then consumed them unchanged through JS wire validation and Dexie
 staging. Ordinary null start and activation were refused, and journal history
 remained unchanged. This non-browser runtime contract proof does not replace the
-hosted native journey. Final frontend core: 320 passed, zero skips. TypeScript (real and offline shim),
+hosted native journey. Final frontend core: 323 passed, zero skips. TypeScript (real and offline shim),
 ESLint/Prettier, isolated build, production PWA build, repository contract and
-production helper-isolation checks (2/2) pass. Local Python checkpoint: 1107 passed,
+production helper-isolation checks (2/2) pass. Real native and Dexie-wrapped quota/transaction-abort errors receive resumable
+storage holds; failed hold persistence disables only the matching local session.
+These additional error-shape regressions were observed failing before correction.
+Local Python checkpoint: 1107 passed,
 140 explicit environment-dependent skips. Aggregate checkpoint: 21 checks pass,
 zero fail, five explicit environment blockers (PostgreSQL, Docker, PostgreSQL
 tooling, managed browser benchmark, configured production E2E target). Final-tree
