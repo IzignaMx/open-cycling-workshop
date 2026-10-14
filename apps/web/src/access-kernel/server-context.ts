@@ -71,7 +71,7 @@ function instant(value: unknown): string {
   if (normalized.slice(0, 19) !== value.slice(0, 19)) return reject()
   return normalized
 }
-function convert(
+export function convertServerContext(
   value: unknown,
   identity: Readonly<ContextRequestIdentity>,
   now: number,
@@ -107,7 +107,8 @@ function convert(
       body.authorization_epoch !== identity.expectedAuthorizationEpoch) ||
     !Array.isArray(body.capabilities) ||
     body.capabilities.some(
-      (grant) => typeof grant !== 'string' || !/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(grant),
+      (grant) =>
+        typeof grant !== 'string' || !/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(grant),
     )
   )
     return reject()
@@ -211,7 +212,7 @@ export function createServerContextAdapter(options: ServerContextAdapterOptions)
         const body: unknown = await response.json()
         const finished = clock()
         if (!current() || !Number.isFinite(finished) || finished < started) return reject()
-        const context = convert(body, identity, finished)
+        const context = convertServerContext(body, identity, finished)
         return Object.freeze({ state: 'BASELINE_REQUIRED', context, identity })
       } catch {
         return reject()

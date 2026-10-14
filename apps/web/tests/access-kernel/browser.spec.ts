@@ -78,6 +78,7 @@ test('real two-tab IndexedDB generation fences old commands and ACKs with unchan
       baselineComplete: true,
       status: 'active',
       cursor: 'fixture-only',
+      baseline: window.kernelHarness.completedMetadata(first.ticket, value, 'fixture-only'),
     })
     const ready = await kernel.acceptVerifiedContext(
       await kernel.beginVerification('tab-A-verified'),
@@ -134,6 +135,7 @@ test('real two-tab IndexedDB generation fences old commands and ACKs with unchan
       baselineComplete: true,
       status: 'active',
       cursor: 'fixture-only',
+      baseline: window.kernelHarness.completedMetadata(first.ticket, value, 'fixture-only'),
     })
     const ready = await kernel.acceptVerifiedContext(
       await kernel.beginVerification('tab-B-verified'),

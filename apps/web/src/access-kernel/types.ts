@@ -1,3 +1,4 @@
+import type { BaselineMetadata } from './baseline-state.js'
 import type { EntityType, MutationEnvelope, MutationResult } from '../sync/types.js'
 
 export interface PrincipalKey {
@@ -57,6 +58,8 @@ export interface AccessContextRecord {
   context: VerifiedAccessContext
 }
 export interface CachePartition {
+  /** Additive non-indexed record format; v1–v5 schema history is unchanged. */
+  baseline?: BaselineMetadata
   partitionId: string
   principalKey: string
   locationId: string

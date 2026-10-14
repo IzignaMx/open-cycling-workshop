@@ -118,6 +118,12 @@ def test_checkpoint_family_is_bounded_and_deadline_never_slides():
     with client.app.state.session_factory() as session:
         deadline = session.scalar(select(BaselineFamily.family_expires_at))
     now[0] += timedelta(minutes=31)
+    # A lost final-delta response replays exactly after the baseline deadline:
+    # completion retained the family, even if the client still thinks catching_up.
+    replay = post(client, "deltas/page", delta.json()["predecessor"])
+    assert replay.status_code == 200
+    assert replay.content == delta.content
+    assert replay.json()["completion"]["checkpoint"] == original_checkpoint
     # Completed proof outlives the scan deadline.
     activation = {"protocol": 1, "checkpoint": original_checkpoint}
     assert client.post(f"{ROOT}/baselines/validate-activation", json=activation).status_code == 200
