@@ -427,8 +427,10 @@ for (const state of ['OFFLINE_READY', 'HELD']) {
 test('temporary delta backoff remains owned by metadata and cannot clear a later push hold', async (t) => {
   const f = await setup(t)
   const expected = (await f.store.pending(ticket)).incremental.next
+  await f.db.deviceControl.update('device', { dispatchAttemptId: 'concurrent-push' })
   await f.store.hold(ticket, expected, 'network_error', NOW)
   assert.equal((await f.db.deviceControl.get('device')).state, 'READY')
+  assert.equal((await f.db.deviceControl.get('device')).dispatchAttemptId, 'concurrent-push')
   assert.equal((await f.store.pending(ticket)).incremental.hold.reason, 'network_error')
   await f.db.deviceControl.update('device', { state: 'HELD' })
   await assert.rejects(f.store.retry(ticket, expected), /fenced/)

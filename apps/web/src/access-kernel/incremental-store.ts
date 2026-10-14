@@ -254,7 +254,7 @@ export class IncrementalTransactions {
         // Transient pull backoff owns only its metadata. It must neither grant
         // online authority nor overwrite an independent push/session hold.
         state: reason === 'invalid_session' ? 'LOCKED' : retryAt === null ? 'HELD' : 'READY',
-        dispatchAttemptId: null,
+        dispatchAttemptId: retryAt === null ? null : control.dispatchAttemptId,
         observedAt,
       })
       this.finalFence(ticket, current, context, Math.max(control.observedAt, observedAt))
