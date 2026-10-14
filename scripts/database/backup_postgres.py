@@ -244,8 +244,14 @@ def create_backup_bundle(
     *,
     runner: Runner = _run,
     engine_factory: EngineFactory = create_engine,
+    snapshot_observer: Callable[[Connection], None] | None = None,
 ) -> Path:
-    """Capture row counts and pg_dump from one open repeatable-read snapshot."""
+    """Capture counts/dump in one snapshot; optionally observe it before dumping.
+
+    The observer must only read and retain bounded references in caller-owned
+    memory. It cannot change the database-only manifest or the completion claim.
+    An observer failure aborts this generation before publication.
+    """
     _libpq_env(database_url)
     directory = directory.absolute()
     try:
@@ -263,6 +269,8 @@ def create_backup_bundle(
                 snapshot_started_at = datetime.now(UTC).isoformat()
                 snapshot = connection.execute(text("SELECT pg_export_snapshot()")).scalar_one()
                 metadata = _database_metadata(connection)
+                if snapshot_observer is not None:
+                    snapshot_observer(connection)
                 dump = backup_postgres(
                     database_url, directory / DUMP_NAME, runner=runner, snapshot=snapshot
                 )
