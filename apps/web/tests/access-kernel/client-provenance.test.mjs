@@ -240,3 +240,200 @@ test('lease expiry during local transaction aborts all staged command records', 
   assert.equal(await db.operationJournal.count(), 0)
   assert.equal(await db.operationDelivery.count(), 0)
 })
+
+for (const mode of ['confirmed', 'unconfirmed', 'explicit-old-dependency'])
+  test(`restored ${mode} prerequisite never adopts old-incarnation history`, async (t) => {
+    const { db, kernel } = await setup(t)
+    const grants = [
+      'customers.read',
+      'customers.write',
+      'bicycles.read',
+      'bicycles.write',
+      'sync.push',
+    ]
+    const originalTicket = await completedBaseline(
+      db,
+      kernel,
+      context('A', { capabilities: grants }),
+    )
+    const customer = command('original-customer-create', 'restored-customer')
+    await kernel.commitLocalCommand(originalTicket, customer)
+    const batch = await kernel.listDispatchable(originalTicket, 10)
+    await kernel.applyPushResult(originalTicket, batch, {
+      results: [
+        {
+          mutation_id: 'original-customer-create',
+          entity_id: 'restored-customer',
+          status: 'applied',
+          entity_version: 1,
+        },
+      ],
+    })
+    const original = await db.operationJournal.get('original-customer-create')
+    const freshContext = context('A', {
+      capabilities: grants,
+      datasetIncarnation: '0199ba00-0000-7000-8000-000000000002',
+    })
+    const ticket = await completedBaseline(db, kernel, freshContext)
+    if (mode !== 'unconfirmed')
+      await db.cacheRecords.add({
+        partitionId: ticket.partitionId,
+        entityType: 'customer',
+        entityId: 'restored-customer',
+        version: 1,
+        payload: customer.optimistic,
+      })
+    const bicycle = command('new-bicycle-create', 'new-bicycle')
+    bicycle.envelope.entity_type = 'bicycle'
+    bicycle.envelope.payload = { customer_id: 'restored-customer' }
+    bicycle.optimistic = {
+      bicycle_id: 'new-bicycle',
+      customer_id: 'restored-customer',
+      organization_id: 'org',
+      location_id: 'loc',
+      version: 1,
+    }
+    if (mode === 'explicit-old-dependency') bicycle.dependsOn = ['original-customer-create']
+    if (mode === 'confirmed') {
+      await kernel.commitLocalCommand(ticket, bicycle)
+      const fresh = await db.operationJournal.get('new-bicycle-create')
+      assert.deepEqual(fresh.dependsOn, [])
+      assert.equal(fresh.authoredDatasetIncarnation, freshContext.datasetIncarnation)
+      assert.equal(
+        (await kernel.readEntity(ticket, 'bicycle', 'new-bicycle')).optimistic.bicycle_id,
+        'new-bicycle',
+      )
+      assert.deepEqual(
+        (await kernel.listDispatchable(ticket, 10)).operations.map((row) => row.mutationId),
+        ['new-bicycle-create'],
+      )
+      await kernel.commitLocalCommand(ticket, bicycle)
+    } else {
+      await assert.rejects(
+        kernel.commitLocalCommand(ticket, bicycle),
+        /Dependency author or scope mismatch/,
+      )
+      assert.equal(await db.operationJournal.get('new-bicycle-create'), undefined)
+    }
+    assert.deepEqual(await db.operationJournal.get('original-customer-create'), original)
+    assert.equal(
+      (await db.operationDelivery.get('original-customer-create')).state,
+      'held_recovery',
+    )
+  })
+
+test('fresh same-entity update uses restored confirmed aggregate while old history stays held', async (t) => {
+  const { db, kernel } = await setup(t)
+  const first = await completedBaseline(db, kernel)
+  const old = command('old-create', 'restored-aggregate')
+  await kernel.commitLocalCommand(first, old)
+  const ticket = await completedBaseline(
+    db,
+    kernel,
+    context('A', { datasetIncarnation: '0199ba00-0000-7000-8000-000000000002' }),
+  )
+  await db.cacheRecords.add({
+    partitionId: ticket.partitionId,
+    entityType: 'customer',
+    entityId: 'restored-aggregate',
+    version: 1,
+    payload: old.optimistic,
+  })
+  const fresh = command('fresh-update', 'restored-aggregate')
+  fresh.envelope.operation = 'update'
+  fresh.envelope.base_version = 1
+  fresh.optimistic.version = 2
+  fresh.optimistic.display_name = 'Independent current update'
+  await kernel.commitLocalCommand(ticket, fresh)
+  assert.deepEqual((await db.operationJournal.get('fresh-update')).dependsOn, [])
+  assert.equal(
+    (await kernel.readEntity(ticket, 'customer', 'restored-aggregate')).optimistic.display_name,
+    'Independent current update',
+  )
+  assert.deepEqual(
+    (await kernel.listDispatchable(ticket, 10)).operations.map((row) => row.mutationId),
+    ['fresh-update'],
+  )
+  assert.equal((await db.operationDelivery.get('old-create')).state, 'held_recovery')
+})
+
+test('confirmed reference ignores unrelated rejected same-incarnation edits while exact retries preserve genuine create dependencies', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(
+    db,
+    kernel,
+    context('A', {
+      capabilities: [
+        'customers.read',
+        'customers.write',
+        'bicycles.read',
+        'bicycles.write',
+        'sync.push',
+      ],
+    }),
+  )
+  const customer = command('customer-create', 'confirmed-customer')
+  await kernel.commitLocalCommand(ticket, customer)
+  const bicycle = command('dependent-bicycle', 'dependent-bicycle')
+  bicycle.envelope.entity_type = 'bicycle'
+  bicycle.envelope.payload = { customer_id: 'confirmed-customer' }
+  bicycle.optimistic = {
+    bicycle_id: 'dependent-bicycle',
+    customer_id: 'confirmed-customer',
+    organization_id: 'org',
+    location_id: 'loc',
+    version: 1,
+  }
+  await kernel.commitLocalCommand(ticket, bicycle)
+  assert.deepEqual((await db.operationJournal.get('dependent-bicycle')).dependsOn, [
+    'customer-create',
+  ])
+  const batch = await kernel.listDispatchable(ticket, 1)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'customer-create',
+        entity_id: 'confirmed-customer',
+        status: 'applied',
+        entity_version: 1,
+      },
+    ],
+  })
+  await db.cacheRecords.add({
+    partitionId: ticket.partitionId,
+    entityType: 'customer',
+    entityId: 'confirmed-customer',
+    version: 1,
+    payload: customer.optimistic,
+  })
+  await kernel.commitLocalCommand(ticket, bicycle)
+  assert.deepEqual((await db.operationJournal.get('dependent-bicycle')).dependsOn, [
+    'customer-create',
+  ])
+  const update = command('rejected-customer-update', 'confirmed-customer')
+  update.envelope.operation = 'update'
+  update.envelope.base_version = 1
+  update.optimistic.version = 2
+  await kernel.commitLocalCommand(ticket, update)
+  const pending = await kernel.listDispatchable(ticket, 10)
+  await kernel.applyPushResult(ticket, pending, {
+    results: pending.operations.map((op) => ({
+      mutation_id: op.mutationId,
+      entity_id: op.entityId,
+      status: 'conflict',
+      entity_version: null,
+      error_code: 'sync_conflict',
+      error_message: 'rejected',
+    })),
+  })
+  const fresh = structuredClone(bicycle)
+  fresh.envelope.mutation_id = 'independent-bicycle'
+  fresh.envelope.entity_id = 'independent-bicycle'
+  fresh.optimistic.bicycle_id = 'independent-bicycle'
+  await kernel.commitLocalCommand(ticket, fresh)
+  assert.deepEqual((await db.operationJournal.get('independent-bicycle')).dependsOn, [])
+  assert.deepEqual(
+    (await kernel.listDispatchable(ticket, 10)).operations.map((row) => row.mutationId),
+    ['independent-bicycle'],
+  )
+})

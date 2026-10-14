@@ -19,7 +19,13 @@ import { completedBaseline } from './baseline-state.js'
 import type { EntityType } from '../sync/types.js'
 import { retryPlan } from '../sync/retry-policy.js'
 import type { KernelDatabase } from './database.js'
-import { readProjection, replayableStates, heldDependencyStates } from './projection.js'
+import {
+  readProjection,
+  replayableStates,
+  heldDependencyStates,
+  hasConfirmedEntity,
+  aggregateBoundary,
+} from './projection.js'
 import { contextKey, nextContextState, principalKey, validateVerifiedContext } from './context.js'
 import {
   canonicalJson,
@@ -701,7 +707,26 @@ export class AccessKernel {
         )
         .reverse()
         .first()
-      if (predecessor) dependencies.add(predecessor.mutationId)
+      if (predecessor) {
+        const confirmed = await hasConfirmedEntity(
+          this.db,
+          ticket.partitionId,
+          context,
+          entityType,
+          entityId,
+        )
+        const aggregate =
+          entityType === command.envelope.entity_type && entityId === command.envelope.entity_id
+        // A confirmed reference is independent of unrelated local edits. Exact-ID
+        // retries retain only dependencies that were present when originally authored.
+        if (
+          confirmed &&
+          (!aggregate || !operationProvenance(predecessor, context)) &&
+          (!existing || !existing.dependsOn.includes(predecessor.mutationId))
+        )
+          continue
+        dependencies.add(predecessor.mutationId)
+      }
     }
     command.dependsOn = [...dependencies]
     if (existing) {
@@ -986,17 +1011,21 @@ export class AccessKernel {
             context.selectedLocationId,
             operation.entityType,
             operation.entityId,
-            1,
           ]
-          const first = await this.db.operationDelivery
-            .where('[principalKey+locationId+entityType+entityId+unresolved+localSequence]')
-            .between(
-              [...aggregatePrefix, 0],
-              [...aggregatePrefix, Number.MAX_SAFE_INTEGER],
-              true,
-              true,
-            )
-            .first()
+          const confirmed = await hasConfirmedEntity(
+            this.db,
+            ticket.partitionId,
+            context,
+            operation.entityType,
+            operation.entityId,
+          )
+          const first = await aggregateBoundary(
+            this.db,
+            context,
+            aggregatePrefix,
+            'unresolved',
+            confirmed,
+          )
           const earlier =
             first && first.mutationId !== operation.mutationId ? first.state : undefined
           let held: OperationDelivery['state'] | null = null
