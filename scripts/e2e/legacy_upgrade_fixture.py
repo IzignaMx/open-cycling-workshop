@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-from cycling_workshop.identity.cutover_cli import activate_cutover
+from cycling_workshop.identity.cutover_cli import activate_cutover, recover_cutover
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.settings import Settings
@@ -61,10 +61,23 @@ def legacy_fixture_session(settings: Settings) -> str:
         engine.dispose()
 
 
+def recover_legacy_fixture(settings: Settings, expected_incarnation: str) -> dict[str, object]:
+    """Only the dedicated synthetic tenant may rotate in this browser fixture."""
+    return recover_cutover(
+        settings,
+        organization_id=E2E_LEGACY_ORGANIZATION_ID,
+        expected_incarnation=expected_incarnation,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["legacy-session", "activate"])
-    action = parser.parse_args().action
+    parser.add_argument("action", choices=["legacy-session", "activate", "recover"])
+    parser.add_argument("--expected-incarnation")
+    args = parser.parse_args()
+    action = args.action
+    if (action == "recover") != (args.expected_incarnation is not None):
+        parser.error("recover requires exactly one expected incarnation")
     url = os.environ.get("OCWP_E2E_DATABASE_URL", "")
     validate_e2e_database_url(url)
     settings = Settings(
@@ -77,8 +90,10 @@ def main() -> int:
     if action == "legacy-session":
         # Captured by the browser runner only; never upload credentials as artifacts.
         print(json.dumps({"token": legacy_fixture_session(settings)}))
-    else:
+    elif action == "activate":
         print(json.dumps(activate_cutover(settings, organization_id=E2E_LEGACY_ORGANIZATION_ID)))
+    else:
+        print(json.dumps(recover_legacy_fixture(settings, args.expected_incarnation)))
     return 0
 
 

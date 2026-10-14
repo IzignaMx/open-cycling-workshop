@@ -512,6 +512,10 @@ test('real selector, baseline progress and server upgrade hold remain keyboard a
   }
   await assertAccessible()
   await attachScreenshot(page, info, 'authenticated-workshop-selector')
+  await page.setViewportSize({ width: 320, height: 900 })
+  await assertAccessible()
+  await attachScreenshot(page, info, 'authenticated-workshop-selector-320', true)
+  await page.setViewportSize({ width: 1440, height: 1000 })
   const workshop = page.getByRole('button', { name: 'Taller E2E', exact: true })
   await workshop.focus()
   await expect(workshop).toBeFocused()
@@ -567,6 +571,9 @@ test('real selector, baseline progress and server upgrade hold remain keyboard a
     expect((await kernelSnapshot(page, originalPartition)).journal).toEqual(authored)
     await assertAccessible()
     await attachScreenshot(page, info, 'authenticated-upgrade-held')
+    await page.setViewportSize({ width: 320, height: 900 })
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-upgrade-held-320', true)
   } finally {
     releaseBaseline()
     releaseRefusal()

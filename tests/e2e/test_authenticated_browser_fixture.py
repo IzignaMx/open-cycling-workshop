@@ -134,4 +134,14 @@ def test_real_old_bundle_fixture_is_floor_zero_until_explicit_disposable_cutover
             blocked.status_code == 409
             and blocked.json()["error"]["code"] == "client_upgrade_required"
         )
+
+        from scripts.e2e.legacy_upgrade_fixture import recover_legacy_fixture
+
+        incarnation = client.get("/api/v1/auth/context", headers=fresh_headers).json()[
+            "dataset_incarnation"
+        ]
+        recovered = recover_legacy_fixture(settings, incarnation)
+        assert recovered["minimum_write_protocol"] == 1
+        assert recovered["dataset_incarnation"] != incarnation
+        assert client.get("/api/v1/auth/me", headers=fresh_headers).status_code == 401
     engine.dispose()

@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -7,15 +8,25 @@ const ROOT = resolve(import.meta.dirname, '../../..')
 const BASE = 'http://127.0.0.1:5174'
 const ORGANIZATION = '00000000-0000-7000-8000-000000000101'
 const PASSWORD = 'ocwp-e2e-password'
-function fixture(action: 'legacy-session' | 'activate') {
+function fixture(action: 'legacy-session' | 'activate' | 'recover', expectedIncarnation?: string) {
   return JSON.parse(
-    execFileSync('uv', ['run', 'python', 'scripts/e2e/legacy_upgrade_fixture.py', action], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      env: { ...process.env, PYTHONPATH: `${ROOT}:${ROOT}/services/platform/src` },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }),
-  ) as { token?: string; changed?: boolean }
+    execFileSync(
+      'uv',
+      [
+        'run',
+        'python',
+        'scripts/e2e/legacy_upgrade_fixture.py',
+        action,
+        ...(expectedIncarnation ? ['--expected-incarnation', expectedIncarnation] : []),
+      ],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONPATH: `${ROOT}:${ROOT}/services/platform/src` },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    ),
+  ) as { token?: string; changed?: boolean; dataset_incarnation?: string }
 }
 async function login(page: Page) {
   await page.getByLabel('Organización').fill(ORGANIZATION)
@@ -65,7 +76,8 @@ async function queueCustomer(page: Page, name: string) {
 test.describe.configure({ retries: 0 })
 test('exact old App and SW preserve offline work across floor1 upgrade and late old-tab edits', async ({
   browser,
-}) => {
+}, info) => {
+  test.setTimeout(120_000)
   const evidence = JSON.parse(
     readFileSync(resolve(ROOT, 'artifacts/legacy-client/evidence.json'), 'utf8'),
   )
@@ -172,6 +184,70 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
     )
   expect((await rawDatabase(current, 'ocwp-authenticated-v1')).stores.operationJournal).toEqual(
     journal,
+  )
+  expect(await rawDatabase(current)).toEqual(late)
+  // Reuse this isolated tenant for genuine incarnation recovery visibility.
+  // Docker acceptance separately proves actual database restore ordering.
+  await context.setOffline(true)
+  await expect(current.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
+  await queueCustomer(current, 'Preserved pending recovery customer')
+  const beforeRecovery = await rawDatabase(current, 'ocwp-authenticated-v1')
+  expect(beforeRecovery.stores.operationJournal).toHaveLength(2)
+  const pending = beforeRecovery.stores.operationJournal.find(
+    (row) =>
+      (row as { optimistic: { display_name: string } }).optimistic.display_name ===
+      'Preserved pending recovery customer',
+  ) as { mutationId: string; entityId: string; authoredDatasetIncarnation: string }
+  expect(fixture('recover', pending.authoredDatasetIncarnation).changed).toBe(true)
+  await current.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await context.setOffline(false)
+  await login(current)
+  await expect(current.locator('[data-runtime-state="READY"]')).toBeVisible()
+  const recoveryItem = current
+    .getByRole('list', { name: 'Trabajo conservado' })
+    .getByRole('listitem')
+    .filter({ hasText: pending.mutationId })
+  await expect(recoveryItem).toContainText('Recuperación pendiente')
+  await expect(
+    current.getByText('Preserved pending recovery customer', { exact: true }),
+  ).toHaveCount(0)
+  expect((await rawDatabase(current, 'ocwp-authenticated-v1')).stores.operationJournal).toEqual(
+    beforeRecovery.stores.operationJournal,
+  )
+  for (const [theme, label] of [
+    ['banco', 'Banco de trabajo'],
+    ['plano', 'Plano técnico'],
+    ['ritmo', 'Ritmo modular'],
+    ['noche', 'Turno nocturno'],
+  ]) {
+    await current.getByRole('button', { name: 'Personalización', exact: true }).click()
+    const choice = current.getByRole('radio', { name: new RegExp(label!) })
+    await choice.focus()
+    await choice.press('Space')
+    await expect(current.locator('.workshop-shell')).toHaveAttribute('data-theme', theme!)
+    await choice.press('Escape')
+    for (const width of [1440, 320]) {
+      await current.setViewportSize({ width, height: 1000 })
+      await expect(recoveryItem).toBeVisible()
+      expect(
+        await current.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      ).toBe(true)
+      const accessibility = await new AxeBuilder({ page: current }).analyze()
+      expect(
+        accessibility.violations.filter((item) =>
+          ['critical', 'serious'].includes(item.impact ?? ''),
+        ),
+      ).toEqual([])
+      const name = `authenticated-recovery-${theme}-${width}`
+      const path = info.outputPath(`${name}.png`)
+      await current.screenshot({ path, fullPage: true })
+      await info.attach(name, { path, contentType: 'image/png' })
+    }
+  }
+  expect((await rawDatabase(current, 'ocwp-authenticated-v1')).stores.operationJournal).toEqual(
+    beforeRecovery.stores.operationJournal,
   )
   expect(await rawDatabase(current)).toEqual(late)
   await context.close()
