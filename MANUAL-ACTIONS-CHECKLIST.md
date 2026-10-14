@@ -774,3 +774,18 @@ v6 notes remain historical. Local emulator/unit/build evidence is not hosted
 SW/PG/restore or physical-device evidence. User/role CRUD administration UI and
 new domain breadth remain later increments. See the
 [C scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
+
+## 2026-10-14 · Audited Python dependency remediation
+
+- [ ] Complete independent review and exact integrated-head hosted Security/CI
+      with both the project-graph scanner correction and the dependency patch.
+      Local pip-audit is clean for all 40 active Linux/Python 3.13 packages;
+      all 42 registry packages are represented in the hashed export. This is
+      not full-history/image, Windows or deployment qualification.
+- [ ] Retain the existing PostgreSQL, native browser/service-worker, restore,
+      physical-device and accessibility gates until their own evidence passes.
+      The dependency patch changes no production installation or credentials.
+
+The [applicability and evidence record](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md)
+accounts for all original 19 advisories, the bounded compatible upgrade and
+the advisory with an unset patched-version field. No finding was suppressed.
