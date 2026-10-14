@@ -1,0 +1,212 @@
+name: ocwp-local
+
+x-platform: &platform
+  image: ocwp-platform:${OCWP_IMAGE_TAG:-local}
+  build:
+    context: ../..
+    dockerfile: infra/docker/platform.local.Dockerfile
+  environment:
+    OCWP_ENVIRONMENT: production
+    OCWP_DATABASE_URL_FILE: /run/secrets/database_url
+    OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
+    OCWP_LOG_LEVEL: INFO
+  secrets:
+    - database_url
+    - auth_secret
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  init: true
+
+services:
+  postgres:
+    image: postgres:18.4-trixie
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets:
+      - postgres_admin_password
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    networks: [data_net]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    # Official entrypoint initializes ownership as root, then runs PostgreSQL
+    # as postgres (verify its image UID). No superuser secret reaches API/worker.
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped
+
+  migrate:
+    <<: *platform
+    environment:
+      OCWP_ENVIRONMENT: production
+      OCWP_DATABASE_URL_FILE: /run/secrets/database_url
+    secrets: [database_url]
+    networks: [data_net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ['alembic', 'upgrade', 'head']
+    restart: 'no'
+
+  api:
+    <<: *platform
+    networks: [app_net, data_net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # The proxy is the only externally reachable service; do not trust arbitrary
+    # forwarded headers from other containers for authentication or URL building.
+    command:
+      [
+        'uvicorn',
+        'cycling_workshop.runtime:app',
+        '--host',
+        '0.0.0.0',
+        '--port',
+        '8000',
+        '--no-proxy-headers',
+      ]
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  worker:
+    <<: *platform
+    networks: [data_net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ['ocwp-worker']
+    # This proves DB/config reachability, not execution of a domain job handler.
+    healthcheck:
+      test: ['CMD', 'ocwpctl', 'doctor']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  edge:
+    image: ocwp-web:${OCWP_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${OCWP_HTTP_PORT:-8080}:8080'
+    networks: [edge_net, app_net]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8081/edge-health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  bootstrap:
+    <<: *platform
+    profiles: ['bootstrap']
+    networks: [data_net]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    secrets:
+      - database_url
+      - auth_secret
+      - admin_password
+    command:
+      - ocwpctl
+      - bootstrap
+      - admin
+      - --organization-name
+      - '${OCWP_ORGANIZATION_NAME:-Local Workshop}'
+      - --location-name
+      - '${OCWP_LOCATION_NAME:-Main}'
+      - --username
+      - '${OCWP_ADMIN_USERNAME:-admin}'
+      - --display-name
+      - '${OCWP_ADMIN_DISPLAY_NAME:-Workshop Administrator}'
+      - --password-file
+      - /run/secrets/admin_password
+    restart: 'no'
+
+  operations:
+    image: ocwp-operations:${OCWP_IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: infra/docker/operations.Dockerfile
+    profiles: ['operations']
+    environment:
+      OCWP_DATABASE_URL_FILE: /run/secrets/database_url
+    secrets: [database_url]
+    networks: [data_net]
+    volumes:
+      - type: bind
+        source: ${OCWP_BACKUP_DIR:-./backups}
+        target: /backups
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    command: ['--help']
+    restart: 'no'
+
+networks:
+  edge_net:
+  app_net:
+    internal: true
+  data_net:
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  database_url:
+    file: ${OCWP_SECRETS_DIR:-./secrets}/database_url.txt
+  auth_secret:
+    file: ${OCWP_SECRETS_DIR:-./secrets}/auth_secret.txt
+  postgres_password:
+    file: ${OCWP_SECRETS_DIR:-./secrets}/postgres_password.txt
+  postgres_admin_password:
+    file: ${OCWP_SECRETS_DIR:-./secrets}/postgres_admin_password.txt
+  admin_password:
+    file: ${OCWP_SECRETS_DIR:-./secrets}/admin_password.txt

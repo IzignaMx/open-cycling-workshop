@@ -1,0 +1,15 @@
+{
+	admin off
+	auto_https off
+}
+
+import /etc/caddy/routes.caddy
+
+http://:8080 {
+	import ocwp_routes
+}
+
+http://:8081 {
+	bind 127.0.0.1
+	respond /edge-health "ok" 200
+}

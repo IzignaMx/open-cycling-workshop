@@ -1,0 +1,32 @@
+(ocwp_routes) {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Mutually exclusive handlers: neither backend errors nor missing assets
+	# can reach the SPA fallback. Preserve the /api prefix for FastAPI.
+	@backend path /api /api/* /health /health/*
+	handle @backend {
+		header Cache-Control "no-store"
+		reverse_proxy api:8000
+	}
+
+	handle /assets/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		root * /srv
+		# Includes index.html, sw.js, workbox JS and the web manifest. Clients
+		# must revalidate them to discover updates without losing local data.
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
