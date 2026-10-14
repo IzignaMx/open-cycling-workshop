@@ -97,6 +97,8 @@ jobs:
         run: pnpm --filter @ocwp/web build
       - name: Install Playwright Chromium
         run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
+      - name: Run isolated offline kernel browser tests
+        run: pnpm --filter @ocwp/web test:kernel-browser
       - name: Prepare browser E2E database
         run: uv run python scripts/e2e/prepare_e2e_database.py
       - name: Run browser E2E

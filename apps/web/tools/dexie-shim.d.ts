@@ -10,6 +10,9 @@ declare module 'dexie' {
 
   export interface Table<T, K = unknown> {
     get(key: K): Promise<T | undefined>
+    add(value: T): Promise<K>
+    count(): Promise<number>
+    hook(name: 'updating' | 'deleting', callback: () => never): void
     put(value: T): Promise<K>
     bulkPut(values: T[]): Promise<K>
     bulkDelete(keys: K[]): Promise<void>
@@ -18,9 +21,22 @@ declare module 'dexie' {
     orderBy(index: string): Collection<T>
   }
 
+  export interface Transaction {
+    table<T = unknown>(name: string): Table<T>
+  }
+
+  export interface Version {
+    stores(schema: Record<string, string>): Version
+    upgrade(callback: (transaction: Transaction) => void | Promise<void>): Version
+  }
+
   export default class Dexie {
     constructor(name: string)
-    version(version: number): { stores(schema: Record<string, string>): void }
+    version(version: number): Version
+    on(event: 'populate', callback: (transaction: Transaction) => Promise<void>): void
+    on(event: 'versionchange', callback: () => void): void
+    close(): void
+    transaction<T>(mode: 'rw' | 'r', tables: unknown[], callback: () => Promise<T>): Promise<T>
     transaction<T>(mode: 'rw' | 'r', ...args: unknown[]): Promise<T>
   }
 }

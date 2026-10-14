@@ -604,7 +604,8 @@ structural_workshop_themes_2026_10_14:
   default_theme: banco
   persistence: additive_dexie_v4_personal_appearance_org_user_and_local_logo_org_user_location
   shared_organization_branding: pending_not_implemented
-  quote_offline_schema_reservation: v5
+  quote_offline_schema_reservation: v6
+  quote_reservation_superseded_by: isolated_offline_identity_kernel_2026_10_14
   focused_tests: 11_personalization_5_session_guard_4_read_display_4_conflict_provenance_passed
   frontend_core_tests: 98_passed
   local_qualification: partial_21_passed_zero_failures_5_environment_blockers
@@ -626,3 +627,61 @@ structural_workshop_themes_2026_10_14:
   corrected_hosted_evidence: pending_real_keyboard_role_selector_narrow_header_and_full_page_images
   exact_head_hosted_ci: pending
   release_gates: unchanged_physical_windows_android_screen_reader_and_manual_qualification
+
+# Additive isolated work; does not replace historical production evidence above.
+isolated_offline_identity_kernel_2026_10_14:
+  document: docs/10-spec-development/2026-10-14-isolated-offline-identity-kernel.md
+  adr: docs/02-technical-architecture/2026-10-14-isolated-offline-identity-kernel.md
+  status: implemented_pending_evidence
+  branch: feat/isolated-offline-identity-kernel
+  base: 1ab3554d
+  dependency: pr28_structural_themes_with_pr27_access_administration
+  requirements:
+    [
+      FR-IAM-002,
+      FR-IAM-004,
+      FR-IAM-006,
+      FR-IAM-008,
+      OFF-003,
+      OFF-005,
+      OFF-007,
+      OFF-009,
+      OFF-012,
+      SEC-002,
+      SEC-003,
+    ]
+  scope: isolated_additive_dexie_v5_factory_and_identity_bound_local_kernel
+  production_path: app_default_singleton_and_golden_slice_v4_unchanged
+  new_context_state: BASELINE_REQUIRED_no_legacy_fallback
+  authentication_context_contract: not_implemented
+  complete_baseline_and_ordered_handoff: not_implemented
+  new_wire_server_contracts: none
+  credentials: no_new_credentials_or_bearer_persistence
+  journal: immutable_author_owned_envelope_separate_delivery_and_history
+  fencing: durable_context_generation_checked_in_repository_transactions
+  acknowledgement: captured_batch_identity_status_version_and_scope_validation
+  legacy: eight_existing_stores_preserved_no_attribution_adoption_or_kernel_replay
+  presentation: existing_personal_preferences_and_local_logos_unchanged
+  quote_offline_schema_reservation: v6_supersedes_unimplemented_v5_reservation
+  administration_alembic: 0008_unchanged
+  quote_postgresql_reservation: 0009_unchanged
+  regression_red: observed_initial_missing_module_and_six_behavioral_failures_corrected
+  focused_tests: 49_passed_dexie_with_fake_indexeddb_not_native_browser
+  frontend_core_tests: 147_passed
+  migration_evidence: native1_10_20_30_40_to_50_exact_preservation_abort_quota_rollback_future60_fixture_passed_emulator
+  static_checks: real_offline_browser_types_eslint_pwa_and_isolated_harness_build_passed
+  local_qualification: intermediate_20_passed_1_format_failure_corrected_fresh_final_pending
+  local_python_tests: 755_passed_60_documented_skips
+  local_environment_blockers: postgresql_url_docker_psql_managed_browser_and_e2e_database
+  old_bundle_blocker: dexie_v4_constructor_opens_native50_and_writes_legacy_queue_emulator_proven_native_browser_pending
+  independent_review: pending
+  final_source_sha: pending
+  hosted_evidence: pending
+  real_browser_evidence: eight_isolated_journeys_built_typechecked_collected_not_locally_executed
+  postgresql_evidence: no_new_server_behavior_qualified
+  production_activation: not_performed
+  actual_installation_upgrade_or_recovery: not_performed
+  rollout_gate: effective_auth_context_complete_baseline_ordered_feed_integrated_repositories_browser_and_postgresql_qualification
+  live_ui_risks: existing_cross_user_cache_replay_offline_permission_freshness_remain_open
+  operator_gate: preserve_legacy_pending_work_verified_backup_reviewed_provenance_and_non_destructive_recovery
+  release_gates: unchanged_physical_windows_android_accessibility_and_other_manual_qualification

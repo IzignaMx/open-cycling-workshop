@@ -23,6 +23,7 @@ const outputs = [
   new URL('../.tmp-auth/', import.meta.url),
   new URL('../.tmp-orders/', import.meta.url),
   new URL('../.tmp-personalization/', import.meta.url),
+  new URL('../.tmp-kernel/', import.meta.url),
 ]
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
@@ -33,8 +34,13 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.auth-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
+    'tests/access-kernel/context.test.mjs',
+    'tests/access-kernel/kernel.test.mjs',
+    'tests/access-kernel/migration.test.mjs',
     'tests/pwa/navigation-policy.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',

@@ -7,7 +7,10 @@ Reconciled main: `59ad7e96ee1f32308a63ffa9248b528685a5221c`, containing
 merged sync-test/runtime PRs #24/#25, authorization PR #26 and server/API
 administration PR #27. Identity migration `0008` is preserved; future quote
 persistence remains `0009`. Theme preferences use additive Dexie v4; offline
-quote stores remain reserved for v5. Shared branding stays pending.
+quote stores are now reserved for v6 by the subsequent
+[isolated identity-kernel ADR](../02-technical-architecture/2026-10-14-isolated-offline-identity-kernel.md).
+Its v5 factory is isolated; production remains v4 pending baseline/auth
+integration and qualification. Shared branding stays pending.
 
 ## Scope
 
