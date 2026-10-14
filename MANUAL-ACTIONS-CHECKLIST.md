@@ -567,6 +567,22 @@ ocwpctl access create-first-owner --organization-id ORGANIZATION_ID --username O
 Physical Windows/Android, accessibility, broader security/session and all other
 unproven release gates above remain open on their own evidence.
 
+## Ordered feed prerequisite · rollout and acceptance boundary
+
+- [ ] Qualify the organization writer barrier against real PostgreSQL on the
+      exact integrated candidate, including commit/rollback ordering, independent
+      organizations, concurrent duplicate replay and authorization changes while
+      writers wait. First published PR31 head passed all ten real-PostgreSQL
+      cases in CI run 38561799721; final main30 combined-tree proof remains pending.
+      SQLite functional tests are not concurrency evidence.
+- [ ] Before relying on ordered continuity, drain/replace all old server writers;
+      the existing numeric feed does not fence older binaries. Historical REST-only
+      rows require the separately designed authoritative baseline.
+- [ ] Keep multi-user cache activation gated on baseline and a real mixed-client
+      writer fence. Old browser bundles can reopen newer IndexedDB and write legacy
+      stores; schema version increments alone do not establish safe rollout.
+- See `docs/02-technical-architecture/2026-10-14-ordered-change-feed.md`.
+
 ## 2026-10-14 · Isolated offline identity kernel and future rollout
 
 Scope: additive isolated Dexie v5 factory/kernel only. Production `App`, the

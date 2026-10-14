@@ -10,7 +10,6 @@ from cycling_workshop.bicycles.domain import Bicycle
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
-from cycling_workshop.events.outbox import enqueue_outbox
 from cycling_workshop.service_orders.domain import (
     InvalidStateTransitionError,
     ServiceOrder,
@@ -26,24 +25,12 @@ from cycling_workshop.sync.domain import (
     SyncConflict,
 )
 from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
+from cycling_workshop.sync.projections import bicycle_payload, customer_payload, order_payload
+from cycling_workshop.sync.writes import append_change, lock_organization
 
 
 def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
-
-
-def _customer_payload(customer: Customer) -> dict[str, object]:
-    return {
-        "customer_id": customer.customer_id,
-        "organization_id": customer.organization_id,
-        "location_id": customer.location_id,
-        "display_name": customer.display_name,
-        "email": customer.email,
-        "phone": customer.phone,
-        "created_at": customer.created_at.isoformat(),
-        "updated_at": customer.updated_at.isoformat(),
-        "version": customer.version,
-    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,42 +41,6 @@ class _Applied:
     location_id: str
     version: int
     payload: dict[str, object]
-
-
-def _bicycle_payload(bicycle: Bicycle) -> dict[str, object]:
-    return {
-        "bicycle_id": bicycle.bicycle_id,
-        "customer_id": bicycle.customer_id,
-        "organization_id": bicycle.organization_id,
-        "location_id": bicycle.location_id,
-        "brand": bicycle.brand,
-        "model": bicycle.model,
-        "bicycle_type": bicycle.bicycle_type,
-        "wheel_size": bicycle.wheel_size,
-        "notes": bicycle.notes,
-        "created_at": bicycle.created_at.isoformat(),
-        "updated_at": bicycle.updated_at.isoformat(),
-        "version": bicycle.version,
-    }
-
-
-def _order_payload(order: ServiceOrder) -> dict[str, object]:
-    return {
-        "order_id": order.order_id,
-        "customer_id": order.customer_id,
-        "bicycle_id": order.bicycle_id,
-        "organization_id": order.organization_id,
-        "location_id": order.location_id,
-        "state": order.state,
-        "reported_problem": order.reported_problem,
-        "intake_condition": order.intake_condition,
-        "accessories": order.accessories,
-        "priority": order.priority,
-        "diagnosis": order.diagnosis,
-        "created_at": order.created_at.isoformat(),
-        "updated_at": order.updated_at.isoformat(),
-        "version": order.version,
-    }
 
 
 class SyncService:
@@ -114,6 +65,7 @@ class SyncService:
             raise SyncConflict(
                 "mutation identity fields must be nonblank and contain no whitespace"
             )
+        lock_organization(self._session, mutation.organization_id)
         existing_receipt = self._session.get(MutationReceiptRecord, mutation.mutation_id)
         if existing_receipt is not None:
             if (
@@ -148,32 +100,16 @@ class SyncService:
 
         self._session.flush()
 
-        self._session.add(
-            ChangeRecord(
-                organization_id=mutation.organization_id,
-                location_id=applied.location_id,
-                entity_type=mutation.entity_type,
-                entity_id=applied.entity_id,
-                operation=mutation.operation,
-                entity_version=applied.version,
-                occurred_at=_as_utc(mutation.occurred_at),
-                payload=applied.payload,
-            )
-        )
-        self._session.flush()
-
-        enqueue_outbox(
+        append_change(
             self._session,
-            event_type=(
-                f"{mutation.entity_type}."
-                f"{'created' if mutation.operation == 'create' else 'updated'}"
-            ),
-            aggregate_type=mutation.entity_type,
-            aggregate_id=applied.entity_id,
             organization_id=mutation.organization_id,
             location_id=applied.location_id,
-            payload=applied.payload,
+            entity_type=mutation.entity_type,
+            entity_id=applied.entity_id,
+            operation=mutation.operation,
+            entity_version=applied.version,
             occurred_at=_as_utc(mutation.occurred_at),
+            payload=applied.payload,
         )
 
         receipt = MutationReceiptRecord(
@@ -228,7 +164,7 @@ class SyncService:
                 entity_id=customer.customer_id,
                 location_id=customer.location_id,
                 version=customer.version,
-                payload=_customer_payload(customer),
+                payload=customer_payload(customer),
             )
 
         existing = repository.get(
@@ -265,7 +201,7 @@ class SyncService:
             entity_id=updated.customer_id,
             location_id=updated.location_id,
             version=updated.version,
-            payload=_customer_payload(updated),
+            payload=customer_payload(updated),
         )
 
     def _apply_bicycle(self, mutation: MutationEnvelope) -> _Applied:
@@ -314,7 +250,7 @@ class SyncService:
                 entity_id=bicycle.bicycle_id,
                 location_id=bicycle.location_id,
                 version=bicycle.version,
-                payload=_bicycle_payload(bicycle),
+                payload=bicycle_payload(bicycle),
             )
 
         existing = repository.get(
@@ -348,7 +284,7 @@ class SyncService:
             entity_id=updated.bicycle_id,
             location_id=updated.location_id,
             version=updated.version,
-            payload=_bicycle_payload(updated),
+            payload=bicycle_payload(updated),
         )
 
     def _apply_service_order(
@@ -410,7 +346,7 @@ class SyncService:
                 entity_id=order.order_id,
                 location_id=order.location_id,
                 version=order.version,
-                payload=_order_payload(order),
+                payload=order_payload(order),
             )
 
         existing = repository.get(
@@ -456,7 +392,7 @@ class SyncService:
             entity_id=result.order.order_id,
             location_id=result.order.location_id,
             version=result.order.version,
-            payload=_order_payload(result.order),
+            payload=order_payload(result.order),
         )
 
     def pull_changes(

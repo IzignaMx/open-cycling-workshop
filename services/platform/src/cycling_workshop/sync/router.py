@@ -17,6 +17,7 @@ from cycling_workshop.sync.schemas import (
     PushMutationsResponse,
 )
 from cycling_workshop.sync.service import SyncService
+from cycling_workshop.sync.writes import lock_writer
 
 router = APIRouter(prefix="/api/v1/sync", tags=["sync"])
 
@@ -30,6 +31,8 @@ def push_mutations(
     service = SyncService(session)
     results: list[MutationResultResponse] = []
     try:
+        principal = lock_writer(session, principal)
+        authorize(principal, capability="sync.push", organization_id=principal.organization_id)
         for item in payload.mutations:
             authorize(
                 principal,

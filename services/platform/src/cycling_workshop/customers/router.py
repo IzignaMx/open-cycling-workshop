@@ -12,6 +12,8 @@ from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.sync.projections import customer_payload
+from cycling_workshop.sync.writes import append_change, lock_writer
 
 router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
 
@@ -36,12 +38,16 @@ def create_customer(
     principal: Annotated[Principal, Depends(require_capability("customers.write"))],
     session: Annotated[Session, Depends(get_session)],
 ) -> CustomerResponse:
-    authorize(
-        principal,
-        capability="customers.write",
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-    )
+    principal = lock_writer(session, principal)
+    try:
+        authorize(
+            principal,
+            capability="customers.write",
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     customer = Customer.create(
         customer_id=payload.customer_id or new_id(),
         organization_id=principal.organization_id,
@@ -52,6 +58,17 @@ def create_customer(
     )
     repository = SqlAlchemyCustomerRepository(session)
     repository.add(customer)
+    append_change(
+        session,
+        organization_id=customer.organization_id,
+        location_id=customer.location_id,
+        entity_type="customer",
+        entity_id=customer.customer_id,
+        operation="create",
+        entity_version=customer.version,
+        occurred_at=customer.updated_at,
+        payload=customer_payload(customer),
+    )
     session.commit()
     return _response(customer)
 

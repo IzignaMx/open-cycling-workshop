@@ -2,11 +2,24 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
+  // Each CI phase owns a sibling directory; later runs cannot erase earlier evidence.
+  outputDir: process.env.OCWP_PLAYWRIGHT_OUTPUT_DIR ?? './test-results/direct',
   timeout: 45_000,
   expect: { timeout: 10_000 },
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
+  reporter: process.env.CI
+    ? [
+        ['line'],
+        [
+          'html',
+          {
+            open: 'never',
+            outputFolder: process.env.PLAYWRIGHT_HTML_OUTPUT_DIR ?? './playwright-report/direct',
+          },
+        ],
+      ]
+    : 'line',
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'retain-on-failure',
