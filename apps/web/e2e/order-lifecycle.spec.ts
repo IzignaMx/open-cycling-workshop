@@ -6,6 +6,7 @@ import {
   login,
   pendingMutationCount,
   releaseJournalCompletion,
+  revealOrder,
   sessionToken,
   waitForApplied,
   waitForConfirmed,
@@ -44,6 +45,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   await expect(card.getByText('Recibida', { exact: true })).toBeVisible()
   await page.reload({ waitUntil: 'domcontentloaded' })
   await waitForReady(page)
+  await revealOrder(page, problem)
   await expect(card.getByText('Recibida', { exact: true })).toBeVisible()
   expect((await kernelSnapshot(page)).journal).toEqual(intake.journal)
   await page.context().setOffline(false)
@@ -67,10 +69,13 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   })
 
   await page.context().setOffline(true)
+  await revealOrder(page, problem)
   await card.getByRole('button', { name: 'Iniciar diagnóstico', exact: true }).click()
+  await revealOrder(page, problem)
   await expect(card.getByText('En diagnóstico', { exact: true })).toBeVisible()
   await page.reload({ waitUntil: 'domcontentloaded' })
   await waitForReady(page)
+  await revealOrder(page, problem)
   await expect(card.getByText('En diagnóstico', { exact: true })).toBeVisible()
   for (const action of ['start_diagnosis', 'authorize']) {
     const remote = await request.post(
@@ -83,6 +88,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
     expect(remote.status(), await remote.text()).toBe(200)
   }
   await card.getByRole('button', { name: 'Autorizar', exact: true }).click()
+  await revealOrder(page, problem)
   await expect(card.getByText('Autorizada', { exact: true })).toBeVisible()
   const beforeConflict = await kernelSnapshot(page)
   const transitions = beforeConflict.journal.filter(
@@ -112,6 +118,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   expect(
     after.records.find((item) => item.entityId === originalOrder.entityId)?.payload.state,
   ).toBe('AUTHORIZED')
+  await revealOrder(page, problem)
   await expect(card.getByText('Autorizada', { exact: true })).toBeVisible()
   const events = await request.get(`/api/v1/service-orders/${originalOrder.entityId}/events`, {
     headers: { Authorization: `Bearer ${token}` },

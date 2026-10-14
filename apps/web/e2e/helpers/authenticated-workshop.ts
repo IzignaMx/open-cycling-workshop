@@ -372,3 +372,30 @@ export async function partitionEvidence(page: Page, partitionId: string) {
     { name: DATABASE, partitionId },
   )
 }
+
+/** Traverse the real bounded UI pages; repeated runs retain more than fifty server rows. */
+export async function revealCustomer(page: Page, displayName: string) {
+  const list = page.getByRole('list', { name: 'Clientes locales', exact: true })
+  const target = list.getByText(displayName, { exact: true })
+  while (!(await target.count())) {
+    const previous = await list.textContent()
+    await page.getByRole('button', { name: 'Más clientes', exact: true }).click()
+    await expect
+      .poll(() => list.textContent(), { message: 'next bounded customer page must render' })
+      .not.toBe(previous)
+  }
+  await expect(target).toBeVisible()
+}
+
+export async function revealOrder(page: Page, problem: string) {
+  const target = page.getByRole('listitem', { name: `Orden ${problem}`, exact: true })
+  const list = page.getByRole('list', { name: 'Órdenes de servicio', exact: true })
+  while (!(await target.count())) {
+    const previous = await list.textContent()
+    await page.getByRole('button', { name: 'Más órdenes', exact: true }).click()
+    await expect
+      .poll(() => list.textContent(), { message: 'next bounded order page must render' })
+      .not.toBe(previous)
+  }
+  await expect(target).toBeVisible()
+}

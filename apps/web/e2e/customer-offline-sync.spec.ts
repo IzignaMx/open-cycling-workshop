@@ -5,6 +5,7 @@ import {
   kernelSnapshot,
   login,
   pendingMutationCount,
+  revealCustomer,
   sessionToken,
   waitForApplied,
   waitForConfirmed,
@@ -53,7 +54,7 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
     const original = await createCustomer(page, name)
     expect(original.envelope.payload.email).toBe('offline@example.test')
     await expect.poll(() => pendingMutationCount(page)).toBe(1)
-    await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
+    await revealCustomer(page, name)
     expect(
       (await kernelSnapshot(page)).records.some((row) => row.entityId === original.entityId),
     ).toBe(false)
@@ -61,7 +62,7 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
     await page.reload({ waitUntil: 'domcontentloaded' })
     await waitForReady(page)
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
-    await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
+    await revealCustomer(page, name)
     const restored = await kernelSnapshot(page)
     expect(restored.journal).toContainEqual(original)
     expect(restored.partition.partitionId).toBe(initial.partition.partitionId)
@@ -92,7 +93,7 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
 
     const otherPage = await second.newPage()
     await login(otherPage)
-    await expect(otherPage.getByText(name, { exact: true }).first()).toBeVisible()
+    await revealCustomer(otherPage, name)
     const other = await kernelSnapshot(otherPage)
     expect(other.records.find((row) => row.entityId === original.entityId)).toMatchObject({
       version: 1,
