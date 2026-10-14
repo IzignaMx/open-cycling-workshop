@@ -1,6 +1,6 @@
 # Increment B · bounded server cutover contract
 
-Date: 2026-10-14. Status: implemented, independently reviewed backend;
+Date: 2026-10-14. Status: implemented, independently reviewed backend and isolated client;
 exact integrated-head hosted PostgreSQL/native qualification pending.
 
 ## Source and scope
@@ -67,7 +67,12 @@ credential, account, activation, restore or deployment operation was performed.
 Backend independent review at local merge `fa2e5f0` found no remaining source
 blockers after committed fixes `86217c4`/`93c49f8`. Independent evidence:508
 focused tests passed/33 explicit skips; final targeted rerun122 passed/6 skips.
-Frontend independent review and exact integrated aggregate are tracked separately.
+The isolated client received a separate independent review at
+`86e8fad1403119c0460c45795a574c7c1dbff32d`, tree
+`99dbdb3cf33f8af994612f00f2e30a775048f986`, and was integrated by cherry-pick
+`ecb7634`. That review independently passed335 core tests, both web/offline
+typechecks, ESLint, Prettier and diff checks, with no remaining source blockers.
+It did not independently execute the actual-HTTP smoke or native Chromium.
 
 ## Executable gates and evidence limits
 
@@ -92,12 +97,20 @@ The test catalog includes:
   epoch invalidation, ordinary isolated client READY/reuse with actual HTTP, and
   a new separate native Chromium case without response rewriting.
 
-Local platform sweep:1458 passed/187 explicit skips before the final schema and
-client reconciliation. Integrated core335/335 and API-client1/1 passed. Ruff,
-Python typing, generated contracts and selected new regressions passed. A later
-full Python sweep exposed the still-old active quote reservation; that metadata
-was corrected to0011, then root repository tests107 passed/1 PG skip. The final
-aggregate is intentionally still pending at this record's first commit.
+The integrated local sweep passed1565 Python tests with189 explicit skips,
+335/335 frontend-core tests and1/1 API-client test. Runtime HTTP smoke, both
+TypeScript contracts, Python typing, Ruff, ESLint and production Vite/PWA build
+passed. The aggregate exposed Markdown formatting in the receipt-proof spec;
+that formatting was corrected before the final exact-head rerun. An earlier full
+Python sweep exposed the old active quote reservation; it was corrected to0011,
+then root repository tests107 passed/1 PG skip. Existing raw PostgreSQL fixture
+inserts now provide explicit incarnations at schema0010; no HTTP lazy initializer
+or production default was added to make those tests work.
+
+The local aggregate cannot qualify five environment gates: configured PostgreSQL,
+Docker, PostgreSQL tools, native IndexedDB100k and browser E2E. Exact final-head
+counts/status and the collected skip inventory accompany the publication manifest;
+they must not be interpreted as hosted PostgreSQL or native-browser results.
 
 No PostgreSQL server/client/Docker or safe configured PG URL is present locally.
 Native Chromium is blocked before execution by the environment's socket policy.

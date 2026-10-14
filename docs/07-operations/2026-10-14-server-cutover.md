@@ -4,7 +4,10 @@ Este procedimiento describe código del incremento B. No demuestra una instalaci
 activada: la App de producción sigue en v4 hasta el incremento C. No activar un
 taller real hasta cualificar la composición integrada, preservar sus pendientes,
 verificar backup/restore y reemplazar todos los binarios escritores anteriores.
-El header no puede detener un servidor viejo que ignora el contrato.
+El header no puede detener un servidor viejo que ignora el contrato. Activar el
+flag de capacidad no cualifica el despliegue: siguen pendientes los gates de C
+para integración de producción y conservación de colas del cliente/bundle y
+service worker anteriores.
 
 ## Preparación y estado
 
