@@ -70,9 +70,9 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   regression passed after its correction. Migration rollback cases execute actual
   Dexie transactions in the emulator; they are not native browser proof.
 - Focused command: `node node_modules/typescript/bin/tsc -p apps/web/tsconfig.kernel-test.json --pretty false`
-  followed by `node --test apps/web/tests/access-kernel/*.test.mjs`: **58 passed**.
-- Integrated `node apps/web/tools/run-core-tests.mjs`: **156 passed** (98 existing
-  tests plus 58 kernel/context/migration regressions). The runner also typechecks
+  followed by `node --test apps/web/tests/access-kernel/*.test.mjs`: **60 passed**.
+- Integrated `node apps/web/tools/run-core-tests.mjs`: **158 passed** (98 existing
+  tests plus 60 kernel/context/migration regressions). The runner also typechecks
   the separate browser harness/config before running the Node tests.
 - Migration fixtures: raw native1 plus logical v1/native10, v2/native20,
   v3/native30 and v4/native40 all preserve exact rows on v5/native50. Abort and
@@ -104,7 +104,9 @@ production UI integration also requires ACC-002/003/004/008/010 evidence.
   immutable history is excluded from projection reads. The review also prompted
   primitive-string database-name rejection and separate browser trace/report
   artifacts so later production E2E cannot erase isolated-kernel evidence.
-  Final re-review is pending.
+  A second review added transitive implicit-aggregate dependency checks and
+  bounded reverse projection pages with older-eligible fallback, each observed
+  red before its fix. Final re-review is pending.
 - Exact final commit/tree and hosted run/artifact links: pending.
 - New server/PostgreSQL behavior: not implemented or qualified by this increment.
 - Actual installation migration, recovery, production activation and physical

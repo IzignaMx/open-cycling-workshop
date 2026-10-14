@@ -746,3 +746,86 @@ test('optimistic version must describe the same original command version', async
   await assert.rejects(kernel.commitLocalCommand(ticket, invalid), /version/i)
   assert.equal(await db.operationJournal.count(), 0)
 })
+
+test('implicit aggregate predecessors also gate transitive dependent projections', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command('p1', 'parent'))
+  const p2 = command('p2', 'parent')
+  p2.envelope.operation = 'update'
+  p2.envelope.base_version = 1
+  p2.optimistic.version = 2
+  await kernel.commitLocalCommand(ticket, p2)
+  const child = command('child', 'child')
+  child.dependsOn = ['p2']
+  await kernel.commitLocalCommand(ticket, child)
+  const batch = await kernel.listDispatchable(ticket, 10)
+  assert.deepEqual(
+    batch.operations.map((row) => row.mutationId),
+    ['p1'],
+  )
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'p1',
+        entity_id: 'parent',
+        status: 'conflict',
+        entity_version: null,
+        error_code: 'sync_conflict',
+        error_message: 'stale parent',
+      },
+    ],
+  })
+  assert.equal(await kernel.readEntity(ticket, 'customer', 'parent'), undefined)
+  assert.equal(await kernel.readEntity(ticket, 'customer', 'child'), undefined)
+  assert.equal(await db.operationJournal.count(), 3)
+})
+
+test('projection candidate pages stay bounded and retain older eligible fallback', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command('rejected-parent', 'separate-parent'))
+  const batch = await kernel.listDispatchable(ticket, 1)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'rejected-parent',
+        entity_id: 'separate-parent',
+        status: 'conflict',
+        entity_version: null,
+        error_code: 'sync_conflict',
+        error_message: 'stale',
+      },
+    ],
+  })
+  const visible = command('visible', 'aggregate')
+  visible.optimistic.display_name = 'Older eligible overlay'
+  await kernel.commitLocalCommand(ticket, visible)
+  for (let index = 0; index < 105; index++) {
+    const newer = command(`blocked-${index}`, 'aggregate')
+    newer.dependsOn = ['rejected-parent']
+    await kernel.commitLocalCommand(ticket, newer)
+  }
+  let largestPage = 0
+  const where = db.operationDelivery.where.bind(db.operationDelivery)
+  db.operationDelivery.where = (...args) => {
+    const clause = where(...args)
+    const between = clause.between.bind(clause)
+    clause.between = (...bounds) => {
+      const collection = between(...bounds)
+      const toArray = collection.toArray.bind(collection)
+      collection.toArray = async (callback) => {
+        const rows = await toArray()
+        largestPage = Math.max(largestPage, rows.length)
+        return callback ? callback(rows) : rows
+      }
+      return collection
+    }
+    return clause
+  }
+  assert.equal(
+    (await kernel.readEntity(ticket, 'customer', 'aggregate')).optimistic.display_name,
+    'Older eligible overlay',
+  )
+  assert.ok(largestPage > 0 && largestPage <= 100)
+})

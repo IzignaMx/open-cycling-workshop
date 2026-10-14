@@ -111,7 +111,8 @@ confirmed version covers it, the read model retains the author's local overlay
 with `optimisticStatus: applied_awaiting_projection`. It yields to authoritative
 projection data when that version arrives. Old-epoch work remains immutable and
 can be composed/replayed only for the same author/scope under the current verified
-capabilities and completed baseline; rejected/held dependency chains stay hidden
+capabilities and completed baseline; explicit dependencies and implicit earlier
+aggregate commands are followed transitively. Rejected/held chains stay hidden
 from the operational overlay while their evidence remains available through the
 read-gated journal API.
 
@@ -121,8 +122,9 @@ that wraps/revisits deferred work. Numeric eligibility flags are valid IndexedDB
 key components. Indexed earliest-unresolved aggregate checks preserve ordering,
 and attempt/generation indexes validate batch membership without origin-wide
 inflight scans. Applied/rejected lifetime payloads are not scanned during normal
-dispatch. Projection reads query only pending metadata and the latest applied
-version beyond confirmed coverage, loading needed immutable payloads lazily;
+dispatch. Projection reads query pending metadata in reverse pages of at most 100 rows
+and the latest applied version beyond confirmed coverage, loading needed
+immutable payloads lazily. Older pages remain eligible when newer chains are held;
 large unresolved backlogs and dependency graphs still need the separate device
 performance qualification. No journal garbage collection is introduced.
 
