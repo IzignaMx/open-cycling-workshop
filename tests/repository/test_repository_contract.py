@@ -118,7 +118,11 @@ def test_root_scripts_and_ci_use_normative_uv_and_static_quality_gates() -> None
 def test_security_workflow_uses_uv_for_python_auditing() -> None:
     workflow = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
     assert "astral-sh/setup-uv@" in workflow
-    assert "uvx pip-audit" in workflow
+    assert "python scripts/ci/security_scan.py dependencies" in workflow
+    audit = (ROOT / "scripts/ci/security_scan.py").read_text(encoding="utf-8")
+    assert 'PIP_AUDIT = "pip-audit==2.9.0"' in audit
+    assert '"uvx"' in audit
+    assert '"--requirement"' in audit
     assert "python -m pip install" not in workflow
 
 

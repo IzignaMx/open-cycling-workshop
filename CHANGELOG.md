@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Security scan coverage
+
+- Correct falsely green secret-history scanning with owner-matched, digest-pinned
+  isolated Gitleaks execution and fail-closed error/coverage checks.
+- Audit the exact committed Python workspace dependency export with pinned
+  pip-audit, complete active-marker coverage and retained input/report evidence.
+- Preserve earlier workflow conclusions as historical badges, not proof of
+  secret-history or project-lock coverage. Exact-integrated-head hosted evidence
+  remains required; application locks and runtime behavior are unchanged. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-security-scan-coverage.md).
+
 ## Unreleased · Authenticated workshop client C
 
 - Compose genuine authenticated workshop admission, concrete workshop selection,
