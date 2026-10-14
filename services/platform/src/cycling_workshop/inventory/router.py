@@ -22,6 +22,7 @@ from cycling_workshop.inventory.schemas import (
 )
 from cycling_workshop.inventory.service import authorize_location, record_movement, scoped_product
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.sync.writes import lock_writer
 from cycling_workshop.tenancy.models import LocationRecord
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
@@ -44,6 +45,7 @@ def create_product(
     principal: Annotated[Principal, Depends(require_capability("inventory.write"))],
     session: Annotated[Session, Depends(get_session)],
 ) -> ProductResponse:
+    principal = lock_writer(session, principal)
     authorize_location(principal, "inventory.write", payload.location_id)
     _require_location(session, principal, payload.location_id)
     product = Product.create(

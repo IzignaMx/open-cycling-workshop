@@ -11,9 +11,10 @@ from cycling_workshop.inventory.repository import SqlAlchemyInventoryRepository
 from cycling_workshop.inventory.schemas import MovementCreateRequest
 from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.sync.writes import lock_writer
 
 
-def authorize_location(principal: Principal, capability: str, location_id: str) -> None:
+def authorize_location(principal: Principal, capability: str, location_id: str | None) -> None:
     try:
         authorize(
             principal,
@@ -53,6 +54,11 @@ def record_movement(
     principal: Principal,
     payload: MovementCreateRequest,
 ) -> InventoryMovement:
+    # Refresh the detached HTTP principal under org→actor locks before touching
+    # the product. Keep those locks through the caller's commit/rollback so an
+    # administration change cannot commit between authorization and ledger write.
+    principal = lock_writer(session, principal)
+    authorize_location(principal, "inventory.write", principal.location_id)
     repository = SqlAlchemyInventoryRepository(session)
     # All public ledger writes acquire the same product lock. The idempotency,
     # stock and finalization reads MUST occur after it, in this transaction.

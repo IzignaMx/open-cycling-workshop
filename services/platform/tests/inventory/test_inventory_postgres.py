@@ -21,6 +21,8 @@ from alembic.config import Config
 from cycling_workshop.app import create_app
 from cycling_workshop.customers.models import CustomerRecord
 from cycling_workshop.db.url import normalize_database_url
+from cycling_workshop.identity.administration import AdministrationService
+from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.inventory.models import InventoryMovementRecord, ProductRecord
@@ -77,6 +79,8 @@ class InventoryPostgres:
     application_name: str
     organization_id: str
     location_id: str
+    other_location_id: str
+    user_id: str
     order_id: str
     headers: dict[str, str]
 
@@ -152,7 +156,7 @@ class InventoryPostgres:
         assert response.json()["available_quantity"] == expected
 
     def race(self, first: dict[str, Any], second: dict[str, Any]) -> list[Response]:
-        """Force both HTTP commands to contend on the same real product lock."""
+        """Observe product→blocker and organization→first-writer wait edges."""
         assert first["product_id"] == second["product_id"]
         with self.factory() as blocker, ThreadPoolExecutor(max_workers=2) as executor:
             blocker.scalar(
@@ -163,9 +167,10 @@ class InventoryPostgres:
                 )
                 .with_for_update()
             )
+            blocker_pid = blocker.scalar(text("SELECT pg_backend_pid()"))
             futures = [executor.submit(self.post, payload) for payload in (first, second)]
             try:
-                waiting_pids = self._wait_for_two_lock_waiters(futures)
+                waiting_pids = self._wait_for_two_lock_waiters(futures, blocker_pid)
             finally:
                 # Always unblock requests, including on a test assertion/error.
                 blocker.rollback()
@@ -177,34 +182,68 @@ class InventoryPostgres:
         )
         return responses
 
-    def _wait_for_two_lock_waiters(self, futures: list[Future[Response]]) -> set[int]:
+    def _wait_for_two_lock_waiters(
+        self, futures: list[Future[Response]], blocker_pid: int
+    ) -> set[int]:
         deadline = time.monotonic() + 10
         waiting_pids: set[int] = set()
         # Autocommit avoids retaining PostgreSQL's statistics snapshot while
         # polling. Application name isolates these requests from other tests.
         with self.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as observer:
             while time.monotonic() < deadline:
-                waiting_pids = set(
-                    observer.scalars(
+                waiters = list(
+                    observer.execute(
                         text(
-                            "SELECT pid FROM pg_stat_activity "
+                            "SELECT pid, query, pg_blocking_pids(pid) FROM pg_stat_activity "
                             "WHERE application_name = :application_name "
                             "AND state = 'active' AND wait_event_type = 'Lock' "
-                            "AND query ILIKE '%products%' "
                             "AND query ILIKE '%FOR UPDATE%'"
                         ),
                         {"application_name": self.application_name},
                     )
                 )
-                if len(waiting_pids) == 2 or any(future.done() for future in futures):
+                product = [row for row in waiters if "FROM products" in row.query]
+                organization = [row for row in waiters if "FROM organizations" in row.query]
+                if (
+                    len(product) == len(organization) == 1
+                    and blocker_pid in product[0].pg_blocking_pids
+                    and product[0].pid in organization[0].pg_blocking_pids
+                ):
+                    waiting_pids = {row.pid for row in waiters}
+                    break
+                if any(future.done() for future in futures):
                     break
                 time.sleep(0.02)
         return waiting_pids
+
+    def wait_for_blocked_writer(self, future: Future[Any], blocker_pid: int) -> int:
+        """Observe the actual lock dependency, without assuming its wait site."""
+        deadline = time.monotonic() + 10
+        with self.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as observer:
+            while time.monotonic() < deadline:
+                pid = observer.scalar(
+                    text(
+                        "SELECT pid FROM pg_stat_activity "
+                        "WHERE application_name = :name AND state = 'active' "
+                        "AND wait_event_type = 'Lock' "
+                        "AND :blocker = ANY(pg_blocking_pids(pid))"
+                    ),
+                    {"name": self.application_name, "blocker": blocker_pid},
+                )
+                if pid is not None:
+                    assert not future.done()
+                    return int(pid)
+                if future.done():
+                    future.result()
+                    pytest.fail("HTTP writer completed before a real lock wait was observed")
+                time.sleep(0.02)
+        pytest.fail("No PostgreSQL writer blocked by the expected transaction")
 
 
 @pytest.fixture
 def inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgres]:
     organization_id, location_id, user_id, customer_id, order_id = (new_id() for _ in range(5))
+    other_location_id = new_id()
     application_name = f"ocwp-inventory-{organization_id}"
     engine = create_engine(
         inventory_postgres_url,
@@ -225,6 +264,9 @@ def inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgre
             session.flush()
             session.add(
                 LocationRecord(id=location_id, organization_id=organization_id, name="Test")
+            )
+            session.add(
+                LocationRecord(id=other_location_id, organization_id=organization_id, name="Other")
             )
             session.flush()
             session.add(
@@ -289,6 +331,8 @@ def inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgre
             application_name=application_name,
             organization_id=organization_id,
             location_id=location_id,
+            other_location_id=other_location_id,
+            user_id=user_id,
             order_id=order_id,
             headers={"Authorization": f"Bearer {login.json()['access_token']}"},
         )
@@ -424,6 +468,166 @@ def test_concurrent_reused_id_with_changed_command_conflicts(
     assert reservations[0].quantity == winner["quantity"]
     assert winner["quantity"] in {-2, -3}
     db.assert_stock(product_id, 10 + winner["quantity"])
+
+
+@pytest.mark.parametrize("kind", ["product", "movement"])
+@pytest.mark.parametrize(
+    "change", ["session", "inactive", "grants", "location", "narrow_scope", "rollback"]
+)
+def test_inventory_rechecks_authority_after_observed_admin_wait(
+    inventory_postgres: InventoryPostgres, kind: str, change: str
+) -> None:
+    db = inventory_postgres
+    product_id = db.product()
+    candidate_id = new_id()
+    if change == "narrow_scope":
+        with db.factory.begin() as session:
+            actor = session.get(UserRecord, db.user_id)
+            assert actor is not None
+            actor.location_id = None
+        token = db.app.state.session_tokens.issue(
+            Principal(db.user_id, db.organization_id, None, frozenset({"inventory.write"}))
+        )
+        db.headers = {"Authorization": f"Bearer {token}"}
+
+    def request() -> Response:
+        if kind == "movement":
+            return db.post({**db.command(product_id, "ADJUST", 3), "movement_id": candidate_id})
+        with TestClient(db.app) as client:
+            return client.post(
+                "/api/v1/inventory/products",
+                headers=db.headers,
+                json={
+                    "product_id": candidate_id,
+                    "location_id": db.location_id,
+                    "sku": f"WAIT-{candidate_id}",
+                    "name": "Synthetic wait regression",
+                },
+            )
+
+    with db.factory() as admin, ThreadPoolExecutor(max_workers=1) as executor:
+        # Same supported lock order as administration. The old committed actor
+        # remains visible to the HTTP dependency until this transaction commits.
+        admin.scalar(
+            select(OrganizationRecord)
+            .where(OrganizationRecord.id == db.organization_id)
+            .with_for_update()
+        )
+        actor = admin.scalar(
+            select(UserRecord).where(UserRecord.id == db.user_id).with_for_update()
+        )
+        assert actor is not None
+        admin.scalar(select(ProductRecord).where(ProductRecord.id == product_id).with_for_update())
+        blocker_pid = admin.scalar(text("SELECT pg_backend_pid()"))
+        future = executor.submit(request)
+        try:
+            # Before the fix: movement/product-lock or product/INSERT FK wait.
+            # After the fix: organization-lock wait. Both prove the dependency
+            # already accepted the previous committed account state.
+            db.wait_for_blocked_writer(future, blocker_pid)
+            if change in {"session", "rollback"}:
+                actor.session_version += 1
+            elif change == "inactive":
+                actor.is_active = False
+            elif change == "grants":
+                actor.capabilities = ["inventory.read"]
+            else:
+                actor.location_id = db.other_location_id
+            if change == "rollback":
+                admin.flush()
+                admin.rollback()
+            else:
+                admin.commit()
+        finally:
+            admin.rollback()
+        response = future.result(timeout=20)
+
+    expected = 201 if change == "rollback" else 403 if change in {"grants", "narrow_scope"} else 401
+    assert response.status_code == expected, response.text
+    with db.factory() as session:
+        assert (session.get(ProductRecord, candidate_id) is not None) == (
+            kind == "product" and change == "rollback"
+        )
+        assert (session.get(InventoryMovementRecord, candidate_id) is not None) == (
+            kind == "movement" and change == "rollback"
+        )
+    rows = db.rows(product_id)
+    assert [(row.movement_id, row.quantity) for row in rows] == (
+        [(candidate_id, 3)] if kind == "movement" and change == "rollback" else []
+    )
+
+
+def test_inventory_writer_commits_before_later_revocation(
+    inventory_postgres: InventoryPostgres,
+) -> None:
+    db = inventory_postgres
+    product_id = db.product()
+    payload = db.command(product_id, "ADJUST", 3)
+
+    def revoke() -> None:
+        with db.factory.begin() as session:
+            actor, _ = AdministrationService(session).lock_actor(
+                Principal(
+                    db.user_id,
+                    db.organization_id,
+                    db.location_id,
+                    frozenset({"inventory.write"}),
+                )
+            )
+            actor.session_version += 1
+
+    with db.factory() as blocker, ThreadPoolExecutor(max_workers=2) as executor:
+        blocker.scalar(
+            select(ProductRecord).where(ProductRecord.id == product_id).with_for_update()
+        )
+        blocker_pid = blocker.scalar(text("SELECT pg_backend_pid()"))
+        writer = executor.submit(db.post, payload)
+        try:
+            writer_pid = db.wait_for_blocked_writer(writer, blocker_pid)
+            # Writer already holds organization→actor and is now on product.
+            revocation = executor.submit(revoke)
+            db.wait_for_blocked_writer(revocation, writer_pid)
+        finally:
+            blocker.rollback()
+        response = writer.result(timeout=20)
+        revocation.result(timeout=20)
+    assert response.status_code == 201, response.text
+    assert [(row.movement_id, row.quantity) for row in db.rows(product_id)] == [
+        (payload["movement_id"], 3)
+    ]
+    # Exact replay remains an authenticated action and is now refused.
+    assert db.post(payload).status_code == 401
+    assert len(db.rows(product_id)) == 1
+
+
+@pytest.fixture
+def other_inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgres]:
+    yield from inventory_postgres.__wrapped__(inventory_postgres_url)
+
+
+def test_inventory_authority_barrier_does_not_block_another_organization(
+    inventory_postgres: InventoryPostgres, other_inventory_postgres: InventoryPostgres
+) -> None:
+    blocked, independent = inventory_postgres, other_inventory_postgres
+    product_id, independent_product = blocked.product(), independent.product()
+    with blocked.factory() as admin, ThreadPoolExecutor(max_workers=1) as executor:
+        admin.scalar(
+            select(OrganizationRecord)
+            .where(OrganizationRecord.id == blocked.organization_id)
+            .with_for_update()
+        )
+        blocker_pid = admin.scalar(text("SELECT pg_backend_pid()"))
+        waiting = executor.submit(blocked.post, blocked.command(product_id, "ADJUST", 2))
+        try:
+            blocked.wait_for_blocked_writer(waiting, blocker_pid)
+            response = independent.post(independent.command(independent_product, "ADJUST", 4))
+            assert response.status_code == 201, response.text
+            assert not waiting.done()
+        finally:
+            admin.rollback()
+        assert waiting.result(timeout=20).status_code == 201
+    blocked.assert_stock(product_id, 2)
+    independent.assert_stock(independent_product, 4)
 
 
 @pytest.mark.parametrize(
