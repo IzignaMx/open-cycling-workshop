@@ -891,10 +891,10 @@ test('UI visual states: each theme captures directory, editor, security review, 
     const choice = page.getByRole('radio', { name: new RegExp(theme) })
     await choice.focus()
     await choice.press('Space')
+    await expect(choice).toBeChecked()
     await expect(choice).toBeFocused()
     await choice.press('Escape')
     await expect(page.getByRole('button', { name: 'Personalización', exact: true })).toBeFocused()
-    await expect(choice).toBeChecked()
     await expect(page.locator('.workshop-shell')).toHaveAttribute(
       'data-theme',
       ['banco', 'plano', 'ritmo', 'noche'][index],

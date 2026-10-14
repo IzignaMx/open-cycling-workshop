@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased · Visible theme verification order
+
+- Verify the selected theme radio before closing its panel, retaining keyboard
+  focus-return and exact shell-theme assertions. Fourth hosted run passed 42/43;
+  full native and isolated state-matrix visual qualification remains pending.
+
 ## Unreleased · Confirmed administration drafts and visual scene isolation
 
 - Mark retained administration drafts clean only after an exact current confirmed

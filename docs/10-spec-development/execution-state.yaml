@@ -1150,3 +1150,20 @@ connected_administration_confirmed_drafts_2026_10_14:
   local_focused: 21_controller_12_draft_panel_passed
   local_static: full_eslint_prettier_real_offline_types_strict_affected_e2e_production_build_repository_passed
   browser_collection: all_43_cases_nine_files_not_executed_locally
+
+connected_administration_visible_theme_assertion_2026_10_14:
+  status: implemented_pending_evidence
+  observed_head: 9165077a316938702d5d1780fe7485c74085231c
+  observed_tree: 7be60b48e3a507e25f447b938b086c7b3ddffcaf
+  ci_run: 38644565981
+  direct_artifact: 11932970558
+  actual_browser: 42_passed_one_failed_zero_flaky_zero_skips
+  passed: user_create_individual_grants_four_theme_reflow_and_expanded_focus
+  remaining: selected_theme_radio_asserted_after_panel_hidden_before_first_scene_capture
+  correction: checked_while_visible_then_escape_focus_return_and_exact_shell_theme_preserved
+  production_changes: none
+  source_regression: observed_red_then_nine_panel_tests_green
+  native_full_suite_and_state_matrix_pixels: pending_exact_new_tree
+  local_core: 662_passed_zero_skips
+  local_static: full_eslint_prettier_strict_affected_e2e_repository_passed
+  browser_collection: all_43_cases_nine_files_not_executed_locally

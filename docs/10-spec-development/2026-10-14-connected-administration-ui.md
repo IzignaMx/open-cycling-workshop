@@ -263,3 +263,33 @@ browser suite still collects **43 cases across nine files**. Receipt refusal,
 uncertainty, stale completion, single-flight rejection and synchronous
 publication/cleanup invalidation are tested independently of source-only form
 composition checks. None of those checks is a new native browser result.
+
+## Fourth hosted result: visible theme verification order
+
+Head `9165077a316938702d5d1780fe7485c74085231c`, tree
+`7be60b48e3a507e25f447b938b086c7b3ddffcaf`, ran in CI
+[38644565981](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38644565981)
+as merge `0d982ba47ccf5e2bda01ba17573283883e79436f`. Verified direct artifact
+11932970558, SHA256
+`280efae2dd204ecfad53693fa42a3803f2e16138cafcb997ded4cb5ce7755627`, reports
+**42 passed, one failed, zero flaky/skipped**. The user create/grant replacement
+journey and full four-theme reflow/expanded-label focus journey now pass. The
+isolated visual-state journey stops before its first capture: it checks the
+selected radio after Escape has hidden its personalization panel, so the default
+accessible-role locator correctly cannot find it. Initial and retry fail alike.
+
+The fixture now verifies the selected radio immediately after Space while it is
+visible, then preserves Escape, focus-return and exact shell-theme assertions.
+No hidden-element workaround, timeout increase or assertion removal is used.
+Remaining same-scene locators were audited: later editor absence checks occur
+after explicit discard; controls used for interaction/state checks are mounted,
+and the next scene reloads and reverifies before selecting a theme. Production
+source is unchanged. A source ordering regression was observed RED then GREEN.
+A new full native run and actual state-matrix pixel review remain required; the
+missing matrix cannot be inferred from the 42 passing cases.
+
+Local fixture-only correction checks: **662 core tests passed, zero skipped**;
+nine panel/source tests, whole-repository ESLint/Prettier, strict affected E2E
+compilation and repository contract passed. Full browser collection remains
+**43 cases across nine files**. Production assets are unchanged; this correction
+does not claim a new native run or replace the pending actual scene review.

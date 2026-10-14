@@ -86,3 +86,12 @@ test('workshop metrics and compact header reflow intrinsically at narrow availab
   assert.match(compact, /\.settings-trigger\s*\{[^}]*max-width: 100%;/s)
   assert.doesNotMatch(css, /zoom\s*:/)
 })
+
+test('visual scene verifies selected theme while the radio remains accessible', () => {
+  const text = readFileSync(new URL('../../e2e/administration.spec.ts', import.meta.url), 'utf8')
+  const scene = text.split("test('UI visual states:")[1]
+  const selected = scene.indexOf('await expect(choice).toBeChecked()')
+  const closed = scene.indexOf("await choice.press('Escape')")
+  assert.ok(selected >= 0 && selected < closed)
+  assert.ok(scene.indexOf("toHaveAttribute(\n      'data-theme'") > closed)
+})

@@ -20,14 +20,13 @@ are historical requests for evidence, subsequently satisfied for this exact
 baseline. They do not mean those main38 checks remain unexecuted. Actual
 installation changes, real-operator recovery, physical Windows/Android and manual
 screen-reader evidence remain open. Cross-built ARM64 images are not hardware
-qualification. The new administration source is a separate candidate. Its third native run
-still passed 41 of 43 cases: role selection and severe enlarged KPI/header reflow
-were corrected, but a successful-create dirty flag and an expanded-label focus
-lookup failed later assertions. Actual review also found minor navigation word
-fragmentation and state contamination in the nominal twenty-image matrix. Current
-receipt/revision guards and explicitly isolated scene fixtures await a new
-exact-tree native run and pixel review. Prior images are diagnostic, not complete
-visual-state qualification. No full MVP, production installation or release certification
+qualification. The new administration source is a separate candidate. Its fourth native run
+passed 42 of 43 cases, including user creation/grants and four-theme reflow with
+expanded-label focus. The isolated scene-matrix case stopped before its first
+capture because a selected radio was asserted after its panel was hidden. The
+fixture ordering correction retains all checks and awaits a new exact-tree full
+native run and actual state-matrix pixel review. Earlier contaminated images
+remain diagnostic, not complete visual-state qualification. No full MVP, production installation or release certification
 is claimed.
 
 > **Historical pre-main38 2026-10-14 update:** The historical summary below does not qualify new
