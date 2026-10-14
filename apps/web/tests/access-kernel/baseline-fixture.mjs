@@ -2,7 +2,7 @@ import { contextKey } from '../../.tmp-kernel/src/access-kernel/context.js'
 import { canonicalJson } from '../../.tmp-kernel/src/access-kernel/operations.js'
 
 // Synthetic qualified-context fixture, only for pre-existing kernel unit tests.
-// Actual server currently advertises null and cannot produce this READY state.
+// This supplies synthetic evidence only, not actual server qualification.
 export function completedMetadata(ticket, context, checkpoint) {
   const baselineId = '00000000-0000-0000-0000-000000000001'
   const expiresAt = new Date(
@@ -21,6 +21,7 @@ export function completedMetadata(ticket, context, checkpoint) {
     capabilities: [...context.capabilities],
     authorization_epoch: context.authorizationEpoch,
     policy_revision: context.policyRevision,
+    dataset_incarnation: context.datasetIncarnation,
     verified_at: context.verifiedAt,
     offline_until: context.offlineUntil,
     snapshot_protocol: context.snapshotProtocol,
@@ -28,6 +29,7 @@ export function completedMetadata(ticket, context, checkpoint) {
   return {
     format: 1,
     binding: contextKey(context),
+    datasetIncarnation: context.datasetIncarnation,
     origin: ticket,
     owner: ticket,
     requestId,

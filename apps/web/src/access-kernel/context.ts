@@ -1,5 +1,12 @@
 import type { ContextState, PrincipalKey, VerifiedAccessContext } from './types.js'
 
+export function isDatasetIncarnation(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value)
+  )
+}
+
 export function principalKey(principal: PrincipalKey): string {
   return JSON.stringify([principal.apiRealm, principal.organizationId, principal.userId])
 }
@@ -9,6 +16,8 @@ export function contextKey(context: VerifiedAccessContext): string {
     context.selectedLocationId,
     context.authorizationEpoch,
     context.policyRevision,
+    context.datasetIncarnation,
+    context.snapshotProtocol,
     context.accountLocationId,
     [...context.capabilities].sort(),
   ])
@@ -24,6 +33,10 @@ export function validateVerifiedContext(context: VerifiedAccessContext, now: num
   ]
   if (
     context.protocol !== 1 ||
+    context.policyRevision !== 'ocwp-access-baseline-2' ||
+    !isDatasetIncarnation(context.datasetIncarnation) ||
+    typeof context.authorizationEpoch !== 'string' ||
+    !/^[A-Za-z0-9_-]{43}$/.test(context.authorizationEpoch) ||
     fields.some((value) => typeof value !== 'string' || !value.trim())
   ) {
     throw new Error('Invalid verified server context')

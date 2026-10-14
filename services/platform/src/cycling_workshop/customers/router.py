@@ -9,6 +9,7 @@ from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.customers.schemas import CustomerCreateRequest, CustomerResponse
 from cycling_workshop.db.dependencies import get_session
+from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.shared.ids import new_id
@@ -37,8 +38,9 @@ def create_customer(
     payload: CustomerCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("customers.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> CustomerResponse:
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     try:
         authorize(
             principal,
@@ -69,7 +71,7 @@ def create_customer(
         occurred_at=customer.updated_at,
         payload=customer_payload(customer),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return _response(customer)
 
 

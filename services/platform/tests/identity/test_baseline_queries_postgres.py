@@ -124,7 +124,12 @@ def test_sparse_authorized_feed_has_bounded_index_plan(baseline_query_postgres: 
 def test_decompressed_large_text_and_json_preflight(baseline_query_postgres: Engine) -> None:
     engine = baseline_query_postgres
     with engine.begin() as connection:
-        connection.execute(text("INSERT INTO organizations(id,name) VALUES ('org','Synthetic')"))
+        connection.execute(
+            text(
+                "INSERT INTO organizations(id,name,dataset_incarnation) "
+                "VALUES ('org','Synthetic','00000000-0000-4000-8000-000000000001')"
+            )
+        )
         connection.execute(
             text("""INSERT INTO locations(id,organization_id,name)
                                    VALUES ('loc','org','Synthetic')""")

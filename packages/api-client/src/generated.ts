@@ -4,12 +4,13 @@ export interface AccessContextResponse {
   account_location_id: string | null
   authorization_epoch: string
   capabilities: Array<string>
+  dataset_incarnation: string
   offline_until: string
-  policy_revision: "ocwp-access-baseline-1"
+  policy_revision: "ocwp-access-baseline-2"
   principal: ContextPrincipal
   protocol: 1
   selected_location_id: string
-  snapshot_protocol: null
+  snapshot_protocol: "baseline-v1" | null
   verified_at: string
 }
 
@@ -266,7 +267,7 @@ export interface MutationRequest {
 export interface MutationResultResponse {
   entity_id: string
   entity_version?: number | null
-  error_code?: string | null
+  error_code?: "sync_conflict" | "legacy_receipt_unverified" | "receipt_integrity_conflict" | "receipt_proof_conflict" | null
   error_message?: string | null
   mutation_id: string
   status: "applied" | "conflict"

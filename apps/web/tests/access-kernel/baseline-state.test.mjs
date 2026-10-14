@@ -11,8 +11,9 @@ const context = {
   accountLocationId: 'loc',
   selectedLocationId: 'loc',
   capabilities: ['sync.pull', 'customers.read'],
-  authorizationEpoch: 'epoch',
-  policyRevision: 'policy',
+  authorizationEpoch: 'epoch'.padEnd(43, '_'),
+  policyRevision: 'ocwp-access-baseline-2',
+  datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
   verifiedAt: new Date(NOW).toISOString(),
   offlineUntil: new Date(NOW + 3600000).toISOString(),
   snapshotProtocol: 'baseline-v1',
@@ -69,6 +70,7 @@ test('start persists exact request and empty fresh partition before transport, n
   assert.notEqual(next.partitionId, ticket.partitionId)
   const partition = await db.cachePartitions.get(next.partitionId)
   assert.equal(partition.baseline.phase, 'start_pending')
+  assert.equal(partition.baseline.datasetIncarnation, context.datasetIncarnation)
   assert.equal(partition.baseline.next.body, partition.baseline.startBody)
   assert.equal(JSON.parse(partition.baseline.startBody).request_id, partition.baseline.requestId)
   assert.equal((await db.cachePartitions.get(ticket.partitionId)).status, 'superseded')
@@ -82,7 +84,8 @@ import { canonicalJson } from '../../.tmp-kernel/src/access-kernel/operations.js
 const protocolContext = {
   ...context,
   snapshotProtocol: null,
-  policyRevision: 'ocwp-access-baseline-1',
+  policyRevision: 'ocwp-access-baseline-2',
+  datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
   authorizationEpoch: 'a'.repeat(43),
 }
 function wireContext(value = protocolContext) {
@@ -94,6 +97,7 @@ function wireContext(value = protocolContext) {
     capabilities: value.capabilities,
     authorization_epoch: value.authorizationEpoch,
     policy_revision: value.policyRevision,
+    dataset_incarnation: value.datasetIncarnation,
     verified_at: value.verifiedAt,
     offline_until: value.offlineUntil,
     snapshot_protocol: value.snapshotProtocol,

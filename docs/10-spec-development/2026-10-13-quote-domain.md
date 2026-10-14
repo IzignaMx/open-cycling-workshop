@@ -56,4 +56,4 @@ following 0007; the next quote-table migration is 0009, following 0008. This
 supersedes the earlier quote reservation of 0008 without changing the historical
 pure-domain evidence or creating an empty reserved migration.
 
-Current migration reservation (2026-10-14): bounded server baseline persistence implements 0009 after 0008. The still-unimplemented quote migration is now 0010 after 0009; earlier reservation statements above are historical.
+Current migration reservation (2026-10-14): bounded server baseline persistence implements 0009 after 0008. Server cutover implements 0010 after 0009. The still-unimplemented quote migration is now 0011 after 0010; earlier reservation statements above are historical.

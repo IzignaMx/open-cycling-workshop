@@ -49,7 +49,10 @@ class BaselineService:
         tokens: SessionTokenService,
         codec: BaselineCodec,
         authorization: str | None,
+        *,
+        cutover_enabled: bool = False,
     ):
+        self.cutover_enabled = cutover_enabled
         self.session, self.tokens, self.codec = session, tokens, codec
         self.deadline: datetime | None = None
         self.expiry_code = "baseline_expired"
@@ -59,7 +62,14 @@ class BaselineService:
         self.validated, self.principal = lock_context(session, tokens, authorization)
 
     def context(self, location: str) -> AccessContextResponse:
-        context = build_context(self.session, self.tokens, self.validated, self.principal, location)
+        context = build_context(
+            self.session,
+            self.tokens,
+            self.validated,
+            self.principal,
+            location,
+            cutover_enabled=self.cutover_enabled,
+        )
         if "sync.pull" not in context.capabilities:
             raise ApiError(403, "capability_denied", "capability denied")
         return context

@@ -13,13 +13,19 @@ from cycling_workshop.identity.admin_schemas import (
     UserResponse,
 )
 from cycling_workshop.identity.audit import append_audit, user_snapshot
+from cycling_workshop.identity.cutover import (
+    WriteAdmission,
+    admit_protocol,
+    lock_compatibility,
+    validate_incarnation,
+)
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.repository import normalize_username
 from cycling_workshop.identity.roles import CAPABILITIES, concrete_capabilities
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.shared.ids import new_id
-from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+from cycling_workshop.tenancy.models import LocationRecord
 
 
 def denied() -> ApiError:
@@ -46,8 +52,13 @@ def user_response(user: UserRecord) -> UserResponse:
 
 
 class AdministrationService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, admission: WriteAdmission) -> None:
         self.session = session
+        self.admission = admission
+
+    @classmethod
+    def for_fixtures(cls, session: Session) -> AdministrationService:
+        return cls(session, WriteAdmission.for_fixtures())
 
     def lock_actor(self, principal: Principal) -> tuple[UserRecord, Principal]:
         """Lock org BEFORE reading actor/target, then reauthorize the current session.
@@ -56,13 +67,10 @@ class AdministrationService:
         is insufficient after waiting behind another administration transaction.
         All admin writers and local first-owner setup use this lock order.
         """
-        organization = self.session.scalar(
-            select(OrganizationRecord)
-            .where(OrganizationRecord.id == principal.organization_id)
-            .with_for_update()
-        )
-        if organization is None:
-            raise ApiError(401, "invalid_session", "invalid session")
+        organization = lock_compatibility(self.session, principal.organization_id)
+        validate_incarnation(organization, principal)
+        admit_protocol(organization, self.admission.protocol, self.admission.enabled)
+        self.admission.check_expiry(principal)
         actor = self.session.scalar(
             select(UserRecord)
             .where(
@@ -91,7 +99,10 @@ class AdministrationService:
                 concrete_capabilities(principal.capabilities)
             ),
             session_version=actor.session_version,
+            dataset_incarnation=principal.dataset_incarnation,
+            expires_at=principal.expires_at,
         )
+        self.admission.check_expiry(effective)
         return actor, effective
 
     def check_location(self, principal: Principal, location_id: str | None) -> None:

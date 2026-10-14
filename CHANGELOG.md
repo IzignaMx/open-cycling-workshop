@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Server cutover contract
+
+- Add forward-only migration0010, explicit organization compatibility floor and
+  restore-resistant signed dataset incarnation; preserve legacy floor0 until opt-in.
+- Enforce locked compatibility on every supported writer and actor/full-command
+  receipt proofs even when a replay arrives through legacy protocol0.
+- Add honest qualified baseline advertisement, closed policy2 client parsing,
+  and operator-only monotone activation/expected-incarnation recovery before
+  reopening restored APIs. Production App stays v4; no real activation performed.
+  See [scope and evidence](docs/10-spec-development/2026-10-14-server-cutover-contract.md).
+
 ## Unreleased · Isolated bounded baseline consumer
 
 - Add durable private staging, exact request replay, bounded wire decoding,

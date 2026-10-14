@@ -1,6 +1,10 @@
 """Functional stale-dependency regression; PostgreSQL tests separately prove waits."""
 
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+
 import pytest
+from cycling_workshop.identity.cutover import WriteAdmission
 from cycling_workshop.identity.dependencies import principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
@@ -30,6 +34,7 @@ def test_writers_revalidate_stale_dependency_before_effects(kind, revocation) ->
         location_id="loc-1",
         capabilities=frozenset(FULL_CAPABILITIES),
     )
+    stale = replace(stale, expires_at=datetime.now(UTC) + timedelta(hours=1))
     client.app.dependency_overrides[principal_from_request] = lambda: stale
     with client.app.state.session_factory() as session:
         actor = session.get(UserRecord, "user-1")
@@ -113,5 +118,19 @@ def test_waiting_writer_preserves_literal_intersection_matrix(
         actor = session.get(UserRecord, "user-1")
         actor.capabilities = sorted(current_account_grants)
         session.commit()
-        refreshed = lock_writer(session, incoming)
+        refreshed = lock_writer(session, incoming, WriteAdmission.for_fixtures())
         assert refreshed.capabilities == incoming.capabilities.intersection(current_account_grants)
+
+
+def test_writer_admission_cannot_be_issued_inside_releasable_savepoint():
+    from cycling_workshop.sync.writes import lock_writer
+
+    client = build_client()
+    with client.app.state.session_factory() as session:
+        with session.begin_nested(), pytest.raises(RuntimeError, match="precede item savepoints"):
+            lock_writer(
+                session,
+                Principal("user-1", "org-1", "loc-1", frozenset(FULL_CAPABILITIES)),
+                WriteAdmission.for_fixtures(),
+            )
+        assert "ocwp_write_admission" not in session.info

@@ -48,7 +48,7 @@ def mutation(
 
 def test_two_devices_converge_after_one_stale_offline_edit_becomes_conflict() -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         customer_id = new_id()
 
         created = service.apply(

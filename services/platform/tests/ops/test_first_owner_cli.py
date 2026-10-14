@@ -160,3 +160,18 @@ def test_first_owner_rejects_oversized_file_without_truncating_secret(installati
     password_file.write_text("valid-synthetic-password\n" + "\n" * 3000 + "unexpected-tail")
     assert main(args) == 1
     assert "unexpected-tail" not in capsys.readouterr().out
+
+
+def test_compiled_first_owner_writer_is_admitted_at_floor_one_without_http_composition(
+    installation,
+    monkeypatch,
+    capsys,
+):
+    engine, args, _, _ = installation
+    with Session(engine) as session:
+        organization = session.get(OrganizationRecord, "existing-org")
+        organization.minimum_write_protocol = 1
+        session.commit()
+    monkeypatch.setenv("OCWP_CUTOVER_ENABLED", "false")
+    assert main(args) == 0
+    assert json.loads(capsys.readouterr().out)["created"] is True

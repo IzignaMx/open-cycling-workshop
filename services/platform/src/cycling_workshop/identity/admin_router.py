@@ -22,6 +22,7 @@ from cycling_workshop.identity.admin_schemas import (
     VersionRequest,
 )
 from cycling_workshop.identity.administration import AdministrationService, require, user_response
+from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
@@ -31,6 +32,7 @@ from cycling_workshop.tenancy.models import LocationRecord
 router = APIRouter(tags=["administration"])
 Actor = Annotated[Principal, Depends(principal_from_request)]
 Database = Annotated[Session, Depends(get_session)]
+Admission = Annotated[WriteAdmission, Depends(write_admission)]
 Limit = Annotated[int, Query(ge=1, le=200)]
 Cursor = Annotated[ScopeId | None, Query()]
 
@@ -72,9 +74,11 @@ def users(
 
 
 @router.post("/api/v1/admin/users", response_model=UserResponse, status_code=201)
-def create_user(payload: CreateUserRequest, principal: Actor, session: Database) -> UserResponse:
-    user = AdministrationService(session).create_user(principal, payload)
-    session.commit()
+def create_user(
+    payload: CreateUserRequest, principal: Actor, session: Database, admission: Admission
+) -> UserResponse:
+    user = AdministrationService(session, admission).create_user(principal, payload)
+    commit_admitted(session, principal, admission)
     return user_response(user)
 
 
@@ -107,44 +111,56 @@ def locations(
 
 @router.patch("/api/v1/admin/users/{user_id}", response_model=UserResponse)
 def patch_user(
-    user_id: ScopeId, payload: PatchUserRequest, principal: Actor, session: Database
+    user_id: ScopeId,
+    payload: PatchUserRequest,
+    principal: Actor,
+    session: Database,
+    admission: Admission,
 ) -> UserResponse:
-    user = AdministrationService(session).patch_user(principal, user_id, payload)
-    session.commit()
+    user = AdministrationService(session, admission).patch_user(principal, user_id, payload)
+    commit_admitted(session, principal, admission)
     return user_response(user)
 
 
 @router.post("/api/v1/admin/users/{user_id}/revoke-sessions", response_model=UserResponse)
 def revoke_sessions(
-    user_id: ScopeId, payload: VersionRequest, principal: Actor, session: Database
+    user_id: ScopeId,
+    payload: VersionRequest,
+    principal: Actor,
+    session: Database,
+    admission: Admission,
 ) -> UserResponse:
-    user = AdministrationService(session).revoke_sessions(
+    user = AdministrationService(session, admission).revoke_sessions(
         principal, user_id, payload.expected_version
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return user_response(user)
 
 
 @router.post("/api/v1/admin/users/{user_id}/reset-password", response_model=UserResponse)
 def reset_password(
-    user_id: ScopeId, payload: ResetPasswordRequest, principal: Actor, session: Database
+    user_id: ScopeId,
+    payload: ResetPasswordRequest,
+    principal: Actor,
+    session: Database,
+    admission: Admission,
 ) -> UserResponse:
-    user = AdministrationService(session).revoke_sessions(
+    user = AdministrationService(session, admission).revoke_sessions(
         principal,
         user_id,
         payload.expected_version,
         new_password=payload.new_password.get_secret_value(),
     )
-    session.commit()
+    commit_admitted(session, principal, admission)
     return user_response(user)
 
 
 @router.post("/api/v1/locations", response_model=LocationResponse, status_code=201)
 def create_location(
-    payload: CreateLocationRequest, principal: Actor, session: Database
+    payload: CreateLocationRequest, principal: Actor, session: Database, admission: Admission
 ) -> LocationResponse:
-    location = AdministrationService(session).create_location(principal, payload.name)
-    session.commit()
+    location = AdministrationService(session, admission).create_location(principal, payload.name)
+    commit_admitted(session, principal, admission)
     return LocationResponse(
         location_id=location.id, organization_id=location.organization_id, name=location.name
     )

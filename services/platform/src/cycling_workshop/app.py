@@ -25,6 +25,7 @@ from cycling_workshop.settings import Settings
 from cycling_workshop.sync.baseline_codec import BaselineCodec
 from cycling_workshop.sync.baseline_http import BaselineBodyLimit, baseline_path
 from cycling_workshop.sync.baseline_router import router as baseline_router
+from cycling_workshop.sync.proof import MutationBodyProofMiddleware
 from cycling_workshop.sync.router import router as sync_router
 
 
@@ -48,6 +49,7 @@ def create_app(
     app.state.session_tokens = SessionTokenService(secret=settings.auth_secret)
     app.state.baseline_codec = BaselineCodec(settings.auth_secret)
     app.add_middleware(BaselineBodyLimit)
+    app.add_middleware(MutationBodyProofMiddleware)
     install_error_handlers(app)
 
     @app.get("/health/live", tags=["health"])

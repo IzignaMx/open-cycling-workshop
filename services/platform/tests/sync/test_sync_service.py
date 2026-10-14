@@ -51,7 +51,7 @@ def customer_create_mutation(
 
 def test_duplicate_mutation_id_is_applied_exactly_once() -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         mutation = customer_create_mutation()
 
         first = service.apply(mutation)
@@ -84,7 +84,7 @@ def test_duplicate_mutation_id_is_applied_exactly_once() -> None:
 )
 def test_receipt_replay_checks_every_persisted_envelope_field(field: str, value: str) -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         original = customer_create_mutation()
         service.apply(original)
         session.commit()
@@ -97,7 +97,7 @@ def test_receipt_replay_checks_every_persisted_envelope_field(field: str, value:
 
 def test_receipt_does_not_claim_unstored_payload_or_base_version_binding() -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         original = customer_create_mutation()
         first = service.apply(original)
         session.commit()
@@ -129,7 +129,7 @@ def test_new_mutation_identity_must_not_be_blank_or_whitespace_normalized(
         mutation = replace(customer_create_mutation(), **{field: value})
 
         with pytest.raises(SyncConflict, match="identity"):
-            SyncService(session).apply(mutation)
+            SyncService.for_fixtures(session).apply(mutation)
 
         assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 0
         assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0
@@ -154,7 +154,7 @@ def test_malformed_legacy_receipt_is_preserved_without_acknowledging_aliases(fie
         session.commit()
 
         with pytest.raises(SyncConflict, match="identity"):
-            SyncService(session).apply(mutation)
+            SyncService.for_fixtures(session).apply(mutation)
 
         session.refresh(receipt)
         assert getattr(receipt, field) == "legacy padded "
@@ -165,7 +165,7 @@ def test_malformed_legacy_receipt_is_preserved_without_acknowledging_aliases(fie
 
 def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         first = customer_create_mutation()
         second = customer_create_mutation()
         service.apply(first)
@@ -204,7 +204,7 @@ def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
 
 def test_update_with_stale_base_version_becomes_explicit_conflict() -> None:
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         created = customer_create_mutation()
         service.apply(created)
         session.commit()
@@ -230,7 +230,7 @@ def test_customer_mutation_writes_outbox_event_in_same_transaction() -> None:
     from sqlalchemy import select
 
     with build_session() as session:
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         mutation = customer_create_mutation()
 
         service.apply(mutation)
@@ -260,7 +260,7 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
             )
         )
         session.commit()
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
 
         bicycle_id = new_id()
         order_id = new_id()

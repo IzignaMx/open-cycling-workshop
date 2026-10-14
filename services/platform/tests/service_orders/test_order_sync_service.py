@@ -78,7 +78,7 @@ def test_order_create_starts_at_intake_and_feeds_change_record() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
 
         result = service.apply(_order_mutation("mut-1", "order-1", payload=CREATE_PAYLOAD))
         session.commit()
@@ -103,7 +103,7 @@ def test_order_create_requires_existing_customer() -> None:
         _seed(session)
 
         with pytest.raises(SyncConflict, match="customer does not exist"):
-            SyncService(session).apply(
+            SyncService.for_fixtures(session).apply(
                 _order_mutation(
                     "mut-2",
                     "order-2",
@@ -118,7 +118,7 @@ def test_order_transition_applies_and_appends_timeline_event() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         _create_order(service)
         session.commit()
 
@@ -155,7 +155,7 @@ def test_order_transition_refuses_payload_actor_without_trusted_context() -> Non
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         _create_order(service)
         session.commit()
 
@@ -183,7 +183,7 @@ def test_invalid_transition_is_a_permanent_sync_conflict() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         _create_order(service)
         session.commit()
 
@@ -215,7 +215,7 @@ def test_order_transition_with_stale_base_version_conflicts() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         _create_order(service)
         service.apply(
             _order_mutation(
@@ -248,7 +248,7 @@ def test_update_without_transition_and_without_fields_is_rejected() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         _create_order(service)
         session.commit()
 

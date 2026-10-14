@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from cycling_workshop.sync.domain import SyncErrorCode
+
 
 class MutationRequest(BaseModel):
     mutation_id: str = Field(min_length=36, max_length=36)
@@ -27,7 +29,7 @@ class MutationResultResponse(BaseModel):
     status: Literal["applied", "conflict"]
     entity_id: str
     entity_version: int | None = None
-    error_code: str | None = None
+    error_code: SyncErrorCode | None = None
     error_message: str | None = None
 
 

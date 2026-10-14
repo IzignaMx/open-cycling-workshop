@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from cycling_workshop.identity.dependencies import principal_from_request
@@ -48,6 +49,7 @@ def test_inventory_revalidates_stale_principal_before_effects(
     stale = Principal("manager", "org-1", None, frozenset(CAPABILITIES))
     if change == "location":
         stale = replace(stale, location_id="loc-1")
+    stale = replace(stale, expires_at=datetime.now(UTC) + timedelta(hours=1))
     client.app.dependency_overrides[principal_from_request] = lambda: stale
     with api.factory() as session:
         actor = session.get(UserRecord, "manager")
@@ -98,6 +100,7 @@ def test_inventory_refresh_preserves_literal_grants(
     client = api.client()
     # The incoming dependency has already intersected token and initial account.
     stale = Principal("writer", "org-1", "loc-1", frozenset(incoming))
+    stale = replace(stale, expires_at=datetime.now(UTC) + timedelta(hours=1))
     client.app.dependency_overrides[principal_from_request] = lambda: stale
     with api.factory() as session:
         actor = session.get(UserRecord, "writer")
@@ -124,6 +127,7 @@ def test_movement_refresh_precedes_product_read(
     api = authority_api
     client = api.client()
     stale = Principal("writer", "org-1", "loc-1", frozenset(CAPABILITIES))
+    stale = replace(stale, expires_at=datetime.now(UTC) + timedelta(hours=1))
     client.app.dependency_overrides[principal_from_request] = lambda: stale
     with api.factory() as session:
         actor = session.get(UserRecord, "writer")

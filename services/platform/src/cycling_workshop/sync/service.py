@@ -10,6 +10,8 @@ from cycling_workshop.bicycles.domain import Bicycle
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
+from cycling_workshop.identity.cutover import WriteAdmission
+from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.service_orders.domain import (
     InvalidStateTransitionError,
     ServiceOrder,
@@ -26,6 +28,13 @@ from cycling_workshop.sync.domain import (
 )
 from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
 from cycling_workshop.sync.projections import bicycle_payload, customer_payload, order_payload
+from cycling_workshop.sync.proof import (
+    PROOF_VERSION,
+    InvalidCommandProof,
+    envelope_digest,
+    valid_actor,
+    valid_digest,
+)
 from cycling_workshop.sync.writes import append_change, lock_organization
 
 
@@ -46,10 +55,148 @@ class _Applied:
 class SyncService:
     def __init__(self, session: Session) -> None:
         self._session = session
+        self._fixture_only = False
+
+    @classmethod
+    def for_fixtures(cls, session: Session) -> SyncService:
+        """Explicitly unadmitted test/seed orchestration; never selected by HTTP."""
+        service = cls(session)
+        service._fixture_only = True
+        return service
+
+    def _require_context(
+        self, mutation: MutationEnvelope, context: SyncApplicationContext | None
+    ) -> None:
+        if context is not None and (
+            not valid_actor(context.actor_id)
+            or type(context.write_protocol) is not int
+            or context.write_protocol not in (0, 1)
+        ):
+            raise RuntimeError("sync application context is invalid")
+        if self._fixture_only:
+            return
+        record = self._session.info.get("ocwp_write_admission")
+        transaction = self._session.get_transaction()
+        if (
+            context is None
+            or context.admitted_session_id != id(self._session)
+            or transaction is None
+            or not transaction.is_active
+            or not isinstance(record, tuple)
+            or len(record) != 3
+        ):
+            raise RuntimeError("sync application requires transaction-owned admission")
+        admitted_transaction, principal, admission = record
+        if (
+            admitted_transaction is not transaction
+            or not isinstance(principal, Principal)
+            or not isinstance(admission, WriteAdmission)
+            or context.actor_id != principal.user_id
+            or context.write_protocol != admission.protocol
+            or mutation.organization_id != principal.organization_id
+        ):
+            raise RuntimeError("sync application requires matching transaction-owned admission")
+        # The record comes from the actual org/actor barrier, not a caller-created
+        # context or an active Session alone. Preserve router authorization here
+        # too, so another internal caller cannot broaden the admitted authority.
+        admission.check_expiry(principal)
+        capability = {
+            "customer": "customers.write",
+            "bicycle": "bicycles.write",
+            "service_order": "orders.write",
+        }.get(mutation.entity_type)
+        if capability is None or mutation.operation not in ("create", "update"):
+            raise SyncConflict("unsupported mutation command")
+        for required in ("sync.push", capability):
+            authorize(
+                principal,
+                capability=required,
+                organization_id=mutation.organization_id,
+                location_id=mutation.location_id,
+            )
+
+    @staticmethod
+    def _incoming_digest(mutation: MutationEnvelope, context: SyncApplicationContext | None) -> str:
+        if context is None or not valid_digest(context.canonical_digest):
+            raise SyncConflict(
+                "canonical command proof is unavailable", error_code="receipt_integrity_conflict"
+            )
+        try:
+            actual = envelope_digest(mutation)
+        except InvalidCommandProof as exc:
+            raise SyncConflict(
+                "canonical command proof is invalid", error_code="receipt_integrity_conflict"
+            ) from exc
+        if actual != context.canonical_digest:
+            raise SyncConflict(
+                "canonical command proof is inconsistent", error_code="receipt_integrity_conflict"
+            )
+        return actual
+
+    def _replay(
+        self,
+        receipt: MutationReceiptRecord,
+        mutation: MutationEnvelope,
+        context: SyncApplicationContext | None,
+    ) -> MutationResult:
+        # Globally colliding IDs never disclose another organization's proof or actor.
+        if receipt.organization_id != mutation.organization_id:
+            raise SyncConflict("mutation id is unavailable for this envelope")
+        proof = (receipt.actor_id, receipt.command_digest, receipt.proof_version)
+        legacy = all(value is None for value in proof)
+        if legacy:
+            if context is not None and context.write_protocol == 1:
+                raise SyncConflict(
+                    "legacy receipt has no verified command proof",
+                    error_code="legacy_receipt_unverified",
+                )
+        else:
+            if (
+                not valid_actor(receipt.actor_id)
+                or not valid_digest(receipt.command_digest)
+                or type(receipt.proof_version) is not int
+                or receipt.proof_version != PROOF_VERSION
+                or receipt.status != "applied"
+                or type(receipt.entity_version) is not int
+                or receipt.entity_version < 1
+            ):
+                raise SyncConflict(
+                    "stored receipt proof is invalid", error_code="receipt_integrity_conflict"
+                )
+            if context is None or receipt.actor_id != context.actor_id:
+                raise SyncConflict(
+                    "receipt does not match this command", error_code="receipt_proof_conflict"
+                )
+            if self._incoming_digest(mutation, context) != receipt.command_digest:
+                raise SyncConflict(
+                    "receipt does not match this command", error_code="receipt_proof_conflict"
+                )
+        if (
+            receipt.location_id,
+            receipt.entity_type,
+            receipt.entity_id,
+            receipt.operation,
+        ) != (
+            mutation.location_id,
+            mutation.entity_type,
+            mutation.entity_id,
+            mutation.operation,
+        ):
+            raise SyncConflict(
+                "mutation id already belongs to another envelope",
+                error_code="sync_conflict" if legacy else "receipt_proof_conflict",
+            )
+        return MutationResult(
+            mutation_id=receipt.mutation_id,
+            status="applied",
+            entity_id=receipt.entity_id,
+            entity_version=receipt.entity_version,
+        )
 
     def apply(
         self, mutation: MutationEnvelope, *, context: SyncApplicationContext | None = None
     ) -> MutationResult:
+        self._require_context(mutation, context)
         # Domain constructors may trim/collapse IDs. Reject ambiguous identity
         # strings before lookup or effects instead of storing a receipt that an
         # identical raw envelope cannot safely replay. Do not normalize aliases.
@@ -68,26 +215,10 @@ class SyncService:
         lock_organization(self._session, mutation.organization_id)
         existing_receipt = self._session.get(MutationReceiptRecord, mutation.mutation_id)
         if existing_receipt is not None:
-            if (
-                existing_receipt.organization_id,
-                existing_receipt.location_id,
-                existing_receipt.entity_type,
-                existing_receipt.entity_id,
-                existing_receipt.operation,
-            ) != (
-                mutation.organization_id,
-                mutation.location_id,
-                mutation.entity_type,
-                mutation.entity_id,
-                mutation.operation,
-            ):
-                raise SyncConflict("mutation id already belongs to another envelope")
-            return MutationResult(
-                mutation_id=existing_receipt.mutation_id,
-                status="applied",
-                entity_id=existing_receipt.entity_id,
-                entity_version=existing_receipt.entity_version,
-            )
+            return self._replay(existing_receipt, mutation, context)
+
+        strict = context is not None and context.write_protocol == 1
+        digest = self._incoming_digest(mutation, context) if strict else None
 
         if mutation.entity_type == "customer":
             applied = self._apply_customer(mutation)
@@ -122,6 +253,9 @@ class SyncService:
             status="applied",
             entity_version=applied.version,
             applied_at=datetime.now(UTC),
+            actor_id=context.actor_id if strict and context is not None else None,
+            command_digest=digest,
+            proof_version=PROOF_VERSION if strict else None,
         )
         self._session.add(receipt)
         self._session.flush()

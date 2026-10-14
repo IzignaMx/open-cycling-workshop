@@ -5,6 +5,7 @@ from dataclasses import replace
 from sqlalchemy.orm import Session
 
 from cycling_workshop.api.errors import ApiError
+from cycling_workshop.identity.cutover import WriteAdmission
 from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.inventory.domain import InventoryMovement, MovementKind, Product
 from cycling_workshop.inventory.repository import SqlAlchemyInventoryRepository
@@ -53,11 +54,13 @@ def record_movement(
     session: Session,
     principal: Principal,
     payload: MovementCreateRequest,
+    *,
+    admission: WriteAdmission,
 ) -> InventoryMovement:
     # Refresh the detached HTTP principal under org→actor locks before touching
     # the product. Keep those locks through the caller's commit/rollback so an
     # administration change cannot commit between authorization and ledger write.
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     authorize_location(principal, "inventory.write", principal.location_id)
     repository = SqlAlchemyInventoryRepository(session)
     # All public ledger writes acquire the same product lock. The idempotency,

@@ -4,10 +4,13 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request, status
+from sqlalchemy import select
 
+from cycling_workshop.identity.cutover import validate_compatibility, validate_incarnation
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository, UserAccount
 from cycling_workshop.identity.security import SessionTokenService
+from cycling_workshop.tenancy.models import OrganizationRecord
 
 
 def _extract_bearer(authorization: str | None) -> str:
@@ -47,6 +50,8 @@ def effective_principal(principal: Principal, account: UserAccount | None) -> Pr
         else account.location_id,
         capabilities=account.capabilities.intersection(principal.capabilities),
         session_version=account.session_version,
+        dataset_incarnation=principal.dataset_incarnation,
+        expires_at=principal.expires_at,
     )
 
 
@@ -57,11 +62,19 @@ def principal_from_request(
     token = _extract_bearer(authorization)
     service: SessionTokenService = request.app.state.session_tokens
     try:
-        token_principal = service.decode(token)
+        token_principal = service.decode_session(token).principal
         factory = request.app.state.session_factory
         if factory is None:
-            return token_principal
+            raise ValueError("authentication persistence unavailable")
         with factory() as session:
+            organization = validate_compatibility(
+                session.scalar(
+                    select(OrganizationRecord).where(
+                        OrganizationRecord.id == token_principal.organization_id
+                    )
+                )
+            )
+            validate_incarnation(organization, token_principal)
             account = SqlAlchemyUserRepository(session).get(
                 user_id=token_principal.user_id,
                 organization_id=token_principal.organization_id,

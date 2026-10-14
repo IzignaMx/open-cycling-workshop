@@ -444,7 +444,7 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
   quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
   quote_main_merge: 98394826884020d9de2498cab551120087dd5334
-  quote_migration_reserved: '0010'
+  quote_migration_reserved: '0011'
   reservation_update: identity_administration_0008_priority_supersedes_earlier_quote_0008_reservation
   release_gates: unchanged
 
@@ -916,3 +916,31 @@ inventory_authority_barrier_2026_10_14:
   migration_protocol_credentials_deployment: none
   production_client: unchanged_v4_kernel_inactive_context_advertisement_null
   record: docs/10-spec-development/2026-10-14-inventory-authority-barrier.md
+
+server_cutover_contract_2026_10_14:
+  status: implemented_pending_exact_hosted_evidence
+  base: 68933a7c61c9ed13a5f5634f3f9c3df69154f22d
+  reconciled_main36: 714342c60f4163c7b4c1ebec8433995dccbeea01
+  specification: docs/10-spec-development/2026-10-14-server-cutover-contract.md
+  adr: docs/02-technical-architecture/2026-10-14-server-cutover-contract.md
+  migration: '0010'
+  future_quote_migration: '0011'
+  downgrade: unconditional_refusal_before_ddl_dml
+  default_floor: 0
+  default_composition_enabled: false
+  policy_revision: ocwp-access-baseline-2
+  signed_dataset_incarnation: all_authenticated_ingress_and_post_lock_revalidation
+  strict_receipts: stored_actor_full_raw_command_proof_even_incoming_protocol0
+  operator_recovery: active_floor1_exact_schema0010_expected_incarnation_atomic_audit
+  local_ingress_matrix: 113_passed_all_14_writers_exact_refusal_snapshots
+  local_core: 335_passed_plus_1_api_client
+  backend_independent_review: 508_passed_33_explicit_skips_all_reported_source_findings_fixed
+  local_python: 1565_passed_189_explicit_skips
+  local_aggregate: 21_passed_zero_failed_five_explicit_environment_blockers
+  frontend_independent_review: no_blockers_335_core_passed_type_lint_format_passed
+  final_backend_reconciliation: no_blockers_7_passed_10_explicit_pg_skips
+  real_postgresql_and_native_browser: pending_exact_head_hosted_no_local_runtime_claim
+  production_app: unchanged_v4_no_activation
+  next_increment: C_production_runtime_journal_provenance_deltas_offline_reload_and_old_bundle_qualification
+  actual_installation_credentials_activation_restore_deployment: not_performed
+  release_gates: physical_devices_accessibility_realistic_restore_and_broader_MVP_unchanged

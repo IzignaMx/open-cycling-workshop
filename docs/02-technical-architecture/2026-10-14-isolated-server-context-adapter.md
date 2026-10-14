@@ -76,3 +76,21 @@ The old realm's journal must be preserved with its original authorship and
 uncertainty. The separately reviewed old-writer compatibility floor, distinct
 new database name, restore/session invalidation and legacy recovery contracts
 remain production activation gates. Offline old tabs cannot be remotely revoked.
+
+## Increment B supersession · 2026-10-14
+
+The [server cutover contract](2026-10-14-server-cutover-contract.md) supersedes
+only this document's temporary policy-1/null-only advertisement boundary. The
+closed context now requires canonical lowercase `dataset_incarnation`, exact
+`ocwp-access-baseline-2`, and `snapshot_protocol` equal to null or `baseline-v1`.
+Only genuinely enabled floor-1 server composition advertises `baseline-v1`;
+null remains an ordinary-client refusal. Historical evidence above is unchanged.
+
+The isolated context/baseline adapter now preserves explicit incarnation in
+verified contexts and local completion/continuation metadata. Context identity
+includes incarnation and support policy. Missing, unknown or contradictory
+historical provenance fails closed without rewriting retained rows. Historical
+start evidence uses the same closed parser as live context/start/activation.
+See the [adapter evidence](../10-spec-development/2026-10-14-cutover-context-adapter.md).
+This does not activate production App, change production repositories, migrate
+journals or implement Increment C's replay/overlay admission and recovery holds.

@@ -566,7 +566,7 @@ def test_inventory_writer_commits_before_later_revocation(
 
     def revoke() -> None:
         with db.factory.begin() as session:
-            actor, _ = AdministrationService(session).lock_actor(
+            actor, _ = AdministrationService.for_fixtures(session).lock_actor(
                 Principal(
                     db.user_id,
                     db.organization_id,

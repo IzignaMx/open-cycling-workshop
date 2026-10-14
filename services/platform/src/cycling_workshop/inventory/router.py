@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.db.dependencies import get_session
+from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.inventory.domain import Product
@@ -44,8 +45,9 @@ def create_product(
     payload: ProductCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("inventory.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> ProductResponse:
-    principal = lock_writer(session, principal)
+    principal = lock_writer(session, principal, admission)
     authorize_location(principal, "inventory.write", payload.location_id)
     _require_location(session, principal, payload.location_id)
     product = Product.create(
@@ -58,7 +60,7 @@ def create_product(
     )
     try:
         SqlAlchemyInventoryRepository(session).add_product(product)
-        session.commit()
+        commit_admitted(session, principal, admission)
     except IntegrityError as exc:
         session.rollback()
         raise ApiError(409, "product_conflict", "product identifier or SKU already exists") from exc
@@ -109,10 +111,11 @@ def create_movement(
     payload: MovementCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("inventory.write"))],
     session: Annotated[Session, Depends(get_session)],
+    admission: Annotated[WriteAdmission, Depends(write_admission)],
 ) -> MovementResponse:
     try:
-        movement = record_movement(session, principal, payload)
-        session.commit()
+        movement = record_movement(session, principal, payload, admission=admission)
+        commit_admitted(session, principal, admission)
     except IntegrityError as exc:
         session.rollback()
         raise ApiError(

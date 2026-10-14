@@ -29,7 +29,7 @@ def test_baseline_migration_preserves_previous_rows_and_enforces_utf8_cache_boun
     engine = create_engine(url)
     with engine.begin() as connection:
         connection.execute(text("INSERT INTO organizations (id,name) VALUES ('org','Preserve')"))
-    command.upgrade(config, "head")
+    command.upgrade(config, "0009")
     with engine.begin() as connection:
         assert (
             connection.scalar(text("SELECT name FROM organizations WHERE id='org'")) == "Preserve"
