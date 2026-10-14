@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Isolated server-context adapter
+
+- Add an unactivated, immutable-request adapter for authenticated context, with
+  exact configured-realm/scope binding, no-store/redirect rejection, literal
+  grants and stale-session/generation fencing. See the
+  [increment record](docs/10-spec-development/2026-10-14-isolated-server-context-adapter.md).
+- Current null snapshot protocol always returns BASELINE_REQUIRED. Production
+  App/auth/defaultDB and all journals remain untouched; preserve old-realm work
+  on endpoint moves. Baseline activation and old-writer cutover remain gates.
+
 ## Unreleased · Ordered supported change-feed writers
 
 - Customer/bicycle/order REST creates and order transitions now publish the same

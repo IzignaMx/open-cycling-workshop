@@ -39,6 +39,7 @@ try {
   run(process.execPath, [
     '--test',
     'tests/access-kernel/context.test.mjs',
+    'tests/access-kernel/server-context.test.mjs',
     'tests/access-kernel/kernel.test.mjs',
     'tests/access-kernel/migration.test.mjs',
     'tests/pwa/navigation-policy.test.mjs',
