@@ -63,18 +63,6 @@ class SqlAlchemyUserRepository:
         record = self._session.scalar(statement)
         return self._to_domain(record) if record is not None else None
 
-    def increment_session_version(self, *, user_id: str, organization_id: str) -> int:
-        statement: Select[tuple[UserRecord]] = select(UserRecord).where(
-            UserRecord.id == user_id,
-            UserRecord.organization_id == organization_id,
-        )
-        record = self._session.scalar(statement)
-        if record is None:
-            raise LookupError("user not found")
-        record.session_version += 1
-        self._session.flush()
-        return record.session_version
-
     @staticmethod
     def _to_domain(record: UserRecord) -> UserAccount:
         return UserAccount(

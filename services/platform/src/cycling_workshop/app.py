@@ -12,6 +12,7 @@ from cycling_workshop.api.schemas import HealthReadyResponse, HealthUnavailableR
 from cycling_workshop.bicycles.router import router as bicycles_router
 from cycling_workshop.customers.router import router as customers_router
 from cycling_workshop.db.registry import register_models
+from cycling_workshop.identity.admin_router import router as administration_router
 from cycling_workshop.identity.router import router as identity_router
 from cycling_workshop.identity.security import SessionTokenService
 from cycling_workshop.inventory.router import router as inventory_router
@@ -63,6 +64,7 @@ def create_app(
         return HealthReadyResponse(environment=settings.environment)
 
     app.include_router(identity_router)
+    app.include_router(administration_router)
     app.include_router(customers_router)
     app.include_router(bicycles_router)
     app.include_router(service_orders_router)

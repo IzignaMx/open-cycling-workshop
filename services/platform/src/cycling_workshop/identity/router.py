@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from cycling_workshop.db.dependencies import get_session
+from cycling_workshop.identity.admin_schemas import ChangePasswordRequest
+from cycling_workshop.identity.administration import AdministrationService
 from cycling_workshop.identity.dependencies import principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
@@ -28,7 +30,7 @@ def login(
     if (
         account is None
         or not account.is_active
-        or not PasswordService().verify(account.password_hash, payload.password)
+        or not PasswordService().verify(account.password_hash, payload.password.get_secret_value())
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
@@ -70,15 +72,21 @@ def logout_all(
     principal: Annotated[Principal, Depends(principal_from_request)],
     session: Annotated[Session, Depends(get_session)],
 ) -> Response:
-    repository = SqlAlchemyUserRepository(session)
-    try:
-        repository.increment_session_version(
-            user_id=principal.user_id,
-            organization_id=principal.organization_id,
-        )
-    except LookupError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
-        ) from exc
+    AdministrationService(session).logout_all(principal)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: ChangePasswordRequest,
+    principal: Annotated[Principal, Depends(principal_from_request)],
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    AdministrationService(session).change_password(
+        principal,
+        payload.current_password.get_secret_value(),
+        payload.new_password.get_secret_value(),
+    )
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
