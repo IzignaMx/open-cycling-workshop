@@ -40,24 +40,53 @@ ownership, with organization/user/location additionally required for logos.
 
 ## Acceptance evidence and limits
 
-Local evidence is component evidence until the final exact tree is qualified.
+Local source qualification is complete for the recorded checkpoint below; hosted
+runtime qualification remains pending.
 Observed RED regressions include missing bounded context reads, lease/commit
 fences, grouped dependencies, incarnation recovery, installed build provenance,
 private response headers, old-fixture preparation and qualified build failure.
 Independent source review additionally reproduced and corrected obsolete
-implicit recovery dependencies and delta interference with offline/push holds.
+implicit recovery dependencies, delta interference with offline/push holds,
+hidden recovery issues beyond the first history page, offline in-flight network
+races, premature synchronized status during retry backoff, and shared browser
+fixture principals exhausting the unchanged server family quota.
 
-The first integrated core runner passed **449 tests** before later review fixes
-and acceptance additions; this is not a final-tree count. Separate focused
-results overlap and must not be summed. Final aggregate/source review and hosted
-results will be recorded against their actual commit/tree.
+The fresh aggregate at source checkpoint
+`23c628fd76fc4adb966851eed344954379876f51` (tree
+`4705573327371506635402c2a2e70651fad1b41a`) passed **21 checks, zero failures**:
+**1,581 Python tests**, **473 frontend tests**, one API-client test, repository
+and API contracts, offline/API types, Python and frontend static checks, the
+current production PWA and two reproducible actual historical builds. Python
+reported **189 explicit local PostgreSQL-dependent skips**. Five environmental
+blockers remain: PostgreSQL test URL, Docker, psql, managed Chromium navigation
+policy and browser E2E database URL. The earlier 3e12de7 aggregate also contains
+21 passing checks; a previously reported count of 22 was a counting error.
+
+Independent component reviews closed all concrete findings. Kernel/delta fixes
+are integrated in `b374dca`, `17c1875`, `23b362b` and `cfd2d62`; runtime issue and
+network fencing fixes in `f106b45` and `5d64b37`; fixture identity, native schema
+and restore corrections in `6bb191e`, `772e26a` and `6c2dc5b`. The acceptance-only
+23c628f delta was independently reviewed with seven Python fixture tests and
+strict E2E typing/static checks passing. A subsequent explicit missing-journal
+assertion in `467fd84` removes its newly introduced optional-index typing
+observation without relaxing preservation assertions. Separate focused results
+overlap and must not be summed with the aggregate.
+
+The final documentation/publication head receives its own aggregate artifact;
+its SHA must not be substituted for the source checkpoint above. Hosted CI and
+actual screenshot inspection must be tied to the published candidate tree.
+Configured types pass; an exploratory E2E compile with both optional/index
+strictness flags exposes pre-existing test diagnostics, so it is not claimed
+as a green configured gate.
 
 The seven existing browser specs move from 24 to 26 direct cases using real
 login/context/baseline and readonly scoped journal inspection. They retain
 customer/order convergence, mixed conflicts, bounded retry, deterministic
 commit/ACK barriers, opaque delta rollback, all four themes, focus/drafts,
 restricted accounts and accessibility. A separate eighth spec adds actual
-old-bundle/service-worker cutover. The former raw-v1 automatic attribution and
+old-bundle/service-worker cutover and genuine recovery visibility. All **27 cases
+in eight files** collect; collection is not execution. The isolated native
+IndexedDB harness has **11 collected cases**, including additive v5→v6 evidence. The former raw-v1 automatic attribution and
 replay assertion is deliberately superseded by exact preservation/non-replay;
 known-author unchanged-ID reload and lost-ACK replay remain required.
 
@@ -78,8 +107,15 @@ signed legacy token is issued with the exact pinned pre-B codec: current B
 login already includes incarnation even at floor zero and must not be mislabeled
 as a legacy token. The required journey proves legacy-session 401, fresh-login
 old-transport 409, actual old SW offline reload, new SW takeover, raw old-work
-preservation and late old-tab additions. **Local deterministic builds and unit
-checks do not prove that browser journey. Hosted execution remains required.**
+preservation and late old-tab additions. It also creates fresh pending work
+through the normal offline UI, rotates this fixed synthetic tenant through the
+supported recovery operation, signs in again and verifies preserved held work
+with no obsolete overlay. Eight actual recovery-UI captures are required across
+Banco/Plano/Ritmo/Noche at 1440px and 320px; selector/session-held captures and
+existing draft/focus, axe and reflow assertions remain. Captures are generated
+only when those real journeys execute, then require visual inspection.
+**Local deterministic builds and unit checks do not prove that browser journey.
+Hosted execution and pixel inspection remain required.**
 
 ### Runtime restore
 
@@ -99,5 +135,6 @@ activate an installation, configure credentials, discard browser storage or
 restore over existing data. Follow the
 [server cutover procedure](../07-operations/2026-10-14-server-cutover.md) and the
 [current checklist](../../MANUAL-ACTIONS-CHECKLIST.md). Exact-head hosted CI,
-independent final-source review, native old-SW/reconnect/restore evidence and
-existing physical/accessibility/recovery gates remain separate.
+native old-SW/reconnect/restore evidence, actual screenshot inspection and
+existing physical/accessibility/recovery gates remain separate. Independent
+source review is closed; it does not substitute for those runtime gates.

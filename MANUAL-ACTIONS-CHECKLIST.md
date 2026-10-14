@@ -755,6 +755,9 @@ device, screen-reader, real restore and broader product-scope gates are unchange
 - [ ] Run the pinned real old App/SW journey: legacy-session 401, fresh-login old
       transport 409, offline reload, actual SW update, preserved raw old data and
       late old-tab edits. Reproducible built assets alone do not close this gate.
+- [ ] Inspect actual hosted selector/session-held and recovery UI captures at
+      desktop and 320px across all four existing themes. Passing test badges or
+      collected screenshot assertions alone do not establish visual readiness.
 - [ ] Run all eleven disposable runtime checks with floor1 backup/restore,
       stopped writers, expected-incarnation rotation before restored API reopen,
       stale session/checkpoint refusal and preserved pending recovery holds.

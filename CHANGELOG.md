@@ -8,7 +8,8 @@
 - Preserve immutable incarnation-bound journals, recovery holds, all four themes
   and exactly scoped preferences; never attribute or replay unknown legacy work.
 - Add real pinned old App/SW and disposable floor1 restore acceptance fixtures.
-  Source integration is pending exact-final-tree hosted/native qualification;
+  Source integration and independent review are complete; 21 local aggregate
+  checks pass, with exact-final-tree hosted/native qualification still pending;
   normal Compose remains opt-in disabled and no installation was activated. See
   [scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
 

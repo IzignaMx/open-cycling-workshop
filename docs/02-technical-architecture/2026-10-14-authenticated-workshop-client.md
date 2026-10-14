@@ -1,6 +1,6 @@
 # ADR · Authenticated workshop production client (Increment C)
 
-Status: accepted implementation contract; implementation and exact-tree qualification pending.
+Status: accepted and implemented; independent source review closed; exact published-tree runtime qualification pending.
 Date: 2026-10-14. Base: actual integrated main37
 `14f4bf005f2b28ded5d31c45c9c532d50597aefc`, tree
 `eb8f2575d06109916b38d6f3d579899d795cd943`.
