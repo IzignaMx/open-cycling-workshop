@@ -1,5 +1,5 @@
 import type { ConflictRecord } from '../../local/types.js'
-import { buildConflictCenterItems } from './conflict-center-model.js'
+import { buildConflictCenterItems, operationStateLabel } from './conflict-center-model.js'
 
 export interface ConflictCenterProps {
   conflicts?: readonly ConflictRecord[]
@@ -65,7 +65,7 @@ export function ConflictCenter({
               <p>ID: {issue.entityId}</p>
               {issue.errorMessage ? <p>{issue.errorMessage}</p> : null}
               <p>
-                Operación {issue.mutationId} · {issue.state}
+                Operación {issue.mutationId} · {operationStateLabel(issue.state)}
                 {issue.errorCode ? ` · ${issue.errorCode}` : ''}. El original se conserva.
               </p>
             </li>

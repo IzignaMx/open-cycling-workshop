@@ -46,3 +46,22 @@ test('sync status model communicates local-first states without relying on color
     detail: 'Hay cambios que necesitan resolución manual.',
   })
 })
+
+test('retained work uses closed Spanish state labels without exposing unknown protocol values', async () => {
+  const { operationStateLabel } =
+    await import('../../.tmp-conflict/src/features/sync/conflict-center-model.js')
+  for (const [state, label] of [
+    ['awaiting_confirmation', 'Confirmación pendiente'],
+    ['held_authorization', 'Autorización pendiente'],
+    ['held_dependency', 'Dependencia pendiente'],
+    ['held_integrity', 'Integridad pendiente'],
+    ['held_retry', 'Reintento pendiente'],
+    ['held_recovery', 'Recuperación pendiente'],
+    ['rejected', 'Cambio rechazado'],
+  ]) {
+    assert.equal(operationStateLabel?.(state), label, state)
+  }
+  for (const state of ['', 'unknown_private_state', '__proto__', 'constructor', 'toString']) {
+    assert.equal(operationStateLabel?.(state), 'Requiere atención', state)
+  }
+})

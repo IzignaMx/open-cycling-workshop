@@ -253,6 +253,10 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
     for (const width of [1440, 320]) {
       await current.setViewportSize({ width, height: 1000 })
       await expect(recoveryItem).toBeVisible()
+      await expect(recoveryItem).not.toContainText('held_recovery')
+      await expect(recoveryItem).toContainText(
+        `Operación ${pending.mutationId} · Recuperación pendiente`,
+      )
       expect(
         await current.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

@@ -42,7 +42,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
           <h1>Selecciona un taller</h1>
           <p>Cuenta: {state.user?.display_name}. La selección limita los datos de esta vista.</p>
           <p role="status">{state.message}</p>
-          <ul>
+          <ul className="workshop-selector-options">
             {state.locations.map((location) => (
               <li key={location.location_id}>
                 <Button

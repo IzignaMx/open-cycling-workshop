@@ -510,10 +510,23 @@ test('real selector, baseline progress and server upgrade hold remain keyboard a
       result.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? '')),
     ).toEqual([])
   }
+  const assertSelectorSpacing = async () => {
+    await expect
+      .poll(() =>
+        page.locator('[data-runtime-state="SELECTOR"] li > button').evaluateAll((buttons) => {
+          if (buttons.length < 2) return 0
+          const boxes = buttons.map((button) => button.getBoundingClientRect())
+          return Math.min(...boxes.slice(1).map((box, index) => box.top - boxes[index]!.bottom))
+        }),
+      )
+      .toBeGreaterThanOrEqual(12)
+  }
   await assertAccessible()
+  await assertSelectorSpacing()
   await attachScreenshot(page, info, 'authenticated-workshop-selector')
   await page.setViewportSize({ width: 320, height: 900 })
   await assertAccessible()
+  await assertSelectorSpacing()
   await attachScreenshot(page, info, 'authenticated-workshop-selector-320', true)
   await page.setViewportSize({ width: 1440, height: 1000 })
   const workshop = page.getByRole('button', { name: 'Taller E2E', exact: true })
@@ -540,6 +553,16 @@ test('real selector, baseline progress and server upgrade hold remain keyboard a
     await expect(page.locator('.order-card')).toHaveCount(0)
     await assertAccessible()
     await attachScreenshot(page, info, 'authenticated-baseline-progress')
+    await page.setViewportSize({ width: 320, height: 900 })
+    await expect(page.locator('[data-runtime-state="BASELINE"]')).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true)
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-baseline-progress-320', true)
+    await page.setViewportSize({ width: 1440, height: 1000 })
     releaseBaseline()
     await waitForReady(page)
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')

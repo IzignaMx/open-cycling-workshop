@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Recovery and selector presentation
+
+- Show closed Spanish labels for retained-work states, with a safe generic label
+  for unknown values; preserve original operations and diagnostic fields.
+- Separate workshop choices visually and add narrow-screen baseline-progress
+  coverage to the existing genuine authenticated browser journey. Hosted visual
+  requalification remains required.
+
 ## Unreleased · Offline reload and browser acceptance corrections
 
 - Admit retained offline reload after a genuine network failure even when the
