@@ -126,7 +126,8 @@ def test_decompressed_large_text_and_json_preflight(baseline_query_postgres: Eng
     with engine.begin() as connection:
         connection.execute(
             text(
-                "INSERT INTO organizations(id,name,dataset_incarnation) VALUES ('org','Synthetic','00000000-0000-4000-8000-000000000001')"
+                "INSERT INTO organizations(id,name,dataset_incarnation) "
+                "VALUES ('org','Synthetic','00000000-0000-4000-8000-000000000001')"
             )
         )
         connection.execute(

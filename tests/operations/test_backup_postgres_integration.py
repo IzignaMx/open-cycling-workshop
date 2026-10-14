@@ -109,7 +109,8 @@ def test_real_database_only_restore_drill(
         with source.begin() as connection:
             connection.execute(
                 text(
-                    "INSERT INTO organizations (id,name,dataset_incarnation) VALUES (:id,:name,:incarnation)"
+                    "INSERT INTO organizations (id,name,dataset_incarnation) "
+                    "VALUES (:id,:name,:incarnation)"
                 ),
                 {
                     "id": "synthetic-org",
