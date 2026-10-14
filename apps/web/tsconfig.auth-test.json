@@ -12,6 +12,7 @@
   },
   "include": [
     "src/auth/session.ts",
+    "src/auth/view-generation.ts",
     "src/auth/login-model.ts",
     "src/auth/session-policy.ts",
     "src/auth/capabilities.ts"

@@ -22,6 +22,7 @@ const outputs = [
   new URL('../.tmp-conflict/', import.meta.url),
   new URL('../.tmp-auth/', import.meta.url),
   new URL('../.tmp-orders/', import.meta.url),
+  new URL('../.tmp-personalization/', import.meta.url),
 ]
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
@@ -31,6 +32,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.conflict-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.auth-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
     'tests/pwa/navigation-policy.test.mjs',
@@ -43,6 +45,8 @@ try {
     'tests/orders/local-order.test.mjs',
     'tests/orders/order-model.test.mjs',
     'tests/auth/session.test.mjs',
+    'tests/auth/view-generation.test.mjs',
+    'tests/personalization/preferences.test.mjs',
     'tests/customers/local-customer.test.mjs',
     'tests/sync/conflict-center.test.mjs',
   ])
