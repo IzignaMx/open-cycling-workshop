@@ -36,7 +36,13 @@ def configure_logging(level: str = "INFO") -> None:
 def install_request_context(app: FastAPI) -> None:
     @app.middleware("http")
     async def request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
-        request_id = request.headers.get("X-Request-ID") or f"req-{uuid.uuid4().hex}"
+        # Do not copy arbitrary user-controlled text into identity audit history.
+        sensitive = request.url.path.startswith(
+            ("/api/v1/auth/", "/api/v1/admin/", "/api/v1/locations")
+        )
+        request_id = (
+            None if sensitive else request.headers.get("X-Request-ID")
+        ) or f"req-{uuid.uuid4().hex}"
         token = request_id_var.set(request_id)
         started = time.perf_counter()
         try:

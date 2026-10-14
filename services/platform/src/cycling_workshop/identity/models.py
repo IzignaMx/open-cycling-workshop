@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -19,6 +20,12 @@ class UserRecord(Base):
     __tablename__ = "users"
     __table_args__ = (
         UniqueConstraint("organization_id", "username", name="uq_users_org_username"),
+        UniqueConstraint("id", "organization_id", name="uq_user_tenant"),
+        CheckConstraint("version > 0", name="ck_users_version_positive"),
+        CheckConstraint("session_version > 0", name="ck_users_session_version_positive"),
+        CheckConstraint(
+            "NOT is_owner OR location_id IS NULL", name="ck_users_owner_organization_scope"
+        ),
         ForeignKeyConstraint(
             ["location_id", "organization_id"],
             ["locations.id", "locations.organization_id"],
@@ -42,3 +49,6 @@ class UserRecord(Base):
     capabilities: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     session_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    is_owner: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

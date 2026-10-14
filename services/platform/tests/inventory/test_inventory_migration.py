@@ -18,6 +18,8 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, IntegrityError
 from sqlalchemy.schema import CreateSchema, DropSchema
 
+# These historical migration tests intentionally stop at 0007. Newer identity
+# migration tests cover true HEAD, including their own SQLite batch rebuild.
 INDEX_NAME = "uq_inventory_reservation_finalization"
 NOW = datetime(2026, 9, 1, tzinfo=UTC)
 
@@ -213,7 +215,7 @@ def test_upgrade_preserves_legacy_consumption_rows_and_balance(
     )
     before = _snapshot(engine)
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
 
     assert _revision(engine) == "0007"
     assert _snapshot(engine) == before
@@ -242,7 +244,7 @@ def test_upgrade_blocks_a_second_terminal_finalization(
         _movement("reservation", "RESERVE", -4),
         _movement("first-finalization", first_kind, 4, "reservation"),
     )
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
     before = _snapshot(engine)
 
     with pytest.raises(IntegrityError):
@@ -268,7 +270,7 @@ def test_duplicate_legacy_finalizations_block_upgrade_without_changing_history(
     before = _snapshot(engine)
 
     with pytest.raises(RuntimeError, match="duplicate reservation finalizations") as failure:
-        command.upgrade(config, "head")
+        command.upgrade(config, "0007")
 
     message = str(failure.value)
     assert "backup" in message.lower()
@@ -302,7 +304,7 @@ def test_preflight_and_index_allow_distinct_tenants_nonterminal_rows_and_null_re
     )
     before = _snapshot(engine)
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
 
     assert _snapshot(engine) == before
     _insert(
@@ -318,7 +320,7 @@ def test_downgrade_removes_only_the_finalization_index(
     migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
     _seed_tenant(engine)
     _insert(engine, _movement("reservation", "RESERVE", -4))
     before = _snapshot(engine)
@@ -332,7 +334,7 @@ def test_downgrade_removes_only_the_finalization_index(
     assert {index["name"] for index in inspect(engine).get_indexes("inventory_movements")} == (
         indexes - {INDEX_NAME}
     )
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
     assert _revision(engine) == "0007"
     assert _snapshot(engine) == before
 
@@ -347,7 +349,7 @@ def test_offline_upgrade_emits_partial_unique_index_without_online_preflight(
     # Offline compilation must not attempt to connect to either database.
     config.set_main_option("sqlalchemy.url", f"{dialect}://")
 
-    command.upgrade(config, "0006:head", sql=True)
+    command.upgrade(config, "0006:0007", sql=True)
 
     sql = output.getvalue()
     assert (
@@ -362,7 +364,7 @@ def test_empty_database_upgrades_to_inventory_finalization_head(
 ) -> None:
     config, engine = migration_database
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
 
     assert _revision(engine) == "0007"
     assert INDEX_NAME in {
@@ -413,7 +415,7 @@ def test_postgres_seeded_upgrade_preserves_legacy_ledger_and_enforces_finalizati
     )
     before = _snapshot(engine)
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "0007")
 
     assert _revision(engine) == "0007"
     assert _snapshot(engine) == before
@@ -446,7 +448,7 @@ def test_postgres_duplicate_preflight_preserves_seeded_ledger_and_revision(
     before = _snapshot(engine)
 
     with pytest.raises(RuntimeError, match="duplicate reservation finalizations") as failure:
-        command.upgrade(config, "head")
+        command.upgrade(config, "0007")
 
     assert "private-fixture" not in str(failure.value)
     assert "org-1" not in str(failure.value)

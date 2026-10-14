@@ -3,10 +3,11 @@
 Status: `implemented_pending_evidence`.
 Branch: `feat/structural-workshop-themes`.
 Original base: `98394826884020d9de2498cab551120087dd5334`.
-Reconciled main: `c1e2230cdc18dfbb778254d9f28b0261ef32ca48`, containing
-merged sync-test/runtime PRs #24/#25 and authorization PR #26, including its
-test-only ambient secret-file isolation guards. Administration PR #27 is not
-included in this branch; subsequent integration must preserve its migration reservations.
+Reconciled main: `59ad7e96ee1f32308a63ffa9248b528685a5221c`, containing
+merged sync-test/runtime PRs #24/#25, authorization PR #26 and server/API
+administration PR #27. Identity migration `0008` is preserved; future quote
+persistence remains `0009`. Theme preferences use additive Dexie v4; offline
+quote stores remain reserved for v5. Shared branding stays pending.
 
 ## Scope
 
@@ -72,6 +73,14 @@ contains the justified adaptations from the visual reference boards.
   its unverified legacy conflict unchanged; such details are hidden. Store tests
   exercise production recordConflicts code with fake tables, not real IndexedDB.
   Browser cases are collected, not run locally.
+
+The final combined main27 reconciliation at
+`fa076ace16a55411d654f74138e9da4bfb98863c` passed all 21 available aggregate checks,
+with zero failures and five unchanged environment blockers: **755 Python passed,
+60 documented local skips and 98 frontend core passed**. The earlier counts above
+describe the pre-administration checkpoint. Platform/API-client source is identical
+to main27; independent reconciliation inspection confirmed both checklist sections,
+quote `0009` and no source conflict. Final hosted browser/image proof remains pending.
 
 ## First hosted browser evidence and correction
 
