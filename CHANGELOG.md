@@ -25,6 +25,12 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Fixed
 
+- Sync chaos setup now waits for durable baseline acknowledgement and proves the
+  server baseline/version before constructing the three-operation conflict batch.
+  A deterministic delayed-completion/ACK regression and retry-free CI repetitions
+  guard the setup race. Hosted red-to-green evidence and ten retry-free
+  repetitions are recorded in draft PR #24.
+
 - Consumption now commits its hold finalization and physical stock deduction
   atomically through the API; consuming a reserved item cannot replenish stock.
 - Reservation-finalization lookup uses reservation reference IDs and recognizes
