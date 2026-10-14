@@ -24,7 +24,11 @@ def test_backup_uses_libpq_environment_instead_of_password_in_command(tmp_path: 
     )
 
     command, env = runner.calls[0]
-    assert command == ["pg_dump", "--format=custom", "--file", str(output)]
+    assert command[:4] == ["pg_dump", "--format=custom", "--no-password", "--file"]
+    temporary = Path(command[4])
+    assert temporary.parent == output.parent
+    assert not temporary.exists()
+    assert output.read_bytes() == b"fake custom dump"
     assert env["PGHOST"] == "db.internal"
     assert env["PGPORT"] == "5432"
     assert env["PGUSER"] == "ocwp"
