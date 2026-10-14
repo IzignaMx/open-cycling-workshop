@@ -1,8 +1,9 @@
 # Effective identity and sync authority prerequisite
 
-Status: implemented and independently reviewed locally; exact-head hosted
-PostgreSQL/browser qualification remains pending. This bounded security increment does not
-enable end-user permission administration or qualify a release.
+Status: the bounded server checkpoint is independently reviewed and hosted
+verified. Reconciliation with merged structural themes requires its own
+exact-head hosted qualification. This increment does not enable end-user
+permission administration or qualify a release.
 
 ## Scope and traceability
 
@@ -116,8 +117,9 @@ own design and evidence.
 - Five real PostgreSQL tests use the existing dedicated-target, isolated-schema
   administration fixture and observable `pg_stat_activity` lock waits. They
   cover session revocation, deactivation, incompatible location, grant removal
-  and grant expansion while `/me` waits. Their runtime result remains pending
-  until a configured PostgreSQL run; SQLite is not row-lock evidence.
+  and grant expansion while `/me` waits. They were initially skipped locally and
+  subsequently passed on hosted PostgreSQL 18.4 at the checkpoint below;
+  SQLite is not row-lock evidence.
 - Full Python suite: **825 passed, 65 skipped**. The skips are PostgreSQL-specific
   tests without a configured dedicated `OCWP_TEST_DATABASE_URL`, including the
   five new contention cases; they are not established by SQLite tests.
@@ -137,8 +139,60 @@ own design and evidence.
   825 passed/65 PostgreSQL skips; no further
   implementation defects were found. Review also checked current-user freshness,
   actor attribution, strict tuple authorization and historical replay boundaries.
-- Exact-head hosted CI/Security/DCO results remain pending; local build evidence
-  does not substitute for PostgreSQL or browser execution.
+- The local evidence above is historical and distinct from the subsequent
+  hosted checkpoint and combined-main reconciliation below.
+
+## Hosted server checkpoint and main reconciliation
+
+[PR #29](https://github.com/IzignaMx/open-cycling-workshop/pull/29) head
+`53f2758fa4ffbeaf69ef57a2d9c4e6387c906799` and its tested synthetic merge
+`db7e451004e9683b2bc5ed5a5711562e197ca158` both have Git tree
+`22be9cf04f5a37090f2ae09a543e355ad276e18b`, verified directly through Git commit
+metadata. The merge parents are main
+`59ad7e96ee1f32308a63ffa9248b528685a5221c` and that PR head.
+
+- [CI 38557162076](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38557162076)
+  passed all 27 aggregate checks with zero blockers. Downloaded qualification
+  artifact `11890711098` records the exact tested merge and Python 3.13.16.
+- The full Python suite passed 887 tests, including all five new PostgreSQL 18.4
+  lock-wait cases. Three unrelated skips remain explicit: the host backup drill
+  lacks matching major-18 clients, SQLite cannot test TRUNCATE, and PostgreSQL
+  cannot test SQLite's INSERT OR REPLACE. The separate container runtime below
+  proves its own real major-18 backup/restore path.
+- The 74 frontend core tests and one API-client test passed. Browser execution
+  passed 10 direct journeys, 10 retry-free repetitions of the two sync-chaos
+  journeys, and another 10-journey aggregate run. The 100k IndexedDB benchmark
+  passed (40,553.8 ms write, 166 ms count/sample), without claiming physical-device
+  qualification.
+- [Local runtime 38557162143](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38557162143)
+  passed all 11 real-stack checks, including PostgreSQL backup/restore, restart
+  persistence, actual-edge PWA offline/reconnect convergence and credential-free
+  logs. Downloaded artifact `11890438957` records the same tested merge. All three
+  ARM64 image builds passed; physical hardware was not tested.
+- [Security 38557162059](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38557162059)
+  and [DCO 38557162116](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38557162116)
+  passed.
+
+The subsequent reconciliation is a true merge with actual main
+`675fe209fa0b038156ba0c57c44f520b2e2de376` (structural themes PR #28), retaining
+both histories. It preserves the already reviewed server implementation and
+tests byte-for-byte and the merged main frontend/workflow files byte-for-byte.
+Only this security evidence is updated beyond the conflict-free merge. No new
+migration, API/generated-contract change, production cache activation or real
+account/deployment action is introduced by reconciliation. The mainline remains
+on Alembic `0008`; future quote persistence follows as `0009`.
+
+The combined local aggregate passed all 21 runnable checks with zero failures
+and the same five environment blockers: 825 Python passed/65 PostgreSQL-specific
+skips, 98 frontend core tests, one API-client test, static/contract checks and
+production PWA build. No additional implementation/test edits were required.
+Independent reconciliation review passed 81 focused server tests, all 98
+frontend core tests, unchanged OpenAPI/generated TypeScript contracts, evidence
+formatting and diff checks. It verified both parent SHAs and the byte-identical
+server/frontend boundaries above; the final follow-up changes only these two
+evidence documents. Fresh exact-head hosted CI/runtime/security/DCO remain pending
+before integration. The earlier green server checkpoint does not qualify this
+combined head. Existing manual and administration-rollout gates remain unchanged.
 
 ## Compatibility, operations and limits
 
