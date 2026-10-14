@@ -1,9 +1,11 @@
 # Synthetic branding decoder smoke in the ARM64 image
 
-Status: source implemented and helper/mock tests executed; the actual image build
-and QEMU container probe have **not** run in this executor, which has no Docker.
-This does not close physical Raspberry, laptop/Docker Desktop, hostile worst-case,
-named-volume ownership or integrated recovery qualification.
+Status: the initial hosted image build succeeded, but the QEMU decoder probe
+**failed** on the exact candidate below. Diagnostic-only source additions have
+helper/mock evidence; they have not run in Docker/QEMU in this executor, which
+has no Docker. Physical Raspberry, laptop/Docker Desktop and hostile worst-case
+qualification remain separate. Named-volume/recovery evidence belongs to its
+own runtime artifact and does not change this ARM failure.
 
 ## Execution and artifact boundary
 
@@ -32,7 +34,8 @@ then verifies the exact four expected RGBA pixels with a fixed-output-size
 standard-library check capped at 19 inflated bytes. It does not compare a
 compression-library-specific fixed PNG digest or import Pillow into the parent.
 
-Only `artifacts/branding-arm64-emulated.json` is uploaded, under artifact name
+Only the bounded probe report `artifacts/branding-arm64-emulated.json` is uploaded
+by the evidence-upload step, under artifact name
 `branding-arm64-emulated-${{ github.sha }}`. The closed report is under 4 KiB and
 includes the exact checked-out commit, actual loaded image ID/platform, installed
 worker source digest, Python/Pillow versions, process checks and canonical output
@@ -43,7 +46,8 @@ than fabricated evidence.
 
 ## Limits and interpretation
 
-The installed worker's unconditional pre-Pillow limit declarations are checked:
+The qualifying attempt checks the installed worker's unconditional pre-Pillow
+limit declarations:
 128 MiB address space, two CPU seconds, 256 KiB output, zero core bytes and 32
 open descriptors. Its existing two-second parent wall deadline is unchanged.
 This is explicitly `installed_worker_source_checked` evidence combined with a
@@ -69,11 +73,11 @@ isolation, rejected checkout imports, bounded safe output, and a refusal without
 retry. Full success orchestration is explicitly mocked; it proves report/control
 structure, not Docker, QEMU, native ARM64 or actual installed-image execution.
 
-The final local scope passed 34 new focused cases and 60 combined probe/runtime-
+The initial source scope passed 34 focused cases and 60 combined probe/runtime-
 source cases. Ruff, formatting, strict mypy for the probe, repository contract
 and extracted workflow shell syntax passed. Independent review reran all 34
 focused cases and found no open source blocker; actual hosted execution remains
-pending.
+pending for the diagnostic additions.
 
 Reproduce the local scope without modifying dependency environments:
 
@@ -87,4 +91,70 @@ Reproduce the local scope without modifying dependency environments:
 See the [decoder/storage contract](../03-security-privacy/2026-10-14-branding-image-storage.md)
 and [local runtime qualification boundary](2026-10-14-local-runtime.md). Hosted
 execution must be recorded against the final reviewed candidate before claiming
-that this newly authored emulated-image check passed.
+that this emulated-image check passed.
+
+## Initial hosted failure and diagnostic-only follow-up
+
+The initial run [38655208868](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38655208868)
+checked merge `eb4a31b55af4ef1a698daf58762da41c01b8b78b`, exact tree
+`416f0737d677b2c810af7be302facee03fe9340e`. The loaded image ID was
+`sha256:a50284c7dc7cd0326e315b09c1847a4cf7842c9530b80971bdb00f9efd7d9bb8`.
+[Artifact 11936163954](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38655208868/artifacts/11936163954)
+has uploaded ZIP SHA256
+`05f95beb0621706879400de48e959d4544bf4e598d94fa563b15812030cc2268`.
+Its installed worker SHA256 is
+`b5ca430ef94a6273e11314d2cccd7277c620a8bc62c4295e3411ea8378e7465c`, matching the
+reviewed production source.
+
+The report proves ARM64 image/process identity, UID/GID 10001, hardened runtime,
+Pillow 12.3.0 and source-declared limits. Its outcome was
+`decoder_unavailable_under_emulation` after 2.009593 seconds. This is consistent
+with the two-second deadline, but that original report did not record whether
+`communicate` timed out, the child's exit/signal or CPU time. It cannot distinguish
+interpreter/module/Pillow startup from decoding or a resource-limit failure. It
+does not establish cold-start causation or a native ARM portability defect.
+
+The source-only diagnostic extension preserves the original qualifying call,
+arguments, resource limits, failure and nonzero exit. Its witness now records
+spawn wall time, an actually observed `TimeoutExpired`, final exit/reap status
+and child user/system CPU deltas, including on failure. These original-attempt
+observations are primary; CPU is the emulated child process's CPU consumption,
+not a native Raspberry measure.
+
+Only after `DecoderUnavailable`, exactly one separate diagnostic child executes
+the unchanged installed worker with the same two-second parent wall deadline
+and the worker's unchanged CPU/address-space/output/descriptor limits. It has
+a single additional private marker descriptor, discarded stderr and private
+file-backed image output. Its line tracer emits only fixed Python/worker entry,
+limit, Pillow-import, decode and encode landmarks with numeric wall/CPU values.
+There are at most 11 markers. Reading is capped at 2,049 bytes to detect a 2,048-
+byte overflow; more than 12 lines also discards the marker stream. Unknown,
+duplicate, nonnumeric, non-ASCII or out-of-range lines are discarded, never
+copied into evidence. Timeout and unexpected failures kill and reap the child;
+a kill/exit race still waits for the child. Raw image output is never reported.
+
+The diagnostic is explicitly `instrumented_second_child_not_original_attempt`.
+Bootstrap imports, tracing overhead and second-attempt warm-cache ordering can
+move the observed bottleneck. A missing marker means only `not_observed`, never
+proof that the original child was stuck at startup. The last marker is an observed
+boundary, not a causal verdict about the next operation. For example,
+`limits_start` without `limits_applied` can mean a limit call failed, a later
+limit call failed, or marker emission failed under the applied limits. Even a
+completed diagnostic
+cannot make the original qualification pass or change exit 1. No production
+optimization, limit change, workflow retry or native fallback is introduced.
+Further causal conclusions require the new exact-tree hosted evidence and review.
+
+The added RED/GREEN cases exercise failure retention, original timeout versus
+exit evidence, marker byte/count/input bounds, single-child spawning, unchanged
+arguments/limits, CPU fields, kill/reap on timeout/unexpected error/exit race,
+and complete omission of unrecognized or image output. Local helper/mock results
+are separate from actual emulated diagnostic execution.
+
+The diagnostic source scope passes 53 focused helper/mock cases. An independent
+reviewer also executed one native Linux diagnostic against the unchanged
+checkout worker with the project virtual environment: all 11 markers through
+`worker_complete`, exit 0 and reaped. This validates local marker plumbing only;
+it is not the installed `/app` image, QEMU, ARM64 or physical-device evidence.
+The full failed-report regression includes all 11 markers and verifies the
+original failure, commit and image ID remain intact under the 4 KiB ceiling.

@@ -18,10 +18,12 @@ import json
 import os
 import platform
 import re
+import resource
 import stat
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 import zlib
 from pathlib import Path
@@ -151,6 +153,206 @@ def worker_limits(source: str, *, memory: int, seconds: float, size: int) -> dic
     }
 
 
+PHASES = frozenset(
+    (
+        "python_ready",
+        "worker_entry",
+        "limits_start",
+        "limits_applied",
+        "pillow_import_start",
+        "pillow_import_end",
+        "decode_start",
+        "decode_complete",
+        "encode_start",
+        "encode_complete",
+        "worker_complete",
+    )
+)
+
+# The installed worker is executed unchanged. Only this separate diagnostic
+# process gets a marker descriptor and line tracer; never the qualifying child.
+DIAGNOSTIC_CHILD = r"""
+import os, resource, sys, time
+worker, descriptor, started = sys.argv[1], int(sys.argv[2]), float(sys.argv[3])
+seen = set()
+def mark(phase):
+    if phase in seen or len(seen) >= 11:
+        return
+    seen.add(phase)
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    line = "%s %.6f %.6f %.6f\n" % (
+        phase, time.monotonic() - started, usage.ru_utime, usage.ru_stime
+    )
+    os.write(descriptor, line.encode("ascii"))
+mark("python_ready")
+import runpy
+phase_lines = __PHASE_LINES__
+def local_trace(frame, event, arg):
+    if event == "line" and frame.f_lineno in phase_lines:
+        mark(phase_lines[frame.f_lineno])
+    return local_trace
+def trace(frame, event, arg):
+    if (event == "call" and frame.f_code.co_filename == worker
+            and frame.f_code.co_name == "_worker_main"):
+        mark("worker_entry")
+        return local_trace
+    return None
+sys.settrace(trace)
+try:
+    runpy.run_path(worker, run_name="__main__")
+finally:
+    sys.settrace(None)
+"""
+
+
+def child_cpu_usage() -> tuple[float, float]:
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return usage.ru_utime, usage.ru_stime
+
+
+def parse_phase_markers(raw: bytes) -> dict[str, object]:
+    result: dict[str, object] = {
+        "phase_markers": [],
+        "last_observed_phase": "not_observed",
+        "marker_stream": "empty",
+    }
+    if len(raw) > 2048 or len(raw.splitlines()) > 12:
+        result["marker_stream"] = "bounds_exceeded"
+        return result
+    phases: list[dict[str, object]] = []
+    seen: set[str] = set()
+    discarded = False
+    for line in raw.splitlines():
+        try:
+            parts = line.decode("ascii").split()
+            if (
+                len(parts) != 4
+                or parts[0] not in PHASES
+                or parts[0] in seen
+                or any(re.fullmatch(r"[0-9]{1,4}\.[0-9]{6}", value) is None for value in parts[1:])
+            ):
+                discarded = True
+                continue
+            wall, user, system = (float(value) for value in parts[1:])
+            if max(wall, user, system) > 3600:
+                discarded = True
+                continue
+            seen.add(parts[0])
+            phases.append(
+                {
+                    "phase": parts[0],
+                    "wall_seconds": wall,
+                    "user_cpu_seconds": user,
+                    "system_cpu_seconds": system,
+                }
+            )
+        except (UnicodeError, ValueError):
+            discarded = True
+    result["phase_markers"] = phases
+    if phases:
+        result["last_observed_phase"] = phases[-1]["phase"]
+    result["marker_stream"] = (
+        "unrecognized_discarded" if discarded else "valid" if phases else "empty"
+    )
+    return result
+
+
+def diagnostic_phase_lines(worker: Path) -> dict[int, str]:
+    source = worker.read_text()
+    function = next(
+        node
+        for node in ast.parse(source).body
+        if isinstance(node, ast.FunctionDef) and node.name == "_worker_main"
+    )
+    prefixes = {
+        "resource.setrlimit(resource.RLIMIT_AS,": "limits_start",
+        "try:": "limits_applied",
+        "from PIL import Image": "pillow_import_start",
+        "Image.MAX_IMAGE_PIXELS =": "pillow_import_end",
+        "with Image.open(": "decode_start",
+        "mode =": "decode_complete",
+        "clean.save(": "encode_start",
+        "inspect_canonical_png(result)": "encode_complete",
+        "return 0": "worker_complete",
+    }
+    mapping = {}
+    for number, line in enumerate(source.splitlines(), 1):
+        if function.lineno < number <= (function.end_lineno or function.lineno):
+            for prefix, phase in prefixes.items():
+                if line.strip().startswith(prefix):
+                    mapping[number] = phase
+    require(set(mapping.values()) == set(prefixes.values()), "decoder_limit_contract")
+    require(len(mapping) == len(prefixes), "decoder_limit_contract")
+    return mapping
+
+
+def run_diagnostic(worker: Path) -> dict[str, object]:
+    """One post-failure supporting observation, never a qualification retry."""
+    result: dict[str, object] = {
+        "diagnostic_only": True,
+        "qualifying_outcome_unchanged": True,
+        "interpretation": "instrumented_second_child_not_original_attempt",
+        "wall_limit_seconds": 2.0,
+        "worker_limits_unchanged": True,
+    }
+    process: subprocess.Popen[bytes] | None = None
+    started = time.monotonic()
+    before = child_cpu_usage()
+    try:
+        code = DIAGNOSTIC_CHILD.replace("__PHASE_LINES__", repr(diagnostic_phase_lines(worker)))
+        with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as markers:
+            started = time.monotonic()
+            deadline = started + 2.0
+            try:
+                process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-I",
+                        "-c",
+                        code,
+                        str(worker),
+                        str(markers.fileno()),
+                        str(started),
+                    ],
+                    stdin=subprocess.PIPE,
+                    stdout=output,
+                    stderr=subprocess.DEVNULL,
+                    close_fds=True,
+                    env={"PATH": os.defpath},
+                    pass_fds=(markers.fileno(),),
+                )
+                process.communicate(
+                    synthetic_png(), timeout=max(0.001, deadline - time.monotonic())
+                )
+                result["outcome"] = "completed" if process.returncode == 0 else "child_nonzero_exit"
+            except subprocess.TimeoutExpired:
+                result["outcome"] = "parent_wall_timeout"
+            except Exception:
+                result["outcome"] = "diagnostic_unavailable"
+            finally:
+                if process is not None:
+                    try:
+                        if process.poll() is None:
+                            process.kill()
+                    except ProcessLookupError:
+                        pass
+                    finally:
+                        process.wait()
+            markers.seek(0)
+            result.update(parse_phase_markers(markers.read(2049)))
+            result["exit_code"] = process.returncode if process is not None else None
+            result["child_reaped"] = process is not None and process.returncode is not None
+    except Exception:
+        result["outcome"] = "diagnostic_unavailable"
+    after = child_cpu_usage()
+    result.update(
+        elapsed_seconds=round(time.monotonic() - started, 6),
+        child_user_cpu_seconds=round(after[0] - before[0], 6),
+        child_system_cpu_seconds=round(after[1] - before[1], 6),
+    )
+    return result
+
+
 class SpawnWitness:
     """Observe and forward the production spawn unchanged; never replace its child."""
 
@@ -159,6 +361,10 @@ class SpawnWitness:
         self.executable = executable
         self.worker = worker
         self.processes: list[Any] = []
+        self.spawn_seconds = 0.0
+        self.wall_timeout = False
+        self.launch_failed = False
+        self.cpu_before: tuple[float, float] | None = None
 
     def __call__(self, args: list[str], **kwargs: Any) -> Any:
         require(
@@ -174,9 +380,50 @@ class SpawnWitness:
         require(
             stat.S_ISREG(os.fstat(kwargs["stdout"].fileno()).st_mode), "decoder_process_contract"
         )
-        child = self.factory(args, **kwargs)
+        started = time.monotonic()
+        self.cpu_before = child_cpu_usage()
+        try:
+            child = self.factory(args, **kwargs)
+        except OSError:
+            self.launch_failed = True
+            raise
+        finally:
+            self.spawn_seconds = round(time.monotonic() - started, 6)
         self.processes.append(child)
+        original_communicate = child.communicate
+
+        def communicate(*arguments: Any, **options: Any) -> Any:
+            try:
+                return original_communicate(*arguments, **options)
+            except subprocess.TimeoutExpired:
+                self.wall_timeout = True
+                raise
+
+        child.communicate = communicate
         return child
+
+    def attempt_evidence(self) -> dict[str, object]:
+        after = child_cpu_usage()
+        before = self.cpu_before or after
+        code = self.processes[0].returncode if self.processes else None
+        outcome = (
+            "parent_wall_timeout"
+            if self.wall_timeout
+            else "launch_failed"
+            if self.launch_failed
+            else "child_exit"
+            if code is not None
+            else "not_observed"
+        )
+        return {
+            "outcome": outcome,
+            "children": len(self.processes),
+            "spawn_seconds": self.spawn_seconds,
+            "exit_code": code,
+            "child_reaped": bool(self.processes) and code is not None,
+            "child_user_cpu_seconds": round(after[0] - before[0], 6),
+            "child_system_cpu_seconds": round(after[1] - before[1], 6),
+        }
 
     def completed(self) -> dict[str, object]:
         require(
@@ -263,16 +510,27 @@ def run_probe(commit: str, image_id: str, image_platform: str) -> dict[str, obje
         )
         witness = SpawnWitness(subprocess.Popen, sys.executable, str(installed))
         started = time.monotonic()
+        unavailable = False
         try:
             # Only observe the launch; forward identical arguments to the real Popen.
             with patch.object(subprocess, "Popen", witness):
                 logo = images.canonicalize_logo(base64.b64encode(synthetic_png()).decode("ascii"))
         except images.DecoderUnavailable:
-            raise ProbeFailure("decoder_unavailable_under_emulation") from None
+            unavailable = True
         except images.InvalidLogo:
             raise ProbeFailure("decoder_rejected_fixture") from None
         finally:
             result["emulated_elapsed_seconds"] = round(time.monotonic() - started, 6)
+            result["qualifying_attempt"] = witness.attempt_evidence()
+        if unavailable:
+            try:
+                result["diagnostic"] = run_diagnostic(installed)
+            except Exception:
+                result["diagnostic"] = {
+                    "diagnostic_only": True,
+                    "outcome": "diagnostic_unavailable",
+                }
+            raise ProbeFailure("decoder_unavailable_under_emulation")
         result["decoder_process"] = witness.completed()
         require(
             images.inspect_canonical_png(logo.data) == (2, 2)

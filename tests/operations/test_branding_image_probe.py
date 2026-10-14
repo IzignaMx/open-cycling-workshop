@@ -92,7 +92,7 @@ def test_relaxed_or_reordered_decoder_limits_are_refused(
 def test_spawn_witness_forwards_unchanged_real_subprocess_arguments(tmp_path: Path) -> None:
     from cycling_workshop.branding import images
 
-    process = SimpleNamespace(pid=321, returncode=0)
+    process = SimpleNamespace(pid=321, returncode=0, communicate=Mock())
     real_popen = Mock(return_value=process)
     witness = probe.SpawnWitness(real_popen, "/app/.venv/bin/python", "/installed/images.py")
     with (tmp_path / "output").open("wb") as output:
@@ -210,6 +210,7 @@ def mock_installed_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(probe, "runtime_identity", lambda: {"machine": "aarch64", "uid": 10001})
     monkeypatch.setattr(probe.sys, "prefix", str(Path(images.__file__).resolve().parent))
     monkeypatch.setattr(probe.importlib.metadata, "version", lambda name: "12.3.0")
+    monkeypatch.setattr(probe, "run_diagnostic", Mock(return_value={"diagnostic_only": True}))
 
 
 def test_mocked_full_success_records_no_png_and_does_not_change_limits(
@@ -230,7 +231,7 @@ def test_mocked_full_success_records_no_png_and_does_not_change_limits(
         if fixture[offset + 4 : offset + 8] not in (b"gAMA", b"sRGB"):
             canonical += fixture[offset : offset + 12 + length]
         offset += 12 + length
-    factory = Mock(return_value=SimpleNamespace(pid=321, returncode=0))
+    factory = Mock(return_value=SimpleNamespace(pid=321, returncode=0, communicate=Mock()))
     monkeypatch.setattr(probe.subprocess, "Popen", factory)
 
     def mock_canonicalize(encoded: str) -> images.CanonicalLogo:
@@ -366,3 +367,297 @@ def test_oversized_report_never_leaves_main(
     assert output.err == ""
     assert len(output.out) < 4096
     assert json.loads(output.out)["failure"] == "unexpected_probe_failure"
+
+
+def test_qualifying_witness_records_timeout_exit_and_cpu_without_changing_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = SimpleNamespace(
+        pid=321,
+        returncode=-9,
+        communicate=Mock(side_effect=probe.subprocess.TimeoutExpired("private", 2)),
+    )
+    original_communicate = process.communicate
+    factory = Mock(return_value=process)
+    monkeypatch.setattr(probe, "child_cpu_usage", Mock(side_effect=[(1.0, 2.0), (1.4, 2.2)]))
+    witness = probe.SpawnWitness(factory, "/python", "/images.py")
+    with (tmp_path / "output").open("wb") as output:
+        kwargs = {
+            "stdin": probe.subprocess.PIPE,
+            "stdout": output,
+            "stderr": probe.subprocess.DEVNULL,
+            "close_fds": True,
+            "env": {"PATH": probe.os.defpath},
+        }
+        child = witness(["/python", "-I", "/images.py"], **kwargs)
+        with pytest.raises(probe.subprocess.TimeoutExpired):
+            child.communicate(b"synthetic-input", timeout=1.9)
+    original_communicate.assert_called_once_with(b"synthetic-input", timeout=1.9)
+    factory.assert_called_once_with(["/python", "-I", "/images.py"], **kwargs)
+    evidence = witness.attempt_evidence()
+    assert evidence["outcome"] == "parent_wall_timeout"
+    assert evidence["exit_code"] == -9
+    assert evidence["child_reaped"] is True
+    assert evidence["child_user_cpu_seconds"] == 0.4
+    assert evidence["child_system_cpu_seconds"] == 0.2
+    assert "private" not in json.dumps(evidence)
+    assert "synthetic-input" not in json.dumps(evidence)
+
+
+def test_phase_parser_accepts_only_fixed_bounded_numeric_markers() -> None:
+    parsed = probe.parse_phase_markers(
+        b"python_ready 0.100000 0.050000 0.010000\n"
+        b"worker_entry 0.300000 0.200000 0.030000\n"
+        b"limits_applied 0.310000 0.210000 0.030000\n"
+    )
+    assert parsed["last_observed_phase"] == "limits_applied"
+    assert parsed["marker_stream"] == "valid"
+    assert parsed["phase_markers"][0] == {
+        "phase": "python_ready",
+        "wall_seconds": 0.1,
+        "user_cpu_seconds": 0.05,
+        "system_cpu_seconds": 0.01,
+    }
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        b"Traceback secret data\n",
+        b"\x89PNG\x00\xff\n",
+        b"pillow_import_start nan inf -1\n",
+        b"private 0.100000 0.100000 0.100000\n",
+    ],
+)
+def test_phase_parser_discards_unknown_lines_without_leaking_them(bad: bytes) -> None:
+    parsed = probe.parse_phase_markers(bad + b"python_ready 0.100000 0.050000 0.010000\n")
+    assert parsed["last_observed_phase"] == "python_ready"
+    assert parsed["marker_stream"] == "unrecognized_discarded"
+    assert "secret" not in json.dumps(parsed)
+    assert "private" not in json.dumps(parsed)
+    assert len(parsed["phase_markers"]) == 1
+
+
+@pytest.mark.parametrize("raw", [b"x" * 2049, b"python_ready 0.100000 0.050000 0.010000\n" * 13])
+def test_phase_parser_discards_oversized_or_excessive_marker_streams(raw: bytes) -> None:
+    parsed = probe.parse_phase_markers(raw)
+    assert parsed["phase_markers"] == []
+    assert parsed["last_observed_phase"] == "not_observed"
+    assert parsed["marker_stream"] == "bounds_exceeded"
+
+
+def test_no_marker_does_not_claim_cold_start_causation() -> None:
+    parsed = probe.parse_phase_markers(b"")
+    assert parsed["last_observed_phase"] == "not_observed"
+    assert parsed["marker_stream"] == "empty"
+    assert "cold" not in json.dumps(parsed)
+
+
+def test_successful_diagnostic_cannot_replace_failed_qualifying_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cycling_workshop.branding import images
+
+    mock_installed_runtime(monkeypatch)
+    decoder = Mock(side_effect=images.DecoderUnavailable("never emit this private diagnostic"))
+    diagnostic = Mock(return_value={"diagnostic_only": True, "outcome": "completed"})
+    monkeypatch.setattr(images, "canonicalize_logo", decoder)
+    monkeypatch.setattr(probe, "run_diagnostic", diagnostic)
+    result = probe.run_probe(SHA, IMAGE_ID, "linux/arm64")
+    assert result["status"] == "failed"
+    assert result["failure"] == "decoder_unavailable_under_emulation"
+    assert result["diagnostic"]["outcome"] == "completed"
+    assert "canonical_output" not in result
+    assert "private" not in json.dumps(result)
+    decoder.assert_called_once()
+    diagnostic.assert_called_once()
+
+
+def test_diagnostic_source_executes_installed_worker_without_replacing_its_limits() -> None:
+    source = probe.DIAGNOSTIC_CHILD
+    compile(source, "diagnostic", "exec")
+    assert 'runpy.run_path(worker, run_name="__main__")' in source
+    assert "setrlimit(" not in source
+    assert "sys.settrace(trace)" in source
+    assert "except Exception as" not in source
+    assert "print(" not in source
+
+
+def test_diagnostic_exception_does_not_replace_original_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cycling_workshop.branding import images
+
+    mock_installed_runtime(monkeypatch)
+    monkeypatch.setattr(images, "canonicalize_logo", Mock(side_effect=images.DecoderUnavailable()))
+    monkeypatch.setattr(probe, "run_diagnostic", Mock(side_effect=RuntimeError("private")))
+    result = probe.run_probe(SHA, IMAGE_ID, "linux/arm64")
+    assert result["status"] == "failed"
+    assert result["failure"] == "decoder_unavailable_under_emulation"
+    assert result["diagnostic"]["outcome"] == "diagnostic_unavailable"
+    assert "private" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("outcome", ["success", "timeout", "unexpected", "kill_race"])
+def test_single_diagnostic_child_is_bounded_reaped_and_does_not_expose_output(
+    outcome: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    worker = ROOT / "services/platform/src/cycling_workshop/branding/images.py"
+    process = Mock()
+    process.returncode = None
+    process.poll.side_effect = lambda: process.returncode
+    captured: dict[str, object] = {}
+
+    def launch(args: list[str], **kwargs: object) -> object:
+        captured.update(args=args, **kwargs)
+        probe.os.write(kwargs["pass_fds"][0], b"python_ready 0.100000 0.050000 0.010000\nprivate\n")
+        kwargs["stdout"].write(b"secret image bytes")
+        return process
+
+    def communicate(data: bytes, timeout: float) -> None:
+        assert data == probe.synthetic_png()
+        assert 0 < timeout <= 2.0
+        if outcome in ("timeout", "kill_race"):
+            raise probe.subprocess.TimeoutExpired("private", timeout)
+        if outcome == "unexpected":
+            raise RuntimeError("private")
+        process.returncode = 0
+
+    def kill() -> None:
+        if outcome == "kill_race":
+            raise ProcessLookupError("private")
+        process.returncode = -9
+
+    def wait() -> int:
+        if outcome == "kill_race":
+            process.returncode = -9
+        return process.returncode
+
+    process.communicate.side_effect = communicate
+    process.kill.side_effect = kill
+    process.wait.side_effect = wait
+    factory = Mock(side_effect=launch)
+    monkeypatch.setattr(probe.subprocess, "Popen", factory)
+    result = probe.run_diagnostic(worker)
+    assert factory.call_count == 1
+    assert captured["env"] == {"PATH": probe.os.defpath}
+    assert captured["close_fds"] is True
+    assert captured["stderr"] == probe.subprocess.DEVNULL
+    assert len(captured["pass_fds"]) == 1
+    assert captured["args"][:3] == [probe.sys.executable, "-I", "-c"]
+    assert captured["args"][4] == str(worker)
+    assert result["diagnostic_only"] is True
+    assert result["qualifying_outcome_unchanged"] is True
+    assert result["child_reaped"] is True
+    assert result["last_observed_phase"] == "python_ready"
+    assert "private" not in json.dumps(result)
+    assert "secret image" not in json.dumps(result)
+    process.wait.assert_called_once()
+    assert process.kill.call_count == int(outcome != "success")
+
+
+def test_diagnostic_phase_mapping_covers_installed_worker_without_editing_it() -> None:
+    worker = ROOT / "services/platform/src/cycling_workshop/branding/images.py"
+    original = worker.read_bytes()
+    lines = probe.diagnostic_phase_lines(worker)
+    assert set(lines.values()) == probe.PHASES - {"python_ready", "worker_entry"}
+    assert len(lines) == 9
+    assert worker.read_bytes() == original
+
+
+def test_full_failed_report_with_all_markers_retains_original_failure_under_4k(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from cycling_workshop.branding import images
+
+    mock_installed_runtime(monkeypatch)
+    monkeypatch.setattr(
+        probe,
+        "runtime_identity",
+        lambda: {
+            "machine": "aarch64",
+            "executable_elf_machine": 183,
+            "uid": 10001,
+            "gid": 10001,
+            "isolated_python": True,
+            "no_new_privileges": True,
+            "effective_capabilities": 0,
+            "python": "3.13.14",
+        },
+    )
+    maximum = 3599.999999
+    qualifying = {
+        "outcome": "parent_wall_timeout",
+        "children": 1,
+        "spawn_seconds": maximum,
+        "exit_code": -9,
+        "child_reaped": True,
+        "child_user_cpu_seconds": maximum,
+        "child_system_cpu_seconds": maximum,
+    }
+    diagnostic = {
+        "diagnostic_only": True,
+        "qualifying_outcome_unchanged": True,
+        "interpretation": "instrumented_second_child_not_original_attempt",
+        "wall_limit_seconds": 2.0,
+        "worker_limits_unchanged": True,
+        "outcome": "parent_wall_timeout",
+        "exit_code": -9,
+        "child_reaped": True,
+        "elapsed_seconds": maximum,
+        "child_user_cpu_seconds": maximum,
+        "child_system_cpu_seconds": maximum,
+        **probe.parse_phase_markers(
+            "".join(
+                f"{phase} {maximum:.6f} {maximum:.6f} {maximum:.6f}\n"
+                for phase in sorted(probe.PHASES)
+            ).encode("ascii")
+        ),
+    }
+    monkeypatch.setattr(probe.SpawnWitness, "attempt_evidence", lambda self: qualifying)
+    monkeypatch.setattr(images, "canonicalize_logo", Mock(side_effect=images.DecoderUnavailable()))
+    monkeypatch.setattr(probe, "run_diagnostic", Mock(return_value=diagnostic))
+    monkeypatch.setattr(
+        probe.sys,
+        "argv",
+        [
+            "probe",
+            "--commit",
+            SHA,
+            "--image-id",
+            IMAGE_ID,
+            "--image-platform",
+            "linux/arm64",
+        ],
+    )
+    assert probe.main() == 1
+    output = capsys.readouterr()
+    result = json.loads(output.out)
+    assert output.err == ""
+    assert len(output.out) < 4096
+    assert result["failure"] == "decoder_unavailable_under_emulation"
+    assert result["commit"] == SHA and result["image_id"] == IMAGE_ID
+    assert result["qualifying_attempt"] == qualifying
+    assert len(result["diagnostic"]["phase_markers"]) == 11
+
+
+def test_child_signal_without_communicate_timeout_is_not_labelled_wall_timeout(
+    tmp_path: Path,
+) -> None:
+    process = SimpleNamespace(pid=321, returncode=-9, communicate=Mock())
+    witness = probe.SpawnWitness(Mock(return_value=process), "/python", "/images.py")
+    with (tmp_path / "output").open("wb") as output:
+        child = witness(
+            ["/python", "-I", "/images.py"],
+            stdin=probe.subprocess.PIPE,
+            stdout=output,
+            stderr=probe.subprocess.DEVNULL,
+            close_fds=True,
+            env={"PATH": probe.os.defpath},
+        )
+        child.communicate(b"synthetic-input", timeout=1.9)
+    assert witness.attempt_evidence()["outcome"] == "child_exit"
+    assert witness.attempt_evidence()["exit_code"] == -9
