@@ -97,7 +97,7 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   await expect.poll(async () => (await rawDatabase(old)).stores.mutationQueue.length).toBe(1)
   const first = await rawDatabase(old)
   await old.reload({ waitUntil: 'domcontentloaded' })
-  expect((await rawDatabase(old)).stores.customers).toEqual(first.stores.customers)
+  expect(await rawDatabase(old)).toEqual(first)
   expect(fixture('activate').changed).toBe(true)
   const refusedLegacy = old.waitForResponse(
     (r) => r.url().includes('/api/v1/') && r.status() === 401,
@@ -105,6 +105,7 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   await context.setOffline(false)
   await refusedLegacy
   await expect(old.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible()
+  expect(await rawDatabase(old)).toEqual(first)
   const refusedProtocol = old.waitForResponse(
     (r) => r.url().endsWith('/api/v1/sync/mutations') && r.status() === 409,
   )
@@ -112,6 +113,7 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   expect((await (await refusedProtocol).json()).error.code).toBe('client_upgrade_required')
   await old.route('**/api/**', (route) => route.abort())
   const preserved = await rawDatabase(old)
+  expect(preserved).toEqual(first)
   expect(preserved.version).toBe(40)
   expect(preserved.stores.mutationQueue).toHaveLength(1)
 
@@ -152,6 +154,25 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
       async () => (await rawDatabase(current, 'ocwp-authenticated-v1')).stores.operationDelivery,
     )
     .toEqual([expect.objectContaining({ state: 'applied' })])
+  const authored = journal[0] as { entityId: string }
+  await expect
+    .poll(async () => (await rawDatabase(current, 'ocwp-authenticated-v1')).stores.cacheRecords)
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entityId: authored.entityId,
+          entityType: 'customer',
+          version: 1,
+          payload: expect.objectContaining({
+            display_name: 'New authored customer after safe upgrade',
+            version: 1,
+          }),
+        }),
+      ]),
+    )
+  expect((await rawDatabase(current, 'ocwp-authenticated-v1')).stores.operationJournal).toEqual(
+    journal,
+  )
   expect(await rawDatabase(current)).toEqual(late)
   await context.close()
 })
