@@ -70,6 +70,17 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Security
 
+- `/auth/me` reports revalidated effective session grants and location without
+  widening token authority; it serializes its account read with administration.
+- Sync service-order transitions attribute new events to the authenticated
+  submitter, ignoring legacy payload actor claims. Existing receipt replays must
+  match the stored organization/location/entity/operation tuple; mismatches
+  become isolated conflicts. Blank or whitespace-containing envelope IDs are
+  rejected before effects so domain normalization cannot break identical retry;
+  malformed historical receipts remain preserved for explicit reconciliation.
+  No receipt actor/digest or client-cache isolation is
+  claimed. See the [scope and evidence](docs/10-spec-development/2026-10-14-effective-identity-sync-authority.md).
+
 - Migration test setup excludes ambient application URLs and secret-file
   fallbacks. PostgreSQL infrastructure tests validate dedicated loopback targets
   and pin the raw test URL during Alembic execution; no runtime resolver behavior

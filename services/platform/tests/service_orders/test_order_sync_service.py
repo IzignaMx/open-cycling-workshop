@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from cycling_workshop.customers.models import CustomerRecord
 from cycling_workshop.db.base import Base
-from cycling_workshop.sync.domain import MutationEnvelope, SyncConflict
+from cycling_workshop.sync.domain import MutationEnvelope, SyncApplicationContext, SyncConflict
 from cycling_workshop.sync.service import SyncService
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 from sqlalchemy import create_engine, text
@@ -129,7 +129,8 @@ def test_order_transition_applies_and_appends_timeline_event() -> None:
                 operation="update",
                 base_version=1,
                 payload={"transition": {"action": "start_diagnosis", "actor_id": "user-1"}},
-            )
+            ),
+            context=SyncApplicationContext(actor_id="user-1"),
         )
         session.commit()
 
@@ -150,6 +151,34 @@ def test_order_transition_applies_and_appends_timeline_event() -> None:
         session.close()
 
 
+def test_order_transition_refuses_payload_actor_without_trusted_context() -> None:
+    session = _build_session()
+    try:
+        _seed(session)
+        service = SyncService(session)
+        _create_order(service)
+        session.commit()
+
+        with pytest.raises(SyncConflict, match="actor context"):
+            service.apply(
+                _order_mutation(
+                    "mut-untrusted",
+                    "order-1",
+                    operation="update",
+                    base_version=1,
+                    payload={"transition": {"action": "start_diagnosis", "actor_id": "forged"}},
+                )
+            )
+        assert session.execute(text("SELECT state, version FROM service_orders")).one() == (
+            "INTAKE",
+            1,
+        )
+        assert session.execute(text("SELECT count(*) FROM service_order_events")).scalar() == 0
+        assert session.execute(text("SELECT count(*) FROM sync_mutation_receipts")).scalar() == 1
+    finally:
+        session.close()
+
+
 def test_invalid_transition_is_a_permanent_sync_conflict() -> None:
     session = _build_session()
     try:
@@ -166,7 +195,8 @@ def test_invalid_transition_is_a_permanent_sync_conflict() -> None:
                     operation="update",
                     base_version=1,
                     payload={"transition": {"action": "mark_ready", "actor_id": "user-1"}},
-                )
+                ),
+                context=SyncApplicationContext(actor_id="user-1"),
             )
         # the order is untouched and no event was written
         state = session.execute(
@@ -194,7 +224,8 @@ def test_order_transition_with_stale_base_version_conflicts() -> None:
                 operation="update",
                 base_version=1,
                 payload={"transition": {"action": "start_diagnosis", "actor_id": "user-1"}},
-            )
+            ),
+            context=SyncApplicationContext(actor_id="user-1"),
         )
         session.commit()
 
@@ -206,7 +237,8 @@ def test_order_transition_with_stale_base_version_conflicts() -> None:
                     operation="update",
                     base_version=1,
                     payload={"transition": {"action": "authorize", "actor_id": "user-1"}},
-                )
+                ),
+                context=SyncApplicationContext(actor_id="user-1"),
             )
     finally:
         session.close()
