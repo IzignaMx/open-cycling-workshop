@@ -10,6 +10,10 @@ declare namespace JSX {
 declare module 'react' {
   export type ReactNode = any
   export type CSSProperties = Record<string, string | number | undefined>
+  export function useSyncExternalStore<T>(
+    subscribe: (callback: () => void) => () => void,
+    getSnapshot: () => T,
+  ): T
   export function useRef<T>(value: T): { current: T }
   export function useRef<T>(value: T | null): { current: T | null }
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T }
