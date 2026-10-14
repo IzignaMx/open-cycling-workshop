@@ -44,6 +44,7 @@ export default defineConfig({
         OCWP_AUTH_SECRET:
           process.env.OCWP_AUTH_SECRET ?? 'e2e-only-secret-00000000000000000000000000000000',
         OCWP_ENVIRONMENT: 'test',
+        OCWP_CUTOVER_ENABLED: 'true',
       },
     },
     {
