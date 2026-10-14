@@ -508,8 +508,8 @@ sync_chaos_setup_barrier_2026_10_13:
 structural_workshop_themes_2026_10_14:
   status: implemented_pending_evidence
   branch: feat/structural-workshop-themes
-  reconciliation_base: 833bf6e21017ce4e513291621515502f22256a72
-  dependency: pr26_authorization_pending_main_merge
+  reconciliation_base: c1e2230cdc18dfbb778254d9f28b0261ef32ca48
+  dependency: pr26_authorization_merged_main
   base: 98394826884020d9de2498cab551120087dd5334
   document: docs/10-spec-development/2026-10-14-structural-workshop-themes.md
   adr: docs/02-technical-architecture/2026-10-14-structural-workshop-themes.md
@@ -531,5 +531,10 @@ structural_workshop_themes_2026_10_14:
   administration_pr27: not_included_pending_later_reconciliation
   conflict_provenance: queued_mutation_identity_verified_legacy_details_hidden_records_preserved_independent_22_test_review_passed
   offline_permission_freshness_cache_revocation_resnapshot: pending_admin_rollout
+  first_hosted_head: f943f8bd982f69ec95ee5a48bd3c1bdc1b127d92
+  first_hosted_ci: run_38551340262_failed_17_of_22_browser_cases_passed_twice
+  first_hosted_runtime_security_dco: passed_including_three_arm64_builds
+  first_hosted_visual_review: twelve_viewports_reviewed_narrow_nav_and_monogram_defects_found
+  corrected_hosted_evidence: pending_real_keyboard_role_selector_narrow_header_and_full_page_images
   exact_head_hosted_ci: pending
   release_gates: unchanged_physical_windows_android_screen_reader_and_manual_qualification

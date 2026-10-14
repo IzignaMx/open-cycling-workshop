@@ -2,10 +2,10 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 
 const THEMES = [
-  { id: 'banco', label: 'Banco de trabajo' },
-  { id: 'plano', label: 'Plano técnico' },
-  { id: 'ritmo', label: 'Ritmo modular' },
-  { id: 'noche', label: 'Turno nocturno' },
+  { id: 'banco', label: 'Banco de trabajo', palette: 'bosque' },
+  { id: 'plano', label: 'Plano técnico', palette: 'cobalto' },
+  { id: 'ritmo', label: 'Ritmo modular', palette: 'malva' },
+  { id: 'noche', label: 'Turno nocturno', palette: 'lima' },
 ] as const
 const READ_CAPABILITIES = ['customers.read', 'bicycles.read', 'orders.read']
 const SCOPE = { organizationId: 'visual-org', userId: 'visual-user', locationId: 'visual-workshop' }
@@ -208,10 +208,10 @@ async function openSettings(page: Page) {
   await expect(page.getByRole('radio', { name: /Banco de trabajo/ })).toBeEnabled()
 }
 
-async function attachScreenshot(page: Page, info: TestInfo, name: string) {
+async function attachScreenshot(page: Page, info: TestInfo, name: string, fullPage = false) {
   await page.evaluate(() => window.scrollTo(0, 0))
   const path = info.outputPath(`${name}.png`)
-  await page.screenshot({ path })
+  await page.screenshot({ path, fullPage })
   await info.attach(name, { path, contentType: 'image/png' })
 }
 
@@ -221,6 +221,7 @@ for (const theme of THEMES) {
   }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await seedWorkshop(page)
+    if (theme.id === 'banco') await attachScreenshot(page, info, 'banco-default-desktop')
     const before = await operationalSnapshot(page)
     expect(before.version).toBe(40)
     expect((before.mutationQueue as unknown[]).length).toBe(1)
@@ -285,6 +286,19 @@ for (const theme of THEMES) {
     await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', theme.id)
     await expect(page.locator('.order-card')).toHaveCount(4)
     expect(await operationalSnapshot(page)).toEqual(before)
+    // Retain same-palette structural evidence above, then separately capture
+    // the catalog's canonical palette and truthful personal/local settings.
+    await openSettings(page)
+    await page.getByLabel('Paleta personal').selectOption(theme.palette)
+    await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
+    const settingsPath = info.outputPath(`${theme.id}-personal-local-settings.png`)
+    await page.locator('#personalization-panel').screenshot({ path: settingsPath })
+    await info.attach(`${theme.id}-personal-local-settings`, {
+      path: settingsPath,
+      contentType: 'image/png',
+    })
+    await page.getByRole('button', { name: 'Cerrar personalización' }).click()
+    await attachScreenshot(page, info, `${theme.id}-canonical-desktop-full`, true)
   })
 }
 
@@ -297,6 +311,7 @@ test.describe('touch and narrow reflow', () => {
       await seedWorkshop(page)
       await openSettings(page)
       await page.getByText(theme.label, { exact: true }).tap()
+      await page.getByLabel('Paleta personal').selectOption(theme.palette)
       await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', theme.id)
       await page.getByLabel('Modo taller').check()
       await page.getByRole('button', { name: 'Cerrar personalización' }).tap()
@@ -319,21 +334,41 @@ test.describe('touch and narrow reflow', () => {
         }))
       expect(semantic).toEqual({ foreground: 'rgb(34, 89, 59)', background: 'rgb(227, 243, 232)' })
       await attachScreenshot(page, info, `${theme.id}-tablet-touch`)
+      await attachScreenshot(page, info, `${theme.id}-tablet-touch-full`, true)
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 900 })
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         ).toBe(true)
         await expect(page.getByRole('button', { name: 'Guardar cliente' })).toBeVisible()
+        for (const link of await page
+          .getByRole('navigation', { name: 'Navegación del taller' })
+          .getByRole('link')
+          .all()) {
+          const textLines = await link.evaluate((element) => {
+            const range = document.createRange()
+            range.selectNodeContents(element)
+            return range.getClientRects().length
+          })
+          expect(textLines).toBe(1)
+        }
+        const monogram = await page.locator('.workshop-monogram').boundingBox()
+        expect(monogram!.width).toBeGreaterThanOrEqual(36)
+        expect(monogram!.width).toBeCloseTo(monogram!.height, 1)
       }
       await attachScreenshot(page, info, `${theme.id}-mobile-320`)
+      await attachScreenshot(page, info, `${theme.id}-mobile-320-full`, true)
       await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
-      await page.getByRole('button', { name: 'Personalización', exact: true }).focus()
-      expect(
-        await page
-          .getByRole('button', { name: 'Personalización', exact: true })
-          .evaluate((element) => getComputedStyle(element).outlineStyle),
-      ).not.toBe('none')
+      // Switch from touch to actual keyboard modality; imperative focus alone
+      // intentionally does not require :focus-visible after a pointer interaction.
+      await page.locator('.workshop-identity').focus()
+      await page.keyboard.press('Tab')
+      const settings = page.getByRole('button', { name: 'Personalización', exact: true })
+      await expect(settings).toBeFocused()
+      expect(await settings.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
+      await expect(settings).toHaveCSS('outline-style', 'solid')
+      await expect(settings).toHaveCSS('outline-width', '3px')
+      await attachScreenshot(page, info, `${theme.id}-mobile-forced-colors-keyboard`)
     })
   }
 })
@@ -429,7 +464,7 @@ test("same-workshop restricted user cannot render another reader's cached data i
   page,
 }) => {
   await seedWorkshop(page)
-  await expect(page.getByLabel('Cliente', { exact: true })).toContainText(
+  await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toContainText(
     'Cliente de prueba visual',
   )
   // v3 hardcoded every conflict as customer; retain the row but hide its ambiguous details.
@@ -481,7 +516,7 @@ test("same-workshop restricted user cannot render another reader's cached data i
     await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
     await expect(page.locator('.order-card')).toHaveCount(0)
     await expect(page.getByLabel('Buscar órdenes')).toHaveCount(0)
-    await expect(page.getByLabel('Cliente', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveCount(0)
     await expect(page.getByText('Historial (1)', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Conflicto verificado de cliente', { exact: true })).toHaveCount(0)
@@ -509,7 +544,7 @@ test('partial reads hide bicycle association and customer conflicts without chan
     await expect(summary).not.toContainText('con bicicleta')
   }
   await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
-  await expect(page.getByLabel('Cliente', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveCount(0)
   await expect(page.getByText('Para seleccionar un cliente necesitas el permiso')).toBeVisible()
   await expect(page.locator('.workshop-metrics dd').last()).toHaveText('Sin acceso')
   await page.getByRole('button', { name: 'Marcar lista', exact: true }).click()

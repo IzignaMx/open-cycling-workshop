@@ -82,6 +82,9 @@ textarea {
   text-decoration: none;
   min-height: 56px;
 }
+.workshop-identity > span:last-child {
+  min-width: 0;
+}
 .workshop-identity strong {
   font-size: 1.25rem;
   letter-spacing: 0.04em;
@@ -92,6 +95,7 @@ textarea {
   font-size: 0.75rem;
 }
 .workshop-monogram {
+  flex-shrink: 0;
   display: grid;
   place-content: center;
   border: 2px solid currentColor;
@@ -102,6 +106,7 @@ textarea {
   letter-spacing: -0.06em;
 }
 .workshop-logo {
+  flex-shrink: 0;
   max-width: 100%;
   width: 160px;
   height: 48px;
@@ -885,6 +890,10 @@ textarea {
   .workshop-logo {
     width: 64px;
     height: 44px;
+  }
+  .workshop-links,
+  [data-theme='plano'] .workshop-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .workshop-links a {
     font-size: 0.8125rem;
