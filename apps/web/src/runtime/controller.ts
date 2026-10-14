@@ -19,6 +19,12 @@ import { PreferenceRepository } from '../personalization/repository.js'
 import { copyOwnedLegacyPreferences, inspectLegacyWork } from './legacy-preservation.js'
 import { createRuntimeTransport, RuntimeHttpError, type WorkshopLocation } from './transport.js'
 import { ReachabilityProbe, type ReachabilityResult } from './reachability-probe.js'
+import {
+  sameAccountAuthority,
+  type AccountAccessSnapshot,
+  type AccountCapture,
+  type AccountCommandOutcome,
+} from './account-access.js'
 import { WorkshopRepositories, type IntakeInput } from './repositories.js'
 import type { LocalCustomer } from '../local/types.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../local/service-order-types.js'
@@ -108,6 +114,22 @@ export class WorkshopController {
   readonly repositories: WorkshopRepositories
   #snapshot = empty()
   #listeners = new Set<() => void>()
+  #account: AccountAccessSnapshot = Object.freeze({
+    phase: 'unverified',
+    user: null,
+    generation: 0,
+    message: null,
+  })
+  #accountListeners = new Set<() => void>()
+  #accountAbort = new AbortController()
+  #accountSaved: SessionSnapshot | null = null
+  #accountSource: BaselineSession | null = null
+  #accountSourceIdentity = ''
+  #accountHandles = new WeakSet<AccountCapture>()
+  #suspendedAccount: AccountCapture | null = null
+  #accountFlight: AbortController | null = null
+  #locationPage = 0
+  #disposed = false
   #sequence = 0
   #active: BaselineSession | null = null
   #working: BaselineSession | null = null
@@ -165,6 +187,283 @@ export class WorkshopController {
     })
   }
   getSnapshot = () => this.#snapshot
+  getAccountSnapshot = () => this.#account
+  subscribeAccount = (listener: () => void) => {
+    this.#accountListeners.add(listener)
+    return () => this.#accountListeners.delete(listener)
+  }
+  private publishAccount(
+    phase: AccountAccessSnapshot['phase'],
+    user: SessionUserSnapshot | null,
+    message: string | null = null,
+  ) {
+    this.#account = Object.freeze({ phase, user, message, generation: this.#account.generation })
+    for (const listener of this.#accountListeners) listener()
+  }
+  invalidateAccount(capture?: AccountCapture, reason?: string): void {
+    if (capture && (!this.#accountHandles.has(capture) || !capture.isCurrent())) return
+    this.#accountAbort.abort()
+    this.#accountFlight?.abort()
+    this.#accountAbort = new AbortController()
+    this.#accountSaved = null
+    this.#accountSource = null
+    this.#suspendedAccount = null
+    const message =
+      !reason || reason === 'administration_closed'
+        ? null
+        : reason === 'owner_verification_required'
+          ? 'Verifica la cuenta para confirmar la designación de propietario.'
+          : reason === 'lock_failed'
+            ? 'No se pudo bloquear el taller. No se envió la operación.'
+            : reason === 'connection_verification_failed'
+              ? 'No se pudo verificar la conexión. Inténtalo de nuevo.'
+              : reason === 'invalid_session'
+                ? 'La sesión no es válida. Inicia sesión nuevamente.'
+                : 'Verifica la cuenta para confirmar tus permisos antes de continuar.'
+    this.#account = Object.freeze({
+      phase: 'unverified',
+      user: null,
+      generation: this.#account.generation + 1,
+      message,
+    })
+    for (const listener of this.#accountListeners) listener()
+    if (reason === 'invalid_session') void this.logout()
+  }
+  private admitAccount(saved: SessionSnapshot) {
+    if (
+      !saved.user ||
+      this.#disposed ||
+      JSON.stringify(saved) !== JSON.stringify(this.sessionStore.getSnapshot()) ||
+      (this.#active && !this.#active.isCurrent(this.#active.identity))
+    )
+      throw new Error('Se requiere verificar la cuenta.')
+    this.#accountSaved = saved
+    this.#accountSource = this.#active
+    this.#accountSourceIdentity = this.#active
+      ? JSON.stringify([this.#active.ticket, this.#active.context])
+      : ''
+    this.publishAccount('connected', saved.user)
+  }
+  captureAccount(): AccountCapture {
+    const saved = this.#accountSaved
+    if (this.#account.phase !== 'connected' || !saved?.user || this.#disposed)
+      throw new Error('Se requiere verificar la cuenta.')
+    const capture = this.makeAccountCapture(saved, false)
+    if (!capture.isCurrent()) {
+      this.invalidateAccount()
+      throw new Error('La cuenta cambió. Verifica la sesión.')
+    }
+    return capture
+  }
+  private makeAccountCapture(saved: SessionSnapshot, suspended: boolean): AccountCapture {
+    const sequence = this.#sequence,
+      network = this.#networkSequence,
+      generation = this.#account.generation,
+      abort = this.#accountAbort,
+      source = this.#accountSource,
+      identity = this.#accountSourceIdentity
+    const capture: AccountCapture = Object.freeze({
+      token: saved.token,
+      user: saved.user!,
+      apiRealm: this.options.apiRealm,
+      signal: abort.signal,
+      isCurrent: () =>
+        !this.#disposed &&
+        !abort.signal.aborted &&
+        generation === this.#account.generation &&
+        network === this.#networkSequence &&
+        this.exactSession(sequence, saved) &&
+        (suspended
+          ? this.#suspendedAccount === capture && this.#account.phase === 'suspended'
+          : this.#account.phase === 'connected' &&
+            this.#active === source &&
+            (!source ||
+              (source.isCurrent(source.identity) &&
+                JSON.stringify([source.ticket, source.context]) === identity))),
+    })
+    this.#accountHandles.add(capture)
+    return capture
+  }
+  async verifyAccount(): Promise<void> {
+    if (
+      this.#disposed ||
+      this.#accountFlight ||
+      this.#account.phase === 'suspended' ||
+      ['verifying', 'baseline'].includes(this.#snapshot.phase)
+    )
+      return
+    const saved = this.sessionStore.getSnapshot()
+    if (!saved) {
+      this.invalidateAccount()
+      return
+    }
+    const operational = this.#active
+    if (operational && !operational.isCurrent(operational.identity)) {
+      this.held('verification_required')
+      return
+    }
+    const operationalIdentity = operational
+      ? JSON.stringify([operational.ticket, operational.context])
+      : ''
+    this.invalidateAccount()
+    this.publishAccount('verifying', null)
+    const sequence = this.#sequence,
+      network = this.#networkSequence,
+      generation = this.#account.generation
+    const flight = new AbortController()
+    this.#accountFlight = flight
+    const current = () =>
+      !this.#disposed &&
+      !flight.signal.aborted &&
+      generation === this.#account.generation &&
+      network === this.#networkSequence &&
+      this.exactSession(sequence, saved) &&
+      this.#active === operational &&
+      (!operational ||
+        (operational.isCurrent(operational.identity) &&
+          JSON.stringify([operational.ticket, operational.context]) === operationalIdentity))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const request = this.#http.me({ token: saved.token, signal: flight.signal, isCurrent: current })
+    // Keep request ownership until even an abort-ignoring transport settles.
+    void request
+      .finally(() => {
+        if (this.#accountFlight === flight) this.#accountFlight = null
+      })
+      .catch(() => undefined)
+    try {
+      const user = await Promise.race([
+        request,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            if (current()) this.invalidateAccount(undefined, 'connection_verification_failed')
+            flight.abort()
+            reject(new RuntimeHttpError('network_error'))
+          }, 10000)
+        }),
+      ])
+      if (!current()) return
+      if (operational) {
+        await this.kernel.inspectSession(operational.ticket, current)
+        if (!current()) return
+      }
+      if (
+        saved.user &&
+        (user.user_id !== saved.user.user_id || user.organization_id !== saved.user.organization_id)
+      ) {
+        await this.logout()
+        return
+      }
+      if (saved.user && !sameAccountAuthority(saved.user, user)) {
+        const source = this.#active ?? this.#working
+        const next = this.blank(
+          'held',
+          'Los permisos cambiaron. Verifica el taller antes de abrirlo.',
+        )
+        const nextNetwork = this.#networkSequence,
+          nextAdmission = this.#account.generation
+        if (source) await this.kernel.lockContext(source.ticket)
+        if (
+          !this.exactSession(next, saved) ||
+          this.#disposed ||
+          nextNetwork !== this.#networkSequence ||
+          nextAdmission !== this.#account.generation
+        )
+          return
+        // A changed authority cannot carry an older durable offline admission.
+        this.sessionStore.clear()
+        this.sessionStore.setToken(saved.token)
+        this.sessionStore.setUser(user)
+        this.admitAccount(this.sessionStore.getSnapshot()!)
+        return
+      }
+      this.sessionStore.setUser(user)
+      this.sessionStore.bindVerifiedSession(saved.token)
+      const updated = this.sessionStore.getSnapshot()!
+      const source = this.#active
+      if (source) this.#sessionSnapshots.get(source)!.saved = updated
+      if (this.#snapshot.user) this.publish({ user: updated.user })
+      this.admitAccount(updated)
+    } catch (error) {
+      if (current()) {
+        if (error instanceof RuntimeHttpError && error.code === 'invalid_session')
+          await this.logout()
+        else if (operational && !(error instanceof RuntimeHttpError))
+          this.held('storage_or_fence_failure')
+        else this.invalidateAccount(undefined, 'authority_verification_required')
+      }
+    } finally {
+      if (timer !== undefined) clearTimeout(timer)
+      if (
+        sequence === this.#sequence &&
+        operational &&
+        this.#active === operational &&
+        !operational.isCurrent(operational.identity)
+      )
+        this.held('verification_required')
+      if (generation === this.#account.generation && this.#account.phase === 'verifying')
+        this.invalidateAccount()
+    }
+  }
+  async suspendAccountCommand(capture: AccountCapture): Promise<AccountCapture> {
+    if (
+      !this.#accountHandles.has(capture) ||
+      !capture.isCurrent() ||
+      this.#account.phase !== 'connected'
+    )
+      throw new Error('La cuenta cambió. Verifica la sesión.')
+    const saved = this.#accountSaved!,
+      source = this.#active ?? this.#working
+    this.blank('held', 'La sesión está suspendida mientras se confirma el cambio de seguridad.')
+    this.#accountSaved = saved
+    this.publishAccount('suspended', null)
+    const handle = this.makeAccountCapture(saved, true)
+    this.#suspendedAccount = handle
+    try {
+      if (source) await this.kernel.lockContext(source.ticket)
+      if (!handle.isCurrent()) throw new Error('La sesión cambió antes de enviar la operación.')
+      return handle
+    } catch (error) {
+      if (handle.isCurrent()) this.invalidateAccount(undefined, 'lock_failed')
+      throw error
+    }
+  }
+  async completeAccountCommand(
+    handle: AccountCapture,
+    outcome: AccountCommandOutcome,
+  ): Promise<void> {
+    if (this.#suspendedAccount !== handle || !handle.isCurrent()) return
+    if (outcome === 'success') await this.logout()
+    else {
+      this.invalidateAccount()
+      this.publish({
+        phase: 'held',
+        message:
+          outcome === 'uncertain'
+            ? 'No se pudo confirmar el resultado. Verifica la cuenta o inicia sesión nuevamente.'
+            : 'La operación fue rechazada. Verifica la cuenta antes de continuar.',
+      })
+    }
+  }
+  updateAccountName(capture: AccountCapture, name: string): void {
+    if (
+      !this.#accountHandles.has(capture) ||
+      !capture.isCurrent() ||
+      this.#account.phase !== 'connected' ||
+      !name.trim() ||
+      [...name].length > 200
+    )
+      throw new Error('No se pudo actualizar el nombre de esta sesión.')
+    const sequence = this.#sequence,
+      saved = this.#accountSaved!,
+      source = this.#active
+    this.sessionStore.setUser({ ...saved.user!, display_name: name })
+    const updated = this.sessionStore.getSnapshot()!
+    if (source) this.#sessionSnapshots.get(source)!.saved = updated
+    this.invalidateAccount()
+    this.admitAccount(updated)
+    if (this.exactSession(sequence, updated) && this.#snapshot.user)
+      this.publish({ user: updated.user })
+  }
   subscribe = (listener: () => void) => {
     this.#listeners.add(listener)
     return () => this.#listeners.delete(listener)
@@ -177,6 +476,8 @@ export class WorkshopController {
     for (const listener of this.#listeners) listener()
   }
   private cancel() {
+    this.invalidateAccount()
+    this.#locationPage++
     this.#observedReachable = false
     this.#probe.cancel()
     this.#sequence++
@@ -271,6 +572,20 @@ export class WorkshopController {
       .catch(() => undefined)
     const saved = this.sessionStore.getSnapshot()
     if (!saved?.user) return
+    if (
+      !saved.admission &&
+      !saved.user.capabilities.includes('sync.pull') &&
+      !saved.user.capabilities.includes('*')
+    ) {
+      await this.verifyAccount()
+      if (this.#account.phase === 'connected')
+        this.publish({
+          phase: 'selector',
+          user: this.#account.user,
+          message: 'Cuenta verificada. No hay un taller operativo abierto.',
+        })
+      return
+    }
     if (this.options.online()) {
       await this.verifyStored(
         saved,
@@ -360,6 +675,7 @@ export class WorkshopController {
     return source
   }
   async login(input: LoginRequestPayload): Promise<void> {
+    const previous = this.#active ?? this.#working
     const sequence = this.blank('verifying'),
       current = () => this.current(sequence)
     if (!this.options.online()) {
@@ -367,14 +683,28 @@ export class WorkshopController {
       return
     }
     try {
-      await this.kernel.beginVerification(crypto.randomUUID(), current)
+      if (previous) await this.kernel.lockContext(previous.ticket)
+      if (!current()) return
       const token = await this.#http.login(input, current)
       if (!current()) return
       this.sessionStore.setToken(token)
       const saved = this.sessionStore.getSnapshot()!
-      const user = await this.#http.me({ token, isCurrent: () => this.current(sequence, saved) })
-      if (!this.current(sequence, saved)) return
+      const user = await this.#http.me({
+        token,
+        isCurrent: () => this.exactSession(sequence, saved),
+      })
+      if (!this.exactSession(sequence, saved)) return
       this.sessionStore.setUser(user)
+      if (!user.capabilities.includes('sync.pull') && !user.capabilities.includes('*')) {
+        this.sessionStore.bindVerifiedSession(token)
+        this.publish({
+          phase: 'selector',
+          user,
+          message: 'Cuenta verificada. No hay un taller operativo abierto.',
+        })
+        await this.verifyAccount()
+        return
+      }
       await this.verifyStored(this.sessionStore.getSnapshot()!, user.location_id ?? undefined)
     } catch (error) {
       if (current()) {
@@ -400,10 +730,7 @@ export class WorkshopController {
     const sequence = this.blank('verifying'),
       networkSequence = this.#networkSequence,
       current = () =>
-        (probe === undefined || networkSequence === this.#networkSequence) &&
-        (offlineReload || probe
-          ? this.exactSession(sequence, saved)
-          : this.current(sequence, saved))
+        networkSequence === this.#networkSequence && this.exactSession(sequence, saved)
     try {
       let user = probe && 'value' in probe ? probe.value : undefined
       let preflightFailure = probe && 'error' in probe ? probe.error : undefined
@@ -439,6 +766,15 @@ export class WorkshopController {
       this.sessionStore.setUser(user)
       this.sessionStore.bindVerifiedSession(saved.token)
       saved = this.sessionStore.getSnapshot()!
+      if (!user.capabilities.includes('sync.pull') && !user.capabilities.includes('*')) {
+        this.publish({
+          phase: 'selector',
+          user,
+          message: 'Cuenta verificada. No hay un taller operativo abierto.',
+        })
+        await this.verifyAccount()
+        return
+      }
       const location =
         user.location_id ??
         selected ??
@@ -694,23 +1030,30 @@ export class WorkshopController {
   }
   async loadLocations(afterId?: string): Promise<void> {
     const sequence = this.#sequence,
+      pageSequence = ++this.#locationPage,
+      networkSequence = this.#networkSequence,
       saved = this.sessionStore.getSnapshot(),
       user = this.#snapshot.user
     if (this.#snapshot.phase !== 'selector' || !saved || !user) return
+    const current = () =>
+      this.#snapshot.phase === 'selector' &&
+      pageSequence === this.#locationPage &&
+      networkSequence === this.#networkSequence &&
+      this.exactSession(sequence, saved)
     try {
       const page = await this.#http.locations(
-        { token: saved.token, isCurrent: () => this.current(sequence, saved) },
+        { token: saved.token, isCurrent: current },
         user.organization_id,
         afterId,
       )
-      if (this.current(sequence, saved))
+      if (current())
         this.publish({
           locations: page.items,
           nextLocation: page.nextCursor,
           message: 'Selecciona un taller para abrir su información.',
         })
     } catch (error) {
-      if (this.current(sequence, saved))
+      if (current())
         this.publish({
           message:
             error instanceof RuntimeHttpError
@@ -746,6 +1089,8 @@ export class WorkshopController {
     await this.verifyStored(saved, source.context.selectedLocationId, source.ticket)
   }
   async offline() {
+    this.invalidateAccount()
+    this.#locationPage++
     if (!this.#verifiedOnline && this.#active && this.#snapshot.sync === 'offline') {
       await this.checkLease()
       return
@@ -784,17 +1129,22 @@ export class WorkshopController {
     if (source) await this.kernel.lockContext(source.ticket).catch(() => undefined)
   }
   async revoke() {
-    const source = this.#active
-    if (!source) return
+    let handle: AccountCapture | undefined
     try {
-      await this.#http.revoke({
-        token: source.bearerToken,
-        isCurrent: () => source.isCurrent(source.identity),
-      })
-      if (this.#active === source) await this.logout()
-    } catch {
-      if (this.#active === source)
-        this.publish({ message: 'No se pudieron revocar las sesiones remotas.' })
+      if (this.#account.phase !== 'connected') await this.verifyAccount()
+      handle = await this.suspendAccountCommand(this.captureAccount())
+      await this.#http.revoke(handle)
+      await this.completeAccountCommand(handle, 'success')
+    } catch (error) {
+      if (handle && error instanceof RuntimeHttpError && error.code === 'invalid_session')
+        this.invalidateAccount(handle, 'invalid_session')
+      else if (handle)
+        await this.completeAccountCommand(
+          handle,
+          error instanceof RuntimeHttpError && error.code === 'capability_denied'
+            ? 'refused'
+            : 'uncertain',
+        )
     }
   }
   private requireActive() {
@@ -1043,10 +1393,12 @@ export class WorkshopController {
     }
   }
   dispose() {
+    this.#disposed = true
     this.cancel()
     this.#observer?.unsubscribe()
     this.#observer = null
     this.#listeners.clear()
+    this.#accountListeners.clear()
     this.database.close()
   }
 }
