@@ -219,6 +219,7 @@ def main() -> int:
     project = "ocwp-smoke-" + uuid.uuid4().hex[:12]
     env = disposable_environment(dict(os.environ))
     browser: BrowserSmoke | None = None
+    branding_probe = None
     command = ["docker", "compose", "-p", project, "-f", str(COMPOSE)]
 
     def run(
@@ -239,12 +240,18 @@ def main() -> int:
         directory = Path(temporary)
         try:
             sys.path.insert(0, str(ROOT))
+            from scripts.ci.branding_volume_probe import BrandingVolumeProbe
             from scripts.operations.init_local_secrets import initialize_secrets
+
+            branding_probe = BrandingVolumeProbe(
+                project=project, command=command, directory=directory, run=run, secrets=secrets
+            )
 
             secret_dir = directory / "secrets"
             initialize_secrets(secret_dir, include_admin=True)
             values = {p.stem: p.read_text().strip() for p in secret_dir.iterdir()}
             secrets.extend(values.values())
+            branding_probe.prepare_restore_secret(values["database_url"])
             restore_file = secret_dir / "restore_url.txt"
             restore_file.write_text(
                 values["database_url"].rsplit("/", 1)[0] + "/ocwp_restore_test\n"
@@ -313,6 +320,7 @@ def main() -> int:
                     "chown 10001:10001 /state/secrets/database_url.txt "
                     "/state/secrets/auth_secret.txt "
                     "/state/secrets/admin_password.txt /state/secrets/restore_url.txt "
+                    "/state/secrets/branding_restore_url.txt "
                     "/state/backups; "
                     f"chown {pg_uid}:{pg_gid} /state/secrets/postgres_password.txt "
                     "/state/secrets/postgres_admin_password.txt",
@@ -426,6 +434,11 @@ def main() -> int:
             assert advertised["policy_revision"] == "ocwp-access-baseline-2"
             evidence["cutover_fixture"] = "generated project only, floor 1, baseline-v1"
             checks.append("first_admin_bootstrap_guard_login_and_customer_creation")
+            # Separate literal-grant fixture, before browser admission; bootstrap
+            # remains the original location-bound wildcard-only actor.
+            branding_probe.seed(
+                base=base, bootstrap=bootstrap, token=token, password=values["admin_password"]
+            )
             code, headers, html = request(base, "/")
             assert code == 200 and b'<div id="root">' in html
             assert headers["cache-control"] == "no-cache"
@@ -469,15 +482,20 @@ def main() -> int:
             compose("start", "api")
             wait_ready(base)
             checks.append("backend_outage_returns_502_without_spa_fallback")
+            branding_probe.verify_restart()
             # The backup/restore drill uses only a fresh, dedicated DB in this
             # generated Compose project; it cannot target an existing installation.
             compose("run", "--rm", "-T", "operations", "backup", "/backups/generation-1")
             compose("run", "--rm", "-T", "operations", "verify", "/backups/generation-1")
+            branding_probe.backup()
             if browser is not None:
                 browser.send({"phase": "backup_verified"})
                 browser.expect("pending_preserved")
             # No fixture writer may access either DB during restored maintenance.
             compose("stop", "edge", "api", "worker")
+            # An additional isolated API probes a different fresh DB and named
+            # asset volume, without changing the browser recovery handshake.
+            branding_probe.restore_and_probe()
             captured_logs = compose("logs", "--no-color").stdout
             assert_logs_safe(captured_logs, secrets)
             compose(
@@ -626,6 +644,7 @@ def main() -> int:
             code, _, body = request(base, "/api/v1/auth/context", token=token)
             assert code == 200 and json.loads(body)["dataset_incarnation"] == original_incarnation
             checks.append("down_up_retains_database_and_authentication")
+            evidence["branding_named_volume"] = branding_probe.verify_source_return(token)
             captured_logs += compose("logs", "--no-color").stdout
             assert_logs_safe(captured_logs, secrets)
             checks.append("container_logs_do_not_contain_generated_credentials")
@@ -638,6 +657,14 @@ def main() -> int:
             if browser is not None:
                 browser.close()
             evidence["checks"] = checks
+            if branding_probe is not None:
+                try:
+                    branding_probe.cleanup()
+                except Exception:
+                    evidence["status"] = "failed"
+                    evidence["branding_cleanup"] = (
+                        "Label-bound cleanup failed; inspect disposable project " + project
+                    )
             try:
                 # The random project is created by this test, never an operator's
                 # project. Its synthetic data/volumes are intentionally disposable.
