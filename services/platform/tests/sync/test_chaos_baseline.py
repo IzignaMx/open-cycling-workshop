@@ -47,6 +47,7 @@ def test_duplicate_and_reordered_independent_mutations_converge_without_duplicat
             session.commit()
 
         page = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=0,

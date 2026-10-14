@@ -61,6 +61,7 @@ def test_duplicate_mutation_id_is_applied_exactly_once() -> None:
         assert second.status == "applied"
         assert first.entity_version == second.entity_version == 1
         changes = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=0,
@@ -79,6 +80,7 @@ def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
         session.commit()
 
         page = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=0,
@@ -88,6 +90,7 @@ def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
         assert page.next_cursor > 0
 
         next_page = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=page.next_cursor,
@@ -97,6 +100,7 @@ def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
         assert next_page.items[0].cursor > page.items[0].cursor
 
         other_tenant = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-2",
             location_id="loc-2",
             after_cursor=0,
@@ -212,7 +216,11 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
         session.commit()
 
         page = service.pull_changes(
-            organization_id="org-1", location_id="loc-1", after_cursor=0, limit=100
+            capabilities=frozenset({"*"}),
+            organization_id="org-1",
+            location_id="loc-1",
+            after_cursor=0,
+            limit=100,
         )
         assert [(item.entity_type, item.operation) for item in page.items] == [
             ("bicycle", "create"),
@@ -228,13 +236,21 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
         assert cursors == sorted(cursors) and len(set(cursors)) == 3
 
         foreign_tenant = service.pull_changes(
-            organization_id="org-2", location_id="loc-2", after_cursor=0, limit=100
+            capabilities=frozenset({"*"}),
+            organization_id="org-2",
+            location_id="loc-2",
+            after_cursor=0,
+            limit=100,
         )
         assert foreign_tenant.items == []
         assert foreign_tenant.next_cursor == 0
 
         foreign_location = service.pull_changes(
-            organization_id="org-1", location_id="loc-2", after_cursor=0, limit=100
+            capabilities=frozenset({"*"}),
+            organization_id="org-1",
+            location_id="loc-2",
+            after_cursor=0,
+            limit=100,
         )
         assert foreign_location.items == []
         assert foreign_location.next_cursor == 0

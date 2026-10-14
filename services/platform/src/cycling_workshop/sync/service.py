@@ -430,13 +430,28 @@ class SyncService:
         *,
         organization_id: str,
         location_id: str | None,
+        capabilities: frozenset[str],
         after_cursor: int,
         limit: int,
     ) -> ChangePage:
+        # New feed entities must declare a read permission before they can be
+        # exposed, including to wildcard users. Filter before LIMIT/lookahead so
+        # denied rows cannot consume a page or advance its cursor.
+        read_permissions = {
+            "customer": "customers.read",
+            "bicycle": "bicycles.read",
+            "service_order": "orders.read",
+        }
+        readable_types = [
+            entity_type
+            for entity_type, capability in read_permissions.items()
+            if capability in capabilities or "*" in capabilities
+        ]
         safe_limit = max(1, min(limit, 500))
         statement = select(ChangeRecord).where(
             ChangeRecord.organization_id == organization_id,
             ChangeRecord.cursor > after_cursor,
+            ChangeRecord.entity_type.in_(readable_types),
         )
         if location_id is not None:
             statement = statement.where(ChangeRecord.location_id == location_id)

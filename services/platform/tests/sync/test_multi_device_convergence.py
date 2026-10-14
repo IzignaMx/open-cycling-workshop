@@ -64,10 +64,18 @@ def test_two_devices_converge_after_one_stale_offline_edit_becomes_conflict() ->
         assert created.entity_version == 1
 
         initial_page_a = service.pull_changes(
-            organization_id="org-1", location_id="loc-1", after_cursor=0, limit=100
+            capabilities=frozenset({"*"}),
+            organization_id="org-1",
+            location_id="loc-1",
+            after_cursor=0,
+            limit=100,
         )
         initial_page_b = service.pull_changes(
-            organization_id="org-1", location_id="loc-1", after_cursor=0, limit=100
+            capabilities=frozenset({"*"}),
+            organization_id="org-1",
+            location_id="loc-1",
+            after_cursor=0,
+            limit=100,
         )
         assert initial_page_a.items[-1].payload["display_name"] == "Ana"
         assert initial_page_b.items[-1].entity_version == 1
@@ -96,12 +104,14 @@ def test_two_devices_converge_after_one_stale_offline_edit_becomes_conflict() ->
         session.rollback()
 
         final_a = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=initial_page_a.next_cursor,
             limit=100,
         )
         final_b = service.pull_changes(
+            capabilities=frozenset({"*"}),
             organization_id="org-1",
             location_id="loc-1",
             after_cursor=initial_page_b.next_cursor,
