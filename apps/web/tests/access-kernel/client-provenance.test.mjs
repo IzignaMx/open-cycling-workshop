@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { setup, command, context, completedBaseline } from './client-fixture.mjs'
+import { setup, command, context, completedBaseline, NOW } from './client-fixture.mjs'
 
 test('new incarnation recovery holds pending, uncertain and applied overlays without rewriting history', async (t) => {
   const { db, kernel } = await setup(t)
@@ -436,4 +436,39 @@ test('confirmed reference ignores unrelated rejected same-incarnation edits whil
     (await kernel.listDispatchable(ticket, 10)).operations.map((row) => row.mutationId),
     ['independent-bicycle'],
   )
+})
+
+test('transient delta backoff preserves a genuine push batch through ACK', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(
+    db,
+    kernel,
+    context('A', {
+      capabilities: ['customers.read', 'customers.write', 'sync.pull', 'sync.push'],
+    }),
+  )
+  await kernel.commitLocalCommand(ticket, command())
+  const batch = await kernel.listDispatchable(ticket, 100)
+  const original = await db.operationJournal.get('operation-A')
+  const pending = await kernel.pendingIncremental(ticket)
+  await kernel.holdIncremental(ticket, pending.incremental.next, 'network_error', NOW + 1000)
+  assert.equal((await db.deviceControl.get('device')).state, 'READY')
+  assert.equal((await db.deviceControl.get('device')).dispatchAttemptId, batch.attemptId)
+  await kernel.applyPushResult(ticket, batch, {
+    results: [
+      {
+        mutation_id: 'operation-A',
+        entity_id: 'customer-shared',
+        status: 'applied',
+        entity_version: 1,
+      },
+    ],
+  })
+  assert.equal((await db.operationDelivery.get('operation-A')).state, 'applied')
+  assert.deepEqual(await db.operationJournal.get('operation-A'), original)
+  assert.equal(
+    (await db.cachePartitions.get(ticket.partitionId)).incremental.hold.reason,
+    'network_error',
+  )
+  assert.equal((await kernel.listDispatchable(ticket, 100)).operations.length, 0)
 })
