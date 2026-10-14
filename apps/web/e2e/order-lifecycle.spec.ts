@@ -71,6 +71,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   await page.context().setOffline(true)
   await revealOrder(page, problem)
   await card.getByRole('button', { name: 'Iniciar diagnóstico', exact: true }).click()
+  await expect(page.locator('.order-actions button:disabled')).toHaveCount(0)
   await revealOrder(page, problem)
   await expect(card.getByText('En diagnóstico', { exact: true })).toBeVisible()
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -88,6 +89,7 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
     expect(remote.status(), await remote.text()).toBe(200)
   }
   await card.getByRole('button', { name: 'Autorizar', exact: true }).click()
+  await expect(page.locator('.order-actions button:disabled')).toHaveCount(0)
   await revealOrder(page, problem)
   await expect(card.getByText('Autorizada', { exact: true })).toBeVisible()
   const beforeConflict = await kernelSnapshot(page)
