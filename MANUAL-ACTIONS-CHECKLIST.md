@@ -567,6 +567,22 @@ ocwpctl access create-first-owner --organization-id ORGANIZATION_ID --username O
 Physical Windows/Android, accessibility, broader security/session and all other
 unproven release gates above remain open on their own evidence.
 
+### Authenticated context prerequisite qualification
+
+- [x] First PR32 head passed all 16 PostgreSQL context lock-wait cases in CI
+      `38562738320`, covering both organization/user barriers, persisted authority
+      freshness and signed expiry. Exact tree and artifacts are in the context
+      increment record; local SQLite tests did not establish this proof.
+- [ ] Requalify the combined context/kernel/ordered-feed candidate after merging
+      actual main31 `6ad6acc146ec47b7b6bd7bf82b6c850898fb5c0e`. First-head evidence
+      is historical and does not substitute for exact integrated-tree checks.
+- [ ] Before any production context adapter/activation, qualify authoritative
+      baselines, verified endpoint realm binding, old-client/service-worker fencing,
+      restore/session invalidation and user-switch isolation. Keep every original
+      realm journal and pending mutation; never automatically retarget old work.
+      This server-only increment advertises `snapshot_protocol: null` and does not
+      close existing browser/device/accessibility/administration rollout gates.
+
 ## Ordered feed prerequisite · rollout and acceptance boundary
 
 - [ ] Qualify the organization writer barrier against real PostgreSQL on the

@@ -16,3 +16,20 @@ def test_generated_typescript_client_contains_v01_customer_and_sync_contracts() 
     assert "createCustomer" in client
     assert "pushMutations" in client
     assert "pullChanges" in client
+
+
+def test_context_contract_preserves_literals_and_closed_nullable_schema() -> None:
+    import json
+
+    generated = Path("packages/api-client/src/generated.ts").read_text()
+    openapi = json.loads(Path("packages/api-client/openapi.json").read_text())
+    context = openapi["components"]["schemas"]["AccessContextResponse"]
+    principal = openapi["components"]["schemas"]["ContextPrincipal"]
+    assert context["additionalProperties"] is False
+    assert principal["additionalProperties"] is False
+    assert context["properties"]["protocol"]["const"] == 1
+    assert context["properties"]["snapshot_protocol"]["type"] == "null"
+    assert set(context["required"]) == set(context["properties"])
+    assert "  protocol: 1\n" in generated
+    assert '  policy_revision: "ocwp-access-baseline-1"\n' in generated
+    assert "  snapshot_protocol: null\n" in generated

@@ -1,6 +1,84 @@
 {
   "components": {
     "schemas": {
+      "AccessContextResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "account_location_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Location Id"
+          },
+          "authorization_epoch": {
+            "title": "Authorization Epoch",
+            "type": "string"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "offline_until": {
+            "format": "date-time",
+            "title": "Offline Until",
+            "type": "string"
+          },
+          "policy_revision": {
+            "const": "ocwp-access-baseline-1",
+            "title": "Policy Revision",
+            "type": "string"
+          },
+          "principal": {
+            "$ref": "#/components/schemas/ContextPrincipal"
+          },
+          "protocol": {
+            "const": 1,
+            "title": "Protocol",
+            "type": "integer"
+          },
+          "selected_location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Selected Location Id",
+            "type": "string"
+          },
+          "snapshot_protocol": {
+            "title": "Snapshot Protocol",
+            "type": "null"
+          },
+          "verified_at": {
+            "format": "date-time",
+            "title": "Verified At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol",
+          "principal",
+          "account_location_id",
+          "selected_location_id",
+          "capabilities",
+          "authorization_epoch",
+          "policy_revision",
+          "verified_at",
+          "offline_until",
+          "snapshot_protocol"
+        ],
+        "title": "AccessContextResponse",
+        "type": "object"
+      },
       "BicycleCreateRequest": {
         "properties": {
           "bicycle_id": {
@@ -293,6 +371,36 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ContextPrincipal": {
+        "additionalProperties": false,
+        "properties": {
+          "api_realm": {
+            "title": "Api Realm",
+            "type": "null"
+          },
+          "organization_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_realm",
+          "organization_id",
+          "user_id"
+        ],
+        "title": "ContextPrincipal",
         "type": "object"
       },
       "CreateLocationRequest": {
@@ -2210,6 +2318,74 @@
           }
         },
         "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/context": {
+      "get": {
+        "operationId": "access_context_api_v1_auth_context_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "selected_location_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Selected Location Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Access Context",
         "tags": [
           "auth"
         ]

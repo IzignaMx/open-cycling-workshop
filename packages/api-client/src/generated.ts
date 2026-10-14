@@ -1,5 +1,18 @@
 // Generated from packages/api-client/openapi.json. Do not edit by hand.
 
+export interface AccessContextResponse {
+  account_location_id: string | null
+  authorization_epoch: string
+  capabilities: Array<string>
+  offline_until: string
+  policy_revision: "ocwp-access-baseline-1"
+  principal: ContextPrincipal
+  protocol: 1
+  selected_location_id: string
+  snapshot_protocol: null
+  verified_at: string
+}
+
 export interface BicycleCreateRequest {
   bicycle_id?: string | null
   bicycle_type?: string | null
@@ -47,6 +60,12 @@ export interface ChangePageResponse {
 export interface ChangePasswordRequest {
   current_password: string
   new_password: string
+}
+
+export interface ContextPrincipal {
+  api_realm: null
+  organization_id: string
+  user_id: string
 }
 
 export interface CreateLocationRequest {
