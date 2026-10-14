@@ -68,3 +68,10 @@ release versions follow the Engineering specification's SemVer policy.
   fresh-target restore; database-only evidence excludes browser queues and assets.
 - Local runtime and recovery qualification are tracked in the execution state; this is not a stable release or physical Raspberry qualification.
 - Inventory API PR #22 and quote-domain PR #23 are merged; full quote workflow remains future work.
+
+### Qualification reliability
+
+- Inventory PostgreSQL test setup now passes raw percent-encoded URLs to the
+  shared migration configuration, avoiding double escaping. A no-network
+  regression checks the exact URL and decoded synthetic password before any
+  engine can connect; production secret-file handling is unchanged.

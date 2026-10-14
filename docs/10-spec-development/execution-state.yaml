@@ -414,7 +414,8 @@ local_workshop_mvp_2026_10_14:
   integration_base: 98394826884020d9de2498cab551120087dd5334
   next_slice: audited_user_role_location_administration
   hardware: raspberry_model_ram_storage_os_unknown
-  local_python_tests: 541_passed_9_live_postgresql_skips
+  local_python_tests: 542_passed_9_live_postgresql_skips
+  migration_fixture_url_regression: observed_red_then_green_no_network
   frontend_core_tests: 74_passed
   local_qualification: 21_passed_0_failed_5_environment_blockers
   independent_review: complete_no_unresolved_findings_after_safety_fixes
