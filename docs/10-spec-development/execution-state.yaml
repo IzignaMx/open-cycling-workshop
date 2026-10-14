@@ -401,8 +401,87 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
   quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
   quote_main_merge: 98394826884020d9de2498cab551120087dd5334
-  quote_migration_reserved: 0008
+  quote_migration_reserved: 0009
+  reservation_update: identity_administration_0008_priority_supersedes_earlier_quote_0008_reservation
   release_gates: unchanged
+
+access_administration_2026_10_14:
+  document: docs/10-spec-development/2026-10-14-access-administration.md
+  adr: docs/02-technical-architecture/2026-10-14-access-administration.md
+  status: implemented_hosted_checkpoint_passed_pending_final_head_ci
+  requirements:
+    [
+      FR-IAM-001,
+      FR-IAM-003,
+      FR-IAM-004,
+      FR-IAM-005,
+      FR-IAM-006,
+      FR-IAM-008,
+      SEC-001,
+      SEC-002,
+      SEC-003,
+      SEC-005,
+      OFF-009,
+    ]
+  scope: bounded_online_server_user_role_location_api_no_admin_ui_or_complete_mvp_claim
+  original_base_commit: 0a9c935
+  prerequisite_head: 833bf6e21017ce4e513291621515502f22256a72
+  base_commit: c1e2230cdc18dfbb778254d9f28b0261ef32ca48
+  reconciled_checkpoint: a077243f0c115647646f124bd9219350e2e2ff01
+  dependency: pr26_merged_c1e2230_after_all_seven_checks_passed
+  runtime_prerequisite: pr25_merged_0342799_included_with_pr26_target_isolation_fix
+  independent_work: visual_theme_changes
+  migration: 0008_identity_administration_down_revision_0007
+  future_quote_migration: 0009_down_revision_0008_no_empty_reserved_migration
+  legacy_accounts: preserve_credentials_active_state_grants_scope_session_versions_no_implicit_owner
+  initial_owner: explicit_separate_account_cli_refuses_any_owner_record_including_inactive
+  owner_invariant: protected_is_owner_organization_scope_full_concrete_catalog_last_active_owner_guard
+  authorization: organization_lock_then_persisted_actor_session_target_and_expected_version_checks
+  audit: one_secret_free_event_per_success_database_update_delete_truncate_guards_no_http_api
+  prerequisite_python_baseline: 492_passed_8_postgresql_skips
+  initial_tdd_red: 22_failed_missing_api_404
+  original_checkpoint: 670_python_passed_59_skipped_72_frontend_core_passed
+  final_tree_verification: main26_merge_changed_no_files_before_evidence_update_new_head_ci_required
+  python_suite: 755_passed_60_skipped_59_unavailable_postgresql_1_sqlite_truncate_not_applicable
+  focused_http: 98_passed
+  first_owner_cli: 10_passed
+  identity_migrations: 54_passed_29_dialect_environment_skips
+  postgresql_administration: 16_fixture_safety_passed_22_runtime_skipped
+  independent_review: no_remaining_defects_177_identity_tests_passed_51_skipped
+  independent_reconciliation_review: no_defect_134_targeted_passed_53_skipped_admin_source_byte_identical
+  file_url_smoke: synthetic_percent_path_file_only_url_alembic_head_first_owner_cli_secret_free_output_passed
+  resolved_review_findings: cli_unknown_argument_secret_echo_isolated_owner_guard_tests_database_error_status
+  static_checks: ruff_lint_format_mypy_75_source_files_passed
+  contracts: openapi_generated_typescript_repository_passed
+  frontend: 74_core_1_api_client_typescript_eslint_prettier_production_pwa_passed
+  local_qualification: partial_21_checks_passed_zero_failures_five_environment_blockers
+  qualification_artifact: ocw-access-admin-reconciled-qualification.json
+  fixture_safety: loopback_test_e2e_no_url_query_no_libpq_redirects_cleared_app_url_and_url_file_owned_schemas
+  postgresql_local: blocked_no_server_or_docker_runtime
+  hosted_verification: initial_exact_tree_checkpoint_passed_final_integration_head_ci_required
+  hosted_pr: https://github.com/IzignaMx/open-cycling-workshop/pull/27
+  hosted_head: 0c37d46ffd24bc787716fe7b068f4ca02e3cc348
+  hosted_merge_ref: ca2f9695be85fc7de8e90bada9f216718ee2a7db
+  hosted_verified_tree: a58efc6fce2da8aba89958d586108e9d8c16330a
+  hosted_ci: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38550525461
+  hosted_qualification_artifact: 11886836617
+  hosted_qualification: 27_passed_zero_blockers
+  hosted_python: 812_passed_3_skipped_two_dialect_exclusions_one_generic_backup_host_client_mismatch
+  hosted_postgresql: 18.4_all_administration_migration_and_contention_cases_passed
+  hosted_frontend: 74_core_1_api_client_30_browser_executions_10_direct_10_repeat_without_retries_10_qualification
+  hosted_indexeddb: 100000_records_write_39898_2_ms_count_sample_100_5_ms_chromium_151
+  hosted_runtime: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38550525483
+  hosted_runtime_artifact: 11885889541
+  hosted_runtime_checks: 11_passed_including_pg18_4_backup_restore_and_secret_free_logs
+  hosted_arm64: all_three_images_built_physical_hardware_unverified
+  hosted_security_dco: passed
+  main_reconciliation_review: no_defect_no_source_contract_changes_prior_tree_artifacts_and_logs_verified
+  main_reconciliation_local_replay: 755_passed_60_skipped_21_checks_passed_five_local_environment_blockers
+  operational_actions: verified_backup_no_server_writes_migration_review_invalid_legacy_versions_if_blocked
+  real_install_owner_setup_or_upgrade: not_performed
+  rollout_gate: browser_user_capability_scope_isolation_cursor_resnapshot_backfill_pending_mutation_reconciliation
+  organization_wide_owner_ui: blocked_pending_workshop_selector_api_only
+  release_gates: broader_mvp_partial_physical_windows_android_and_other_manual_qualification_unchanged
 
 sync_read_authorization_2026_10_14:
   document: docs/10-spec-development/2026-10-14-sync-read-authorization.md

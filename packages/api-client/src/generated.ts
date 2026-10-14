@@ -44,6 +44,25 @@ export interface ChangePageResponse {
   next_cursor: number
 }
 
+export interface ChangePasswordRequest {
+  current_password: string
+  new_password: string
+}
+
+export interface CreateLocationRequest {
+  name: string
+}
+
+export interface CreateUserRequest {
+  capabilities?: Array<string> | null
+  display_name: string
+  is_owner?: boolean
+  location_id: string | null
+  password: string
+  role?: string | null
+  username: string
+}
+
 export interface CurrentUserResponse {
   capabilities: Array<string>
   display_name: string
@@ -83,6 +102,17 @@ export interface HealthReadyResponse {
 
 export interface HealthUnavailableResponse {
   status?: string
+}
+
+export interface LocationPage {
+  items: Array<LocationResponse>
+  next_cursor: string | null
+}
+
+export interface LocationResponse {
+  location_id: string
+  name: string
+  organization_id: string
 }
 
 export interface LoginRequest {
@@ -148,6 +178,16 @@ export interface OrderTransitionRequest {
   note?: string | null
 }
 
+export interface PatchUserRequest {
+  capabilities?: Array<string> | null
+  display_name?: string
+  expected_version: number
+  is_active?: boolean
+  is_owner?: boolean
+  location_id?: string | null
+  role?: string | null
+}
+
 export interface ProductCreateRequest {
   location_id: string
   name: string
@@ -174,6 +214,21 @@ export interface PushMutationsRequest {
 
 export interface PushMutationsResponse {
   results: Array<MutationResultResponse>
+}
+
+export interface ResetPasswordRequest {
+  expected_version: number
+  new_password: string
+}
+
+export interface RoleCatalogResponse {
+  capabilities: Array<string>
+  roles: Array<RoleResponse>
+}
+
+export interface RoleResponse {
+  capabilities: Array<string>
+  name: string
 }
 
 export interface ServiceOrderCreateRequest {
@@ -222,10 +277,31 @@ export interface StockResponse {
   product_id: string
 }
 
+export interface UserPage {
+  items: Array<UserResponse>
+  next_cursor: string | null
+}
+
+export interface UserResponse {
+  capabilities: Array<string>
+  display_name: string
+  is_active: boolean
+  is_owner: boolean
+  location_id: string | null
+  organization_id: string
+  user_id: string
+  username: string
+  version: number
+}
+
 export interface ValidationError {
   ctx?: Record<string, unknown>
   input?: unknown
   loc: Array<string | number>
   msg: string
   type: string
+}
+
+export interface VersionRequest {
+  expected_version: number
 }

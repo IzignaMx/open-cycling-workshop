@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Annotated
+
+from pydantic import BaseModel, Field, SecretStr
+
+from cycling_workshop.identity.admin_schemas import ScopeId, Username
 
 
 class LoginRequest(BaseModel):
-    organization_id: str = Field(min_length=1, max_length=36)
-    username: str = Field(min_length=1, max_length=160)
-    password: str = Field(min_length=1, max_length=1024)
+    organization_id: ScopeId
+    username: Username
+    password: Annotated[SecretStr, Field(min_length=1, max_length=1024)]
 
 
 class LoginResponse(BaseModel):

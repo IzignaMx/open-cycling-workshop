@@ -50,4 +50,8 @@ CI is authorization to merge, tag or deploy it.
 Next dependent work must add authorization evidence, atomic revision persistence
 with optimistic concurrency, and transport validation before exposing quotes.
 Read current `main` and migration head before allocating any future migration;
-inventory migration 0007 is present; the next quote-table migration is 0008.
+inventory migration 0007 is present. The subsequently prioritized
+[access-administration increment](2026-10-14-access-administration.md) uses 0008,
+following 0007; the next quote-table migration is 0009, following 0008. This
+supersedes the earlier quote reservation of 0008 without changing the historical
+pure-domain evidence or creating an empty reserved migration.

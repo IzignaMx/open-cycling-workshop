@@ -4,11 +4,16 @@ import argparse
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from typing import NoReturn
 
+from pydantic import ValidationError
 from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from cycling_workshop.api.errors import ApiError
 from cycling_workshop.db.session import build_engine
+from cycling_workshop.identity.admin_cli import create_first_owner
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.repository import (
     SqlAlchemyUserRepository,
@@ -97,8 +102,14 @@ def bootstrap_admin(
     }
 
 
+class _SafeArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        # Even invalid flags must not echo a mistakenly supplied plaintext secret.
+        self.exit(2, "Invalid command arguments. Run ocwpctl --help.\n")
+
+
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="ocwpctl")
+    parser = _SafeArgumentParser(prog="ocwpctl", allow_abbrev=False)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("doctor", help="Run operational health checks")
     subcommands.add_parser("status", help="Show concise operational status")
@@ -113,12 +124,44 @@ def _build_parser() -> argparse.ArgumentParser:
     admin.add_argument("--username", required=True)
     admin.add_argument("--display-name", required=True)
     admin.add_argument("--password-file", type=Path, required=True)
+    access = subcommands.add_parser("access", help="Explicit local access administration")
+    access_commands = access.add_subparsers(
+        dest="access_command", required=True, parser_class=_SafeArgumentParser
+    )
+    owner = access_commands.add_parser(
+        "create-first-owner",
+        allow_abbrev=False,
+        help="Create a separate organization-wide owner; never promote an account",
+    )
+    owner.add_argument("--organization-id", required=True)
+    owner.add_argument("--username", required=True)
+    owner.add_argument("--display-name", required=True)
+    owner.add_argument("--password-file", type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     settings = Settings.from_env()
+    if args.command == "access" and args.access_command == "create-first-owner":
+        try:
+            report = create_first_owner(
+                settings,
+                organization_id=args.organization_id,
+                username=args.username,
+                display_name=args.display_name,
+                password_file=args.password_file,
+            )
+        except ApiError as exc:
+            print(json.dumps({"created": False, "error": exc.code}, sort_keys=True))
+            return 1
+        except (OSError, UnicodeError, ValidationError, SQLAlchemyError):
+            # Validation/DB exception strings can contain secret inputs, SQL
+            # parameters, or credential-bearing connection URLs. Never echo them.
+            print(json.dumps({"created": False, "error": "owner_setup_failed"}, sort_keys=True))
+            return 1
+        print(json.dumps(report, sort_keys=True))
+        return 0
     if args.command in {"doctor", "status"}:
         report = doctor_report(settings)
         print(json.dumps(report, sort_keys=True))
