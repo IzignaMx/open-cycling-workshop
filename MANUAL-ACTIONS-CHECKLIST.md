@@ -6,6 +6,8 @@
 > increments. The bounded access-administration API has separate exact-head
 > PostgreSQL/upgrade and browser-isolation rollout gates in the
 > [current operator section](#2026-10-14--local-account-administration-operator-gates).
+> The [isolated identity-kernel rollout section](#2026-10-14--isolated-offline-identity-kernel-and-future-rollout)
+> adds future browser/baseline and legacy-recovery gates; production remains v4.
 > Neither a complete MVP nor a production/release qualification is claimed.
 
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
@@ -570,7 +572,9 @@ unproven release gates above remain open on their own evidence.
 - [ ] Qualify the organization writer barrier against real PostgreSQL on the
       exact integrated candidate, including commit/rollback ordering, independent
       organizations, concurrent duplicate replay and authorization changes while
-      writers wait. SQLite functional tests are not concurrency evidence.
+      writers wait. First published PR31 head passed all ten real-PostgreSQL
+      cases in CI run 38561799721; final main30 combined-tree proof remains pending.
+      SQLite functional tests are not concurrency evidence.
 - [ ] Before relying on ordered continuity, drain/replace all old server writers;
       the existing numeric feed does not fence older binaries. Historical REST-only
       rows require the separately designed authoritative baseline.
@@ -578,3 +582,72 @@ unproven release gates above remain open on their own evidence.
       writer fence. Old browser bundles can reopen newer IndexedDB and write legacy
       stores; schema version increments alone do not establish safe rollout.
 - See `docs/02-technical-architecture/2026-10-14-ordered-change-feed.md`.
+
+## 2026-10-14 · Isolated offline identity kernel and future rollout
+
+Scope: additive isolated Dexie v5 factory/kernel only. Production `App`, the
+default singleton and Golden Slice remain on v4. New isolated contexts stop at
+`BASELINE_REQUIRED`; authentication-context and authoritative complete-baseline
+integration are not implemented. The live UI remains unqualified for shared
+browser multi-user isolation. See the
+[ADR](docs/02-technical-architecture/2026-10-14-isolated-offline-identity-kernel.md)
+and [evidence record](docs/10-spec-development/2026-10-14-isolated-offline-identity-kernel.md).
+These open items do not authorize deployment or imply an actual installation has
+been migrated. Existing checked evidence remains historical.
+
+- [x] Record the first reviewed tree `22ef13dd` / published head `668a18f5`:
+      independent 60/60 focused tests; hosted CI `38559830979` passed 27 checks,
+      eight isolated native cases, 23 production PWA cases twice and ten sync
+      repetitions. Artifact links/digests and all explicit skips are in the
+      evidence record; fake IndexedDB coverage remains identified separately.
+- [ ] Requalify the exact combined source after true-merging actual main #29
+      `f8720515`. First-head evidence above is not proof of the later server
+      prerequisite integration. Preserve the existing Golden Slice.
+- [ ] Before production activation, integrate effective authenticated context,
+      bounded offline eligibility, reconnect revalidation and a complete
+      authorized baseline with ordered handoff. Include historical direct-REST
+      data, grant expansion/backfill and contraction. Prove writer commit-order
+      and revocation races on real PostgreSQL; a zero-cursor replay is not a
+      complete baseline.
+- [ ] Qualify production PWA migration, old-bundle/service-worker and versionchange
+      behavior, same-workshop A/B switching, two-tab stale commits/ACKs,
+      offline/reload/reconnect, quota pressure and accessible held/recovery UX.
+      Replace production auth/repositories/sync and the singleton together only
+      after that evidence exists; retain compatible rollback/forward repair.
+- [ ] Explicitly review the remaining server receipt actor/payload-binding risk
+      and any required migration/legacy policy. Browser ownership metadata is
+      not proof of historical authorship. Keep the administration UI and
+      organization-wide owner navigation gated on integration and a qualified
+      concrete-workshop selector.
+- [ ] For a future installation with legacy pending work, use a reviewed,
+      authorized preservation/reconciliation procedure. Keep all original rows
+      and unknown fields. Do not infer an author from a login, actor field,
+      matching workshop or conflict-type marker. No automatic claim/replay or
+      bulk relabelling is provided. Separate possibly-applied work from
+      never-sent work; a new actor's deliberate resubmission is a new audited
+      action linked to the preserved original.
+- [ ] Before any actual upgrade/recovery/origin change, account for browser
+      queues separately from the verified server backup. A server dump does not
+      contain local journal/IndexedDB data. Never clear IndexedDB, uninstall the
+      PWA, force a schema downgrade or delete ambiguous history as a shortcut.
+      Stop affected dispatch on uncertainty; preserve originals for compatible
+      forward repair. Any private recovery export requires its own access and
+      recipient/security design.
+
+- [ ] Resolve the demonstrated old-bundle compatibility blocker before activation:
+      Dexie 4.4.4 with both emulated and native Chromium IndexedDB lets a v4-only
+      constructor open native50 and write the legacy queue. Hosted run
+      `38559830979` confirmed this blocker. Qualify explicit old-bundle/client-protocol fencing
+      and a no-mixed-writers procedure. A lower schema declaration is not a fence.
+      A separate database name is a design option awaiting reviewed integration,
+      not protection implemented here.
+
+All eight existing stores, personal appearance and device-local logos pass the
+exact-value emulator migrations; the first-head native cases additionally prove
+queue/preferences preservation. Actual installation and broader native failure/
+device qualification remain pending. Future quote
+stores reserve v6 after the isolated v5 kernel; no v6 migration is implemented.
+PostgreSQL administration `0008` and quote reservation `0009` remain unchanged.
+No credentials, new server/wire contracts, physical-device evidence or actual
+installation activation are supplied by this increment. Physical Windows,
+Android, screen-reader, broader security and existing release gates stay open.

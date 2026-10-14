@@ -97,6 +97,8 @@ jobs:
         run: pnpm --filter @ocwp/web build
       - name: Install Playwright Chromium
         run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
+      - name: Run isolated offline kernel browser tests
+        run: pnpm --filter @ocwp/web test:kernel-browser
       - name: Prepare browser E2E database
         run: uv run python scripts/e2e/prepare_e2e_database.py
       - name: Run browser E2E
@@ -132,4 +134,12 @@ jobs:
           path: |
             apps/web/test-results/
             apps/web/playwright-report/
+          if-no-files-found: warn
+      - name: Upload isolated kernel browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-kernel-browser-${{ github.sha }}
+          path: apps/web/.tmp-kernel-browser-results/
+          include-hidden-files: true
           if-no-files-found: warn

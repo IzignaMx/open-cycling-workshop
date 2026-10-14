@@ -10,7 +10,8 @@
     "typecheck:offline": "tsc -p tsconfig.offline-check.json",
     "test": "node tools/run-core-tests.mjs",
     "test:e2e": "playwright test",
-    "test:core": "node tools/run-core-tests.mjs"
+    "test:core": "node tools/run-core-tests.mjs",
+    "test:kernel-browser": "vite build --config tools/kernel-browser/vite.config.ts && playwright test --config playwright.kernel.config.ts"
   },
   "dependencies": {
     "@ocwp/branding": "workspace:*",
@@ -32,6 +33,7 @@
     "@playwright/test": "1.62.0",
     "@axe-core/playwright": "4.12.1",
     "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3"
+    "@types/react-dom": "19.2.3",
+    "fake-indexeddb": "6.2.5"
   }
 }

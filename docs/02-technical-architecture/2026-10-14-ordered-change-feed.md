@@ -1,6 +1,6 @@
 # ADR: serialize supported projection writers per organization
 
-Status: implemented, independently reviewed; PostgreSQL evidence pending.
+Status: first published head hosted-verified; final main30 reconciliation pending evidence.
 
 ## Context and invariant
 
@@ -100,3 +100,46 @@ Ruff full check/format, mypy (77 source files), OpenAPI/generated-client and
 repository contracts passed. The 75 skips include ten new ordering tests and
 pre-existing PostgreSQL/environment cases; real PostgreSQL acceptance remains
 pending hosted qualification. No browser execution was attempted locally.
+
+## First published head: exact hosted proof and main30 reconciliation
+
+Published head `b3ce95ee581e939b9dbbf8b9f15c19bfbdbde79a` passed on its first
+attempt. Tested synthetic merge `6ba4646c2a8210e03a91e7c3124ce9b3803432fa`
+has tree `45e4259f8a37c4ea5da1cb2e2b5c749c0b38750f`, equal to the published head.
+
+- [CI run 38561799721](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38561799721):
+  1,047 Python tests passed, three documented unrelated skips; all ten new real
+  PostgreSQL ordering cases executed successfully, both directly and in the
+  qualification verifier. The skips concern two database-specific migration
+  variants and missing host PostgreSQL 18 backup clients; the separate runtime
+  workflow passed the actual backup/restore check.
+- 98 frontend core and one API-client test passed. Browser execution: 23 direct,
+  ten retry-free repeats and 23 qualification reruns, 56 total passed.
+- Qualification artifact `11892357812`: passed, 27/27 checks. Browser artifact
+  `11892372835`. No reruns or accepted failures.
+- [Runtime run 38561799869](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38561799869):
+  11 checks passed including real PostgreSQL restore and browser offline
+  convergence; three ARM64 image builds passed. Artifact `11892981300`.
+- [Security 38561799800](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38561799800)
+  and [DCO 38561799846](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38561799846)
+  passed. Physical hardware qualification remains separate.
+
+The final reconciliation is a true merge of actual main30
+`840f3514b5b65ae6bf13f86d69836bd4e8cea37d` into the published PR31 ancestry,
+without rewriting published history. Only the changelog, manual checklist and
+execution-state additions overlapped, and both increments' records were kept.
+Server product/tests remain identical to published PR31; kernel/client/workflow
+files remain identical to main30. The kernel stays isolated and inactive;
+production remains v4 and no authentication-context or baseline is activated.
+Prior hosted proof is not asserted to verify this new combined tree: final
+integrated hosted qualification remains required.
+
+Final local combined-tree aggregate: 21 checks passed, zero failed and five
+explicit environment blockers (PostgreSQL integration, Docker, PostgreSQL client,
+managed-policy-blocked IndexedDB browser benchmark and browser E2E). Python:
+975 passed/75 skips; frontend: 158 passed; API client: one passed. Static analysis,
+contracts and production PWA build passed. An initial local dependency-link error
+in the UI workspace was corrected without source changes before rerunning the
+complete aggregate. Independent reconciliation review verified byte-identical
+server and client boundaries above and found no defects. Final hosted CI remains
+pending; historical baseline, mixed-writer rollout and physical gates stay open.

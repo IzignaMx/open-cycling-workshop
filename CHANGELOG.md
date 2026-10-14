@@ -11,7 +11,29 @@
 - Existing numeric feed and REST contracts stay compatible. Historical REST-only
   records still need a baseline. This does not activate a multi-user offline
   cache, backfill inventory/quotes, or fence old server/browser writers.
-- PostgreSQL concurrency acceptance remains pending exact-source hosted evidence.
+- First-head hosted PostgreSQL ordering coverage passed; final main30
+  reconciliation awaits exact combined-tree hosted qualification.
+
+## Unreleased · Isolated offline identity kernel
+
+- Additive isolated Dexie v5 factory and identity-bound local repository kernel,
+  with immutable authored-operation journals, separate delivery history and
+  transactionally fenced command/acknowledgement boundaries. Independent review,
+  first-head hosted/native-browser proof and the pending main-29 reconciliation
+  gate are recorded in the [increment record](docs/10-spec-development/2026-10-14-isolated-offline-identity-kernel.md).
+- New isolated contexts remain `BASELINE_REQUIRED`. The production App/default
+  singleton and Golden Slice remain v4; authentication-context, complete baseline
+  and ordered-feed integration are not implemented. Live shared-browser
+  isolation and offline-permission risks remain open; there is no rollout claim.
+- Preserve all eight existing stores, personal preferences/logos and unattributed
+  legacy queued work. The kernel does not claim, replay or delete legacy rows;
+  its [ADR](docs/02-technical-architecture/2026-10-14-isolated-offline-identity-kernel.md)
+  records the future activation and operator recovery gates.
+- Document the native-Chromium-confirmed Dexie v4-to-v5 old-bundle reopen/write blocker; no
+  production activation or schema-version-only fencing claim.
+- Move the unimplemented offline quote schema reservation from v5 to v6.
+  Administration Alembic 0008 and future quote PostgreSQL 0009 remain unchanged.
+  No new credentials, server/wire contract or actual installation upgrade.
 
 ## Unreleased · Structural personal themes
 
