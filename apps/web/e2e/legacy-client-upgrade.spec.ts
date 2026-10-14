@@ -192,8 +192,10 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   await expect(current.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
   await queueCustomer(current, 'Preserved pending recovery customer')
   const beforeRecovery = await rawDatabase(current, 'ocwp-authenticated-v1')
-  expect(beforeRecovery.stores.operationJournal).toHaveLength(2)
-  const pending = beforeRecovery.stores.operationJournal.find(
+  const recoveryJournal = beforeRecovery.stores.operationJournal
+  expect(recoveryJournal).toHaveLength(2)
+  if (!recoveryJournal) throw new Error('Recovery fixture must retain its operation journal')
+  const pending = recoveryJournal.find(
     (row) =>
       (row as { optimistic: { display_name: string } }).optimistic.display_name ===
       'Preserved pending recovery customer',
