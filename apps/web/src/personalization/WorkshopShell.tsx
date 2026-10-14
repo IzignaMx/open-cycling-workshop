@@ -9,6 +9,8 @@ import {
 } from 'react'
 
 import { PALETTES, THEMES, presentationTokens } from './catalog.js'
+import { resolvePresentation } from './resolution.js'
+import type { BrandingProfile } from '../features/branding/contracts.js'
 import { prepareLocalLogo } from './logo.js'
 import {
   DEFAULT_PREFERENCES,
@@ -23,6 +25,11 @@ interface WorkshopShellProps {
   userName: string
   canCreateOrders: boolean
   children: ReactNode
+  sharedBranding?: BrandingProfile | null
+  brandingCached?: boolean
+  brandingMessage?: string | null
+  onRefreshBranding?: () => void
+  locationLabel?: string
 }
 
 export function WorkshopShell({
@@ -31,6 +38,11 @@ export function WorkshopShell({
   userName,
   canCreateOrders,
   children,
+  sharedBranding = null,
+  brandingCached = false,
+  brandingMessage = null,
+  onRefreshBranding,
+  locationLabel = 'OCWP',
 }: WorkshopShellProps) {
   const [preferences, setPreferences] = useState<PresentationPreferences>({
     ...DEFAULT_PREFERENCES,
@@ -44,7 +56,7 @@ export function WorkshopShell({
   const [message, setMessage] = useState('Cargando preferencias locales…')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [logoMessage, setLogoMessage] = useState<string | null>(null)
-  const [logoBroken, setLogoBroken] = useState(false)
+  const [brokenLogo, setBrokenLogo] = useState<string | null>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const { organizationId, userId, locationId } = scope
 
@@ -79,14 +91,16 @@ export function WorkshopShell({
     const next = { ...latest.current, ...patch }
     latest.current = next
     setPreferences(next)
-    setLogoBroken(false)
+    setBrokenLogo(null)
     const version = ++saveVersion.current
-    const kind = 'logoDataUrl' in patch ? 'logo' : 'appearance'
+    const kind = 'logoDataUrl' in patch || 'logoMode' in patch ? 'logo' : 'appearance'
     setMessage('Aplicado en tu vista. Guardando en este dispositivo…')
     // Enqueue immediately at the shared repository boundary, including across remounts.
     const saved =
       kind === 'logo'
-        ? repository.saveLogo(scope, next.logoDataUrl)
+        ? next.logoMode === 'local'
+          ? repository.saveLogo(scope, next.logoDataUrl)
+          : repository.saveLogoMode(scope, next.logoMode)
         : repository.saveAppearance(scope, next)
     void saved
       .then(() => {
@@ -107,7 +121,9 @@ export function WorkshopShell({
       })
   }
 
-  const tokens = presentationTokens(preferences)
+  const resolved = resolvePresentation(preferences, sharedBranding, locationLabel)
+  const rendered = resolved.preferences
+  const tokens = presentationTokens(rendered)
   const style: CSSProperties = {
     '--ocwp-color-canvas': tokens.canvas,
     '--ocwp-color-surface': tokens.surface,
@@ -143,15 +159,19 @@ export function WorkshopShell({
         Saltar al contenido
       </a>
       <header className="workshop-navigation">
-        <a href="#workshop-content" className="workshop-identity" aria-label="OCWP, taller activo">
-          {preferences.logoDataUrl && !logoBroken ? (
+        <a
+          href="#workshop-content"
+          className="workshop-identity"
+          aria-label={`${resolved.displayName}, taller activo`}
+        >
+          {loaded && rendered.logoDataUrl && brokenLogo !== rendered.logoDataUrl ? (
             <img
               className="workshop-logo"
-              src={preferences.logoDataUrl}
+              src={rendered.logoDataUrl}
               alt=""
               width="160"
               height="48"
-              onError={() => setLogoBroken(true)}
+              onError={() => setBrokenLogo(rendered.logoDataUrl)}
             />
           ) : (
             <span className="workshop-monogram" aria-hidden="true">
@@ -159,7 +179,7 @@ export function WorkshopShell({
             </span>
           )}
           <span>
-            <strong>OCWP</strong>
+            <strong>{resolved.displayName}</strong>
             <small>
               {locationId ? `Ubicación · ${locationId.slice(-8)}` : 'Sin ubicación activa'}
             </small>
@@ -211,10 +231,11 @@ export function WorkshopShell({
               Cerrar personalización
             </button>
           </div>
+          <h3>Mi apariencia</h3>
           <p id="personalization-scope">
             La apariencia se guarda solo para tu usuario y organización en este dispositivo. El logo
-            local también pertenece al taller activo. No se comparten con otras personas ni
-            dispositivos.
+            local también pertenece al taller activo. Los ajustes personales no se comparten. Puedes
+            seguir los colores y el logo compartidos del taller.
           </p>
           <fieldset disabled={!loaded} aria-describedby="personalization-scope">
             <legend>Estructura del espacio</legend>
@@ -260,7 +281,7 @@ export function WorkshopShell({
                 <select
                   value={preferences.paletteId}
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                    update({ paletteId: event.currentTarget.value })
+                    update({ paletteId: event.currentTarget.value, paletteSource: 'personal' })
                   }
                 >
                   {PALETTES.map((palette) => (
@@ -270,6 +291,16 @@ export function WorkshopShell({
                   ))}
                 </select>
               </label>
+              <button type="button" onClick={() => update({ paletteSource: 'workshop' })}>
+                Usar colores del taller
+              </button>
+              <p>
+                Colores:{' '}
+                {preferences.paletteSource === 'workshop'
+                  ? 'Heredados del taller activo'
+                  : 'Selección personal'}
+                .
+              </p>
               <label>
                 Esquema de superficies
                 <select
@@ -305,6 +336,7 @@ export function WorkshopShell({
                 update({
                   themeId: 'banco',
                   paletteId: 'bosque',
+                  paletteSource: 'workshop',
                   scheme: 'theme',
                   density: 'comfortable',
                 })
@@ -312,12 +344,15 @@ export function WorkshopShell({
             >
               Restablecer mi apariencia
             </button>
+            <small>
+              Restablecer usa Banco y los colores del taller; conserva tu elección de logo.
+            </small>
           </fieldset>
           <fieldset disabled={!loaded || !locationId} className="logo-settings">
             <legend>Logo local para mi vista</legend>
             <p>
-              Solo cambia tu vista de este taller en este dispositivo. La identidad compartida del
-              taller todavía no se edita aquí.
+              Solo cambia tu vista de este taller en este dispositivo. La marca compartida se
+              administra en su sección y nunca recibe tu imagen local automáticamente.
             </p>
             <label>
               Archivo de logo local
@@ -359,7 +394,7 @@ export function WorkshopShell({
                   type="button"
                   className="primary-button"
                   onClick={() => {
-                    update({ logoDataUrl: logoPreview })
+                    update({ logoDataUrl: logoPreview, logoMode: 'local' })
                     setLogoPreview(null)
                     setLogoMessage(null)
                   }}
@@ -386,13 +421,50 @@ export function WorkshopShell({
                 uploadVersion.current++
                 setLogoPreview(null)
                 setLogoMessage(null)
-                update({ logoDataUrl: null })
+                update({ logoDataUrl: null, logoMode: 'none' })
               }}
             >
-              Quitar mi logo local
+              Quitar logo de mi vista
             </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                uploadVersion.current++
+                setLogoPreview(null)
+                setLogoMessage(null)
+                update({ logoMode: 'workshop', logoDataUrl: null })
+              }}
+            >
+              Usar logo del taller
+            </button>
+            <p>
+              Logo:{' '}
+              {preferences.logoMode === 'workshop'
+                ? 'Heredado del taller activo'
+                : preferences.logoMode === 'none'
+                  ? 'Oculto en mi vista'
+                  : 'Imagen personal local'}
+              .
+            </p>
             {logoMessage ? <p role="status">{logoMessage}</p> : null}
           </fieldset>
+          <section aria-label="Configuración compartida visible">
+            <h3>Marca compartida</h3>
+            <p>
+              {resolved.shared
+                ? `Marca del taller: ${resolved.displayName}.`
+                : 'No hay una marca compartida accesible guardada; se muestra un nombre de referencia.'}{' '}
+              {brandingCached ? 'Copia verificada disponible sin conexión.' : ''}
+            </p>
+            {brandingMessage && <p role="status">{brandingMessage}</p>}
+            <button type="button" onClick={onRefreshBranding}>
+              Actualizar marca compartida
+            </button>
+            <a href="#workshop-shared-branding" onClick={closeSettings}>
+              Consultar o editar la marca del taller
+            </a>
+          </section>
           <p className="preference-status" role="status" aria-live="polite">
             {message}
           </p>

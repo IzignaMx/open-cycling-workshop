@@ -90,6 +90,7 @@ body {
   min-width: 0;
 }
 .workshop-identity strong {
+  overflow-wrap: anywhere;
   font-size: 1.25rem;
   letter-spacing: 0.04em;
 }
