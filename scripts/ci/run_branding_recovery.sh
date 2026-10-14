@@ -23,7 +23,7 @@ exec docker run --rm --network host \
   --volume "$BRANDING_RECOVERY_WORKSPACE:$BRANDING_RECOVERY_WORKSPACE" \
   --workdir "$BRANDING_RECOVERY_WORKSPACE" \
   --env PGHOST --env PGPORT --env PGUSER --env PGDATABASE \
-  --env PGPASSWORD --env PGCONNECTTIMEOUT --env PGAPPNAME \
+  --env PGPASSWORD --env PGCONNECT_TIMEOUT --env PGAPPNAME \
   postgres:18.4-trixie "$tool" "$@"
 CLIENT
   chmod 0700 "$client_dir/$tool"
@@ -42,14 +42,29 @@ import os
 from pathlib import Path
 
 files = list(Path("artifacts/branding-recovery").rglob("branding-recovery-evidence.json"))
-if len(files) != 1:
-    raise SystemExit("Branding recovery did not produce its required single proof artifact")
-if files[0].stat().st_mtime_ns < int(os.environ["BRANDING_RECOVERY_STARTED_NS"]):
-    raise SystemExit("Branding recovery evidence is stale; this run is not qualified")
-proof = json.loads(files[0].read_text())
-assert proof["authenticated_profile_smoke_tested"] is True
-assert proof["stale_sessions_and_checkpoint_refused"] is True
-assert len(proof["profiles"]) == 3
-assert all(row["expected_sha256"] == row["actual_sha256"] for row in proof["profiles"])
-print("Confirmed authenticated three-profile recovery proof; no dump or logo bytes are uploaded.")
+expected = {
+    "branding_restore_checked": (0, 2),
+    "branding_restore_checked_with_explicit_legacy_cutover": (2, 3),
+}
+if len(files) != len(expected):
+    raise SystemExit("Branding recovery requires both floor-1 and mixed-floor proof artifacts")
+observed = set()
+for path in files:
+    if path.stat().st_mtime_ns < int(os.environ["BRANDING_RECOVERY_STARTED_NS"]):
+        raise SystemExit("Branding recovery evidence is stale; this run is not qualified")
+    proof = json.loads(path.read_text())
+    status = proof["status"]
+    assert status in expected and status not in observed
+    observed.add(status)
+    activated, rotated = expected[status]
+    assert type(proof["legacy_organizations_activated"]) is int
+    assert type(proof["incarnations_rotated"]) is int
+    assert proof["legacy_organizations_activated"] == activated
+    assert proof["incarnations_rotated"] == rotated
+    assert proof["authenticated_profile_smoke_tested"] is True
+    assert proof["stale_sessions_and_checkpoint_refused"] is True
+    assert len(proof["profiles"]) == 3
+    assert all(row["expected_sha256"] == row["actual_sha256"] for row in proof["profiles"])
+assert observed == set(expected)
+print("Confirmed floor-1 and mixed-floor authenticated recovery proofs; only safe JSON is uploaded.")
 PY

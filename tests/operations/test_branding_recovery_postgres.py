@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -64,10 +65,12 @@ def put(
     return response.json()
 
 
+@pytest.mark.parametrize("legacy_source", [False, True])
 def test_real_snapshot_assets_corrupt_latest_earlier_restore_and_authenticated_bytes(
     disposable_databases: tuple[str, str],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    legacy_source: bool,
 ) -> None:
     source_url, target_url = disposable_databases
     config = Config(str(ROOT / "services/platform/alembic.ini"))
@@ -90,7 +93,19 @@ def test_real_snapshot_assets_corrupt_latest_earlier_restore_and_authenticated_b
     try:
         with source_factory.begin() as session:
             for org in ("recovery-a", "recovery-b"):
-                session.add(OrganizationRecord(id=org, name=org, minimum_write_protocol=1))
+                session.add(
+                    OrganizationRecord(
+                        id=org,
+                        name=org,
+                        minimum_write_protocol=0 if legacy_source and org == "recovery-a" else 1,
+                    )
+                )
+            if legacy_source:
+                session.add(
+                    OrganizationRecord(
+                        id="recovery-c", name="No-brand legacy tenant", minimum_write_protocol=0
+                    )
+                )
             session.flush()
             for org, locations in (("recovery-a", ("a1", "a2")), ("recovery-b", ("b1",))):
                 for location in locations:
@@ -108,12 +123,27 @@ def test_real_snapshot_assets_corrupt_latest_earlier_restore_and_authenticated_b
                             "branding.read",
                             "branding.write",
                             "customers.read",
+                            "customers.write",
                             "sync.pull",
                         ],
                     )
                 )
         with TestClient(create_app(source_settings, session_factory=source_factory)) as client:
             old_headers = {org: login(client, org) for org in ("recovery-a", "recovery-b")}
+            legacy_token = None
+            if legacy_source:
+                current = client.app.state.session_tokens.decode(
+                    old_headers["recovery-a"]["Authorization"].split(" ", 1)[1]
+                )
+                legacy_token = client.app.state.session_tokens.issue(
+                    replace(current, dataset_incarnation=None)
+                )
+                assert (
+                    client.get(
+                        "/api/v1/auth/me", headers={"Authorization": f"Bearer {legacy_token}"}
+                    ).status_code
+                    == 200
+                )
             expected = {
                 "a1": put(client, old_headers["recovery-a"], "a1", synthetic_png()),
                 "a2": put(client, old_headers["recovery-a"], "a2", synthetic_png(b"\xff\0\0\xff")),
@@ -184,12 +214,32 @@ def test_real_snapshot_assets_corrupt_latest_earlier_restore_and_authenticated_b
                 )
             # Close the probe pool before the fresh-target no-other-clients preflight.
             target.dispose()
+            if legacy_source:
+                with pytest.raises(postgres.BackupError, match="floor-1"):
+                    branding.restore_branding_bundle(
+                        earlier, target_url, asset_root=restored_assets, confirm_empty_target=True
+                    )
+                assert not restored_assets.exists()
             result = branding.restore_branding_bundle(
-                earlier, target_url, asset_root=restored_assets, confirm_empty_target=True
+                earlier,
+                target_url,
+                asset_root=restored_assets,
+                confirm_empty_target=True,
+                confirm_legacy_cutover=tuple(
+                    branding._legacy_pairs(earlier_manifest["organizations"])
+                )
+                if legacy_source
+                else (),
+                confirm_legacy_prerequisites=legacy_source,
             )
-            assert result["status"] == "branding_restore_checked"
+            assert result["status"] == (
+                "branding_restore_checked_with_explicit_legacy_cutover"
+                if legacy_source
+                else "branding_restore_checked"
+            )
             assert result["profiles_checked"] == result["asset_references_checked"] == 3
-            assert result["incarnations_rotated"] == 2
+            assert result["incarnations_rotated"] == (3 if legacy_source else 2)
+            assert result["legacy_organizations_activated"] == (2 if legacy_source else 0)
             assert result["application_smoke_tested"] is False
             assert result["elapsed_seconds"] > 0
             target_settings = Settings(
@@ -207,7 +257,25 @@ def test_real_snapshot_assets_corrupt_latest_earlier_restore_and_authenticated_b
                 for headers in old_headers.values():
                     refused = restored_client.get("/api/v1/auth/me", headers=headers)
                     assert refused.status_code == 401, refused.text
+                if legacy_token is not None:
+                    assert (
+                        restored_client.get(
+                            "/api/v1/auth/me", headers={"Authorization": f"Bearer {legacy_token}"}
+                        ).status_code
+                        == 401
+                    )
                 fresh = {org: login(restored_client, org) for org in old_headers}
+                old_client = restored_client.post(
+                    "/api/v1/customers",
+                    headers={"Authorization": fresh["recovery-a"]["Authorization"]},
+                    json={
+                        "customer_id": new_id(),
+                        "display_name": "Never created",
+                        "location_id": "a1",
+                    },
+                )
+                assert old_client.status_code == 409
+                assert old_client.json()["error"]["code"] == "client_upgrade_required"
                 proofs = []
                 for location, original in expected.items():
                     org = "recovery-b" if location == "b1" else "recovery-a"
