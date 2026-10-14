@@ -508,7 +508,7 @@ sync_chaos_setup_barrier_2026_10_13:
 structural_workshop_themes_2026_10_14:
   status: implemented_pending_evidence
   branch: feat/structural-workshop-themes
-  reconciliation_base: 273bc8f06bb8c367660c0afd354f4f6c0ae6864d
+  reconciliation_base: 833bf6e21017ce4e513291621515502f22256a72
   dependency: pr26_authorization_pending_main_merge
   base: 98394826884020d9de2498cab551120087dd5334
   document: docs/10-spec-development/2026-10-14-structural-workshop-themes.md
@@ -521,12 +521,14 @@ structural_workshop_themes_2026_10_14:
   focused_tests: 11_personalization_5_session_guard_4_read_display_4_conflict_provenance_passed
   frontend_core_tests: 98_passed
   local_qualification: partial_21_passed_zero_failures_5_environment_blockers
-  local_python_tests: 558_passed_9_live_postgresql_skips
+  local_python_tests: 577_passed_9_live_postgresql_skips
   static_and_pwa_build: passed
   browser_cases: 12_added_22_total_collected_not_executed_locally
   local_browser: blocked_managed_url_policy_respected
   independent_review: reported_findings_fixed_re_review_16_focused_tests_and_real_offline_typechecks_passed
   read_display_guards: explicit_entity_reads_fail_closed_preserve_cache_and_queue_focused_review_passed
+  combined_proof_source_head: b98abd69afb279e49414178122b0c03648174b4a
+  administration_pr27: not_included_pending_later_reconciliation
   conflict_provenance: queued_mutation_identity_verified_legacy_details_hidden_records_preserved_independent_22_test_review_passed
   offline_permission_freshness_cache_revocation_resnapshot: pending_admin_rollout
   exact_head_hosted_ci: pending

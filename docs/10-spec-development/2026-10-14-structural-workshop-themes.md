@@ -3,8 +3,10 @@
 Status: `implemented_pending_evidence`.
 Branch: `feat/structural-workshop-themes`.
 Original base: `98394826884020d9de2498cab551120087dd5334`.
-Reconciled base: `273bc8f06bb8c367660c0afd354f4f6c0ae6864d`, containing
-merged sync-test/runtime PRs #24/#25 and the still-unmerged authorization PR #26.
+Reconciled base: `833bf6e21017ce4e513291621515502f22256a72`, containing
+merged sync-test/runtime PRs #24/#25 and the still-unmerged authorization PR #26,
+including its test-only ambient secret-file isolation guards. Administration PR #27
+is not included in this branch.
 This dependency is explicit; publication waits for the parent integration decision.
 
 ## Scope
@@ -43,10 +45,12 @@ contains the justified adaptations from the visual reference boards.
 - Focused model/repository/logo/contrast suite: 11 passed; session lifetime guard: 5 passed; read-display gate: 4 passed (red missing module → green); conflict provenance/store→display policy: 4 additional tests passed.
 - Full frontend core suite on the reconciled base plus read-display gates/provenance: 98 passed. Real/offline typechecks, repository-wide
   ESLint and Prettier, and production PWA build pass. Final aggregate qualification after review fixes: 21 passing checks, zero
-  failures, five environment blockers; 558 Python tests passed, 9 live PostgreSQL
+  failures, five environment blockers; 577 Python tests passed, 9 live PostgreSQL
   tests skipped. Remaining blockers are PostgreSQL integration, Docker/psql
   availability, managed-policy browser navigation and the browser E2E database. No frozen-install claim: offline package metadata was unavailable,
   and preinstalled cached dependencies were reused without changing the lockfile.
+  Combined proof ran at source head `b98abd69afb279e49414178122b0c03648174b4a`;
+  the subsequent reconciliation commit only records this evidence and pending dependency.
 - Browser suite collection on the reconciled base: 22 cases, including twelve new structural-theme/access cases.
   Collection is not execution. Each desktop/touch case attaches a screenshot;
   touch cases also attach a 320px screenshot.
