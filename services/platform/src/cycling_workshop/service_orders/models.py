@@ -86,3 +86,11 @@ class ServiceOrderEventRecord(Base):
     actor_id: Mapped[str] = mapped_column(String(36), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+Index(
+    "ix_service_orders_baseline_scan",
+    ServiceOrderRecord.organization_id,
+    ServiceOrderRecord.location_id,
+    ServiceOrderRecord.id.collate("C"),
+).ddl_if(dialect="postgresql")

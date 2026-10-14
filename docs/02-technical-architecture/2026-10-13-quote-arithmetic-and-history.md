@@ -97,3 +97,9 @@ inputs with an independent exact `Fraction` oracle. All five-line permutations,
 reference permutations, mixed taxes/discounts, zero-priced lines, invalid values,
 immutability and revision failure paths are covered. No third-party property
 framework or runtime dependency is required.
+
+## Persistence reservation update · 2026-10-14
+
+Bounded authoritative server baselines use additive migration 0009 after 0008.
+The unimplemented quote persistence reservation moves to 0010 after 0009.
+This does not create, run or rewrite quote migrations or change quote arithmetic.

@@ -667,3 +667,25 @@ PostgreSQL administration `0008` and quote reservation `0009` remain unchanged.
 No credentials, new server/wire contracts, physical-device evidence or actual
 installation activation are supplied by this increment. Physical Windows,
 Android, screen-reader, broader security and existing release gates stay open.
+
+## 2026-10-14 · Bounded authoritative server baseline gates
+
+- [ ] Obtain exact-head PostgreSQL 18.4 evidence for migration 0008→0009 and
+      empty→head, ordered lock/revocation/expiry races, cross-worker replay and
+      capacity, and EXPLAIN ANALYZE/BUFFERS of large hidden-only feeds. SQLite
+      passes and locally skipped PostgreSQL cases do not close this gate.
+- [ ] Before advertising baseline-v1, qualify every server path and reconcile
+      independent review; context currently remains snapshot_protocol=null.
+- [ ] Before any installation upgrade, preserve/verify backup and restore in an
+      isolated target, establish no mixed old server writers, and review the
+      schema-compatible rollback. Migration 0009 has not run on an installation.
+- [ ] Before production client activation, separately qualify durable pre-start
+      identity/resume, staged page transactions, full post-commit partition
+      fencing, old-client/server write floor and restore/session invalidation.
+      Preserve all original local journals/legacy work. Server validation does
+      not prove durable browser receipt or authorize replay of unknown work.
+
+Current SQL reservation: bounded baselines implement 0009 after 0008; unimplemented
+quote persistence moves to 0010 after 0009. Earlier reservation notes remain
+historical. Existing physical Windows/Android, accessibility and recovery gates
+remain open. No source increment is installation or rollout evidence.

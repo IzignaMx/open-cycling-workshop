@@ -13,6 +13,19 @@ export interface AccessContextResponse {
   verified_at: string
 }
 
+export interface ActivationRequest {
+  checkpoint: string
+  protocol: 1
+}
+
+export interface ActivationResponse {
+  authorization_epoch: string
+  baseline_id: string
+  checkpoint: string
+  context: AccessContextResponse
+  protocol: 1
+}
+
 export interface BicycleCreateRequest {
   bicycle_id?: string | null
   bicycle_type?: string | null
@@ -22,6 +35,28 @@ export interface BicycleCreateRequest {
   model?: string | null
   notes?: string | null
   wheel_size?: string | null
+}
+
+export interface BicyclePayload {
+  bicycle_id: string
+  bicycle_type: string | null
+  brand: string
+  created_at: string
+  customer_id: string
+  location_id: string
+  model: string | null
+  notes: string | null
+  organization_id: string
+  updated_at: string
+  version: number
+  wheel_size: string | null
+}
+
+export interface BicycleRecord {
+  entity_id: string
+  entity_type: "bicycle"
+  entity_version: number
+  payload: BicyclePayload
 }
 
 export interface BicycleResponse {
@@ -62,6 +97,12 @@ export interface ChangePasswordRequest {
   new_password: string
 }
 
+export interface Completion {
+  authorization_epoch: string
+  baseline_id: string | null
+  checkpoint: string
+}
+
 export interface ContextPrincipal {
   api_realm: null
   organization_id: string
@@ -98,6 +139,25 @@ export interface CustomerCreateRequest {
   phone?: string | null
 }
 
+export interface CustomerPayload {
+  created_at: string
+  customer_id: string
+  display_name: string
+  email: string | null
+  location_id: string
+  organization_id: string
+  phone: string | null
+  updated_at: string
+  version: number
+}
+
+export interface CustomerRecord {
+  entity_id: string
+  entity_type: "customer"
+  entity_version: number
+  payload: CustomerPayload
+}
+
 export interface CustomerResponse {
   created_at: string
   customer_id: string
@@ -108,6 +168,26 @@ export interface CustomerResponse {
   phone: string | null
   updated_at: string
   version: number
+}
+
+export interface DeltaPage {
+  authorization_epoch: string
+  baseline_id: string | null
+  completion: Completion | null
+  continuation: string
+  page_id: string
+  phase: "catching_up" | "complete"
+  predecessor: string
+  protocol: 1
+  records: Array<unknown>
+}
+
+export interface FinalizeResponse {
+  authorization_epoch: string
+  baseline_id: string
+  continuation: string
+  predecessor: string
+  protocol: 1
 }
 
 export interface HTTPValidationError {
@@ -197,6 +277,11 @@ export interface OrderTransitionRequest {
   note?: string | null
 }
 
+export interface PageRequest {
+  continuation: string
+  protocol: 1
+}
+
 export interface PatchUserRequest {
   capabilities?: Array<string> | null
   display_name?: string
@@ -250,6 +335,17 @@ export interface RoleResponse {
   name: string
 }
 
+export interface ScanPage {
+  authorization_epoch: string
+  baseline_id: string
+  continuation: string
+  page_id: string
+  phase: "scan" | "scan_complete"
+  predecessor: string
+  protocol: 1
+  records: Array<unknown>
+}
+
 export interface ServiceOrderCreateRequest {
   accessories?: string | null
   bicycle_id?: string | null
@@ -272,6 +368,30 @@ export interface ServiceOrderEventResponse {
   to_state: string
 }
 
+export interface ServiceOrderPayload {
+  accessories: string | null
+  bicycle_id: string | null
+  created_at: string
+  customer_id: string
+  diagnosis: string | null
+  intake_condition: string | null
+  location_id: string
+  order_id: string
+  organization_id: string
+  priority: string
+  reported_problem: string
+  state: "INTAKE" | "DIAGNOSIS" | "AUTHORIZED" | "REJECTED" | "IN_PROGRESS" | "WAITING_FOR_PARTS" | "READY" | "CLOSED" | "CANCELLED"
+  updated_at: string
+  version: number
+}
+
+export interface ServiceOrderRecord {
+  entity_id: string
+  entity_type: "service_order"
+  entity_version: number
+  payload: ServiceOrderPayload
+}
+
 export interface ServiceOrderResponse {
   accessories: string | null
   bicycle_id: string | null
@@ -287,6 +407,21 @@ export interface ServiceOrderResponse {
   state: string
   updated_at: string
   version: number
+}
+
+export interface StartRequest {
+  authorization_epoch: string
+  protocol: 1
+  request_id: string
+  selected_location_id: string
+}
+
+export interface StartResponse {
+  baseline_id: string
+  context: AccessContextResponse
+  continuation: string
+  expires_at: string
+  protocol: 1
 }
 
 export interface StockResponse {

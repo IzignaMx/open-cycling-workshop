@@ -207,7 +207,7 @@ def test_empty_database_upgrades_to_identity_head(
     identity_migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
 
     assert _revision(engine) == "0008"
     schema = inspect(engine)
@@ -240,7 +240,7 @@ def test_upgrade_preserves_all_legacy_identity_values_without_promoting_users(
         _insert(engine, "users", values)
     before = _snapshot(engine, "users")
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
 
     after = _snapshot(engine, "users")
     assert len(after) == len(before)
@@ -263,7 +263,7 @@ def test_invalid_legacy_session_version_blocks_upgrade_without_rewriting_users(
     before = _snapshot(engine, "users")
 
     with pytest.raises(RuntimeError, match="invalid session versions") as failure:
-        command.upgrade(config, "head")
+        command.upgrade(config, "0008")
 
     assert organization_id not in str(failure.value)
     assert "backup" in str(failure.value).lower()
@@ -287,7 +287,7 @@ def test_user_version_and_owner_nullability_constraints_reject_invalid_rows(
     identity_migration_database: tuple[Config, Engine], invalid: dict[str, Any]
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     with pytest.raises(IntegrityError):
         _insert(engine, "users", _user(organization_id, **invalid))
@@ -298,7 +298,7 @@ def test_user_defaults_and_organization_wide_owner_constraint(
     identity_migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, location_id = _seed_tenant(engine)
     ordinary = _user(organization_id, location_id=location_id)
     _insert(engine, "users", ordinary)
@@ -315,7 +315,7 @@ def test_existing_tenant_location_and_username_constraints_remain_enforced(
     identity_migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     foreign_organization_id, foreign_location_id = _seed_tenant(engine)
     _insert(engine, "users", _user(organization_id, username="normalized"))
@@ -331,7 +331,7 @@ def test_audit_user_references_cannot_cross_tenants_or_reference_missing_users(
     identity_migration_database: tuple[Config, Engine], reference: str
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     foreign_organization_id, _ = _seed_tenant(engine)
     user = _user(organization_id)
@@ -352,7 +352,7 @@ def test_audited_users_cannot_be_deleted_or_moved_between_tenants(
     identity_migration_database: tuple[Config, Engine], reference: str
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     foreign_organization_id, _ = _seed_tenant(engine)
     user = _user(organization_id)
@@ -375,7 +375,7 @@ def test_audit_organization_reference_is_required_and_restricts_deletion(
     identity_migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     for invalid_organization_id in (None, str(uuid4())):
         with pytest.raises(IntegrityError):
@@ -400,7 +400,7 @@ def test_audit_rejects_invalid_required_fields(
     identity_migration_database: tuple[Config, Engine], invalid: dict[str, Any]
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     with pytest.raises(IntegrityError):
         _insert(engine, "identity_audit_events", _audit(organization_id, **invalid))
@@ -410,7 +410,7 @@ def test_location_audit_keeps_location_identifier_in_safe_snapshot_only(
     identity_migration_database: tuple[Config, Engine],
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, location_id = _seed_tenant(engine)
     user = _user(organization_id)
     _insert(engine, "users", user)
@@ -436,7 +436,7 @@ def test_audit_history_is_database_append_only(
     identity_migration_database: tuple[Config, Engine], mutation: str
 ) -> None:
     config, engine = identity_migration_database
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     _insert(engine, "identity_audit_events", _audit(organization_id))
     before = _snapshot(engine, "identity_audit_events")
@@ -456,7 +456,7 @@ def test_postgres_audit_history_rejects_truncate(
     config, engine = identity_migration_database
     if engine.dialect.name != "postgresql":
         pytest.skip("TRUNCATE is PostgreSQL-specific")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     _insert(engine, "identity_audit_events", _audit(organization_id))
     before = _snapshot(engine, "identity_audit_events")
@@ -473,7 +473,7 @@ def test_downgrade_and_reupgrade_preserve_legacy_user_fields(
     organization_id, location_id = _seed_tenant(engine)
     _insert(engine, "users", _user(organization_id, location_id=location_id))
     before = _snapshot(engine, "users")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     _insert(engine, "identity_audit_events", _audit(organization_id))
 
     command.downgrade(config, "0007")
@@ -481,7 +481,7 @@ def test_downgrade_and_reupgrade_preserve_legacy_user_fields(
     assert _revision(engine) == "0007"
     assert _snapshot(engine, "users") == before
     assert "identity_audit_events" not in inspect(engine).get_table_names()
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     assert _revision(engine) == "0008"
     assert len(_snapshot(engine, "users")) == 1
 
@@ -493,7 +493,7 @@ def test_postgres_offline_upgrade_emits_constraints_and_append_only_trigger(
     config = _config("postgresql+psycopg://")
     output = StringIO()
     config.output_buffer = output
-    command.upgrade(config, "0007:head", sql=True)
+    command.upgrade(config, "0007:0008", sql=True)
     sql = output.getvalue()
     assert "CREATE TABLE identity_audit_events" in sql
     assert "uq_user_tenant" in sql
@@ -587,7 +587,7 @@ def test_sqlite_replace_cannot_overwrite_an_existing_audit_event(
     config, engine = identity_migration_database
     if engine.dialect.name != "sqlite":
         pytest.skip("INSERT OR REPLACE is SQLite-specific")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0008")
     organization_id, _ = _seed_tenant(engine)
     audit = _audit(organization_id)
     _insert(engine, "identity_audit_events", audit)

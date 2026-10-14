@@ -43,3 +43,11 @@ class CustomerRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+Index(
+    "ix_customers_baseline_scan",
+    CustomerRecord.organization_id,
+    CustomerRecord.location_id,
+    CustomerRecord.id.collate("C"),
+).ddl_if(dialect="postgresql")

@@ -18,9 +18,10 @@ from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.admin_schemas import ScopeId
 from cycling_workshop.identity.context_schemas import AccessContextResponse, ContextPrincipal
 from cycling_workshop.identity.dependencies import _extract_bearer, effective_principal
+from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
 from cycling_workshop.identity.roles import CAPABILITIES
-from cycling_workshop.identity.security import SessionTokenService
+from cycling_workshop.identity.security import SessionTokenService, ValidatedSession
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -36,6 +37,14 @@ def access_context(
     authorization: Annotated[str | None, Header()] = None,
 ) -> AccessContextResponse:
     service: SessionTokenService = request.app.state.session_tokens
+    validated, effective = lock_context(session, service, authorization)
+    return build_context(session, service, validated, effective, selected_location_id)
+
+
+def lock_context(
+    session: Session, service: SessionTokenService, authorization: str | None
+) -> tuple[ValidatedSession, Principal]:
+    """Retain original literal token authority, then lock org and fresh actor."""
     try:
         validated = service.decode_session(_extract_bearer(authorization))
     except (jwt.InvalidTokenError, ValueError, TypeError, OverflowError) as exc:
@@ -56,6 +65,16 @@ def access_context(
     except ValueError as exc:
         raise HTTPException(status_code=401, detail="invalid session") from exc
 
+    return validated, effective
+
+
+def build_context(
+    session: Session,
+    service: SessionTokenService,
+    validated: ValidatedSession,
+    effective: Principal,
+    selected_location_id: str | None,
+) -> AccessContextResponse:
     selected = selected_location_id if selected_location_id is not None else effective.location_id
     if selected is None:
         raise ApiError(422, "location_required", "a concrete location is required")
