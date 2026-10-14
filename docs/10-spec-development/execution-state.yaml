@@ -334,6 +334,30 @@ authoritative_restore_script:
   retained_for: future_integrity_preserving_restores_and_disaster_recovery
 
 # Corrective increment; does not supersede historical release evidence above.
+effective_identity_sync_authority_2026_10_14:
+  document: docs/10-spec-development/2026-10-14-effective-identity-sync-authority.md
+  status: implemented_pending_evidence
+  base_commit: 59ad7e96ee1f32308a63ffa9248b528685a5221c
+  requirements: [FR-IAM-002, FR-IAM-004, SEC-002]
+  scope: effective_current_user_response_server_attributed_sync_transition_stored_receipt_tuple_binding
+  api_shapes_and_migrations: unchanged
+  effective_grants: existing_literal_token_persisted_intersection_no_wildcard_expansion
+  current_user_read: organization_then_user_lock_and_persisted_revalidation_after_wait
+  actor_boundary: authenticated_submitter_not_proof_of_original_offline_author
+  receipt_boundary: no_original_actor_payload_digest_base_version_or_timestamp_binding
+  regression_http_red: 15_failed_7_passed
+  regression_service_red: 5_failed_2_passed
+  focused_green: 43_passed
+  local_python_suite: 787_passed_65_postgresql_specific_skips
+  local_qualification: partial_21_checks_passed_zero_failures_five_environment_blockers
+  local_frontend: 74_core_1_api_client_tests_real_typecheck_and_production_pwa_build_passed
+  static_and_contracts: ruff_lint_format_mypy_75_files_eslint_prettier_openapi_typescript_passed
+  postgres_contention_cases: five_added_runtime_pending_configured_postgresql
+  independent_review: pending
+  hosted_evidence: pending_exact_head_ci
+  browser_rollout: remains_gated_on_identity_cache_resnapshot_pending_write_reconciliation
+  release_gates: unchanged_no_real_accounts_credentials_or_deployment
+
 sync_pull_scope_integrity_2026_10_13:
   document: docs/10-spec-development/2026-10-13-sync-pull-scope-integrity.md
   status: verified
