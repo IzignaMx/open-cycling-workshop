@@ -1,9 +1,10 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
 from cycling_workshop.db.base import Base
 from cycling_workshop.shared.ids import new_id
-from cycling_workshop.sync.domain import MutationEnvelope, SyncConflict
+from cycling_workshop.sync.domain import MutationEnvelope, SyncApplicationContext, SyncConflict
 from cycling_workshop.sync.service import SyncService
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 from sqlalchemy import create_engine
@@ -68,6 +69,54 @@ def test_duplicate_mutation_id_is_applied_exactly_once() -> None:
             limit=100,
         )
         assert len(changes.items) == 1
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("organization_id", "org-2"),
+        ("location_id", "loc-2"),
+        ("entity_type", "bicycle"),
+        ("entity_id", "other-entity"),
+        ("operation", "update"),
+    ],
+)
+def test_receipt_replay_checks_every_persisted_envelope_field(field: str, value: str) -> None:
+    with build_session() as session:
+        service = SyncService(session)
+        original = customer_create_mutation()
+        service.apply(original)
+        session.commit()
+
+        with pytest.raises(SyncConflict, match="mutation id"):
+            service.apply(replace(original, **{field: value}))
+
+        assert service.apply(original).entity_version == 1
+
+
+def test_receipt_does_not_claim_unstored_payload_or_base_version_binding() -> None:
+    with build_session() as session:
+        service = SyncService(session)
+        original = customer_create_mutation()
+        first = service.apply(original)
+        session.commit()
+
+        # The legacy receipt stores neither the submitted payload nor base_version.
+        # A same-tuple replay acknowledges the old result without applying new data.
+        replay = service.apply(
+            replace(original, payload={"display_name": "Not applied"}, base_version=99)
+        )
+
+        assert replay == first
+        changes = service.pull_changes(
+            organization_id="org-1",
+            location_id="loc-1",
+            capabilities=frozenset({"*"}),
+            after_cursor=0,
+            limit=100,
+        )
+        assert len(changes.items) == 1
+        assert changes.items[0].payload["display_name"] == "Ana Rivera"
 
 
 def test_change_feed_cursor_is_incremental_and_tenant_scoped() -> None:
@@ -211,7 +260,8 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
                 base_version=1,
                 occurred_at=now,
                 payload={"transition": {"action": "start_diagnosis", "actor_id": "user-1"}},
-            )
+            ),
+            context=SyncApplicationContext(actor_id="user-1"),
         )
         session.commit()
 

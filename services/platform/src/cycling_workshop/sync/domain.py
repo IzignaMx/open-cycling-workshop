@@ -14,6 +14,13 @@ class SyncConflict(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
+class SyncApplicationContext:
+    """Trusted caller identity supplied by the server, never a wire payload."""
+
+    actor_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class MutationEnvelope:
     mutation_id: str
     entity_type: EntityType
