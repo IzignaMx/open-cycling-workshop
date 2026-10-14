@@ -444,7 +444,7 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
   quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
   quote_main_merge: 98394826884020d9de2498cab551120087dd5334
-  quote_migration_reserved: 0010
+  quote_migration_reserved: '0010'
   reservation_update: identity_administration_0008_priority_supersedes_earlier_quote_0008_reservation
   release_gates: unchanged
 
