@@ -366,3 +366,34 @@ test('sanitizes an injected clock failure', async () => {
     { message: 'Server context verification failed' },
   )
 })
+
+test('actual administration concrete multi-segment grants survive literally', async () => {
+  // Literal capabilities emitted by the actual FastAPI seeded administration identity.
+  const capabilities = [
+    'bicycles.read',
+    'bicycles.write',
+    'customers.read',
+    'customers.write',
+    'inventory.read',
+    'inventory.write',
+    'locations.create',
+    'locations.read',
+    'orders.read',
+    'orders.write',
+    'sync.pull',
+    'sync.push',
+    'users.credentials.reset',
+    'users.grants.write',
+    'users.read',
+    'users.sessions.revoke',
+    'users.write',
+  ]
+  const result = await request(setup(async () => response({ ...wire(), capabilities })))
+  assert.deepEqual(result.context.capabilities, capabilities)
+  assert.equal(result.context.snapshotProtocol, null)
+  assert.equal(result.state, 'BASELINE_REQUIRED')
+})
+for (const grant of ['users..read', 'users.credentials.*', '.users.read', 'users.read.', 'users'])
+  test(`concrete grant grammar rejects ${grant}`, async () => {
+    await assert.rejects(request(setup(async () => response({ ...wire(), capabilities: [grant] }))))
+  })
