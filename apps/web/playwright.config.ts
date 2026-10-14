@@ -34,6 +34,12 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: 'node ../../scripts/e2e/upgrade_fixture_server.mjs',
+      url: 'http://127.0.0.1:5174/__fixture/ready',
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
       command:
         'cd ../.. && uv run uvicorn cycling_workshop.runtime:app --app-dir services/platform/src --host 127.0.0.1 --port 8000',
       url: 'http://127.0.0.1:8000/health/ready',

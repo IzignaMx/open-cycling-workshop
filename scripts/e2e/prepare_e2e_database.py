@@ -20,6 +20,8 @@ E2E_USER_ID = "00000000-0000-7000-8000-000000000003"
 E2E_SECOND_LOCATION_ID = "00000000-0000-7000-8000-000000000004"
 E2E_SECOND_USER_ID = "00000000-0000-7000-8000-000000000005"
 E2E_OWNER_ID = "00000000-0000-7000-8000-000000000006"
+E2E_LEGACY_ORGANIZATION_ID = "00000000-0000-7000-8000-000000000101"
+E2E_LEGACY_LOCATION_ID = "00000000-0000-7000-8000-000000000102"
 E2E_USERNAME = "e2e-admin"
 E2E_PASSWORD = "ocwp-e2e-password"
 
@@ -145,6 +147,45 @@ def seed_browser_identity(database_url: str, *, authenticated: bool = False) -> 
         engine.dispose()
 
 
+def seed_legacy_upgrade_identity(database_url: str) -> None:
+    """Separate floor-zero synthetic tenant for the actual pinned old App/SW."""
+    from cycling_workshop.identity.models import UserRecord
+    from cycling_workshop.identity.roles import CAPABILITIES
+    from cycling_workshop.identity.security import PasswordService
+    from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+
+    engine = create_engine(normalize_database_url(database_url))
+    try:
+        with Session(engine) as session:
+            session.add(
+                OrganizationRecord(id=E2E_LEGACY_ORGANIZATION_ID, name="Disposable old App upgrade")
+            )
+            session.add(
+                LocationRecord(
+                    id=E2E_LEGACY_LOCATION_ID,
+                    organization_id=E2E_LEGACY_ORGANIZATION_ID,
+                    name="Taller anterior E2E",
+                )
+            )
+            session.flush()
+            session.add(
+                UserRecord(
+                    id="00000000-0000-7000-8000-000000000103",
+                    organization_id=E2E_LEGACY_ORGANIZATION_ID,
+                    location_id=E2E_LEGACY_LOCATION_ID,
+                    username="e2e-legacy",
+                    display_name="Usuario anterior E2E",
+                    password_hash=PasswordService().hash(E2E_PASSWORD),
+                    capabilities=sorted(CAPABILITIES),
+                    is_active=True,
+                    session_version=1,
+                )
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+
 def seed_historical_workshop_records(database_url: str) -> None:
     """Real REST writes while this disposable organization remains at floor 0."""
     from cycling_workshop.app import create_app
@@ -210,6 +251,7 @@ def main() -> int:
     reset_schema(database_url)
     run_migrations(database_url)
     seed_browser_identity(database_url, authenticated=True)
+    seed_legacy_upgrade_identity(database_url)
     print(f"E2E database ready for organization {E2E_ORGANIZATION_ID}")
     return 0
 
