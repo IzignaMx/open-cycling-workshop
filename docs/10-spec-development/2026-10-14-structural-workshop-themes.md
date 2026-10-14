@@ -112,6 +112,38 @@ Runtime run `38551340068` and Security/DCO completed successfully for this first
 head. Runtime proof includes the real local stack and all three ARM64 image builds;
 it does not qualify physical ARM hardware or make the failed browser suite green.
 
+## Combined hosted checkpoint and full-page review
+
+PR #28 head `1ab3554d990e0869bcbae88515549c47d39f20e8` and tested merge
+`9fb49f64fbd106e0d1539d71c7c48695b6d90ae5` both resolve to tree
+`73bc2e41cf91c1b4134f1c3f14b2c72d55bc394b`. CI `38553639997`, job
+`115817310407`, completed successfully: 27 checks, zero blockers, 812 Python
+passed/three explained skips, 98 frontend tests, and 54 browser executions
+(22 direct, 10 retry-free sync repeats, 22 aggregate). Qualification artifact
+`11887584318` and browser artifact `11887599369` were downloaded and SHA-256
+verified. Runtime `38553639955` and Security `38553639964` also passed after
+unchanged, targeted infrastructure retries: ARM web cache export returned 503;
+Trivy database mirror returned 404 before scanning. No image build/scanner gate
+was disabled. Runtime artifact `11888315475` contains the real-stack evidence.
+
+Independent inspection of the full-page screenshots confirmed the corrected
+narrow navigation/monogram and found three remaining visual defects: shared UI
+Button utility styles were absent from the production CSS, Conflict Center's
+refresh label shrank/wrapped, and the active navigation label became unreadable
+in forced colors. Passing automation was therefore insufficient for completion.
+
+The next correction explicitly registers the shared workspace UI source using
+[Tailwind's supported source directive](https://tailwindcss.com/docs/detecting-classes-in-source-files),
+keeps the generic form-font reset in the base cascade layer, wraps the conflict
+header without shrinking its refresh button, and uses Canvas/LinkText with a
+Highlight border/underline for active high-contrast navigation. The three missing
+accent/on-accent/hover utility selectors were absent in the local production
+bundle before this change and present after rebuilding. Browser assertions now
+cover rendered fill/text/padding/radius/weight and 44/56px customer/order buttons,
+a separate login keyboard/busy-disabled journey, an unbroken refresh label and
+distinct forced-colors foreground/background. There are now 23 collected cases;
+the new tree still needs exact-head hosted execution and screenshot review.
+
 ## Remaining work
 
 Shared organization/workshop branding, server persistence, permissioned editing

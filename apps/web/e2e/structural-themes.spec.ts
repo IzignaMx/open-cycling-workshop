@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 
 const THEMES = [
   { id: 'banco', label: 'Banco de trabajo', palette: 'bosque' },
@@ -215,6 +215,48 @@ async function attachScreenshot(page: Page, info: TestInfo, name: string, fullPa
   await info.attach(name, { path, contentType: 'image/png' })
 }
 
+async function assertSharedButtonPresentation(button: Locator, minimum = 44) {
+  const appearance = await button.evaluate((element) => {
+    const actual = getComputedStyle(element)
+    const probe = document.createElement('span')
+    probe.style.cssText = 'background: var(--ocwp-color-accent); color: var(--ocwp-color-on-accent)'
+    element.append(probe)
+    const expected = getComputedStyle(probe)
+    const result = {
+      background: actual.backgroundColor,
+      foreground: actual.color,
+      expectedBackground: expected.backgroundColor,
+      expectedForeground: expected.color,
+      paddingX: parseFloat(actual.paddingLeft),
+      paddingY: parseFloat(actual.paddingTop),
+      radius: parseFloat(actual.borderTopLeftRadius),
+      weight: Number(actual.fontWeight),
+    }
+    probe.remove()
+    return result
+  })
+  expect(appearance.background).toBe(appearance.expectedBackground)
+  expect(appearance.foreground).toBe(appearance.expectedForeground)
+  expect(appearance.background).not.toBe(appearance.foreground)
+  expect(appearance.paddingX).toBeGreaterThanOrEqual(16)
+  expect(appearance.paddingY).toBeGreaterThanOrEqual(8)
+  expect(appearance.radius).toBeGreaterThanOrEqual(4)
+  expect(appearance.weight).toBeGreaterThanOrEqual(600)
+  const box = await button.boundingBox()
+  expect(box!.height).toBeGreaterThanOrEqual(minimum)
+  expect(box!.width).toBeGreaterThanOrEqual(minimum)
+}
+
+async function assertSingleLine(control: Locator) {
+  expect(
+    await control.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      return range.getClientRects().length
+    }),
+  ).toBe(1)
+}
+
 for (const theme of THEMES) {
   test(`${theme.id}: keyboard preserves drafts, history, focus and v3 pending queue offline`, async ({
     page,
@@ -264,6 +306,10 @@ for (const theme of THEMES) {
     await choice.press('Escape')
     await expect(page.getByRole('button', { name: 'Personalización', exact: true })).toBeFocused()
     await expect(page.locator('#personalization-panel')).toBeHidden()
+    for (const name of ['Guardar cliente', 'Guardar orden']) {
+      await assertSharedButtonPresentation(page.getByRole('button', { name, exact: true }))
+    }
+    await assertSingleLine(page.getByRole('button', { name: 'Actualizar', exact: true }))
     const navigation = await page.locator('.workshop-navigation').boundingBox()
     const main = await page.locator('#workshop-content').boundingBox()
     expect(navigation).not.toBeNull()
@@ -345,12 +391,11 @@ test.describe('touch and narrow reflow', () => {
           .getByRole('navigation', { name: 'Navegación del taller' })
           .getByRole('link')
           .all()) {
-          const textLines = await link.evaluate((element) => {
-            const range = document.createRange()
-            range.selectNodeContents(element)
-            return range.getClientRects().length
-          })
-          expect(textLines).toBe(1)
+          await assertSingleLine(link)
+        }
+        await assertSingleLine(page.getByRole('button', { name: 'Actualizar', exact: true }))
+        for (const name of ['Guardar cliente', 'Guardar orden']) {
+          await assertSharedButtonPresentation(page.getByRole('button', { name, exact: true }), 56)
         }
         const monogram = await page.locator('.workshop-monogram').boundingBox()
         expect(monogram!.width).toBeGreaterThanOrEqual(36)
@@ -368,6 +413,14 @@ test.describe('touch and narrow reflow', () => {
       expect(await settings.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
       await expect(settings).toHaveCSS('outline-style', 'solid')
       await expect(settings).toHaveCSS('outline-width', '3px')
+      const activeLink = page.getByRole('link', { name: 'Resumen', exact: true })
+      const activeColors = await activeLink.evaluate((element) => ({
+        text: getComputedStyle(element).color,
+        background: getComputedStyle(element).backgroundColor,
+      }))
+      expect(activeColors.text).not.toBe(activeColors.background)
+      await expect(activeLink).toHaveCSS('border-top-width', '2px')
+      await expect(activeLink).toHaveCSS('text-decoration-line', 'underline')
       await attachScreenshot(page, info, `${theme.id}-mobile-forced-colors-keyboard`)
     })
   }
@@ -564,4 +617,40 @@ test('partial reads hide bicycle association and customer conflicts without chan
   expect(transition?.payload).toEqual({
     transition: { action: 'mark_ready', actor_id: SCOPE.userId, note: null },
   })
+})
+
+test('shared login button keeps its production styling, keyboard focus and disabled busy state', async ({
+  page,
+}, info) => {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/auth/login', async (route) => {
+    await gate
+    await route.fulfill({ status: 401, json: { detail: 'Synthetic login rejection' } })
+  })
+  try {
+    await page.goto('/')
+    const login = page.getByRole('button', { name: 'Iniciar sesión', exact: true })
+    await assertSharedButtonPresentation(login)
+    await page.getByLabel('Organización', { exact: true }).fill('synthetic-org')
+    await page.getByLabel('Usuario', { exact: true }).fill('synthetic-user')
+    await page.getByLabel('Contraseña', { exact: true }).fill('synthetic-test-only')
+    await page.keyboard.press('Tab')
+    await expect(login).toBeFocused()
+    expect(await login.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
+    await expect(login).toHaveCSS('outline-style', 'solid')
+    await attachScreenshot(page, info, 'login-shared-button-keyboard')
+    await page.keyboard.press('Enter')
+    const busy = page.getByRole('button', { name: 'Ingresando…', exact: true })
+    await expect(busy).toBeDisabled()
+    await expect(busy).toHaveCSS('opacity', '0.5')
+    await assertSharedButtonPresentation(busy)
+    await attachScreenshot(page, info, 'login-shared-button-disabled')
+    release()
+    await expect(login).toBeEnabled()
+  } finally {
+    release()
+  }
 })
