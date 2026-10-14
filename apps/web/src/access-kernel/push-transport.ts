@@ -1,6 +1,6 @@
 import { BoundedHttpError, cancelResponse, readBoundedJson } from './bounded-http.js'
 import { canonicalJson, validateResults } from './operations.js'
-import { validateVerifiedContext } from './context.js'
+import { principalKey, validateVerifiedContext } from './context.js'
 import type { BaselineSession } from './baseline-coordinator.js'
 import type { DispatchBatch } from './types.js'
 import type { PushResponse } from '../sync/types.js'
@@ -87,6 +87,12 @@ export function createPushTransport(options: {
         identity.organizationId !== context.principal.organizationId ||
         identity.userId !== context.principal.userId ||
         identity.selectedLocationId !== context.selectedLocationId ||
+        identity.deviceGeneration !== batch.ticket.deviceGeneration ||
+        identity.tabAttemptId !== batch.ticket.tabAttemptId ||
+        batch.ticket.authorizationEpoch !== context.authorizationEpoch ||
+        batch.ticket.principalKey !== principalKey(context.principal) ||
+        (identity.expectedAuthorizationEpoch !== undefined &&
+          identity.expectedAuthorizationEpoch !== context.authorizationEpoch) ||
         canonicalJson(batch.ticket) !== canonicalJson(source.ticket) ||
         !bearer ||
         /\s/.test(bearer) ||
@@ -107,6 +113,8 @@ export function createPushTransport(options: {
             'occurred_at',
             'payload',
           ]) ||
+          op.authoredDatasetIncarnation !== context.datasetIncarnation ||
+          op.principalKey !== batch.ticket.principalKey ||
           op.envelope.organization_id !== identity.organizationId ||
           op.envelope.location_id !== identity.selectedLocationId
         )

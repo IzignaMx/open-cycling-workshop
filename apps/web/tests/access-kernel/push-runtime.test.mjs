@@ -9,7 +9,7 @@ const ticket = {
   deviceGeneration: 1,
   tabAttemptId: 'tab',
   partitionId: 'part',
-  principalKey: 'principal',
+  principalKey: JSON.stringify(['https://example.test/api/v1', 'org', 'user']),
   authorizationEpoch: 'a'.repeat(43),
 }
 const context = {
@@ -46,6 +46,7 @@ const envelope = {
   payload: { display_name: 'Test' },
 }
 const operation = {
+  principalKey: ticket.principalKey,
   mutationId: 'm',
   entityId: 'c',
   entityType: 'customer',
@@ -203,4 +204,32 @@ test('whole refusal is typed and status-paired; oversized JSON never parsed', as
       (e) => e instanceof PushTransportError && e.code === code,
     )
   }
+})
+
+test('transport rejects ticket epoch or incarnation mismatches before any HTTP', async () => {
+  let calls = 0
+  const transport = createPushTransport({
+    apiRealm: context.principal.apiRealm,
+    now: () => Date.parse(context.verifiedAt),
+    fetch: async () => {
+      calls++
+      return response(result)
+    },
+  })
+  const request = { ...source(), batch: structuredClone(batch) }
+  request.ticket = { ...request.ticket, authorizationEpoch: 'b'.repeat(43) }
+  request.batch.ticket = request.ticket
+  await assert.rejects(
+    transport.push(request),
+    (e) => e instanceof PushTransportError && e.code === 'invalid_request',
+  )
+  assert.equal(calls, 0)
+  const wrongIncarnation = { ...source(), batch: structuredClone(batch) }
+  wrongIncarnation.batch.operations[0].authoredDatasetIncarnation =
+    '00000000-0000-4000-8000-000000000099'
+  await assert.rejects(
+    transport.push(wrongIncarnation),
+    (e) => e instanceof PushTransportError && e.code === 'invalid_request',
+  )
+  assert.equal(calls, 0)
 })
