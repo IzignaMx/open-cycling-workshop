@@ -72,8 +72,21 @@ reported **1,632 passed, 194 skipped, 11 failed**. All failures are the dependen
 security regression file: four PyJWT hardening cases, six malformed-Host cases
 and the request-path authority case. Its installed Starlette 0.52.1/FastAPI 0.128.8
 predate the current locked remediation (Starlette 1.3.1). The shared environment
-was not modified. This is not a green combined Python qualification; the current
-locked environment and hosted PostgreSQL runs remain required.
+was not modified. A subsequent full rerun with the already-qualified read-only
+FastAPI 0.133.1/Starlette 1.3.1/PyJWT 2.15.1 environment and pinned Gitleaks binary
+passed **1,648 tests**, with **189 explicit PostgreSQL skips**. Import location was
+verified against this worktree. The initial failures therefore remain recorded
+as a stale-environment result; the corrected local suite is green. Hosted
+PostgreSQL and native-browser qualification remain required.
+
+Independent review of source commit
+`280391e15c70605bb3b8f5cd06da27494c4363db` (tree
+`07cea6a882e3a513cf83057849aec43a6f468dc7`) found no actionable correctness or
+security issue. It independently reran all 18 focused tests, touched static
+checks, web/offline types and strict E2E compile, and mechanically confirmed all
+other old-client acceptance code and historical build inputs remain unchanged.
+The later documentation update records completed evidence only; the reviewed
+three executable/test files are unchanged.
 
 Hosted execution of the complete original journey is still required. Synthetic
 HTTP observation tests do not prove native service-worker takeover, old-tab late
