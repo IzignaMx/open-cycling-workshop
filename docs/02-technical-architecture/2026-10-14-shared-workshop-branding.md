@@ -68,26 +68,26 @@ policy revision. A brand name/palette/version change never rotates authority.
 
 ## Profile transport and persistence
 
-SQL migration0011 adds `workshop_brand_profiles`, keyed by organization/location
+SQL migration 0011 adds `workshop_brand_profiles`, keyed by organization/location
 with composite tenant FKs, descriptor consistency constraints and positive saved
-versions. Absent profiles have explicit version0 responses; first save is CAS0.
-The unimplemented quote reservation moves to SQL0012. No applied migration is
+versions. Absent profiles have explicit version 0 responses; first save is CAS 0.
+The unimplemented quote reservation moves to SQL 0012. No applied migration is
 rewritten; destructive downgrade is refused before DDL/DML.
 
-GET/PUT `/api/v1/locations/{location_id}/branding` use protocol1 admission and closed
+GET/PUT `/api/v1/locations/{location_id}/branding` use protocol 1 admission and closed
 DTOs. PUT contains only expected_version, display_name, palette_id and nullable
 logo_png_base64. Name normalization is NFC/trim, 1–160 Unicode codepoints, <=640
-UTF8 bytes, no Unicode control/private/surrogate/unassigned categories. Version0
+UTF8 bytes, no Unicode control/private/surrogate/unassigned categories. Version 0
 normalizes the permitted location label for display only and falls back to Taller
 when old tenancy values cannot meet this contract.
 
-Responses repeat organization/location/incarnation, schema1/version, name/palette,
+Responses repeat organization/location/incarnation, schema 1/version, name/palette,
 update metadata and explicit logo states. `none` has no descriptor, `available`
 embeds canonical bytes, `unavailable` retains the descriptor with a safe diagnostic
 and no bytes. Missing/corrupt assets never become deliberate removal or reuse old
 image bytes. Write-only success returns only the newly submitted replacement; read
 permission is independently required for display/cache. Request/response envelopes
-are bounded to384KiB, PNG to256KiB. Streaming checks do not trust Content-Length.
+are bounded to 384 KiB, PNG to 256 KiB. Streaming checks do not trust Content-Length.
 All paths, including validation/auth failures, redirects, unsupported methods and
 unexpected errors, carry no-store. Validation failures are constant bounded
 messages rather than echoed input arrays.
@@ -103,10 +103,10 @@ an automatic retry or inferred success from a matching later read.
 
 ## Assets and recovery
 
-Pillow12.3.0 is pinned in the lock. PNG framing/CRC/chunk/dimension/ancillary checks
+Pillow 12.3.0 is pinned in the lock. PNG framing/CRC/chunk/dimension/ancillary checks
 precede full isolated decode/re-encode. One killable child per API worker has no
-waiting queue, a two-second wall limit and a128MiB Linux limit. Canonical output is
-metadata-free 8-bit RGB/RGBA PNG, <=512px per side. No SVG, URLs, animation or APNG.
+waiting queue, a two-second wall limit and a 128 MiB Linux limit. Canonical output is
+metadata-free 8-bit RGB/RGBA PNG, <=512 px per side. No SVG, URLs, animation or APNG.
 See [decoder/storage evidence](../03-security-privacy/2026-10-14-branding-image-storage.md).
 
 Organization namespaces derive from server-validated IDs. Opened directory/file
@@ -125,11 +125,11 @@ metadata checks, then the established expected-incarnation recovery fence before
 API reopening. No tenant or browser journal is excluded. Checksums establish
 integrity, not authenticity. See the [operator procedure](../07-operations/2026-10-14-branding-recovery.md).
 
-Shared branding does not implicitly activate a protocol-floor0 organization.
-Full-instance bundles preserve every floor0/floor1 tenant, including tenants with
-no branding profile. By default restore refuses any floor0 tenant before changing
+Shared branding does not implicitly activate a protocol-floor 0 organization.
+Full-instance bundles preserve every floor 0/floor 1 tenant, including tenants with
+no branding profile. By default restore refuses any floor 0 tenant before changing
 either target. `verify --show-legacy-cutover` is read-only. A separate, sensitive
-operator decision may supply the exact complete set of floor0 organization/source-
+operator decision may supply the exact complete set of floor 0 organization/source-
 incarnation pairs and acknowledge drained old writers, raw legacy preservation
 and existing audited cutover prerequisites. Missing, extra, duplicate or stale
 pairs fail before target modification. All restored metadata and asset bytes are
@@ -141,8 +141,8 @@ installation transition.
 
 ## Authenticated offline display
 
-Only the separate authenticated database gains schema7 `brandingSnapshots`; legacy
-`ocwp` is not upgraded. Future quote local schema is8. Branding is not an operational
+Only the separate authenticated database gains schema 7 `brandingSnapshots`; legacy
+`ocwp` is not upgraded. Future quote local schema is 8. Branding is not an operational
 sync entity and never enters journals, receipts, baseline records or mutation
 transports. The dedicated cache repeats realm/org/user/location/epoch/policy/
 incarnation/partition/lease and validates canonical data. Current device ownership

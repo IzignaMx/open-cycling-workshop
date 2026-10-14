@@ -20,8 +20,10 @@ are implemented; exact integrated evidence remains pending.
 - [ ] Same-snapshot database+assets restore into fresh targets, authenticated
       decoded-logo byte comparison, corrupt-latest refusal/earlier recovery and
       stale-token/checkpoint rejection, including mixed-floor operator safeguards.
-- [ ] Docker private-volume ownership/runtime, exact dependency audit and ARM64
-      builds/resource tests. Cross-building is not Raspberry hardware qualification.
+- [ ] Docker private-volume API save/read, restart ownership/persistence and fresh
+      restored byte proof, exact dependency audit and ARM64 builds/QEMU decoder
+      smoke. Neither cross-building nor emulation qualifies native Raspberry
+      timing/memory or physical-device behavior.
 - [ ] Real deployment/content/grant adoption only after separate operator authority;
       no real account, credential, image or installation was changed by implementation.
 - [ ] Physical Windows/Android, screen-reader/glare and realistic-capacity recovery

@@ -7,6 +7,8 @@
 - Freeze historical wildcard/catalog/role-alias semantics, preserve established
   owner edits, and provide explicit synthetic-tested grant adoption.
 - Add durable private assets and same-snapshot database-plus-logo recovery.
+  Author separate named-volume API/restart/restored-byte and emulated ARM64
+  decoder probes while preserving existing runtime and browser recovery checks.
   Native browser, PostgreSQL/restore, Docker/ARM and actual visual qualification
   remain pending for this exact increment; no full MVP or production claim.
 

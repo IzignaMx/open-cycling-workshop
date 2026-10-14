@@ -32,8 +32,8 @@ not unresolved main39 failures.
 The [ADR](../02-technical-architecture/2026-10-14-shared-workshop-branding.md)
 freezes compatible v1/v2 catalog semantics, explicit-only grants, personal
 inheritance, independent profile authority, canonical PNG limits, private durable
-assets and exact admitted offline cache ownership. SQL head is0011; authenticated
-local schema is7; future quote reservations are SQL0012/local8. Existing operational
+assets and exact admitted offline cache ownership. SQL head is 0011; authenticated
+local schema is 7; future quote reservations are SQL 0012/local 8. Existing operational
 policy remains `ocwp-access-baseline-2` with unchanged prior effective authority.
 
 The [recovery procedure](../07-operations/2026-10-14-branding-recovery.md)
@@ -61,7 +61,7 @@ final clean-commit certificate.
 - Ruff, Python format, mypy (99 source files), ESLint, Prettier, current PWA build
   and pinned legacy App/service-worker build passed. Whole-app TypeScript also
   passed separately after fixing this worktree's external dependency links.
-- Pillow12.3.0 is pinned in `uv.lock`. The isolated frozen dependency environment
+- Pillow 12.3.0 is pinned in `uv.lock`. The isolated frozen dependency environment
   includes it; no other worktree's dependency environment was changed. The
   [decoder/storage evidence](../03-security-privacy/2026-10-14-branding-image-storage.md)
   records 41 active Linux packages with zero known audit findings, actual x86_64
@@ -76,7 +76,7 @@ coordinator and hosted reports must identify their own commit/tree and results.
 ## Independent source review
 
 Frontend/runtime/cache/preference/admin review found and reproduced two lifecycle
-issues: current editor403 did not retire operational admission, and a delayed
+issues: current editor 403 did not retire operational admission, and a delayed
 older response could overwrite a newer accepted profile after asynchronous
 validation. Both were fixed and independently rerun. The settings navigation
 anchor was also corrected to its unconditional target. Final review: 175 targeted
@@ -88,10 +88,18 @@ Backend/asset/recovery review covered through `55b6535` and strengthened orderin
 test blob `814d91f5666fd6dad4edfd628b89bced800fa53b`. It closed nested-directory
 fsync, unsafe recovery path/file ownership, complete mixed-floor recovery and
 atomic activation-incarnation consent findings. The CI wrapper now requires two
-fresh distinct safe recovery proofs, floor1 and mixed-floor, with activation
-counts0/2 and incarnation rotations2/3. Final review found no remaining blocking
+fresh distinct safe recovery proofs, floor 1 and mixed-floor, with activation
+counts 0/2 and incarnation rotations 2/3. Final review found no remaining blocking
 source issue. Reports and exact source manifests are retained with the handoff;
 source review is not native runtime proof.
+
+Two bounded qualification-source additions followed that implementation checkpoint:
+the QEMU image probe (`d879bc8`, 34 helper/mock tests) and the named-volume Compose
+probe (`c29cf4a`, 40 focused tests; the complete operations suite passed 213 with
+three explicit PostgreSQL skips). Both retain separate authored/runtime evidence
+boundaries. These counts overlap other focused runs and are not added to the
+full-suite total. Final independent review and exact-source handoff accompany
+these additions; no container execution is inferred from the mocked tests.
 
 ## Authored or collected, not locally executed
 
@@ -99,15 +107,24 @@ source review is not native runtime proof.
   desktop/tablet/320px, light/dark, 200% CSS enlargement and forced-colors coverage
   includes 36 labelled synthetic-logo captures requiring actual pixel review.
 - Native access-kernel suite: fourteen cases collected, including three new
-  schema6→7/cache/admission cases. Fake IndexedDB is not native-browser evidence.
+  schema 6→7/cache/admission cases. Fake IndexedDB is not native-browser evidence.
 - Real PostgreSQL tests cover migrations, both authority lock orders, expiry while
   blocked, coherent read-first logo bytes and independent tenant progress.
-- `bash scripts/ci/run_branding_recovery.sh` requires disposable PostgreSQL18.4,
+- `bash scripts/ci/run_branding_recovery.sh` requires disposable PostgreSQL 18.4,
   both restore variants and authenticated returned-logo byte checks, plus corrupt
   latest-generation refusal, earlier recovery, stale token/checkpoint rejection
   and explicit old-client refusal. It does not publish dump/logo bytes as CI artifacts.
-- Docker volume ownership and ARM64 builds/decoder runtime remain exact-head gates.
-  Cross-building alone does not qualify ARM execution or Raspberry hardware.
+- The disposable Compose runtime adds a separate synthetic branding actor and
+  named-volume save/read, API restart/persistence and fresh database-plus-assets
+  restored-byte probe. The original wildcard actor, eleven runtime checks and
+  browser recovery handshake remain separate. These authored checks require
+  actual Docker execution; source and mocked orchestration do not prove durability.
+- The [ARM64 probe](../07-operations/2026-10-14-branding-arm64-probe.md) loads the
+  actual API image under QEMU and checks installed architecture, non-root identity,
+  unchanged decoder limits, exact pixels and metadata removal. Only bounded JSON
+  tied to source SHA and image ID is uploaded. QEMU failure is not retried with
+  weaker limits. Emulated execution, cross-building and native Raspberry resource
+  qualification are distinct evidence; none establishes physical-device behavior.
 
 Local blockers: no configured PostgreSQL test/E2E URL, no Docker or PostgreSQL
 client/server tools, and managed Chromium navigation restrictions. No browser
