@@ -1,11 +1,12 @@
+import type { BrandingLogoResponse, BrandingProfileResponse } from '@ocwp/api-client'
 import { PALETTES } from '../../personalization/catalog.js'
 import { isDatasetIncarnation } from '../../access-kernel/context.js'
 
 export const MAX_BRANDING_BODY_BYTES = 393216
 export const MAX_BRANDING_PNG_BYTES = 262144
 export type { BrandingPutRequest } from '@ocwp/api-client'
-export type BrandingLogo = import('@ocwp/api-client').BrandingLogoResponse
-export type BrandingProfile = import('@ocwp/api-client').BrandingProfileResponse
+export type BrandingLogo = BrandingLogoResponse
+export type BrandingProfile = BrandingProfileResponse
 function invalid(): never {
   throw new Error('Invalid branding profile')
 }
