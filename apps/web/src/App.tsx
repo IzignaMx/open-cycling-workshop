@@ -1,4 +1,8 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
+import { hasUnsentForms } from './features/draft-state.js'
+import { AdministrationPanel } from './features/administration/AdministrationPanel.js'
+import { AdministrationController } from './features/administration/controller.js'
+import './features/administration/administration.css'
 import { Button } from '@ocwp/ui'
 import { LoginForm } from './auth/LoginForm.js'
 import { CustomerQuickCreate } from './features/customers/CustomerQuickCreate.js'
@@ -11,6 +15,27 @@ import type { WorkshopController } from './runtime/controller.js'
 
 export function App({ runtime }: { runtime: WorkshopController }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot)
+  const leaveWorkshop = (action: () => Promise<void>) => {
+    if (
+      hasUnsentForms(document) &&
+      !window.confirm(
+        '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
+      )
+    )
+      return
+    void action()
+  }
+  const administration = useMemo(() => new AdministrationController(runtime), [runtime])
+  useLayoutEffect(() => {
+    administration.setLogoutGuard(
+      () =>
+        !hasUnsentForms(document) ||
+        window.confirm(
+          '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
+        ),
+    )
+  }, [administration])
+  useEffect(() => () => administration.dispose(), [administration])
   useEffect(() => {
     void runtime.start()
     const online = () => void runtime.reconnect(),
@@ -47,7 +72,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
               <li key={location.location_id}>
                 <Button
                   type="button"
-                  onClick={() => void runtime.selectWorkshop(location.location_id)}
+                  onClick={() => leaveWorkshop(() => runtime.selectWorkshop(location.location_id))}
                 >
                   {location.name}
                 </Button>
@@ -63,11 +88,12 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 Más talleres
               </Button>
             ) : null}
-            <Button type="button" onClick={() => void runtime.logout()}>
+            <Button type="button" onClick={() => leaveWorkshop(() => runtime.logout())}>
               Cerrar esta sesión
             </Button>
           </div>
           {legacy}
+          <AdministrationPanel controller={administration} selectedLocationId={null} />
         </section>
       </main>
     )
@@ -81,7 +107,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             <>
               <h2>Preparando el taller</h2>
               <p role="status">{state.message}</p>
-              <Button type="button" onClick={() => void runtime.logout()}>
+              <Button type="button" onClick={() => leaveWorkshop(() => runtime.logout())}>
                 Cancelar y cerrar sesión
               </Button>
             </>
@@ -99,13 +125,14 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 </Button>
               ) : null}
               {state.phase === 'verifying' ? (
-                <Button type="button" onClick={() => void runtime.logout()}>
+                <Button type="button" onClick={() => leaveWorkshop(() => runtime.logout())}>
                   Cancelar
                 </Button>
               ) : null}
             </>
           )}
           {legacy}
+          <AdministrationPanel controller={administration} selectedLocationId={null} />
         </section>
       </main>
     )
@@ -279,17 +306,18 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             Sincronizar ahora
           </Button>
           {state.user.location_id === null ? (
-            <Button type="button" onClick={() => void runtime.changeWorkshop()}>
+            <Button type="button" onClick={() => leaveWorkshop(() => runtime.changeWorkshop())}>
               Cambiar taller
             </Button>
           ) : null}
-          <Button type="button" onClick={() => void runtime.logout()}>
+          <Button type="button" onClick={() => leaveWorkshop(() => runtime.logout())}>
             Cerrar esta sesión
           </Button>
-          <Button type="button" disabled={!navigator.onLine} onClick={() => void runtime.revoke()}>
-            Revocar todas las sesiones
-          </Button>
         </section>
+        <AdministrationPanel
+          controller={administration}
+          selectedLocationId={context.selectedLocationId}
+        />
         <footer className="workshop-footer">
           OCWP · Local first · Los cambios pendientes se conservan en este dispositivo.
         </footer>

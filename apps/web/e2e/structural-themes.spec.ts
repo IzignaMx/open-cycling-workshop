@@ -387,7 +387,33 @@ test("same-workshop restricted user cannot render another reader's cached data o
     'customers.write',
     'orders.write',
   ])
-  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  const logout = page.getByRole('button', { name: 'Cerrar esta sesión', exact: true })
+  const expectedPrompt =
+    '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.'
+  const cancellation = page.waitForEvent('dialog')
+  const cancelledClick = logout.click()
+  const cancelDialog = await cancellation
+  expect(cancelDialog.type()).toBe('confirm')
+  expect(cancelDialog.message()).toBe(expectedPrompt)
+  await cancelDialog.dismiss()
+  await cancelledClick
+  await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue(
+    'Borrador privado de cliente',
+  )
+  await expect(page.getByLabel('Problema reportado')).toHaveValue('Borrador privado de orden')
+  const cancelled = await kernelSnapshot(page)
+  expect(cancelled.context.principal.userId).toBe(original.context.principal.userId)
+  expect(cancelled.partition.partitionId).toBe(original.partition.partitionId)
+  expect(cancelled.journal).toEqual(original.journal)
+  const confirmation = page.waitForEvent('dialog')
+  const confirmedClick = logout.click()
+  const confirmDialog = await confirmation
+  expect(confirmDialog.type()).toBe('confirm')
+  expect(confirmDialog.message()).toBe(expectedPrompt)
+  await confirmDialog.accept()
+  await confirmedClick
+  await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible()
+
   await page.context().setOffline(false)
   await login(page, restricted, undefined, 'local-only')
   await openSettings(page)

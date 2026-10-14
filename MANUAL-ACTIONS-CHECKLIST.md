@@ -2,7 +2,34 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
-> **2026-10-14 update:** The historical summary below does not qualify new
+## Current qualification summary · 2026-10-14
+
+The authoritative inherited source baseline is main38
+`79cb4055aeb34344f2182d77e244c8187e9bb71b`. Its authenticated client C **has
+executed and passed** exact postmerge CI/browser/native qualification in
+[38630382271](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382271),
+the eleven-check disposable runtime and isolated restore in
+[38630382283](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382283),
+and security in
+[38630382252](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38630382252).
+See `inherited_base_ci`, `inherited_base_runtime`, and `inherited_base_security`
+in the [current administration evidence](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
+Earlier C source-checkpoint notes and unchecked hosted browser/restore items below
+are historical requests for evidence, subsequently satisfied for this exact
+baseline. They do not mean those main38 checks remain unexecuted. Actual
+installation changes, real-operator recovery, physical Windows/Android and manual
+screen-reader evidence remain open. Cross-built ARM64 images are not hardware
+qualification. The new administration source is a separate candidate. Its fourth native run
+passed 42 of 43 cases, including user creation/grants and four-theme reflow with
+expanded-label focus. The isolated scene-matrix case stopped before its first
+capture because a selected radio was asserted after its panel was hidden. The
+fixture ordering correction retains all checks and awaits a new exact-tree full
+native run and actual state-matrix pixel review. Earlier contaminated images
+remain diagnostic, not complete visual-state qualification. No full MVP, production installation or release certification
+is claimed.
+
+> **Historical pre-main38 2026-10-14 update:** The historical summary below does not qualify new
 > increments. The bounded access-administration API has separate exact-head
 > PostgreSQL/upgrade and browser-isolation rollout gates in the
 > [current operator section](#2026-10-14--local-account-administration-operator-gates).
@@ -789,3 +816,22 @@ new domain breadth remain later increments. See the
 The [applicability and evidence record](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md)
 accounts for all original 19 advisories, the bounded compatible upgrade and
 the advisory with an unset patched-version field. No finding was suppressed.
+
+## 2026-10-14 · Connected administration UI qualification
+
+- [ ] Obtain exact integrated-head CI for the connected account/runtime facade,
+      users/permissions/locations/self-session UI and all existing offline/probe
+      regressions. Unit/emulator checks do not qualify native storage or sessions.
+- [ ] Execute the actual-production administration browser journeys against
+      disposable floor1 PostgreSQL; keep direct, repeat and aggregate artifacts
+      separate. Verify zero-location/no-sync accounts and unconfirmed commands.
+- [ ] Inspect actual four-theme administration screenshots and prove mounted
+      drafts/focus, synchronous credential cleanup, keyboard/reflow/zoom/forced
+      colors. Source regex checks and axe are partial accessibility evidence.
+- [ ] Keep the pinned old-client/service-worker preservation and eleven-check
+      runtime/restore gates on their own exact-tree evidence. Never clear local
+      work, infer authors or replay ambiguous commands as a qualification shortcut.
+
+No real accounts, passwords, first-owner command, installation update or deployment
+was performed. Existing physical-device, screen-reader and operator recovery gates
+remain open. See the [evidence record](docs/10-spec-development/2026-10-14-connected-administration-ui.md).

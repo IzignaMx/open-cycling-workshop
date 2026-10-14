@@ -1,5 +1,52 @@
 # Changelog
 
+## Unreleased · Visible theme verification order
+
+- Verify the selected theme radio before closing its panel, retaining keyboard
+  focus-return and exact shell-theme assertions. Fourth hosted run passed 42/43;
+  full native and isolated state-matrix visual qualification remains pending.
+
+## Unreleased · Confirmed administration drafts and visual scene isolation
+
+- Mark retained administration drafts clean only after an exact current confirmed
+  receipt for their unchanged local revision; preserve newer edits and uncertainty.
+- Verify independent themed visual states, intact navigation words and preserved
+  focus after label expansion. The prior 41/43 native result remains diagnostic;
+  exact corrected native and pixel qualification is still pending.
+
+## Unreleased · Administration role locators and enlarged-layout readability
+
+- Target the exact accessible role combobox in three administration journeys.
+  Preserve role values and security assertions after the second hosted run
+  passed 41 of 43 cases; complete native and visual qualification remains pending.
+- Reflow operational metrics and the compact header from actual available width,
+  preventing fragmented words under CSS enlargement while preserving theme DOM.
+  Add four-theme complete-word/identity geometry checks and stable full-page capture.
+
+## Unreleased · Connected administration browser corrections
+
+- Preserve the native fetch receiver for administration requests; keep exact
+  captures and all request/refusal checks unchanged.
+- Guard navigation using current unsent form values rather than past input
+  activity, including selector transitions. Saved work no longer produces a
+  stale discard prompt; real drafts still require a deliberate decision.
+- Preserve all 43 browser journeys, explicitly test cancel/accept for private
+  drafts, and qualify 200% CSS zoom at the established 320 CSS-pixel reflow width.
+  Exact corrected native and visual evidence remains pending.
+
+## Unreleased · Connected account administration
+
+- Add users/per-user permissions, location creation and self-session controls
+  using existing connected APIs, including account-only entry before opening a
+  workshop. Preserve exact session fences, four themes and local journals.
+- Capture versions, bound owner lookup, clear credential controls synchronously
+  and keep uncertain commands unconfirmed without replay. Self-security commands
+  lock operational context before dispatch.
+- Add synthetic production browser qualification and focused lifecycle/transport
+  regressions. Native browser, screenshot, PostgreSQL and disposable-runtime
+  evidence remains required on the exact published tree. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
 ## Unreleased · Recovery and selector presentation
 
 - Show closed Spanish labels for retained-work states, with a safe generic label

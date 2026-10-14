@@ -100,7 +100,11 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       response.status === 204 &&
       path === '/auth/logout-all' &&
       response.url === url &&
-      !response.redirected
+      !response.redirected &&
+      response.headers
+        .get('cache-control')
+        ?.split(',')
+        .some((v) => v.trim().toLowerCase() === 'no-store')
     )
       return null
     if (
@@ -121,6 +125,10 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       void cancelResponse(response)
       if (response.status === 401) fail('invalid_session')
       if (response.status === 403) fail('capability_denied')
+      fail()
+    }
+    if (path === '/auth/logout-all' || response.status !== 200) {
+      void cancelResponse(response)
       fail()
     }
     let value: unknown
@@ -255,7 +263,26 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       })) as LocalServiceOrderEvent[]
     },
     async revoke(source: CapturedRead): Promise<void> {
-      await request('/auth/logout-all', source, {}, 16384, source.isCurrent)
+      const abort = new AbortController(),
+        cancel = () => abort.abort(),
+        captured = { token: source.token, signal: abort.signal, isCurrent: source.isCurrent }
+      if (source.signal?.aborted) abort.abort()
+      source.signal?.addEventListener('abort', cancel, { once: true })
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await Promise.race([
+          request('/auth/logout-all', captured, {}, 16384, source.isCurrent),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              abort.abort()
+              reject(new RuntimeHttpError(source.isCurrent() ? 'network_error' : 'stale_request'))
+            }, 10000)
+          }),
+        ])
+      } finally {
+        if (timer !== undefined) clearTimeout(timer)
+        source.signal?.removeEventListener('abort', cancel)
+      }
     },
   })
 }

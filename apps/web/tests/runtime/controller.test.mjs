@@ -1510,3 +1510,148 @@ test('organization-wide account retains concrete workshop through automatic reva
   assert.equal(second.runtime.getSnapshot().context.accountLocationId, null)
   assert.equal(second.runtime.getSnapshot().context.selectedLocationId, 'loc')
 })
+
+test('account refresh and name-only rebind preserve live operational owner and admission', async (t) => {
+  const f = setup(t)
+  await login(f.runtime)
+  const before = f.runtime.getSnapshot(),
+    saved = f.runtime.sessionStore.getSnapshot()
+  await f.runtime.verifyAccount()
+  assert.equal(f.runtime.getSnapshot().identityKey, before.identityKey)
+  assert.deepEqual(f.runtime.sessionStore.getSnapshot().admission, saved.admission)
+  const capture = f.runtime.captureAccount()
+  f.runtime.updateAccountName(capture, 'New display name')
+  assert.equal(f.runtime.getSnapshot().user.display_name, 'New display name')
+  assert.deepEqual(f.runtime.sessionStore.getSnapshot().admission, saved.admission)
+  await f.runtime.refresh()
+  assert.equal(f.runtime.getSnapshot().phase, 'ready')
+  assert.equal(f.runtime.getSnapshot().identityKey, before.identityKey)
+})
+
+test('self-command lock failure sends no command and leaves operational data blank', async (t) => {
+  const f = setup(t)
+  await login(f.runtime)
+  await f.runtime.verifyAccount()
+  const capture = f.runtime.captureAccount()
+  f.runtime.kernel.lockContext = async () => {
+    throw new Error('synthetic storage failure')
+  }
+  let dispatched = false
+  await assert.rejects(async () => {
+    await f.runtime.suspendAccountCommand(capture)
+    dispatched = true
+  })
+  assert.equal(dispatched, false)
+  assert.deepEqual(f.runtime.getSnapshot().customers, [])
+  assert.notEqual(f.runtime.getSnapshot().phase, 'ready')
+  assert.equal(capture.isCurrent(), false)
+})
+
+test('replacement login during self lock invalidates dedicated command before dispatch', async (t) => {
+  const f = setup(t)
+  await login(f.runtime)
+  await f.runtime.verifyAccount()
+  const lock = f.runtime.kernel.lockContext.bind(f.runtime.kernel)
+  let release
+  f.runtime.kernel.lockContext = async (ticket) => {
+    await lock(ticket)
+    await new Promise((r) => {
+      release = r
+    })
+  }
+  const pending = f.runtime.suspendAccountCommand(f.runtime.captureAccount())
+  await until(() => !!release, 'lock did not suspend')
+  await login(f.runtime, 'B')
+  release()
+  await assert.rejects(pending)
+  assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
+  assert.equal(f.runtime.getSnapshot().phase, 'ready')
+})
+
+test('cross-account transition to account-only identity locks previous owner and removes old data', async (t) => {
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    if (url.endsWith('/auth/me') && init.headers.Authorization === 'Bearer token-B')
+      return response(url, { ...user('B'), capabilities: [] })
+    return original(url, init)
+  }
+  const f = setup(t, { server })
+  await login(f.runtime)
+  const oldAdmission = f.runtime.sessionStore.getSnapshot().admission
+  await f.runtime.login({ organization_id: 'org', username: 'B', password: 'synthetic' })
+  assert.equal(f.runtime.getSnapshot().phase, 'selector')
+  assert.equal(f.runtime.getSnapshot().context, null)
+  assert.deepEqual(f.runtime.getSnapshot().customers, [])
+  assert.equal(f.runtime.getAccountSnapshot().user.user_id, 'B')
+  assert.equal(f.runtime.sessionStore.getSnapshot().admission, null)
+  const control = await f.database.deviceControl.get('device')
+  assert.equal(control.state, 'LOCKED')
+  assert.ok(control.generation > oldAdmission.owner.deviceGeneration)
+})
+
+test('connected account authority change retires old offline admission without opening operational scope', async (t) => {
+  const server = api(),
+    original = server.fetch
+  let changed = false
+  server.fetch = async (url, init) =>
+    changed && url.endsWith('/auth/me')
+      ? response(url, { ...user(), capabilities: [] })
+      : original(url, init)
+  const f = setup(t, { server })
+  await login(f.runtime)
+  changed = true
+  await f.runtime.verifyAccount()
+  assert.equal(f.runtime.getAccountSnapshot().phase, 'connected')
+  assert.deepEqual(f.runtime.getAccountSnapshot().user.capabilities, [])
+  assert.equal(f.runtime.getSnapshot().phase, 'held')
+  assert.deepEqual(f.runtime.getSnapshot().customers, [])
+  assert.equal(f.runtime.sessionStore.getSnapshot().admission, null)
+  assert.equal((await f.database.deviceControl.get('device')).state, 'LOCKED')
+})
+
+test('offline during changed-authority lock cannot establish fresh connected account', async (t) => {
+  const server = api(),
+    original = server.fetch
+  let changed = false
+  server.fetch = async (url, init) =>
+    changed && url.endsWith('/auth/me')
+      ? response(url, { ...user(), capabilities: [] })
+      : original(url, init)
+  const f = setup(t, { server })
+  await login(f.runtime)
+  changed = true
+  const lock = f.runtime.kernel.lockContext.bind(f.runtime.kernel)
+  let release
+  f.runtime.kernel.lockContext = async (ticket) => {
+    await lock(ticket)
+    await new Promise((r) => {
+      release = r
+    })
+  }
+  const pending = f.runtime.verifyAccount()
+  await until(() => !!release, 'authority change did not lock')
+  await f.runtime.offline()
+  release()
+  await pending
+  assert.notEqual(f.runtime.getAccountSnapshot().phase, 'connected')
+  assert.throws(() => f.runtime.captureAccount())
+})
+
+test('account verification cannot rebind a previously stale operational source after same-token authority replacement', async (t) => {
+  const server = api(),
+    original = server.fetch
+  let changed = false
+  server.fetch = async (url, init) =>
+    changed && url.endsWith('/auth/me')
+      ? response(url, { ...user(), capabilities: [] })
+      : original(url, init)
+  const f = setup(t, { server })
+  await login(f.runtime)
+  changed = true
+  f.runtime.sessionStore.setUser({ ...user(), capabilities: [] })
+  await f.runtime.verifyAccount()
+  assert.notEqual(f.runtime.getSnapshot().phase, 'ready')
+  assert.notEqual(f.runtime.getAccountSnapshot().phase, 'connected')
+  assert.deepEqual(f.runtime.getSnapshot().customers, [])
+})

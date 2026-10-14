@@ -92,10 +92,12 @@ test('logout-all sends captured protocol 1 and token with safe routing and accep
     },
   })
   await t.revoke(auth)
+  assert.ok(calls[0].init.signal instanceof AbortSignal)
   assert.deepEqual(calls, [
     {
       url: `${realm}/auth/logout-all`,
       init: {
+        signal: calls[0].init.signal,
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -278,3 +280,43 @@ test(
     assert.equal(canceled, 1)
   },
 )
+
+test('logout-all rejects bodyless success without no-store', async () => {
+  const transport = createRuntimeTransport({
+    apiRealm: realm,
+    fetch: async (url) => {
+      const result = response(url, null, 204)
+      result.headers.delete('cache-control')
+      return result
+    },
+  })
+  await assert.rejects(transport.revoke(auth), (error) => error.code === 'invalid_response')
+})
+
+test('logout-all deadline bounds even an abort-ignoring fetch and aborts the capture signal', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let signal, finish
+  const transport = createRuntimeTransport({
+    apiRealm: realm,
+    fetch: (url, init) => {
+      signal = init.signal
+      return new Promise((resolve) => {
+        finish = () => resolve(response(url, null, 204))
+      })
+    },
+  })
+  const pending = transport.revoke(auth)
+  const rejection = assert.rejects(pending, (error) => error.code === 'network_error')
+  t.mock.timers.tick(10000)
+  await rejection
+  assert.equal(signal.aborted, true)
+  finish()
+})
+
+test('logout-all rejects unexpected200 even with valid JSON and no-store', async () => {
+  const transport = createRuntimeTransport({
+    apiRealm: realm,
+    fetch: async (url) => response(url, {}, 200),
+  })
+  await assert.rejects(transport.revoke(auth), (error) => error.code === 'invalid_response')
+})

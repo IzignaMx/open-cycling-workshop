@@ -13,7 +13,15 @@ declare module 'react' {
   export function useSyncExternalStore<T>(
     subscribe: (callback: () => void) => () => void,
     getSnapshot: () => T,
+    getServerSnapshot?: () => T,
   ): T
+  export interface RefObject<T> {
+    current: T
+  }
+  export function useLayoutEffect(
+    effect: () => void | (() => void),
+    deps?: readonly unknown[],
+  ): void
   export function useRef<T>(value: T): { current: T }
   export function useRef<T>(value: T | null): { current: T | null }
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T }
