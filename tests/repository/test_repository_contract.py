@@ -204,7 +204,10 @@ def test_ci_publishes_a_v01_qualification_artifact() -> None:
 def test_golden_slice_requires_service_worker_offline_reload_evidence() -> None:
     spec = (ROOT / "apps/web/e2e/customer-offline-sync.spec.ts").read_text(encoding="utf-8")
     assert "navigator.serviceWorker.ready" in spec
-    assert "firstPage.reload" in spec
+    assert "await page.reload({ waitUntil: 'domcontentloaded' })" in spec
+    assert "await waitForReady(page)" in spec
+    assert "expect(restored.journal).toContainEqual(original)" in spec
+    assert "await waitForConfirmed(page, original)" in spec
     # Authenticated functional content survives regardless of the selected theme headline.
     assert "getByRole('heading', { name: 'Órdenes de servicio', exact: true })" in spec
 

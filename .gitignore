@@ -19,3 +19,6 @@ apps/web/.tmp-*/
 infra/compose/secrets/*
 !infra/compose/secrets/README.md
 *.tsbuildinfo
+
+# Generated qualification/build evidence is uploaded by CI, never source.
+artifacts/
