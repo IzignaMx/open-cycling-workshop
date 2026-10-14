@@ -6,6 +6,7 @@ def register_models() -> None:
     from cycling_workshop.bicycles import models as bicycle_models  # noqa: F401
     from cycling_workshop.customers import models as customer_models  # noqa: F401
     from cycling_workshop.events import models as event_models  # noqa: F401
+    from cycling_workshop.identity import audit as identity_audit  # noqa: F401
     from cycling_workshop.identity import models as identity_models  # noqa: F401
     from cycling_workshop.inventory import models as inventory_models  # noqa: F401
     from cycling_workshop.jobs import models as job_models  # noqa: F401
