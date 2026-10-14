@@ -23,6 +23,8 @@ from cycling_workshop.service_orders.schemas import (
     ServiceOrderResponse,
 )
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.sync.projections import order_payload
+from cycling_workshop.sync.writes import append_change, lock_writer
 
 router = APIRouter(prefix="/api/v1/service-orders", tags=["service-orders"])
 
@@ -52,12 +54,16 @@ def create_service_order(
     principal: Annotated[Principal, Depends(require_capability("orders.write"))],
     session: Annotated[Session, Depends(get_session)],
 ) -> ServiceOrderResponse:
-    authorize(
-        principal,
-        capability="orders.write",
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-    )
+    principal = lock_writer(session, principal)
+    try:
+        authorize(
+            principal,
+            capability="orders.write",
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     customers = SqlAlchemyCustomerRepository(session)
     if (
         customers.get(customer_id=payload.customer_id, organization_id=principal.organization_id)
@@ -84,6 +90,17 @@ def create_service_order(
     )
     repository = SqlAlchemyServiceOrderRepository(session)
     repository.add(order)
+    append_change(
+        session,
+        organization_id=order.organization_id,
+        location_id=order.location_id,
+        entity_type="service_order",
+        entity_id=order.order_id,
+        operation="create",
+        entity_version=order.version,
+        occurred_at=order.updated_at,
+        payload=order_payload(order),
+    )
     session.commit()
     return _response(order)
 
@@ -114,16 +131,20 @@ def transition_service_order(
     principal: Annotated[Principal, Depends(require_capability("orders.write"))],
     session: Annotated[Session, Depends(get_session)],
 ) -> ServiceOrderResponse:
+    principal = lock_writer(session, principal)
     repository = SqlAlchemyServiceOrderRepository(session)
     order = repository.get(order_id=order_id, organization_id=principal.organization_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
-    authorize(
-        principal,
-        capability="orders.write",
-        organization_id=order.organization_id,
-        location_id=order.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="orders.write",
+            organization_id=order.organization_id,
+            location_id=order.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     try:
         result = order.transition(payload.action, actor_id=principal.user_id, note=payload.note)
     except InvalidStateTransitionError as exc:
@@ -134,6 +155,17 @@ def transition_service_order(
         ) from exc
     repository.save(result.order)
     repository.add_event(result.event)
+    append_change(
+        session,
+        organization_id=result.order.organization_id,
+        location_id=result.order.location_id,
+        entity_type="service_order",
+        entity_id=result.order.order_id,
+        operation="update",
+        entity_version=result.order.version,
+        occurred_at=result.order.updated_at,
+        payload=order_payload(result.order),
+    )
     session.commit()
     return _response(result.order)
 

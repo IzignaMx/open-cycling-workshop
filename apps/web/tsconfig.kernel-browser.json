@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "tools/kernel-browser/**/*.ts",
+    "tests/access-kernel/browser.spec.ts",
+    "playwright.kernel.config.ts"
+  ]
+}

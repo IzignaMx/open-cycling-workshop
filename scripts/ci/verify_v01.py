@@ -277,7 +277,16 @@ def browser_runtime_checks(
     if prepare.status != "pass":
         checks.append(Check("browser_e2e", "fail", "browser E2E database preparation failed"))
         return checks, blockers
-    checks.append(run_check("browser_e2e", ["node", playwright_bin, "test"], env=env, cwd=web))
+    # Override inherited direct/repeat paths even outside CI. Playwright clears
+    # its output directory on every invocation, so qualification owns siblings.
+    browser_env = {
+        **env,
+        "OCWP_PLAYWRIGHT_OUTPUT_DIR": str(web / "test-results/qualification"),
+        "PLAYWRIGHT_HTML_OUTPUT_DIR": str(web / "playwright-report/qualification"),
+    }
+    checks.append(
+        run_check("browser_e2e", ["node", playwright_bin, "test"], env=browser_env, cwd=web)
+    )
     return checks, blockers
 
 

@@ -1,7 +1,8 @@
 # Authenticated offline context prerequisite
 
-Status: Accepted for this bounded, unactivated server contract. PostgreSQL
-contention qualification remains pending; see the increment specification.
+Status: Accepted for this bounded, unactivated server contract. First-head
+PostgreSQL contention qualification passed; final integrated-source qualification
+is tracked separately in the increment specification.
 
 ## Decision and invariant
 
