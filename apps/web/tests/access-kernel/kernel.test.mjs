@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto'
+import { completedMetadata } from './baseline-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createKernelDatabase } from '../../.tmp-kernel/src/access-kernel/database.js'
@@ -66,14 +67,15 @@ async function verified(kernel, value = context()) {
   const attempt = await kernel.beginVerification(crypto.randomUUID())
   return kernel.acceptVerifiedContext(attempt, value)
 }
-// No production activation API exists. This is a trusted test fixture representing
-// a baseline completed by the future authoritative integration, never a login.
+// Synthetic supported-protocol completion proof for kernel unit tests only.
+// The actual null-advertised server cannot activate this ordinary path.
 async function completedBaseline(db, kernel, value = context()) {
   const initial = await verified(kernel, value)
   await db.cachePartitions.update(initial.ticket.partitionId, {
     baselineComplete: true,
     status: 'active',
     cursor: 'opaque-fixture-checkpoint',
+    baseline: completedMetadata(initial.ticket, value, 'opaque-fixture-checkpoint'),
   })
   const accepted = await verified(kernel, value)
   assert.equal(accepted.state, 'READY')

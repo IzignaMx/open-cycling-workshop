@@ -95,6 +95,8 @@ jobs:
         run: pnpm --filter @ocwp/web typecheck
       - name: Build PWA
         run: pnpm --filter @ocwp/web build
+      - name: Verify isolated qualification helpers stay outside production
+        run: node --test apps/web/tools/kernel-browser/check-production-isolation.mjs
       - name: Install Playwright Chromium
         run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
       - name: Run isolated offline kernel browser tests

@@ -1,3 +1,7 @@
+import { BaselineTransactions } from './baseline-store.js'
+import type { BaselineRequest } from './baseline-state.js'
+import type { ContextRequestIdentity } from './server-context.js'
+import { completedBaseline } from './baseline-state.js'
 import type { EntityType } from '../sync/types.js'
 import { retryPlan } from '../sync/retry-policy.js'
 import type { KernelDatabase } from './database.js'
@@ -34,11 +38,13 @@ interface Authorized {
   partition: CachePartition
 }
 
-/** No transport, token store or baseline activation API. Consumers must supply a verified
- * server context and finish the authoritative integration before production use.
+/** Isolated kernel with no credential storage or production wiring. Baseline entry
+ * requires a supported verified context; the actual null-advertised server stays gated.
  */
 export class AccessKernel {
   #ticket: ContextTicket | null = null
+  #sequence = 0
+  #baselineStarting = false
   constructor(
     private readonly db: KernelDatabase,
     private readonly dependencies: Dependencies = {
@@ -77,6 +83,7 @@ export class AccessKernel {
 
   async beginVerification(tabAttemptId: string): Promise<VerificationAttempt> {
     if (!tabAttemptId.trim()) throw new Error('A new tab attempt is required')
+    this.#sequence += 1
     this.#ticket = null // blank the local authorization boundary before any async work
     return this.db.transaction('rw', this.tables(), async () => {
       const control = (await this.db.deviceControl.get('device')) ?? this.initial()
@@ -91,6 +98,8 @@ export class AccessKernel {
   }
 
   async acceptVerifiedContext(attempt: VerificationAttempt, supplied: VerifiedAccessContext) {
+    const sequence = this.#sequence
+    const expectedTicket = this.#ticket ? structuredClone(this.#ticket) : null
     attempt = structuredClone(attempt)
     const context = structuredClone(supplied)
     validateVerifiedContext(context, this.dependencies.now())
@@ -134,11 +143,7 @@ export class AccessKernel {
       control.activePartitionId = partition.partitionId
       control.state = nextContextState(
         control.state,
-        partition.baselineComplete &&
-          partition.status === 'active' &&
-          context.snapshotProtocol === 'baseline-v1'
-          ? 'verified_complete'
-          : 'needs_baseline',
+        completedBaseline(partition, context) ? 'verified_complete' : 'needs_baseline',
       )
       control.observedAt = this.dependencies.now()
       await this.db.deviceControl.put(control)
@@ -154,20 +159,133 @@ export class AccessKernel {
         baselineSupported: context.snapshotProtocol === 'baseline-v1',
       }
     })
-    // Another beginVerification on this instance may have won while this transaction ran.
-    const current = await this.db.deviceControl.get('device')
-    if (
-      current?.generation !== result.ticket.deviceGeneration ||
-      current.tabAttemptId !== result.ticket.tabAttemptId
-    )
-      throw new Error('Verification attempt fenced')
-    this.#ticket = structuredClone(result.ticket)
+    await this.installTicket(result.ticket, sequence, expectedTicket)
     return result
+  }
+
+  private async installTicket(
+    ticket: ContextTicket,
+    sequence: number,
+    expected: ContextTicket | null,
+  ): Promise<void> {
+    const [current, partition, record] = await this.db.transaction(
+      'r',
+      [this.db.deviceControl, this.db.cachePartitions, this.db.accessContexts],
+      () =>
+        Promise.all([
+          this.db.deviceControl.get('device'),
+          this.db.cachePartitions.get(ticket.partitionId),
+          this.db.accessContexts.get(ticket.partitionId),
+        ]),
+    )
+    if (
+      partition?.authorizationEpoch !== ticket.authorizationEpoch ||
+      partition.principalKey !== ticket.principalKey ||
+      partition.status === 'superseded' ||
+      record?.context.authorizationEpoch !== ticket.authorizationEpoch ||
+      principalKey(record.context.principal) !== ticket.principalKey ||
+      this.#sequence !== sequence ||
+      canonicalJson(this.#ticket) !== canonicalJson(expected) ||
+      current?.generation !== ticket.deviceGeneration ||
+      current.tabAttemptId !== ticket.tabAttemptId ||
+      current.activePartitionId !== ticket.partitionId
+    )
+      throw new Error('Verification attempt or baseline partition fenced')
+    this.#ticket = structuredClone(ticket)
+  }
+  private baselines() {
+    return new BaselineTransactions(
+      this.db,
+      this.dependencies.now,
+      this.dependencies.newId,
+      (ticket) => this.live(ticket),
+    )
+  }
+  private async baselineAdmission(ticket: ContextTicket) {
+    if (!this.live(ticket)) throw new Error('No matching verified session')
+    const record = await this.db.accessContexts.get(ticket.partitionId)
+    if (!this.live(ticket) || record?.context.snapshotProtocol !== 'baseline-v1')
+      throw new Error('Supported baseline advertisement required')
+    return record.context
+  }
+  async beginBaseline(supplied: ContextTicket): Promise<ContextTicket> {
+    const ticket = structuredClone(supplied)
+    if (this.#baselineStarting) throw new Error('A baseline start is already pending')
+    this.#baselineStarting = true
+    try {
+      await this.baselineAdmission(ticket)
+      const sequence = ++this.#sequence
+      const result = await this.baselines().begin(ticket)
+      await this.installTicket(result, sequence, ticket)
+      return result
+    } finally {
+      this.#baselineStarting = false
+    }
+  }
+  async resumeBaseline(supplied: ContextTicket): Promise<void> {
+    const ticket = structuredClone(supplied)
+    await this.baselineAdmission(ticket)
+    await this.baselines().resume(ticket)
+    if (!this.live(ticket)) throw new Error('Baseline resume fenced')
+  }
+  async pendingBaseline(supplied: ContextTicket) {
+    const ticket = structuredClone(supplied)
+    await this.baselineAdmission(ticket)
+    return this.baselines().pending(ticket)
+  }
+  async commitBaselinePage(
+    ticket: ContextTicket,
+    request: BaselineRequest,
+    response: unknown,
+    identity: ContextRequestIdentity,
+    current: () => boolean,
+  ) {
+    await this.baselineAdmission(ticket)
+    if (!current()) throw new Error('Baseline session fenced')
+    const result = await this.baselines().commit(ticket, request, response, identity, current)
+    if (!current() || !this.live(ticket)) throw new Error('Baseline session fenced')
+    return result
+  }
+  async activateBaseline(
+    supplied: ContextTicket,
+    checkpoint: string,
+    context: VerifiedAccessContext,
+    current: () => boolean,
+  ): Promise<void> {
+    const ticket = structuredClone(supplied)
+    await this.baselineAdmission(ticket)
+    if (!current()) throw new Error('Baseline session fenced')
+    const sequence = this.#sequence
+    await this.baselines().activate(ticket, checkpoint, context, current)
+    if (!current()) throw new Error('Baseline session fenced')
+    await this.installTicket(ticket, sequence, ticket)
+  }
+  async retryBaseline(ticket: ContextTicket, request: BaselineRequest): Promise<void> {
+    await this.baselineAdmission(ticket)
+    await this.baselines().retry(ticket, request)
+  }
+  disableBaselineSession(ticket: ContextTicket, current: () => boolean): void {
+    if (current() && this.live(ticket)) {
+      this.#sequence += 1
+      this.#ticket = null
+    }
+  }
+  async holdBaseline(
+    supplied: ContextTicket,
+    request: BaselineRequest,
+    reason: string,
+    retryAt: number | null = null,
+    current: () => boolean = () => true,
+  ): Promise<boolean> {
+    const ticket = structuredClone(supplied)
+    if (!current() || !this.live(ticket)) return false
+    return this.baselines().hold(ticket, request, reason, retryAt, current)
   }
 
   async lockContext(ticket: ContextTicket): Promise<void> {
     ticket = structuredClone(ticket)
     if (!this.live(ticket)) throw new Error('No matching verified session')
+    this.#sequence += 1
     this.#ticket = null
     await this.db.transaction('rw', this.db.deviceControl, async () => {
       const control = await this.db.deviceControl.get('device')
@@ -221,8 +339,7 @@ export class AccessKernel {
       return 'Context expired or clock moved backward; online verification required'
     }
     if (
-      !partition.baselineComplete ||
-      partition.status !== 'active' ||
+      !completedBaseline(partition, record.context) ||
       !['READY', 'OFFLINE_READY'].includes(control.state)
     )
       return 'Completed baseline and ready context required'
