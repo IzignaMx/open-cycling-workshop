@@ -165,12 +165,13 @@ function setup(
     server = api(),
     online = true,
     now = NOW,
+    apiRealm = realm,
   } = {},
 ) {
   const env = { online, now },
     database = createKernelDatabase(name),
     runtime = new WorkshopController({
-      apiRealm: realm,
+      apiRealm,
       storage,
       database,
       fetch: server.fetch,
@@ -473,4 +474,384 @@ test('local writes without sync.push permission remain honestly pending', async 
   )
   assert.ok(!f.server.calls.some((path) => path.endsWith('/sync/mutations')))
   assert.equal((await f.database.operationDelivery.toArray())[0].state, 'pending')
+})
+
+async function retainedReload(t) {
+  const first = setup(t)
+  await first.runtime.start()
+  await login(first.runtime)
+  first.env.online = false
+  await first.runtime.offline()
+  await first.runtime.createCustomer({ displayName: 'Retained offline work' })
+  const evidence = {
+    journal: await first.database.operationJournal.toArray(),
+    delivery: await first.database.operationDelivery.toArray(),
+    control: await first.database.deviceControl.get('device'),
+    context: first.runtime.getSnapshot().context,
+    session: first.runtime.sessionStore.getSnapshot(),
+  }
+  first.runtime.dispose()
+  return { first, evidence }
+}
+
+test('online-hint reload with unreachable me admits exact retained offline work without extending lease', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  const calls = []
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: true,
+    server: {
+      fetch: async (url) => {
+        calls.push(new URL(url).pathname)
+        throw new TypeError('offline')
+      },
+    },
+  })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready', second.runtime.getSnapshot().message)
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.deepEqual(second.runtime.getSnapshot().context, evidence.context)
+  const control = await second.database.deviceControl.get('device')
+  assert.equal(control.generation, evidence.control.generation + 1)
+  assert.equal(control.state, 'OFFLINE_READY')
+  assert.equal(control.activePartitionId, evidence.control.activePartitionId)
+  assert.equal(second.runtime.sessionStore.getSnapshot().bindingId, evidence.session.bindingId)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+  assert.deepEqual(calls, ['/api/v1/auth/me'])
+  await second.runtime.createCustomer({ displayName: 'Additional work while hint remains online' })
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.equal((await second.database.operationJournal.toArray()).length, 2)
+  assert.deepEqual(calls, ['/api/v1/auth/me'])
+  await second.runtime.createOrder({
+    customerId: 'historical-A',
+    reportedProblem: 'Offline intake',
+    intakeCondition: null,
+    accessories: null,
+    priority: 'normal',
+    brand: 'Offline bicycle',
+    model: null,
+  })
+  const order = second.runtime.getSnapshot().orders[0]
+  await second.runtime.transition(order.order_id, 'start_diagnosis')
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.equal((await second.database.operationJournal.toArray()).length, 5)
+  assert.equal(second.runtime.getSnapshot().orders[0].state, 'DIAGNOSIS')
+  assert.equal(calls.filter((path) => path.endsWith('/auth/me')).length, 1)
+  assert.equal(
+    calls.some((path) => path.includes('/sync/')),
+    false,
+  )
+})
+
+for (const status of [401, 403, 409, 500]) {
+  test(`reachable HTTP ${status} with interrupted body never resumes offline or leaves reusable admission`, async (t) => {
+    const { first } = await retainedReload(t)
+    const server = {
+      fetch: async (url) => {
+        const result = new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError('interrupted'))
+            },
+          }),
+          {
+            status,
+            headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+          },
+        )
+        Object.defineProperty(result, 'url', { value: url })
+        return result
+      },
+    }
+    const second = setup(t, { name: first.name, storage: first.storage, server })
+    let resumed = 0
+    const original = second.runtime.kernel.resumeOffline.bind(second.runtime.kernel)
+    second.runtime.kernel.resumeOffline = (...args) => {
+      resumed++
+      return original(...args)
+    }
+    await second.runtime.start()
+    assert.equal(second.runtime.getSnapshot().phase, 'held')
+    assert.equal(resumed, 0)
+    second.runtime.dispose()
+    const third = setup(t, { name: first.name, storage: first.storage, online: false })
+    await third.runtime.start()
+    assert.notEqual(third.runtime.getSnapshot().phase, 'ready')
+  })
+}
+
+for (const mode of ['malformed', 'different_principal']) {
+  test(`reachable ${mode} me fails closed and cannot fall back on a later offline reload`, async (t) => {
+    const { first } = await retainedReload(t)
+    const server = {
+      fetch: async (url) => response(url, mode === 'malformed' ? { broken: true } : user('B')),
+    }
+    const second = setup(t, { name: first.name, storage: first.storage, server })
+    await second.runtime.start()
+    assert.equal(second.runtime.getSnapshot().phase, 'held')
+    second.runtime.dispose()
+    const third = setup(t, { name: first.name, storage: first.storage, online: false })
+    await third.runtime.start()
+    assert.notEqual(third.runtime.getSnapshot().phase, 'ready')
+  })
+}
+
+for (const now of [NOW - 1, NOW + 3600000]) {
+  test(`unreachable online-hint reload retains clock/lease denial at ${now}`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      now,
+      server: {
+        fetch: async () => {
+          throw new TypeError('offline')
+        },
+      },
+    })
+    await second.runtime.start()
+    assert.equal(second.runtime.getSnapshot().phase, 'held')
+    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  })
+}
+
+for (const outcome of ['network', 'denial', 'success']) {
+  test(`late ${outcome} preflight cannot reclaim another tab owner`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    let reached, release
+    const barrier = new Promise((resolve) => {
+      reached = resolve
+    })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      server: {
+        fetch: async (url) => {
+          reached()
+          await new Promise((resolve) => {
+            release = resolve
+          })
+          if (outcome === 'network') throw new TypeError('offline')
+          if (outcome === 'success') return response(url, user())
+          const denied = new Response('{}', {
+            status: 401,
+            headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+          })
+          Object.defineProperty(denied, 'url', { value: url })
+          return denied
+        },
+      },
+    })
+    const pending = second.runtime.start()
+    await barrier
+    const winner = setup(t, { name: first.name })
+    await winner.runtime.start()
+    await login(winner.runtime, 'B')
+    const owner = await winner.database.deviceControl.get('device')
+    release()
+    await pending
+    assert.equal(second.runtime.getSnapshot().phase, 'held')
+    const after = await winner.database.deviceControl.get('device')
+    assert.equal(after.generation, owner.generation)
+    assert.equal(after.tabAttemptId, owner.tabAttemptId)
+    assert.equal(after.activePartitionId, owner.activePartitionId)
+    assert.equal(winner.runtime.getSnapshot().phase, 'ready')
+    assert.deepEqual(await winner.database.operationJournal.toArray(), evidence.journal)
+  })
+}
+
+for (const mode of ['realm', 'user', 'organization', 'account_location']) {
+  for (const online of [true, false]) {
+    test(`retained admission cannot cross changed ${mode} with online hint ${online}`, async (t) => {
+      const { first, evidence } = await retainedReload(t)
+      if (mode !== 'realm') {
+        const saved = JSON.parse(first.storage.getItem('ocwp.session.v2'))
+        saved.user[
+          mode === 'user' ? 'user_id' : mode === 'organization' ? 'organization_id' : 'location_id'
+        ] = 'changed'
+        first.storage.setItem('ocwp.session.v2', JSON.stringify(saved))
+      }
+      const calls = []
+      const second = setup(t, {
+        name: first.name,
+        storage: first.storage,
+        online,
+        server: {
+          fetch: async (url) => {
+            calls.push(url)
+            throw new TypeError('offline')
+          },
+        },
+        apiRealm: mode === 'realm' ? 'https://other.test/api/v1' : realm,
+      })
+      await second.runtime.start()
+      assert.equal(second.runtime.getSnapshot().phase, 'held')
+      assert.deepEqual(await second.database.deviceControl.get('device'), evidence.control)
+      assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+      assert.deepEqual(calls, [])
+    })
+  }
+}
+
+for (const mode of ['user', 'admission']) {
+  test(`same token/binding ${mode} replacement during unreachable preflight cannot be admitted`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    let reached, release
+    const barrier = new Promise((resolve) => {
+      reached = resolve
+    })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      server: {
+        fetch: async () => {
+          reached()
+          await new Promise((resolve) => {
+            release = resolve
+          })
+          throw new TypeError('offline')
+        },
+      },
+    })
+    const pending = second.runtime.start()
+    await barrier
+    const changed = JSON.parse(first.storage.getItem('ocwp.session.v2'))
+    if (mode === 'user') changed.user.user_id = 'B'
+    else changed.admission.owner.tabAttemptId = 'replaced'
+    first.storage.setItem('ocwp.session.v2', JSON.stringify(changed))
+    release()
+    await pending
+    assert.notEqual(second.runtime.getSnapshot().phase, 'ready')
+    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  })
+}
+
+test('reachable reload verifies me once and then the authoritative context', async (t) => {
+  const { first } = await retainedReload(t)
+  const second = setup(t, { name: first.name, storage: first.storage })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready', second.runtime.getSnapshot().message)
+  assert.equal(second.server.calls.filter((path) => path.endsWith('/auth/me')).length, 1)
+  assert.ok(second.server.calls.includes('/api/v1/auth/context'))
+})
+
+test('a context network failure after successful me cannot resume pre-verification admission', async (t) => {
+  const { first } = await retainedReload(t)
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    if (new URL(url).pathname.endsWith('/auth/context')) throw new TypeError('offline after me')
+    return original(url, init)
+  }
+  const second = setup(t, { name: first.name, storage: first.storage, server })
+  let resumed = false
+  const resume = second.runtime.kernel.resumeOffline.bind(second.runtime.kernel)
+  second.runtime.kernel.resumeOffline = (...args) => {
+    resumed = true
+    return resume(...args)
+  }
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'held')
+  assert.equal(resumed, false)
+  second.runtime.dispose()
+  const third = setup(t, { name: first.name, storage: first.storage, online: false })
+  await third.runtime.start()
+  assert.equal(third.runtime.getSnapshot().phase, 'held')
+})
+
+test('two cloned unreachable reloads claim exactly one owner', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  const server = {
+    fetch: async () => {
+      throw new TypeError('offline')
+    },
+  }
+  const a = setup(t, { name: first.name, storage: first.storage, server }),
+    b = setup(t, { name: first.name, storage: first.storage.clone(), server })
+  await Promise.all([a.runtime.start(), b.runtime.start()])
+  assert.deepEqual([a.runtime.getSnapshot().phase, b.runtime.getSnapshot().phase].sort(), [
+    'held',
+    'ready',
+  ])
+  assert.equal(
+    (await a.database.deviceControl.get('device')).generation,
+    evidence.control.generation + 1,
+  )
+  assert.deepEqual(await a.database.operationJournal.toArray(), evidence.journal)
+})
+
+test('lease expiring during unreachable preflight cannot renew its original deadline', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let reached, release
+  const barrier = new Promise((resolve) => {
+    reached = resolve
+  })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    server: {
+      fetch: async () => {
+        reached()
+        await new Promise((resolve) => {
+          release = resolve
+        })
+        throw new TypeError('offline')
+      },
+    },
+  })
+  const pending = second.runtime.start()
+  await barrier
+  second.env.now = NOW + 3600000
+  release()
+  await pending
+  assert.equal(second.runtime.getSnapshot().phase, 'held')
+  assert.deepEqual(await second.database.deviceControl.get('device'), evidence.control)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+})
+
+test('organization-wide account keeps null account scope and its concrete selected workshop offline', async (t) => {
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    if (new URL(url).pathname.endsWith('/locations'))
+      return response(url, {
+        items: [{ location_id: 'loc', organization_id: 'org', name: 'Selected workshop' }],
+        next_cursor: null,
+      })
+    const body = await (await original(url, init)).json()
+    if (Object.hasOwn(body, 'user_id')) body.location_id = null
+    const context = body.context ?? body
+    if (Object.hasOwn(context, 'account_location_id')) context.account_location_id = null
+    return response(url, body)
+  }
+  const first = setup(t, { server })
+  await first.runtime.start()
+  await first.runtime.login({ organization_id: 'org', username: 'A', password: 'synthetic' })
+  assert.equal(first.runtime.getSnapshot().phase, 'selector')
+  await first.runtime.selectWorkshop('loc')
+  await until(
+    () => first.runtime.getSnapshot().phase === 'ready',
+    'selected baseline did not finish',
+  )
+  first.runtime.dispose()
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    server: {
+      fetch: async () => {
+        throw new TypeError('offline')
+      },
+    },
+  })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready', second.runtime.getSnapshot().message)
+  assert.equal(second.runtime.getSnapshot().user.location_id, null)
+  assert.equal(second.runtime.getSnapshot().context.accountLocationId, null)
+  assert.equal(second.runtime.getSnapshot().context.selectedLocationId, 'loc')
 })

@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie'
 import { AccessKernel } from '../access-kernel/kernel.js'
+import { principalKey } from '../access-kernel/context.js'
 import { createKernelDatabase, type KernelDatabase } from '../access-kernel/database.js'
 import { createServerContextAdapter } from '../access-kernel/server-context.js'
 import { createBaselineTransport } from '../access-kernel/baseline-transport.js'
@@ -250,27 +251,60 @@ export class WorkshopController {
         saved,
         saved.admission ? undefined : (saved.user.location_id ?? undefined),
         saved.admission?.owner,
+        false,
+        !!saved.admission,
       )
     } else if (saved.bindingId && saved.admission) {
-      const sequence = this.blank('verifying'),
-        current = () => this.current(sequence, saved)
-      try {
-        const resumed = await this.kernel.resumeOffline(
-          saved.admission,
-          crypto.randomUUID(),
-          current,
-        )
-        if (!current()) return
-        this.sessionStore.remember(resumed.admission, saved.token)
-        const source = this.makeSession(saved, resumed.ticket, resumed.context, sequence)
-        await this.ready(source, saved.user, sequence, false)
-      } catch {
-        if (current()) this.held('offline_expired')
-      }
+      await this.resumeStoredOffline(saved, this.blank('verifying'))
     } else
       this.publish({
         message: 'Conéctate para verificar esta sesión antes de abrir datos locales.',
       })
+  }
+  private retainedScopeMatches(saved: SessionSnapshot): boolean {
+    if (!saved.user || !saved.bindingId || !saved.admission) return false
+    const expectedPrincipal = principalKey({
+      apiRealm: this.options.apiRealm,
+      organizationId: saved.user.organization_id,
+      userId: saved.user.user_id,
+    })
+    try {
+      const binding: unknown = JSON.parse(saved.admission.binding)
+      return (
+        saved.admission.owner.principalKey === expectedPrincipal &&
+        Array.isArray(binding) &&
+        binding.length === 8 &&
+        binding[0] === expectedPrincipal &&
+        binding[6] === saved.user.location_id &&
+        (saved.user.location_id === null || binding[1] === saved.user.location_id)
+      )
+    } catch {
+      return false
+    }
+  }
+  private exactSession(sequence: number, saved: SessionSnapshot): boolean {
+    return (
+      this.current(sequence, saved) &&
+      JSON.stringify(this.sessionStore.getSnapshot()) === JSON.stringify(saved)
+    )
+  }
+  private async resumeStoredOffline(saved: SessionSnapshot, sequence: number): Promise<void> {
+    const current = () => this.exactSession(sequence, saved)
+    try {
+      if (!this.retainedScopeMatches(saved)) throw new Error('Offline session scope changed')
+      const resumed = await this.kernel.resumeOffline(
+        saved.admission!,
+        crypto.randomUUID(),
+        current,
+      )
+      if (!current()) return
+      this.sessionStore.remember(resumed.admission, saved.token)
+      const refreshed = this.sessionStore.getSnapshot()!
+      const source = this.makeSession(refreshed, resumed.ticket, resumed.context, sequence)
+      await this.ready(source, refreshed.user!, sequence, false)
+    } catch {
+      if (this.current(sequence, saved)) this.held('offline_expired')
+    }
   }
   private makeSession(
     saved: SessionSnapshot,
@@ -331,16 +365,35 @@ export class WorkshopController {
     selected?: string,
     expectedOwner?: ContextTicket,
     freshBaseline = false,
+    offlineReload = false,
   ): Promise<void> {
     const sequence = this.blank('verifying'),
-      current = () => this.current(sequence, saved)
+      current = () =>
+        offlineReload ? this.exactSession(sequence, saved) : this.current(sequence, saved)
     try {
+      let user: SessionUserSnapshot | undefined
+      let preflightFailure: unknown
+      if (offlineReload) {
+        if (!this.retainedScopeMatches(saved)) throw new Error('Reload session scope changed')
+        try {
+          user = await this.#http.me({ token: saved.token, isCurrent: current })
+        } catch (error) {
+          if (!current()) return
+          if (error instanceof RuntimeHttpError && error.code === 'network_error') {
+            await this.resumeStoredOffline(saved, sequence)
+            return
+          }
+          // Reachable refusal must still invalidate old admission below.
+          preflightFailure = error
+        }
+      }
       const attempt = await this.kernel.beginVerification(
         crypto.randomUUID(),
         current,
         expectedOwner,
       )
-      const user = await this.#http.me({ token: saved.token, isCurrent: current })
+      if (preflightFailure !== undefined) throw preflightFailure
+      user ??= await this.#http.me({ token: saved.token, isCurrent: current })
       if (!current()) return
       if (
         saved.user &&
@@ -738,14 +791,14 @@ export class WorkshopController {
     await this.repositories.createCustomer(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.schedule(() => this.sync())
   }
   async createOrder(input: IntakeInput) {
     const source = this.requireActive()
     await this.repositories.createOrder(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.schedule(() => this.sync())
   }
   async transition(orderId: string, action: OrderAction) {
     const source = this.requireActive()
@@ -753,7 +806,7 @@ export class WorkshopController {
     if (this.#active !== source) return
     await this.refresh()
     await this.timeline(orderId)
-    this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.schedule(() => this.sync())
   }
   async timeline(orderId: string) {
     const source = this.requireActive(),
