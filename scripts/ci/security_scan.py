@@ -111,7 +111,7 @@ def scan_secrets(root: Path, output: Path) -> dict[str, object]:
         raise CoverageError("Git preflight did not identify the exact checkout")
     if not lines[1].isdigit() or int(lines[1]) <= 0:
         raise CoverageError("Git preflight found no reachable commits")
-    result = execute(
+    result, findings = execute_gitleaks(
         container_command(
             root,
             "gitleaks",
@@ -119,22 +119,97 @@ def scan_secrets(root: Path, output: Path) -> dict[str, object]:
                 "git",
                 "/repo",
                 f"--log-opts={GIT_LOG_OPTIONS}",
-                "--redact=100",
                 "--exit-code=1",
                 "--no-banner",
                 "--no-color",
             ],
         ),
         root,
-        output / "gitleaks.log",
+        output,
     )
+    coverage = validate_gitleaks(result.stdout, result.returncode)
+    if findings:
+        raise CoverageError("Gitleaks reported findings despite a successful exit")
     return {
         "git_sha": lines[0],
         "image": GITLEAKS_IMAGE,
         "scope": GIT_LOG_OPTIONS,
         "reachable_commits": int(lines[1]),
-        **validate_gitleaks(result.stdout, result.returncode),
+        **coverage,
+        "findings_count": len(findings),
     }
+
+
+def safe_gitleaks_findings(raw: str) -> list[dict[str, object]]:
+    """Whitelist metadata; never retain report match/secret/context or author fields."""
+    if len(raw) > 16 * 1024 * 1024:
+        raise CoverageError("Gitleaks report exceeds the bounded metadata parser limit")
+    try:
+        report = json.loads(raw)
+    except ValueError:
+        raise CoverageError("Gitleaks did not produce a valid JSON report") from None
+    if not isinstance(report, list):
+        raise CoverageError("Gitleaks report is not a findings array")
+    findings = []
+    for finding in report:
+        if not isinstance(finding, dict):
+            raise CoverageError("Gitleaks finding metadata is malformed")
+        path = finding.get("File")
+        rule = finding.get("RuleID")
+        commit = finding.get("Commit", "")
+        start = finding.get("StartLine")
+        end = finding.get("EndLine")
+        if (
+            not isinstance(path, str)
+            or not path
+            or len(path) > 4096
+            or any(ord(char) < 32 for char in path)
+            or Path(path).is_absolute()
+            or ".." in Path(path).parts
+            or not isinstance(rule, str)
+            or not re.fullmatch(r"[a-z0-9-]{1,100}", rule)
+            or not isinstance(commit, str)
+            or not re.fullmatch(r"(?:[a-f0-9]{40})?", commit)
+            or type(start) is not int
+            or type(end) is not int
+            or start < 1
+            or end < start
+        ):
+            raise CoverageError("Gitleaks finding metadata failed validation")
+        prefix = f"{commit}:" if commit else ""
+        findings.append(
+            {
+                "rule": rule,
+                "path": path,
+                "start_line": start,
+                "end_line": end,
+                "commit": commit,
+                "fingerprint": f"{prefix}{path}:{rule}:{start}",
+            }
+        )
+    return findings
+
+
+def execute_gitleaks(
+    command: list[str], root: Path, output: Path
+) -> tuple[subprocess.CompletedProcess[str], list[dict[str, object]]]:
+    # JSON is captured privately, never merged into log stdout or saved raw.
+    # --redact is defense in depth, not permission to retain contextual fields.
+    result = subprocess.run(
+        [*command, "--redact=100", "--report-format=json", "--report-path=-"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        timeout=900,
+    )
+    (output / "gitleaks.log").write_text(result.stderr, encoding="utf-8")
+    print(result.stderr, end="", flush=True)
+    findings = safe_gitleaks_findings(result.stdout)
+    (output / "gitleaks-findings.json").write_text(
+        json.dumps(findings, indent=2) + "\n", encoding="utf-8"
+    )
+    # Return only the redacted log, so callers cannot accidentally emit raw JSON.
+    return subprocess.CompletedProcess(result.args, result.returncode, result.stderr), findings
 
 
 def canonical_name(name: str) -> str:

@@ -83,7 +83,7 @@ def test_scan_preflight_and_scanner_cover_all_refs_detached_head_and_merges(
         side_effect=[
             subprocess.CompletedProcess([], 0, "pulled"),
             subprocess.CompletedProcess([], 0, "a" * 40 + "\n12\n"),
-            subprocess.CompletedProcess([], 0, GOOD_LOG),
+            subprocess.CompletedProcess([], 0, "[]", GOOD_LOG),
         ]
     )
     monkeypatch.setattr(security_scan.subprocess, "run", runner)

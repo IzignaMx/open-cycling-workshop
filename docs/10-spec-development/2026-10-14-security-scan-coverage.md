@@ -109,3 +109,58 @@ marker environments require their own audit evidence.
 - [Pinned image configuration](https://github.com/gitleaks/gitleaks/blob/v8.30.1/Dockerfile)
 - [uv export options](https://docs.astral.sh/uv/reference/cli/#uv-export)
 - [pip-audit requirement and strict collection options](https://github.com/pypa/pip-audit/tree/v2.9.0)
+
+## Follow-up: six findings from the first genuine hosted scan
+
+[Security run 38614088041, job 116024569283](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38614088041/job/116024569283)
+at merge `e647a38e5611428369f7f52227337fb917e50f01` traversed 200 reachable
+commits, scanned 192 commits / 10,132,641 bytes, and correctly **failed** on six
+findings. Its original failure and
+[artifact 11919296499](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38614088041/artifacts/11919296499)
+remain evidence; they are not relabeled as a clean scan.
+
+A fresh full clone at that exact merge, scanned with the official Gitleaks 8.30.1
+Linux release, reproduced the same six findings and identical coverage. The
+release archive SHA256 was verified against the official release asset:
+`551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`.
+All findings use the `generic-api-key` rule:
+
+- `tests/operations/test_local_compose_runtime.py:300` and `:351`, in commits
+  `d78abbb72174f9c706d4ac0e3395085b7652578e` and
+  `e647a38e5611428369f7f52227337fb917e50f01`: four records of one synthetic
+  JWT-shaped value in the two log-redaction regression tests. Its HS256-shaped
+  header is paired with the literal placeholder signature, whose length is
+  invalid Base64URL; it is not a signed credential. Tests feed it to synthetic
+  log/failure output to verify that diagnostics do not expose token-shaped data.
+- `README.md:30`, in commits `390241ed097090abd9da407136d67b65e5890adf`
+  and `852af00b2475fc426d5ff7e084aa7ce8e010e048`: two records of the plain
+  prose value `signed/revocable`, in a description of password hashing and
+  sessions. No credential material is present.
+
+No actual credential was identified in these findings, so no credential rotation
+or history rewrite was performed. `.gitleaks.toml` extends every default rule and
+adds only two per-rule exceptions. Each requires **both** the exact anchored
+repository path and the exact anchored reviewed secret-field value. There is no
+whole-file, whole-rule, commit, directory or unrestricted regular-expression
+suppression. Any other value or path remains subject to normal detection.
+
+Seven real-scanner canaries are now mandatory in Security before the history scan:
+exact fixture/prose acceptance, modified fixture/prose detection, same values at
+other paths, and detection by an unrelated default GitHub-token rule. Synthetic
+inputs are created temporarily outside the artifact directory and removed after
+checking. Local mutation checks confirm the canaries fail when exceptions are
+removed, made disjunctive, given a broad path, or given a broad value expression.
+
+Gitleaks now emits its fully redacted JSON report to a privately captured stdout
+stream. Raw JSON is never logged or saved: even redacted reports can contain
+context, author and commit-message fields. The wrapper validates and saves only
+rule, relative path, line numbers, commit and a reconstructed fingerprint in
+`gitleaks-findings.json`. Nonzero scanner exit remains a failure after metadata is
+saved; a zero exit accompanied by findings also fails. Malformed report content
+is rejected without reproducing it in an error message.
+
+With the two exact exceptions, the original hosted history locally scans the same
+192 commits / 10,132,641 bytes with zero findings. This proves the bounded policy
+against that history; it does not replace exact-integrated-head hosted review and
+qualification of the new report path/canaries. The Python advisory remediation
+and all unrelated release gates retain their independent evidence requirements.

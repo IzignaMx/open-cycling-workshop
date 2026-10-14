@@ -12,6 +12,11 @@
 
 ## Unreleased · Security scan coverage
 
+- Preserve content-free finding metadata and classify the six findings from the
+  first genuine hosted scan as exact synthetic-test or documentation matches.
+  Conjunction-scoped exceptions preserve all default rules/history; mandatory
+  real-scanner canaries detect modified values and the same values at other paths.
+
 - Correct falsely green secret-history scanning with owner-matched, digest-pinned
   isolated Gitleaks execution and fail-closed error/coverage checks.
 - Audit the exact committed Python workspace dependency export with pinned

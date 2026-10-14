@@ -31,6 +31,9 @@ jobs:
           enable-cache: true
       # The checked wrapper runs the digest-pinned gitleaks image as the
       # checkout owner and rejects scanner errors or empty history coverage.
+      - name: Qualify exact Gitleaks false-positive policy
+        run: python scripts/ci/check_secret_scan_policy.py
+
       - name: Secret scanning with Gitleaks
         run: python scripts/ci/security_scan.py secrets
 
