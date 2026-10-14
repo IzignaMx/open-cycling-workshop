@@ -76,6 +76,6 @@ The native case is compiled and built, but still requires exact integrated-head
 hosted Chromium evidence. Independent source review at
 `86e8fad1403119c0460c45795a574c7c1dbff32d` (tree
 `99dbdb3cf33f8af994612f00f2e30a775048f986`) found no remaining blockers and
-independently passed335 core tests plus type/lint/format checks. PostgreSQL,
+independently passed 335 core tests plus type/lint/format checks. PostgreSQL,
 old-bundle/service-worker, C production journeys, physical-device and installation
 gates remain open.
