@@ -1,0 +1,34 @@
+# Deny the context by default, then permit only build inputs. Runtime secrets,
+# local databases, artifacts and credentials never enter the build context.
+*
+!LICENSE
+!pyproject.toml
+!uv.lock
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!services/
+!services/platform/
+!services/platform/**
+!apps/
+!apps/web/
+!apps/web/**
+!packages/
+!packages/**
+!scripts/
+!scripts/database/
+!scripts/database/**
+!infra/
+!infra/edge/
+!infra/edge/**
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.env*
+**/dist
+**/test-results
+**/playwright-report
+**/*.sqlite3
+infra/compose/secrets

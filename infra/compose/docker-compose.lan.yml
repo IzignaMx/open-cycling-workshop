@@ -1,0 +1,10 @@
+# Opt-in LAN mode: requires Compose >= 2.24.4 (!override), stable LAN DNS/IP,
+# and verified trust of the generated Caddy root CA on EVERY client device.
+# Do not use this file for an Internet-facing deployment.
+services:
+  edge:
+    environment:
+      OCWP_LAN_HOST: ${OCWP_LAN_HOST:?Set the hostname or static LAN IP clients will use}
+    command: ['caddy', 'run', '--config', '/etc/caddy/Caddyfile.lan', '--adapter', 'caddyfile']
+    ports: !override
+      - '${OCWP_LAN_BIND_IP:?Set this server LAN IP explicitly}:${OCWP_HTTPS_PORT:-443}:8443'

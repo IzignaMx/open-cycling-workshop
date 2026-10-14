@@ -6,14 +6,15 @@ from logging.config import fileConfig
 from alembic import context
 from cycling_workshop.db.base import Base
 from cycling_workshop.db.registry import register_models
+from cycling_workshop.settings import database_url_from_env
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-if database_url := os.getenv("OCWP_DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", database_url)
+if os.getenv("OCWP_DATABASE_URL") is not None or os.getenv("OCWP_DATABASE_URL_FILE"):
+    config.set_main_option("sqlalchemy.url", database_url_from_env().replace("%", "%%"))
 
 register_models()
 target_metadata = Base.metadata

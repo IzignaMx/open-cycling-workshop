@@ -6,6 +6,23 @@ from dataclasses import dataclass
 _DEFAULT_DEV_SECRET = "development-only-secret-change-before-production-0000000000000000"
 
 
+def database_url_from_env() -> str:
+    database_url = os.getenv("OCWP_DATABASE_URL")
+    if database_url is None and (database_file := os.getenv("OCWP_DATABASE_URL_FILE")):
+        try:
+            with open(database_file, encoding="utf-8") as database_handle:
+                database_url = database_handle.read().strip()
+        except (OSError, UnicodeError):
+            raise RuntimeError("OCWP_DATABASE_URL_FILE could not be read") from None
+        if not database_url or "\x00" in database_url:
+            raise RuntimeError("OCWP_DATABASE_URL_FILE must contain a non-empty URL")
+    return (
+        database_url
+        if database_url is not None
+        else "postgresql+psycopg://ocwp:ocwp@localhost:5432/ocwp"
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     environment: str = "development"
@@ -30,10 +47,7 @@ class Settings:
             )
         return cls(
             environment=environment,
-            database_url=os.getenv(
-                "OCWP_DATABASE_URL",
-                "postgresql+psycopg://ocwp:ocwp@localhost:5432/ocwp",
-            ),
+            database_url=database_url_from_env(),
             log_level=os.getenv("OCWP_LOG_LEVEL", "INFO").upper(),
             auth_secret=auth_secret,
         )

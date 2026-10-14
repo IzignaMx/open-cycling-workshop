@@ -64,7 +64,7 @@ def inventory_postgres_url() -> str:
     # env.py reads OCWP_DATABASE_URL ahead of Config. Never let an unrelated
     # application URL override the explicitly validated test database.
     with pytest.MonkeyPatch.context() as environment:
-        environment.setenv("OCWP_DATABASE_URL", url.replace("%", "%%"))
+        environment.setenv("OCWP_DATABASE_URL", url)
         command.upgrade(config, "head")
     return url
 
@@ -440,3 +440,26 @@ def test_concurrent_reused_id_with_changed_command_conflicts(
 def test_inventory_postgres_fixture_rejects_unsafe_database_urls(url: str) -> None:
     with pytest.raises(ValueError, match="dedicated local PostgreSQL test URL"):
         _safe_postgres_url(url)
+
+
+def test_fixture_preserves_percent_encoded_url_before_any_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sqlalchemy
+
+    class StopBeforeConnection(Exception):
+        pass
+
+    captured: list[str] = []
+    synthetic_url = "postgresql+psycopg://ocwp:p%40ss%25word@127.0.0.1/ocwp_test"
+    monkeypatch.setenv("OCWP_TEST_DATABASE_URL", synthetic_url)
+
+    def capture_config(configuration: dict[str, Any], **kwargs: Any) -> None:
+        captured.append(configuration["sqlalchemy.url"])
+        raise StopBeforeConnection
+
+    monkeypatch.setattr(sqlalchemy, "engine_from_config", capture_config)
+    with pytest.raises(StopBeforeConnection):
+        inventory_postgres_url.__wrapped__()
+    assert captured == [synthetic_url]
+    assert make_url(captured[0]).password == "p@ss%word"

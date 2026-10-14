@@ -61,5 +61,23 @@ release versions follow the Engineering specification's SemVer policy.
 ### Integration
 
 - PR #22 inventory API integrated on 2026-10-14 after fresh independent code review
-  and exact-head CI/Security/DCO. Quote Task 4 remains subject to combined-tree CI
-  and review in PR #23; no complete quote workflow or stable release is claimed.
+  and exact-head CI/Security/DCO. Quote Task 4 passed combined-tree CI
+  and independent review and was integrated through PR #23; no complete quote workflow or stable release is claimed.
+
+### Local workshop MVP foundation (pending hosted qualification)
+
+- Define the laptop-to-ARM64 workshop MVP sequence, preserving existing tenant/capability and offline-first architecture.
+- Add file-based database URL configuration and prevent service-worker navigation fallback from converting API/health routes into application HTML.
+- Add isolated local Caddy/PWA/API/PostgreSQL/worker Compose, separate LAN TLS,
+  non-superuser application database role and locked amd64/arm64 build paths.
+- Add snapshot-consistent PostgreSQL bundles, integrity manifests and guarded
+  fresh-target restore; database-only evidence excludes browser queues and assets.
+- Local runtime and recovery qualification are tracked in the execution state; this is not a stable release or physical Raspberry qualification.
+- Inventory API PR #22 and quote-domain PR #23 are merged; full quote workflow remains future work.
+
+### Qualification reliability
+
+- Inventory PostgreSQL test setup now passes raw percent-encoded URLs to the
+  shared migration configuration, avoiding double escaping. A no-network
+  regression checks the exact URL and decoded synthetic password before any
+  engine can connect; production secret-file handling is unchanged.
