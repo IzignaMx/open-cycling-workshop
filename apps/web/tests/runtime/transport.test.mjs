@@ -31,6 +31,7 @@ test('auth, location and history reads bound bytes before parsing with captured 
   })
   assert.equal((await transport.me(auth)).user_id, 'u')
   assert.equal(calls[0].init.headers.Authorization, 'Bearer captured-token')
+  assert.equal(calls[0].init.headers['X-OCWP-Write-Protocol'], undefined)
   assert.equal(calls[0].init.credentials, 'omit')
   assert.equal(calls[0].init.redirect, 'error')
   for (const method of ['me', 'locations', 'timeline']) {
@@ -81,16 +82,61 @@ test('server timeline is scoped by captured URL and adds verified organization o
   assert.deepEqual(await t.timeline(auth, 'o', 'order'), [{ ...event, organization_id: 'o' }])
   await assert.rejects(t.timeline(auth, 'o', 'other'), RuntimeHttpError)
 })
-test('no-body logout response succeeds and stale responses never escape', async () => {
-  let current = true
+test('logout-all sends captured protocol 1 and token with safe routing and accepts no-body success', async () => {
+  const calls = []
   const t = createRuntimeTransport({
     apiRealm: realm,
-    fetch: async (url) => response(url, null, 204),
+    fetch: async (url, init) => {
+      calls.push({ url, init })
+      return response(url, null, 204)
+    },
   })
   await t.revoke(auth)
-  const stale = createRuntimeTransport({
+  assert.deepEqual(calls, [
+    {
+      url: `${realm}/auth/logout-all`,
+      init: {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer captured-token',
+          'X-OCWP-Write-Protocol': '1',
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
+      },
+    },
+  ])
+})
+test('logout-all refuses stale dispatch and ignores success after captured session changes', async () => {
+  let current = false
+  let calls = 0
+  const source = { token: auth.token, isCurrent: () => current }
+  const t = createRuntimeTransport({
     apiRealm: realm,
     fetch: async (url) => {
+      calls += 1
+      current = false
+      return response(url, null, 204)
+    },
+  })
+  const isStale = (e) => e instanceof RuntimeHttpError && e.code === 'stale_request'
+  await assert.rejects(t.revoke(source), isStale)
+  assert.equal(calls, 0)
+  current = true
+  await assert.rejects(t.revoke(source), isStale)
+  assert.equal(calls, 1)
+})
+test('stale login responses never escape and login does not declare a write protocol', async () => {
+  let current = true
+  const stale = createRuntimeTransport({
+    apiRealm: realm,
+    fetch: async (url, init) => {
+      assert.equal(init.headers['X-OCWP-Write-Protocol'], undefined)
       current = false
       return response(url, { access_token: 'secret', token_type: 'bearer' })
     },

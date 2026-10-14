@@ -68,6 +68,7 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
     if (!current()) fail('stale_request')
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (token) headers.Authorization = `Bearer ${token}`
+    if (path === '/auth/logout-all') headers['X-OCWP-Write-Protocol'] = '1'
     const serialized = body === undefined ? undefined : JSON.stringify(body)
     if (serialized !== undefined) {
       if (new TextEncoder().encode(serialized).byteLength > 16384) fail()
