@@ -1003,3 +1003,510 @@ test('deliberate sync after fallback remains real verification and holds unreach
   assert.equal(third.runtime.getSnapshot().phase, 'held')
   assert.deepEqual(await third.database.operationJournal.toArray(), evidence.journal)
 })
+
+test('offline reload automatically verifies and dispatches retained work when network returns without an online event', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let reachable = false
+  const server = first.server
+  const calls = []
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: true,
+    server: {
+      fetch: async (url, init) => {
+        const path = new URL(url).pathname
+        calls.push(path)
+        if (!reachable) throw new TypeError('unreachable')
+        if (path.endsWith('/sync/mutations')) {
+          return response(url, {
+            results: JSON.parse(init.body).mutations.map((row) => ({
+              mutation_id: row.mutation_id,
+              entity_id: row.entity_id,
+              status: 'applied',
+              entity_version: 1,
+              error_code: null,
+              error_message: null,
+            })),
+          })
+        }
+        return server.fetch(url, init)
+      },
+    },
+  })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  reachable = true
+  // No reconnect/sync call and no online event: the browser hint stayed true.
+  for (let i = 0; i < 175 && second.runtime.getSnapshot().sync !== 'synced'; i++)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  assert.equal(second.runtime.getSnapshot().sync, 'synced', JSON.stringify(calls))
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  assert.equal((await second.database.operationDelivery.toArray())[0].state, 'applied')
+  assert.deepEqual(calls.slice(0, 4), [
+    '/api/v1/auth/me',
+    '/api/v1/auth/me',
+    '/api/v1/auth/context',
+    '/api/v1/sync/mutations',
+  ])
+})
+
+async function settleProbe() {
+  for (let i = 0; i < 100; i++) await new Promise(setImmediate)
+}
+for (const mode of ['401', '403', 'malformed', 'principal'])
+  test(`automatic probe ${mode} invalidates the expected offline owner without another me or dispatch`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    let calls = 0
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      online: false,
+      server: {
+        fetch: async (url) => {
+          calls++
+          assert.ok(url.endsWith('/auth/me'))
+          if (mode === 'malformed') return response(url, {})
+          if (mode === 'principal') return response(url, user('other'))
+          const r = new Response(null, {
+            status: Number(mode),
+            headers: {
+              'content-type': 'application/json',
+              'cache-control': 'no-store',
+            },
+          })
+          Object.defineProperty(r, 'url', { value: url })
+          return r
+        },
+      },
+    })
+    await second.runtime.start()
+    const owner = await second.database.deviceControl.get('device')
+    t.mock.timers.tick(2000)
+    await settleProbe()
+    assert.equal(calls, 1)
+    assert.equal(second.runtime.getSnapshot().phase, 'held')
+    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+    assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+    assert.ok((await second.database.deviceControl.get('device')).generation > owner.generation)
+    second.runtime.dispose()
+    const third = setup(t, { name: first.name, storage: first.storage, online: false })
+    await third.runtime.start()
+    assert.equal(third.runtime.getSnapshot().phase, 'held')
+  })
+
+test('unreachable automatic probes preserve exact owner, admission, deadline and pending work', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let calls = 0
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async () => {
+        calls++
+        throw new TypeError('unreachable')
+      },
+    },
+  })
+  await second.runtime.start()
+  const session = structuredClone(second.runtime.sessionStore.getSnapshot())
+  const owner = await second.database.deviceControl.get('device')
+  for (const delay of [2000, 4000, 8000]) {
+    t.mock.timers.tick(delay)
+    await settleProbe()
+  }
+  assert.equal(calls, 3)
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.deepEqual(await second.database.deviceControl.get('device'), owner)
+  assert.deepEqual(second.runtime.sessionStore.getSnapshot(), session)
+  assert.deepEqual(second.runtime.getSnapshot().context, evidence.context)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+})
+
+for (const change of ['logout', 'metadata', 'takeover', 'expiry', 'rollback'])
+  test(`late automatic probe cannot reactivate after ${change}`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    let release,
+      calls = 0,
+      signal
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      online: false,
+      server: {
+        fetch: async (url, init) => {
+          calls++
+          signal = init.signal
+          await new Promise((resolve) => {
+            release = resolve
+          })
+          return response(url, user())
+        },
+      },
+    })
+    await second.runtime.start()
+    t.mock.timers.tick(2000)
+    await settleProbe()
+    assert.equal(calls, 1)
+    if (change === 'logout') await second.runtime.logout()
+    if (change === 'metadata')
+      second.runtime.sessionStore.setUser({ ...user(), display_name: 'replacement' })
+    if (change === 'takeover')
+      await second.runtime.kernel.beginVerification('other-tab', () => true)
+    if (change === 'expiry') second.env.now = NOW + 3600000
+    if (change === 'rollback') second.env.now = NOW - 1
+    const session = structuredClone(second.runtime.sessionStore.getSnapshot())
+    release()
+    await settleProbe()
+    assert.equal(calls, 1)
+    assert.deepEqual(second.runtime.sessionStore.getSnapshot(), session)
+    assert.notEqual(second.runtime.getSnapshot().sync, 'synced')
+    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+    assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+    if (change !== 'metadata') assert.notEqual(second.runtime.getSnapshot().phase, 'ready')
+    if (change === 'logout') assert.equal(signal.aborted, true)
+  })
+
+for (const changedAuthority of [false, true])
+  test(`successful automatic verification overrides stale false hint before ${changedAuthority ? 'new baseline' : 'equivalent context'} dispatch`, async (t) => {
+    const { first, evidence } = await retainedReload(t)
+    const calls = []
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      online: false,
+      server: {
+        fetch: async (url, init) => {
+          const path = new URL(url).pathname
+          calls.push(path)
+          if (path.endsWith('/sync/mutations'))
+            return response(url, {
+              results: JSON.parse(init.body).mutations.map((row) => ({
+                mutation_id: row.mutation_id,
+                entity_id: row.entity_id,
+                status: 'applied',
+                entity_version: 1,
+                error_code: null,
+                error_message: null,
+              })),
+            })
+          const original = await first.server.fetch(url, init)
+          if (!changedAuthority) return original
+          const body = JSON.stringify(await original.json())
+            .replaceAll(epoch, 'b'.repeat(43))
+            .replaceAll(baselineId, '0199ba00-0000-7000-8000-000000000003')
+          return response(url, JSON.parse(body))
+        },
+      },
+    })
+    await second.runtime.start()
+    t.mock.timers.tick(2000)
+    for (let i = 0; i < 20; i++) {
+      await settleProbe()
+      t.mock.timers.tick(0)
+      if (second.runtime.getSnapshot().sync === 'synced') break
+    }
+    assert.equal(second.env.online, false)
+    assert.equal(second.runtime.getSnapshot().phase, 'ready')
+    assert.equal(second.runtime.getSnapshot().sync, 'synced', JSON.stringify(calls))
+    assert.equal((await second.database.operationDelivery.toArray())[0].state, 'applied')
+    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+    assert.ok(calls.indexOf('/api/v1/auth/context') < calls.indexOf('/api/v1/sync/mutations'))
+    assert.equal(calls.includes('/api/v1/sync/baselines/start'), changedAuthority)
+  })
+
+test('duplicate offline notifications preserve the probe backoff and original admission', async (t) => {
+  const { first } = await retainedReload(t)
+  let calls = 0
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async () => {
+        calls++
+        throw new TypeError('unreachable')
+      },
+    },
+  })
+  await second.runtime.start()
+  const session = structuredClone(second.runtime.sessionStore.getSnapshot())
+  t.mock.timers.tick(1000)
+  await second.runtime.offline()
+  t.mock.timers.tick(1000)
+  await settleProbe()
+  assert.equal(calls, 1)
+  t.mock.timers.tick(2000)
+  await second.runtime.offline()
+  await settleProbe()
+  assert.equal(calls, 1)
+  t.mock.timers.tick(2000)
+  await settleProbe()
+  assert.equal(calls, 2)
+  assert.deepEqual(second.runtime.sessionStore.getSnapshot(), session)
+})
+
+test('automatic account-scope change cannot silently select a different workshop', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let calls = 0
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async (url) => {
+        calls++
+        return response(url, { ...user(), location_id: 'other' })
+      },
+    },
+  })
+  await second.runtime.start()
+  t.mock.timers.tick(2000)
+  await settleProbe()
+  assert.equal(calls, 1)
+  assert.equal(second.runtime.getSnapshot().phase, 'held')
+  assert.equal(second.runtime.getSnapshot().selectedLocationId, null)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+})
+
+for (const replacement of ['user', 'admission'])
+  test(`online source cannot start a probe after same-token ${replacement} replacement`, async (t) => {
+    const first = setup(t)
+    await first.runtime.start()
+    await login(first.runtime)
+    await until(() => first.runtime.getSnapshot().sync === 'synced', 'initial sync')
+    const before = first.server.calls.length
+    if (replacement === 'user')
+      first.runtime.sessionStore.setUser({ ...user(), organization_id: 'foreign' })
+    else {
+      const session = first.runtime.sessionStore.getSnapshot()
+      first.runtime.sessionStore.remember(
+        { ...session.admission, datasetIncarnation: '0199ba00-0000-7000-8000-000000000009' },
+        session.token,
+      )
+    }
+    first.env.online = false
+    await first.runtime.offline()
+    await new Promise((resolve) => setTimeout(resolve, 2100))
+    await settleProbe()
+    assert.equal(first.server.calls.length, before)
+  })
+
+for (const change of ['user', 'admission'])
+  test(`automatic verification preserves exact ${change} snapshot through post-remember publication`, async (t) => {
+    const { first } = await retainedReload(t)
+    t.mock.timers.enable({ apis: ['setTimeout'] })
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      online: false,
+      server: first.server,
+    })
+    await second.runtime.start()
+    const remember = second.runtime.sessionStore.remember.bind(second.runtime.sessionStore)
+    second.runtime.sessionStore.remember = (...args) => {
+      remember(...args)
+      queueMicrotask(() => {
+        const replacement = JSON.parse(first.storage.getItem('ocwp.session.v2'))
+        if (change === 'user') replacement.user = user('B')
+        else replacement.admission.owner.tabAttemptId = 'replacement'
+        first.storage.setItem('ocwp.session.v2', JSON.stringify(replacement))
+      })
+    }
+    t.mock.timers.tick(2000)
+    await settleProbe()
+    assert.notEqual(second.runtime.getSnapshot().phase, 'ready')
+    assert.equal(second.runtime.getSnapshot().customers.length, 0)
+    if (change === 'user') assert.equal(second.runtime.sessionStore.getSnapshot().user.user_id, 'B')
+    else
+      assert.equal(
+        second.runtime.sessionStore.getSnapshot().admission.owner.tabAttemptId,
+        'replacement',
+      )
+  })
+
+test('changed-authority baseline network failure under false hint cannot resurrect old offline admission', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  const calls = []
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async (url, init) => {
+        calls.push(new URL(url).pathname)
+        if (url.endsWith('/sync/baselines/start')) throw new TypeError('unreachable')
+        const original = await first.server.fetch(url, init)
+        return response(
+          url,
+          JSON.parse(JSON.stringify(await original.json()).replaceAll(epoch, 'b'.repeat(43))),
+        )
+      },
+    },
+  })
+  await second.runtime.start()
+  t.mock.timers.tick(2000)
+  await settleProbe()
+  assert.equal(second.runtime.getSnapshot().phase, 'baseline')
+  second.env.now += 3000
+  t.mock.timers.tick(3000)
+  await settleProbe()
+  assert.equal(second.runtime.getSnapshot().phase, 'held')
+  assert.deepEqual(calls, [
+    '/api/v1/auth/me',
+    '/api/v1/auth/context',
+    '/api/v1/sync/baselines/start',
+  ])
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  second.runtime.dispose()
+  const third = setup(t, { name: first.name, storage: first.storage, online: false })
+  await third.runtime.start()
+  assert.equal(third.runtime.getSnapshot().phase, 'held')
+})
+
+test('native reconnect cancels a pending probe and its late completion cannot verify the new owner again', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let release,
+    probeSignal,
+    me = 0
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async (url, init) => {
+        if (url.endsWith('/auth/me') && ++me === 1) {
+          probeSignal = init.signal
+          await new Promise((resolve) => {
+            release = resolve
+          })
+        }
+        return first.server.fetch(url, init)
+      },
+    },
+  })
+  await second.runtime.start()
+  t.mock.timers.tick(2000)
+  await settleProbe()
+  assert.equal(me, 1)
+  second.env.online = true
+  await second.runtime.reconnect()
+  assert.equal(probeSignal.aborted, true)
+  const owner = await second.database.deviceControl.get('device')
+  release()
+  await settleProbe()
+  assert.equal(me, 2)
+  assert.deepEqual(await second.database.deviceControl.get('device'), owner)
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+})
+
+test('disconnect during preference copy retains offline admission and probes without destructive automatic sync', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let reachable = true
+  const calls = []
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online: false,
+    server: {
+      fetch: async (url, init) => {
+        calls.push(new URL(url).pathname)
+        if (!reachable) throw new TypeError('unreachable')
+        return first.server.fetch(url, init)
+      },
+    },
+  })
+  await second.runtime.start()
+  let reached,
+    release,
+    once = false
+  const barrier = new Promise((resolve) => {
+    reached = resolve
+  })
+  second.runtime.options.factory = {
+    open(name) {
+      if (once) return indexedDB.open(name)
+      once = true
+      const request = { transaction: { abort() {} } }
+      queueMicrotask(() => {
+        request.onupgradeneeded()
+        release = () => request.onerror()
+        reached()
+      })
+      return request
+    },
+  }
+  second.env.online = true
+  t.mock.timers.tick(2000)
+  await barrier
+  reachable = false
+  await second.runtime.offline()
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  release()
+  await settleProbe()
+  t.mock.timers.tick(0)
+  await settleProbe()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.deepEqual(calls, ['/api/v1/auth/me', '/api/v1/auth/context'])
+  const session = structuredClone(second.runtime.sessionStore.getSnapshot())
+  t.mock.timers.tick(2000)
+  await settleProbe()
+  assert.deepEqual(calls, ['/api/v1/auth/me', '/api/v1/auth/context', '/api/v1/auth/me'])
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.deepEqual(second.runtime.sessionStore.getSnapshot(), session)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+})
+
+test('organization-wide account retains concrete workshop through automatic revalidation', async (t) => {
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    if (new URL(url).pathname.endsWith('/locations'))
+      return response(url, {
+        items: [{ location_id: 'loc', organization_id: 'org', name: 'Selected workshop' }],
+        next_cursor: null,
+      })
+    const body = await (await original(url, init)).json()
+    if (Object.hasOwn(body, 'user_id')) body.location_id = null
+    const context = body.context ?? body
+    if (Object.hasOwn(context, 'account_location_id')) context.account_location_id = null
+    return response(url, body)
+  }
+  const first = setup(t, { server })
+  await first.runtime.start()
+  await first.runtime.login({ organization_id: 'org', username: 'A', password: 'synthetic' })
+  assert.equal(first.runtime.getSnapshot().phase, 'selector')
+  await first.runtime.selectWorkshop('loc')
+  await until(() => first.runtime.getSnapshot().sync === 'synced', 'initial selected sync')
+  first.env.online = false
+  await first.runtime.offline()
+  first.runtime.dispose()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const second = setup(t, { name: first.name, storage: first.storage, server, online: false })
+  await second.runtime.start()
+  t.mock.timers.tick(2000)
+  for (let i = 0; i < 20; i++) {
+    await settleProbe()
+    t.mock.timers.tick(0)
+    if (second.runtime.getSnapshot().sync === 'synced') break
+  }
+  assert.equal(second.runtime.getSnapshot().sync, 'synced')
+  assert.equal(second.runtime.getSnapshot().user.location_id, null)
+  assert.equal(second.runtime.getSnapshot().context.accountLocationId, null)
+  assert.equal(second.runtime.getSnapshot().context.selectedLocationId, 'loc')
+})

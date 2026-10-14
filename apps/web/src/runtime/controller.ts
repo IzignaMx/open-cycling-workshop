@@ -18,6 +18,7 @@ import type { LoginRequestPayload } from '../auth/login-model.js'
 import { PreferenceRepository } from '../personalization/repository.js'
 import { copyOwnedLegacyPreferences, inspectLegacyWork } from './legacy-preservation.js'
 import { createRuntimeTransport, RuntimeHttpError, type WorkshopLocation } from './transport.js'
+import { ReachabilityProbe, type ReachabilityResult } from './reachability-probe.js'
 import { WorkshopRepositories, type IntakeInput } from './repositories.js'
 import type { LocalCustomer } from '../local/types.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../local/service-order-types.js'
@@ -116,10 +117,13 @@ export class WorkshopController {
   #started = false
   #running = false
   #verifiedOnline = false
+  #observedReachable = false
+  #sessionSnapshots = new WeakMap<BaselineSession, { saved: SessionSnapshot }>()
   #networkSequence = 0
   #preferences: PreferenceRepository | null = null
   #observer: { unsubscribe(): void } | null = null
   readonly #now: () => number
+  readonly #probe: ReachabilityProbe<SessionUserSnapshot>
   readonly #http: ReturnType<typeof createRuntimeTransport>
   readonly #context: ReturnType<typeof createServerContextAdapter>
   readonly #baseline: ReturnType<typeof createBaselineCoordinator>
@@ -127,6 +131,11 @@ export class WorkshopController {
   readonly #push: ReturnType<typeof createPushCoordinator>
   constructor(private readonly options: RuntimeOptions) {
     this.#now = options.now ?? Date.now
+    this.#probe = new ReachabilityProbe({
+      now: this.#now,
+      set: (action, delay) => setTimeout(action, delay),
+      clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+    })
     this.database = options.database ?? createKernelDatabase('ocwp-authenticated-v1')
     this.kernel = new AccessKernel(this.database, {
       now: this.#now,
@@ -140,7 +149,7 @@ export class WorkshopController {
       kernel: this.kernel,
       now: this.#now,
       random: Math.random,
-      online: options.online,
+      online: () => this.#observedReachable || options.online(),
     }
     this.#baseline = createBaselineCoordinator({
       ...common,
@@ -168,6 +177,8 @@ export class WorkshopController {
     for (const listener of this.#listeners) listener()
   }
   private cancel() {
+    this.#observedReachable = false
+    this.#probe.cancel()
     this.#sequence++
     this.#networkSequence++
     this.#context.invalidate()
@@ -215,6 +226,20 @@ export class WorkshopController {
       },
       Math.max(0, delay),
     )
+  }
+  private scheduleSync(delay = 0) {
+    const source = this.#active
+    if (
+      !this.#verifiedOnline ||
+      !source ||
+      this.#snapshot.phase !== 'ready' ||
+      !source.isCurrent(source.identity)
+    )
+      return
+    this.schedule(async () => {
+      if (this.#verifiedOnline && this.#active === source && source.isCurrent(source.identity))
+        await this.sync()
+    }, delay)
   }
   private held(reason: string) {
     const active = this.#active ?? this.#working
@@ -301,7 +326,7 @@ export class WorkshopController {
       if (!current()) return
       this.sessionStore.remember(resumed.admission, saved.token)
       captured = this.sessionStore.getSnapshot()!
-      const source = this.makeSession(captured, resumed.ticket, resumed.context, sequence, true)
+      const source = this.makeSession(captured, resumed.ticket, resumed.context, sequence)
       await this.ready(source, captured.user!, sequence, false)
     } catch {
       if (current()) this.held('offline_expired')
@@ -312,7 +337,6 @@ export class WorkshopController {
     ticket: ContextTicket,
     context: VerifiedAccessContext,
     sequence: number,
-    exact = false,
   ): BaselineSession {
     const identity = {
       apiRealm: this.options.apiRealm,
@@ -324,13 +348,16 @@ export class WorkshopController {
       sessionHandle: saved.bindingId!,
       expectedAuthorizationEpoch: context.authorizationEpoch,
     }
-    return {
+    const capture = { saved }
+    const source: BaselineSession = {
       ticket: structuredClone(ticket),
       context: structuredClone(context),
       identity,
       bearerToken: saved.token,
-      isCurrent: () => (exact ? this.exactSession(sequence, saved) : this.current(sequence, saved)),
+      isCurrent: () => this.exactSession(sequence, capture.saved),
     }
+    this.#sessionSnapshots.set(source, capture)
+    return source
   }
   async login(input: LoginRequestPayload): Promise<void> {
     const sequence = this.blank('verifying'),
@@ -368,13 +395,18 @@ export class WorkshopController {
     expectedOwner?: ContextTicket,
     freshBaseline = false,
     offlineReload = false,
+    probe?: ReachabilityResult<SessionUserSnapshot>,
   ): Promise<void> {
     const sequence = this.blank('verifying'),
+      networkSequence = this.#networkSequence,
       current = () =>
-        offlineReload ? this.exactSession(sequence, saved) : this.current(sequence, saved)
+        (probe === undefined || networkSequence === this.#networkSequence) &&
+        (offlineReload || probe
+          ? this.exactSession(sequence, saved)
+          : this.current(sequence, saved))
     try {
-      let user: SessionUserSnapshot | undefined
-      let preflightFailure: unknown
+      let user = probe && 'value' in probe ? probe.value : undefined
+      let preflightFailure = probe && 'error' in probe ? probe.error : undefined
       if (offlineReload) {
         if (!this.retainedScopeMatches(saved)) throw new Error('Reload session scope changed')
         try {
@@ -402,6 +434,8 @@ export class WorkshopController {
         (user.user_id !== saved.user.user_id || user.organization_id !== saved.user.organization_id)
       )
         throw new Error('Principal changed')
+      if (probe && user.location_id !== saved.user?.location_id)
+        throw new Error('Account scope changed')
       this.sessionStore.setUser(user)
       this.sessionStore.bindVerifiedSession(saved.token)
       saved = this.sessionStore.getSnapshot()!
@@ -435,6 +469,7 @@ export class WorkshopController {
       if (!current()) return
       const accepted = await this.kernel.acceptVerifiedContext(attempt, verified.context, current)
       if (!current()) return
+      this.#observedReachable = true
       const source = this.makeSession(saved, accepted.ticket, verified.context, sequence)
       this.#working = source
       this.publish({
@@ -445,7 +480,7 @@ export class WorkshopController {
       })
       if (accepted.state === 'READY' && !freshBaseline) {
         await this.ready(source, user, sequence, true)
-        this.schedule(() => this.sync())
+        this.scheduleSync()
         return
       }
       if (!accepted.baselineSupported) {
@@ -477,13 +512,14 @@ export class WorkshopController {
     sequence: number,
   ): Promise<void> {
     if (!source.isCurrent(source.identity)) return
+    if (outcome.reason === 'network_error') this.#observedReachable = false
     if (outcome.state === 'READY') {
       const state = await this.kernel.inspectSession(source.ticket, () =>
         source.isCurrent(source.identity),
       )
       source.context = state.context
       await this.ready(source, this.#snapshot.user!, sequence, true)
-      this.schedule(() => this.sync())
+      this.scheduleSync()
       return
     }
     if (outcome.state === 'PROGRESSED' || outcome.state === 'RETRY_LATER') {
@@ -511,6 +547,7 @@ export class WorkshopController {
       const admission = await this.kernel.rememberSession(source.ticket, saved.bindingId!, current)
       if (!current()) return
       this.sessionStore.remember(admission, saved.token)
+      this.#sessionSnapshots.get(source)!.saved = this.sessionStore.getSnapshot()!
     }
     this.#active = source
     this.#working = null
@@ -553,22 +590,79 @@ export class WorkshopController {
       /* Preference copy failure does not affect operational admission. */
     }
     if (!current()) return
+    const connected = online && this.#verifiedOnline
     this.publish({
       phase: 'ready',
       user,
       context: source.context,
       selectedLocationId: scope.locationId,
-      message: online ? null : 'Acceso local verificado hasta el vencimiento de la sesión.',
-      sync: online ? 'local' : 'offline',
+      message: connected ? null : 'Acceso local verificado hasta el vencimiento de la sesión.',
+      sync: connected ? 'local' : 'offline',
       identityKey: `${saved.bindingId}:${scope.locationId}`,
     })
     this.armLease(source)
+    if (!connected) this.probeOffline(source)
     await this.refresh()
     void inspectLegacyWork(this.options.factory ?? indexedDB)
       .then((present) => {
         if (current()) this.publish({ legacyPresent: present })
       })
       .catch(() => undefined)
+  }
+  private probeOffline(source: BaselineSession) {
+    if (this.#snapshot.phase !== 'ready') return
+    const saved = this.sessionStore.getSnapshot()
+    const captured = this.#sessionSnapshots.get(source)?.saved
+    if (
+      !saved ||
+      !captured ||
+      JSON.stringify(saved) !== JSON.stringify(captured) ||
+      !this.retainedScopeMatches(saved) ||
+      !saved.admission ||
+      saved.token !== source.bearerToken ||
+      saved.bindingId !== source.identity.sessionHandle ||
+      saved.admission.datasetIncarnation !== source.context.datasetIncarnation ||
+      Object.keys(source.ticket).some(
+        (key) =>
+          saved.admission!.owner[key as keyof ContextTicket] !==
+          source.ticket[key as keyof ContextTicket],
+      )
+    )
+      return
+    const sequence = this.#sequence,
+      networkSequence = this.#networkSequence
+    const current = () =>
+      this.#snapshot.phase === 'ready' &&
+      !this.#verifiedOnline &&
+      this.#active === source &&
+      networkSequence === this.#networkSequence &&
+      this.exactSession(sequence, saved) &&
+      source.isCurrent(source.identity)
+    this.#probe.start({
+      expiresAt: Date.parse(source.context.offlineUntil),
+      current,
+      inspect: async () => {
+        await this.kernel.inspectSession(source.ticket, current)
+      },
+      request: (signal, capture) =>
+        this.#http.me({ token: saved.token, signal, isCurrent: capture }),
+      complete: async (result, capture) => {
+        if (!capture()) return
+        await this.kernel.inspectSession(source.ticket, capture)
+        if (capture())
+          await this.verifyStored(
+            saved,
+            source.context.selectedLocationId,
+            source.ticket,
+            false,
+            false,
+            result,
+          )
+      },
+      invalid: () => {
+        if (current()) this.held('offline_expired')
+      },
+    })
   }
   private armLease(source: BaselineSession) {
     if (this.#leaseTimer !== null) clearTimeout(this.#leaseTimer)
@@ -652,6 +746,12 @@ export class WorkshopController {
     await this.verifyStored(saved, source.context.selectedLocationId, source.ticket)
   }
   async offline() {
+    if (!this.#verifiedOnline && this.#active && this.#snapshot.sync === 'offline') {
+      await this.checkLease()
+      return
+    }
+    this.#observedReachable = false
+    this.#probe.cancel()
     this.#verifiedOnline = false
     this.#networkSequence++
     this.#push.invalidate()
@@ -664,7 +764,10 @@ export class WorkshopController {
     this.publish({ sync: 'offline' })
     try {
       await this.kernel.continueOffline(source.ticket)
-      if (this.#active === source) this.publish({ sync: 'offline' })
+      if (this.#active === source) {
+        this.publish({ sync: 'offline' })
+        this.probeOffline(source)
+      }
     } catch {
       if (this.#active === source) this.held('verification_required')
     }
@@ -793,14 +896,14 @@ export class WorkshopController {
     await this.repositories.createCustomer(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    if (this.#verifiedOnline) this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.scheduleSync()
   }
   async createOrder(input: IntakeInput) {
     const source = this.requireActive()
     await this.repositories.createOrder(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    if (this.#verifiedOnline) this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.scheduleSync()
   }
   async transition(orderId: string, action: OrderAction) {
     const source = this.requireActive()
@@ -808,7 +911,7 @@ export class WorkshopController {
     if (this.#active !== source) return
     await this.refresh()
     await this.timeline(orderId)
-    if (this.#verifiedOnline) this.schedule(() => this.sync())
+    if (this.#verifiedOnline) this.scheduleSync()
   }
   async timeline(orderId: string) {
     const source = this.requireActive(),
@@ -854,7 +957,7 @@ export class WorkshopController {
   async sync(): Promise<void> {
     const source = this.#active
     if (!source || this.#running) return
-    if (!this.options.online()) {
+    if (!this.#observedReachable && !this.options.online()) {
       await this.offline()
       return
     }
@@ -876,6 +979,7 @@ export class WorkshopController {
         ? await this.#push.step(networkSession)
         : { state: 'IDLE' }
       if (!current()) return
+      if ('reason' in push && push.reason === 'network_error') this.#observedReachable = false
       if (push.state === 'HELD') {
         this.held(
           'reason' in push ? (push.reason ?? 'verification_required') : 'verification_required',
@@ -884,6 +988,7 @@ export class WorkshopController {
       }
       const delta = await this.#incremental.step(networkSession)
       if (!current()) return
+      if (delta.reason === 'network_error') this.#observedReachable = false
       if (delta.state === 'HELD' || delta.state === 'BASELINE_REQUIRED') {
         this.held(delta.reason ?? 'verification_required')
         return
@@ -891,13 +996,12 @@ export class WorkshopController {
       await this.refresh()
       if (!current()) return
       if (delta.state === 'PROGRESSED' || push.state === 'APPLIED') {
-        this.schedule(() => this.sync())
+        this.scheduleSync()
         return
       }
       if (delta.state === 'RETRY_LATER' || push.state === 'RETRY_LATER') {
         this.publish({ sync: 'error' })
-        this.schedule(
-          () => this.sync(),
+        this.scheduleSync(
           Math.max(
             1000,
             Math.min(
@@ -927,8 +1031,7 @@ export class WorkshopController {
                   : 'error'
                 : 'synced',
       })
-      this.schedule(
-        () => this.sync(),
+      this.scheduleSync(
         this.#snapshot.nextRetryAt === null
           ? 30000
           : Math.max(1000, Math.min(30000, this.#snapshot.nextRetryAt - this.#now())),
