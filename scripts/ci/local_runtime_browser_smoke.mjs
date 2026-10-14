@@ -147,6 +147,29 @@ async function session(page) {
   return page.evaluate(() => JSON.parse(sessionStorage.getItem('ocwp.session.v2')))
 }
 
+// Read only a fixed UI state marker after the original assertion has failed.
+// No DOM text, error, identifier, session or storage contents enter diagnostics.
+export async function readReadmissionPhase(page) {
+  try {
+    const phase = await page
+      .locator('[data-runtime-state]')
+      .first()
+      .getAttribute('data-runtime-state', { timeout: 1000 })
+    switch (phase) {
+      case 'LOCKED':
+      case 'VERIFYING':
+      case 'SELECTOR':
+      case 'BASELINE':
+      case 'READY':
+      case 'HELD':
+        return phase
+    }
+  } catch {
+    // Missing marker, closed page or observation failure stays content-free.
+  }
+  return 'UNKNOWN'
+}
+
 async function run() {
   const phases = new PhaseInput(process.stdin)
   let step = 'fixture_input'
@@ -324,7 +347,33 @@ async function run() {
     step = 'offline_reload'
     await page.reload({ waitUntil: 'domcontentloaded' })
     step = 'offline_readmission'
-    await ready(page)
+    try {
+      await ready(page)
+    } catch (error) {
+      switch (await readReadmissionPhase(page)) {
+        case 'LOCKED':
+          step = 'offline_readmission_locked'
+          break
+        case 'VERIFYING':
+          step = 'offline_readmission_verifying'
+          break
+        case 'SELECTOR':
+          step = 'offline_readmission_selector'
+          break
+        case 'BASELINE':
+          step = 'offline_readmission_baseline'
+          break
+        case 'READY':
+          step = 'offline_readmission_ready'
+          break
+        case 'HELD':
+          step = 'offline_readmission_held'
+          break
+        default:
+          step = 'offline_readmission_unknown'
+      }
+      throw error
+    }
     step = 'offline_reloaded_ui_state'
     await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
     step = 'offline_reloaded_projection'

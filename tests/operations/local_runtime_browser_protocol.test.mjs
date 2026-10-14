@@ -5,6 +5,7 @@ import { PassThrough, Readable } from 'node:stream'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { PhaseInput, validateInput } from '../../scripts/ci/local_runtime_browser_smoke.mjs'
+import * as smoke from '../../scripts/ci/local_runtime_browser_smoke.mjs'
 
 const smokeUrl = new URL('../../scripts/ci/local_runtime_browser_smoke.mjs', import.meta.url)
 
@@ -103,4 +104,84 @@ test('fixture input is closed and only accepts its loopback origin and exact ide
     { token: 'secret' },
   ])
     assert.throws(() => validateInput({ ...valid, ...change }))
+})
+
+test('readmission diagnosis reads only a bounded phase attribute and returns a closed enum', async () => {
+  assert.equal(typeof smoke.readReadmissionPhase, 'function')
+  const known = ['LOCKED', 'VERIFYING', 'SELECTOR', 'BASELINE', 'READY', 'HELD']
+  const privateValue = 'synthetic-private-dom-session-token'
+  for (const raw of [
+    ...known,
+    null,
+    undefined,
+    '',
+    'ready',
+    privateValue,
+    { token: privateValue },
+  ]) {
+    const calls = []
+    const page = {
+      locator(selector) {
+        calls.push(['locator', selector])
+        return {
+          first() {
+            calls.push(['first'])
+            return {
+              async getAttribute(name, options) {
+                calls.push(['getAttribute', name, options])
+                return raw
+              },
+            }
+          },
+        }
+      },
+    }
+    assert.equal(await smoke.readReadmissionPhase(page), known.includes(raw) ? raw : 'UNKNOWN')
+    assert.deepEqual(calls, [
+      ['locator', '[data-runtime-state]'],
+      ['first'],
+      ['getAttribute', 'data-runtime-state', { timeout: 1000 }],
+    ])
+  }
+  assert.equal(
+    await smoke.readReadmissionPhase({
+      locator() {
+        throw new Error(privateValue)
+      },
+    }),
+    'UNKNOWN',
+  )
+  assert.equal(
+    await smoke.readReadmissionPhase({
+      locator() {
+        return {
+          first() {
+            return {
+              async getAttribute() {
+                throw new Error(privateValue)
+              },
+            }
+          },
+        }
+      },
+    }),
+    'UNKNOWN',
+  )
+})
+
+test('readmission failure preserves the exact assertion, timeout, rethrow and static labels', () => {
+  const source = readFileSync(smokeUrl, 'utf8')
+  const start = source.indexOf("    step = 'offline_readmission'")
+  const end = source.indexOf("    step = 'offline_reloaded_ui_state'", start)
+  const block = source.slice(start, end)
+  assert.match(
+    source,
+    /expect\(target\.locator\('\[data-runtime-state="READY"\]'\)\)\.toBeVisible\(\{ timeout: 60_000 \}\)/,
+  )
+  assert.match(block, /try \{\s+await ready\(page\)\s+\} catch \(error\) \{/)
+  assert.match(block, /switch \(await readReadmissionPhase\(page\)\)/)
+  for (const phase of ['locked', 'verifying', 'selector', 'baseline', 'ready', 'held', 'unknown']) {
+    assert.ok(block.includes(`step = 'offline_readmission_${phase}'`))
+  }
+  assert.match(block, /throw error\s+\}\s*$/)
 })
