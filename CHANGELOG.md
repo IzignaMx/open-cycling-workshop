@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Inventory authority and private HTTP responses
+
+- Inventory product/movement commands now refresh persisted session, active
+  state, literal grants and scope under the shared organization → actor barrier
+  before domain reads or product locks. Existing ledger and replay semantics
+  are preserved; PostgreSQL exact-head qualification remains pending.
+- Existing identity, administration and location responses are no-store,
+  including redirects and sanitized errors. No protocol, schema, credential,
+  deployment or production-client activation changes. See the
+  [security correction record](docs/10-spec-development/2026-10-14-inventory-authority-barrier.md).
+
 ## Unreleased · Bounded authoritative server baselines
 
 - Add durable, identity-bound full scans and finite ordered delta runs, exact

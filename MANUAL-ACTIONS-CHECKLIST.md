@@ -689,3 +689,17 @@ Current SQL reservation: bounded baselines implement 0009 after 0008; unimplemen
 quote persistence moves to 0010 after 0009. Earlier reservation notes remain
 historical. Existing physical Windows/Android, accessibility and recovery gates
 remain open. No source increment is installation or rollout evidence.
+
+## 2026-10-14 · Inventory authority correction qualification
+
+- [ ] Obtain exact-candidate PostgreSQL evidence for inventory product and
+      movement authority changes while waiting, rollback, reverse write/revoke
+      ordering, independent organizations and the updated two-edge stock/replay
+      contention tests. Local functional RED/GREEN is not PostgreSQL proof.
+- [ ] Before an actual authorized server update, use the reviewed backup/restore
+      and drained-writer upgrade process. No installation was changed; this fix
+      has no schema migration and does not fence old server binaries.
+- Existing client activation, physical-device and accessibility gates remain
+  unchanged. The narrow no-store correction does not qualify an administration
+  UI or erase any stored client data. See the
+  [scope and evidence](docs/10-spec-development/2026-10-14-inventory-authority-barrier.md).

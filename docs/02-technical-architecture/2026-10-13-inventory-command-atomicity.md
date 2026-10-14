@@ -35,6 +35,11 @@ leave 2. Existing rows must not be rewritten or silently reinterpreted.
   quantity, with one RELEASE or CONSUME winner. Partial finalization requires a
   separate remaining-quantity specification and is rejected in this increment.
 - All public ledger writes lock the product row with PostgreSQL FOR UPDATE.
+  The current-authority correction first acquires the shared organization →
+  actor writer barrier and refreshes literal effective authorization, before
+  locking the product. Product creation uses the same barrier before its
+  location lookup/INSERT. See the
+  [authority evidence record](../10-spec-development/2026-10-14-inventory-authority-barrier.md).
   After acquiring the lock they check idempotency, stock, references and prior
   finalization. A partial unique database index on organization/reference for
   RELEASE/CONSUME additionally rejects multiple finalizers. The ADJUST companion

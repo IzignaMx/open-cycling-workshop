@@ -870,3 +870,25 @@ isolated_server_context_adapter_2026_10_14:
   legacy_recovery: original_realm_journals_preserved_no_retarget_or_replay
   remaining_gates: baseline_ingestion_activation_old_writer_cutover_restore_physical_accessibility
   record: docs/10-spec-development/2026-10-14-isolated-server-context-adapter.md
+
+inventory_authority_barrier_2026_10_14:
+  status: implemented_pending_evidence
+  base: 2723ec321a606a69a2516f1eaea4d96600354f8f
+  scope: inventory_org_actor_product_barrier_and_private_identity_http_no_store
+  authorization: refreshed_session_active_scope_and_literal_grant_intersection
+  semantics: existing_inventory_atomicity_idempotency_and_stock_preserved
+  inventory_functional_red: 36_failed_6_passed_before_correction
+  inventory_functional_green: 42_passed
+  focused_regression: 394_passed_31_postgresql_skips
+  http_cache_red: 78_failed_13_boundary_controls_passed
+  http_cache_green: 91_passed_real_routes_synthetic_accounts_injected_failure_cases
+  postgres: 14_new_cases_authored_not_executed_locally
+  local_python: 1240_passed_154_explicit_skips
+  local_frontend_core: 216_passed
+  local_api_client: 1_passed
+  local_aggregate: 21_passed_zero_failed_five_explicit_environment_blockers
+  independent_review: no_actionable_defects_481_passed_21_pg_skips_plus_145_writer_tests
+  reviewed_product_test_head: 17b167186df72c278856b8c5aaf915e12c0b4f02
+  migration_protocol_credentials_deployment: none
+  production_client: unchanged_v4_kernel_inactive_context_advertisement_null
+  record: docs/10-spec-development/2026-10-14-inventory-authority-barrier.md
