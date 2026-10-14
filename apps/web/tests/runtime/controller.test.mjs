@@ -451,3 +451,26 @@ test('late recovery issue remains visible and global conflict survives an empty 
   assert.equal(f.runtime.getSnapshot().hasIssues, true)
   assert.equal(f.runtime.getSnapshot().sync, 'conflict')
 })
+
+test('local writes without sync.push permission remain honestly pending', async (t) => {
+  const server = api(),
+    original = server.fetch
+  server.fetch = async (url, init) => {
+    const raw = await original(url, init),
+      body = await raw.json()
+    const value = body.context ?? body
+    if (Array.isArray(value.capabilities))
+      value.capabilities = value.capabilities.filter((capability) => capability !== 'sync.push')
+    return response(url, body)
+  }
+  const f = setup(t, { server })
+  await login(f.runtime)
+  await until(() => f.runtime.getSnapshot().sync === 'synced', 'initial read sync did not finish')
+  await f.runtime.createCustomer({ displayName: 'Pending local-only authorization' })
+  await until(
+    () => f.runtime.getSnapshot().sync === 'local' && f.runtime.getSnapshot().hasPending,
+    'local pending status not published',
+  )
+  assert.ok(!f.server.calls.some((path) => path.endsWith('/sync/mutations')))
+  assert.equal((await f.database.operationDelivery.toArray())[0].state, 'pending')
+})
