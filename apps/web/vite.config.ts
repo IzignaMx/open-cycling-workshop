@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { navigationFallbackDenylist } from './pwa-navigation-policy.mjs'
 
 const apiProxy = {
   '/api': {
@@ -28,6 +29,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: navigationFallbackDenylist,
         cleanupOutdatedCaches: true,
       },
     }),

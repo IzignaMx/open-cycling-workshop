@@ -399,7 +399,8 @@ inventory_quote_integration_2026_10_14:
   quote_pr: 23
   reconciliation: documentation_only_preserves_both_domains
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
-  quote_combined_tree_hosted_verification: pending
+  quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
+  quote_main_merge: 98394826884020d9de2498cab551120087dd5334
   quote_migration_reserved: 0008
   release_gates: unchanged
 
@@ -421,6 +422,80 @@ sync_read_authorization_2026_10_14:
   frontend_core_tests: 72_passed
   api_client_tests: 1_passed
   production_pwa_build: passed
-  hosted_verification: pending_publication_authorization
+  hosted_verified_checkpoint: head_0a9c935_ci_38545079024_500_python_27_checks_passed
+  reconciliation_base: 0342799bbdbebdcb6f7c692e398ae8b512979fb7
+  hosted_verification: final_reconciled_head_ci_pending
   follow_up: authorization_changes_need_session_revocation_and_scoped_resnapshot_without_pending_mutation_loss
+  release_gates: unchanged
+
+local_workshop_mvp_2026_10_14:
+  status: merged_hosted_verified_physical_acceptance_pending
+  baseline: b1df504bfd7d7050ee915df0bd43c55d19811a3f
+  plan: docs/10-spec-development/2026-10-14-local-workshop-mvp.md
+  adr: docs/02-technical-architecture/2026-10-14-portable-local-runtime.md
+  scope: additive_local_compose_and_database_recovery
+  integrated_prs: [22, 23, 24]
+  integration_base: 192c46c1c8cb0c6d0a1d6c949dc851236726d473
+  next_slice: audited_user_role_location_administration
+  hardware: raspberry_model_ram_storage_os_unknown
+  local_python_tests: 542_passed_9_live_postgresql_skips
+  migration_fixture_url_regression: observed_red_then_green_no_network
+  frontend_core_tests: 74_passed
+  local_qualification: 21_passed_0_failed_5_environment_blockers
+  independent_review: complete_no_unresolved_findings_after_safety_fixes
+  qualification: head_4d95527_ci_38546710635_27_checks_and_runtime_38546710553_11_checks_passed
+  merged_main: 0342799bbdbebdcb6f7c692e398ae8b512979fb7
+  release: development_versions_retained_no_production_readiness_claim
+
+local_workshop_mvp_first_hosted_2026_10_14:
+  head: 26bdb9f4a8da71a1e5ab4b5ea54e089f3f70b638
+  run: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38543107957
+  artifact: 11883570934
+  synthetic_test_merge: 45a8bedde7502d06794465098693979d64c8834b
+  amd64_runtime: 11_passed_including_pwa_offline_pg_restore_restart_and_log_redaction
+  arm64_builds: platform_web_operations_passed_no_image_publication
+  physical_hardware: not_tested
+  later_integration: main_9839482_plus_current_schema_fixture_correction
+  final_exact_head_evidence: head_4d95527_tree_896baaca_all_checks_passed
+  final_runtime_artifact: 11885510168
+  final_qualification_artifact: 11884254806
+sync_chaos_setup_barrier_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-sync-chaos-setup-barrier.md
+  status: verified
+  incident_ci_run: 38426124042
+  incident_job: 115395858982
+  incident: qualification_repeat_expected_three_queued_mutations_received_four_retry_passed
+  regression: held_indexeddb_completion_then_withheld_real_server_ack
+  hosted_red:
+    ci_run: 38541165450
+    job: 115775986709
+    head: 35118af37378bbf2b86c3d071b715ddd67b609d8
+    tested_merge: 3a9373383e3658cf44a411a0555dd40229d18048
+    result: baseline_readiness_resolved_with_pending_create_both_attempts_other_nine_journeys_passed
+    qualification_artifact: 11882193139
+  implementation: local_save_unique_customer_queue_zero_synced_and_server_version_one_barrier
+  remote_update: require_matching_mutation_and_entity_applied_at_version_two
+  repeat_gate: both_affected_journeys_five_times_each_zero_retries
+  local_qualification: partial_21_pass_zero_fail_five_environment_blockers
+  local_python_tests: 476_pass_eight_postgresql_skips
+  local_frontend_core_tests: 72_pass
+  local_e2e_static: strict_typecheck_and_discovery_passed_not_browser_execution
+  hosted_green_checkpoint:
+    head: 01f7c5e013655d23732e83eb6f71387e866ff925
+    tested_merge: 9c510a78503033ad38dd094d3a8149d13522177b
+    tree_equals_head: 7b3ea97007a2a5031048b0ad19e41a288c277b82
+    ci_run: 38542610878
+    job: 115780814286
+    initial_browser_suite: 10_passed_zero_flakes
+    retry_free_repeat_gate: 10_passed_five_each_zero_retries
+    qualification_browser_repeat: 10_passed_zero_flakes
+    qualification_artifact: 11883580431_passed_27_checks_zero_blockers
+    python_tests: 378_passed_zero_skips
+    security_run: 38542610839_passed
+    dco_run: 38542610803_passed
+  reconciliation_base: 98394826884020d9de2498cab551120087dd5334
+  reconciliation_scope: preserve_merged_inventory_pr22_quote_pr23_with_unchanged_sync_code
+  current_head_evidence: pr24_head_7db3307_ci_38543738916_passed_27_checks_30_browser_executions
+  merged_main: 192c46c1c8cb0c6d0a1d6c949dc851236726d473
+  independent_review: no_defects_targeted_checks_independently_passed
   release_gates: unchanged

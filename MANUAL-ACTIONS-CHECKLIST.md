@@ -361,3 +361,28 @@ Add durable evidence below instead of editing completed checklist history away.
 - See `docs/02-technical-architecture/2026-10-13-inventory-command-atomicity.md`.
   This is a conditional operational boundary, not evidence that deployed data
   contains duplicates. Existing physical-device qualification remains open.
+
+## Local workshop MVP / laptop-to-Raspberry (2026-10-14)
+
+- [ ] Qualify the additive local Compose runtime on the actual laptop and Docker installation; hosted Linux results do not prove Docker Desktop permissions or host behavior.
+- [ ] Identify Raspberry model, RAM, 64-bit OS, SSD/storage capacity, network and power resilience before promising suitability.
+- [ ] Prepare secret-file ownership for the container identities on the destination; do not make credentials world-readable. Review Windows/Docker Desktop ACL behavior separately.
+- [ ] Establish trusted LAN HTTPS before using PWA features from other devices; do not bypass browser certificate/security warnings.
+- [ ] Execute clean-target restore and asset transfer with realistic data, verify identities/counts and business workflows, and measure RPO/RTO.
+- [ ] Drain or preserve browser mutation queues before changing origins; a database dump does not include unsynchronized IndexedDB records.
+- [ ] Establish encrypted off-device backup and verified retention; database-only tooling is not full installation recovery.
+
+See [MVP acceptance plan](docs/10-spec-development/2026-10-14-local-workshop-mvp.md).
+These entries do not close existing physical/manual V0.1 gates or authorize deployment.
+
+## 2026-10-14 · Sync chaos setup regression
+
+- [x] Verify the corrected large-batch setup and deterministic regression on
+      hosted CI. PR #24 red run 38541165450 reproduces the legacy readiness
+      helper resolving with a pending create. Green checkpoint 01f7c5e, run
+      38542610878, passed all ten browser journeys, ten retry-free repetitions
+      (five per affected journey), and a further ten-journey qualification pass.
+      Artifact 11883580431 passed all 27 checks with zero blockers. Security and
+      DCO passed. The exact-three conflict assertions remain intact. Subsequent
+      base/evidence reconciliation commits require their own exact-head CI;
+      see the dedicated sync-chaos setup document and current PR #24 checks.

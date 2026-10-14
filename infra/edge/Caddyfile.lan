@@ -1,0 +1,19 @@
+{
+	admin off
+	http_port 8080
+	https_port 8443
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+import /etc/caddy/routes.caddy
+
+{$OCWP_LAN_HOST} {
+	tls internal
+	import ocwp_routes
+}
+
+http://:8081 {
+	bind 127.0.0.1
+	respond /edge-health "ok" 200
+}

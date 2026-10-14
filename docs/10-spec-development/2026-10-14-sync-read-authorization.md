@@ -45,8 +45,11 @@ describes the bounded behavior and future permission-change resnapshot requireme
   checks, runtime HTTP smoke, and production PWA build. PostgreSQL integration,
   Docker, psql, browser E2E database setup, and the managed Chromium navigation
   policy remain blocked. Browser/device behavior is not inferred from the build.
-- Hosted verification remains pending publication authorization and exact-head
-  CI. Local evidence describes the reviewed working tree, not a published SHA.
+- Hosted checkpoint `0a9c935`: CI 38545079024 passed 500 Python tests,
+  72 frontend core tests, nine browser journeys twice and all 27 qualification
+  checks. Security and DCO passed; artifact 11883594232 records the exact tested
+  tree. Final reconciliation with merged PRs #24/#25 on main `0342799` requires
+  a fresh exact-head run; the earlier checkpoint is not substituted for it.
 
 No schema/data migration, credential changes, deployment, role-admin API or
 client-cache reset is included. Existing physical-device, PostgreSQL/browser,
