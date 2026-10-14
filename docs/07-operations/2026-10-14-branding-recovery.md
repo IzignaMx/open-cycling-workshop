@@ -45,9 +45,14 @@ automática de generaciones o archivos antiguos. Vigilar capacidad del volumen y
 conservar espacio de trabajo suficiente. Un taller mayor requiere una ampliación
 revisada y probada del formato, nunca quitar validaciones para pasar un backup.
 
-Las carpetas deben ser controladas por el operador y no escribibles por grupo u
-otros usuarios. Se rechazan symlinks, incluso en componentes intermedios de las
-rutas, archivos no regulares, manifiestos duplicados/desconocidos y referencias
+Cada directorio final debe pertenecer al operador y no ser escribible por grupo
+u otros usuarios. Cada ancestro debe pertenecer al operador o a root, sin escritura
+ajena, salvo ancestros sticky propiedad de root como `/tmp`. Los manifiestos y el
+dump deben ser archivos regulares de un propietario confiable (operador/root),
+sin escritura de grupo/otros. Así se rechaza también un archivo modificable por
+otro UID dentro de una carpeta no escribible. Procesos maliciosos del mismo UID y
+administradores privilegiados permanecen dentro del límite de confianza. Se
+rechazan symlinks en cualquier componente, manifiestos duplicados/desconocidos y referencias
 que no coincidan con la clave derivada del digest. El destino padre debe existir;
 la herramienta no prepara permisos del host ni sobrescribe generaciones.
 
@@ -102,9 +107,15 @@ Estados:
 - `branding_integrity_checked_not_restored`: metadata, todos los bytes y TOC SQL
   comprobados; no se ha restaurado.
 - `branding_restore_checked`: SQL restaurado con schema/conteos coincidentes,
-  todos los perfiles y bytes comparados e incarnaciones rotadas. El resultado
-  mantiene `application_smoke_tested: false` y
-  `client_pending_mutations_checked: false`.
+  todos los perfiles y bytes comparados e incarnaciones rotadas; todas las
+  organizaciones ya tenían piso 1.
+- `branding_restore_checked_with_explicit_legacy_cutover`: además, se avanzaron
+  únicamente las organizaciones piso 0 consentidas expresamente a piso 1. Es una
+  transición de compatibilidad autorizada, no una restauración transparente.
+
+Ambos resultados mantienen `application_smoke_tested: false` y
+`client_pending_mutations_checked: false`; `legacy_organizations_activated`
+registra cuántas organizaciones fueron activadas.
 
 El manifiesto mantiene siempre `restore_tested: false`; no se modifica al
 verificar/restaurar. Conservar el resultado del ensayo separado, vinculado a sus
@@ -165,11 +176,64 @@ uv run python -m scripts.database.branding_bundle restore /backups/generacion \
 
 ## Incarnación y reapertura
 
-Esta ruta exige que **todas** las organizaciones de la generación tengan piso de
-protocolo 1. Una generación de piso 0 puede preservarse/verificarse, pero este CLI
-rechaza restaurarla antes de crear el destino de assets. Requiere un procedimiento
-separado de upgrade/cutover aislado con su release compatible; no activa permisos,
-cuentas o compatibilidad automáticamente.
+Por defecto, esta ruta exige que **todas** las organizaciones de la generación
+tengan piso de protocolo 1. Una generación con piso 0 se preserva/verifica, pero
+restore la rechaza antes de crear destinos, incluso cuando ese tenant no tiene
+perfil de branding. No se excluyen tenants ni se activa compatibilidad
+implícitamente.
+
+Existe una ruta explícita para una recuperación que también necesita activar el
+cutover legacy. Primero inspeccionar, sin escritura, la lista exacta del snapshot:
+
+```sh
+uv run python -m scripts.database.branding_bundle verify /backups/generacion \
+  --show-legacy-cutover
+```
+
+`legacy_cutover_required` contiene pares exactos
+`ORGANIZATION_ID=EXPECTED_INCARNATION`; no normaliza IDs legacy ni exige UUID para
+la organización. La incarnación sí debe ser un UUID canónico. Esta salida puede
+contener IDs internos: conservarla junto al backup restringido.
+
+Antes de autorizar esa transición, comprobar **por separado**:
+
+- Todos los escritores anteriores están drenados o detenidos; API/edge/worker y
+  demás clientes permanecen fuera del destino aislado.
+- Cada navegador conserva sus datos legacy originales en bruto y el trabajo
+  pendiente. No borrar, transformar ni atribuir journals automáticamente.
+- Se cumplen los prerrequisitos existentes de cutover y release/cliente
+  cualificados. Se acepta que cada tenant enumerado pasará a piso 1 y sus clientes
+  legacy necesitarán actualización; la aplicación no volverá a aceptar piso 0.
+- La lista de tenants/incarnaciones del origen coincide exactamente con la
+  generación elegida; la herramienta vuelve a verificar esos mismos valores en
+  el destino restaurado antes de ejecutar mantenimiento.
+
+Sólo después, repetir un argumento por **cada** par mostrado y reconocer esos
+prerrequisitos explícitamente. Ejemplo únicamente sintético:
+
+```sh
+uv run python -m scripts.database.branding_bundle restore /backups/generacion \
+  --asset-root /ruta/privada/volumen-nuevo --confirm-empty-target \
+  --confirm-legacy-cutover 'taller-a=00000000-0000-4000-8000-000000000001' \
+  --confirm-legacy-cutover 'taller-b=00000000-0000-4000-8000-000000000002' \
+  --confirm-legacy-prerequisites
+```
+
+Estos argumentos **autorizan una transición real de compatibilidad cuando el
+operador ejecuta el comando**. No son una opción para saltarse verificaciones.
+Se rechazan omisiones, extras, duplicados, incarnaciones distintas y ausencia del
+reconocimiento antes de reservar assets o modificar SQL. No hay aceptación global
+booleana de todos los tenants. Esta implementación sólo se probó con datos
+sintéticos; no autoriza activación alguna en una instalación real.
+
+Después de comparar todos los perfiles y bytes, la herramienta llama por
+separado a la activación auditada existente para cada par piso 0 autorizado y a
+la recuperación auditada para todos los tenants. La activación comprueba además
+la incarnación consentida bajo el lock existente de la organización antes de
+cambiar piso o auditoría. Si el destino cambia después de las comprobaciones de
+bytes, esa precondición rechaza sin activar dicho tenant. El piso sólo sube de 0 a 1;
+cuentas, permisos, roles, ámbitos y sus versiones no cambian. Una organización ya
+en piso 1 sólo recibe la rotación que ya exigía la restauración anterior.
 
 Tras comprobar SQL, perfiles y assets, la herramienta invoca la recuperación
 existente de cutover para cada organización con **la incarnación exacta del
@@ -178,8 +242,8 @@ cuentas, permisos, contraseñas y contadores. No incrementar session_version par
 simular recuperación: un contador restaurado puede coincidir con una sesión
 posterior al backup. La migración/cutover de esta release debe admitir 0011.
 
-Si una rotación falla o se pierde la respuesta, puede haber organizaciones ya
-rotadas y otras pendientes. Mantener ambos destinos aislados, consultar status y
+Si una activación/rotación falla o se pierde la respuesta, puede haber
+organizaciones ya activadas/rotadas y otras pendientes. Mantener ambos destinos aislados, consultar status y
 la auditoría de mantenimiento por el procedimiento existente, y resolver con
 las precondiciones comprobadas. No reintentar ciegamente ni volver a restaurar
 sobre la base poblada. No ejecutar otra rotación tras un resultado exitoso.
@@ -213,8 +277,12 @@ hardware Raspberry. Cross-build ARM64 tampoco prueba ejecución física.
 
 Pruebas unitarias ejecutables cubren el observador en la transacción exportada,
 coherencia ante una actualización posterior, manifiestos cerrados/acotados,
-publicación final, bytes/dimensiones, symlinks, corrupción, destinos poblados,
-fallos SQL y rotación sólo después de comprobaciones.
+publicación final posterior a fsync de `postgres/`, bytes/dimensiones, symlinks,
+propiedad/permisos de ancestros y archivos, corrupción, destinos poblados, fallos
+SQL, consentimiento exacto y rotación sólo después de comprobaciones. Una prueba
+SQLite usa mantenimiento y autenticación reales para verificar auditoría, cuentas
+intactas y rechazo de tokens/checkpoint/clientes antiguos; su restore SQL se
+simula y no constituye evidencia PostgreSQL.
 
 El ensayo `tests/operations/test_branding_recovery_postgres.py` utiliza únicamente
 bases temporales UUID creadas por el fixture PostgreSQL existente y PNG/cuentas
@@ -222,7 +290,10 @@ sintéticos. Escribe tres perfiles de dos organizaciones por la API, confirma un
 edición concurrente después del snapshot, demuestra que el dump anterior conserva
 sus referencias, corrompe la generación nueva y exige rechazo, restaura la
 anterior, rota incarnaciones y lee/compara todos los logos por GET autenticado.
-Comprueba sesiones/checkpoint previos y denegación cross-tenant. Emite un JSON de
+Ejecuta dos variantes: todas las organizaciones piso 1 y una mezcla piso 0/1
+con un tenant legacy sin branding. Comprueba consentimiento exacto, sesiones
+modernas y legacy previas, checkpoint, rechazo de clientes protocolo 0 y
+denegación cross-tenant. Emite un JSON de
 hashes esperados/reales y tiempos en su directorio temporal; su recolección como
 artefacto CI requiere la configuración correspondiente.
 

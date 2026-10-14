@@ -670,3 +670,462 @@ def test_failed_postgres_directory_fsync_never_publishes_completion(
             engine_factory=lambda *args, **kwargs: engine,
         )
     assert not (directory / branding.MANIFEST_NAME).exists()
+
+
+def test_writable_ancestor_refused_before_archive_commands(bundle: Path, tmp_path: Path) -> None:
+    ancestor = tmp_path / "untrusted-ancestor"
+    ancestor.mkdir(mode=0o777)
+    ancestor.chmod(0o777)
+    private = ancestor / "operator-owned"
+    private.mkdir(mode=0o700)
+    relocated = private / "generation"
+    bundle.rename(relocated)
+    runner = Runner()
+    with pytest.raises(postgres.BackupError, match="unsafe"):
+        branding.verify_branding_bundle(relocated, runner=runner)
+    assert not runner.calls
+
+
+@pytest.mark.parametrize(
+    "relative", [branding.MANIFEST_NAME, "postgres/manifest.json", "postgres/database.dump"]
+)
+def test_writable_regular_sources_refused_before_archive_commands(
+    bundle: Path, relative: str
+) -> None:
+    (bundle / relative).chmod(0o666)
+    runner = Runner()
+    with pytest.raises(postgres.BackupError, match="unsafe"):
+        branding.verify_branding_bundle(bundle, runner=runner)
+    assert not runner.calls
+
+
+@pytest.mark.parametrize(
+    "relative", [".", "postgres", branding.MANIFEST_NAME, "postgres/database.dump"]
+)
+def test_foreign_owned_sources_refused_before_archive_commands(
+    bundle: Path, relative: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    original = os.fstat
+    untrusted = (bundle / relative).stat()
+
+    def fstat(descriptor: int) -> os.stat_result:
+        details = original(descriptor)
+        if os.path.samestat(details, untrusted):
+            values = list(details)
+            values[4] = os.geteuid() + 10000
+            return os.stat_result(values)
+        return details
+
+    monkeypatch.setattr(os, "fstat", fstat)
+    runner = Runner()
+    with pytest.raises(postgres.BackupError, match="unsafe"):
+        branding.verify_branding_bundle(bundle, runner=runner)
+    assert not runner.calls
+
+
+def mixed_snapshot() -> dict[str, object]:
+    state = snapshot()
+    state["organizations"][0]["minimum_write_protocol"] = 0
+    state["organizations"] += [
+        {
+            "organization_id": "synthetic-org-b",
+            "minimum_write_protocol": 1,
+            "dataset_incarnation": "00000000-0000-4000-8000-000000000002",
+        },
+        {
+            "organization_id": "synthetic-org-c",
+            "minimum_write_protocol": 0,
+            "dataset_incarnation": "00000000-0000-4000-8000-000000000003",
+        },
+    ]
+    return state
+
+
+def legacy_pairs() -> tuple[str, ...]:
+    return (
+        "synthetic-org=00000000-0000-4000-8000-000000000001",
+        "synthetic-org-c=00000000-0000-4000-8000-000000000003",
+    )
+
+
+@pytest.fixture
+def mixed_bundle(bundle: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    state = mixed_snapshot()
+    path = bundle / branding.MANIFEST_NAME
+    manifest = json.loads(path.read_text())
+    manifest.update(state)
+    path.write_text(json.dumps(manifest))
+    monkeypatch.setattr(branding, "_snapshot_metadata", lambda connection: copy.deepcopy(state))
+    return bundle
+
+
+@pytest.mark.parametrize(
+    "pairs,acknowledged",
+    [
+        ((), False),
+        ((), True),
+        (legacy_pairs(), False),
+        (legacy_pairs()[:1], True),
+        (legacy_pairs() + legacy_pairs()[:1], True),
+        ((*legacy_pairs(), "extra=00000000-0000-4000-8000-000000000004"), True),
+        ((legacy_pairs()[0], "synthetic-org-c=00000000-0000-4000-8000-000000000004"), True),
+        ((legacy_pairs()[0], "synthetic-org-c=invalid"), True),
+        ((legacy_pairs()[0], "synthetic-org-c=00000000-0000-4000-8000-00000000000A"), True),
+    ],
+)
+def test_exact_legacy_consent_refused_before_any_target_change(
+    mixed_bundle: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    pairs: tuple[str, ...],
+    acknowledged: bool,
+) -> None:
+    restore = MagicMock()
+    monkeypatch.setattr(postgres, "restore_backup_bundle", restore)
+    target = tmp_path / "unmodified-target"
+    with pytest.raises(postgres.BackupError, match=r"legacy|floor-1"):
+        branding.restore_branding_bundle(
+            mixed_bundle,
+            "postgresql://user@localhost/target",
+            asset_root=target,
+            confirm_empty_target=True,
+            confirm_legacy_cutover=pairs,
+            confirm_legacy_prerequisites=acknowledged,
+            runner=Runner(),
+        )
+    assert not target.exists()
+    assert not restore.called
+
+
+def test_explicit_mixed_legacy_activation_follows_metadata_checks(
+    mixed_bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events: list[tuple[str, str]] = []
+    monkeypatch.setattr(postgres, "restore_backup_bundle", lambda *a, **kw: {})
+
+    def observed_snapshot(connection: object) -> dict[str, object]:
+        events.append(("metadata", "checked"))
+        return mixed_snapshot()
+
+    def activate(
+        settings: object, *, organization_id: str, expected_incarnation: str
+    ) -> dict[str, object]:
+        assert settings.cutover_enabled is True
+        assert settings.database_url == "postgresql://user@localhost/target"
+        assert events[0] == ("metadata", "checked")
+        assert f"{organization_id}={expected_incarnation}" in legacy_pairs()
+        events.append(("activate", organization_id))
+        return {"changed": True}
+
+    def recover(
+        settings: object, *, organization_id: str, expected_incarnation: str
+    ) -> dict[str, object]:
+        expected = {
+            row["organization_id"]: row["dataset_incarnation"]
+            for row in mixed_snapshot()["organizations"]
+        }
+        assert expected_incarnation == expected[organization_id]
+        events.append(("recover", organization_id))
+        return {"changed": True}
+
+    monkeypatch.setattr(branding, "_snapshot_metadata", observed_snapshot)
+    monkeypatch.setattr(branding, "activate_cutover", activate)
+    monkeypatch.setattr(branding, "recover_cutover", recover)
+    result = branding.restore_branding_bundle(
+        mixed_bundle,
+        "postgresql://user@localhost/target",
+        asset_root=tmp_path / "target",
+        confirm_empty_target=True,
+        confirm_legacy_cutover=legacy_pairs(),
+        confirm_legacy_prerequisites=True,
+        runner=Runner(),
+        engine_factory=lambda *args, **kwargs: MagicMock(),
+    )
+    assert events == [
+        ("metadata", "checked"),
+        ("activate", "synthetic-org"),
+        ("recover", "synthetic-org"),
+        ("recover", "synthetic-org-b"),
+        ("activate", "synthetic-org-c"),
+        ("recover", "synthetic-org-c"),
+    ]
+    assert result["legacy_organizations_activated"] == 2
+    assert result["incarnations_rotated"] == 3
+    assert result["status"] == "branding_restore_checked_with_explicit_legacy_cutover"
+
+
+def test_legacy_activation_failure_quarantines_partial_recovery(
+    mixed_bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(postgres, "restore_backup_bundle", lambda *a, **kw: {})
+    activate = MagicMock(side_effect=[{"changed": True}, ValueError("private fault")])
+    recover = MagicMock(return_value={"changed": True})
+    monkeypatch.setattr(branding, "activate_cutover", activate)
+    monkeypatch.setattr(branding, "recover_cutover", recover)
+    target = tmp_path / "quarantined-target"
+    with pytest.raises(postgres.BackupError, match="isolate both targets"):
+        branding.restore_branding_bundle(
+            mixed_bundle,
+            "postgresql://user@localhost/target",
+            asset_root=target,
+            confirm_empty_target=True,
+            confirm_legacy_cutover=legacy_pairs(),
+            confirm_legacy_prerequisites=True,
+            runner=Runner(),
+            engine_factory=lambda *args, **kwargs: MagicMock(),
+        )
+    assert recover.call_count == 2
+    assert (target / ".ocwp-branding-restore").is_file()
+
+
+def test_readonly_legacy_consent_listing_is_explicit(
+    mixed_bundle: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    actual_verify = branding.verify_branding_bundle
+    monkeypatch.setattr(
+        branding,
+        "verify_branding_bundle",
+        lambda directory: actual_verify(directory, runner=Runner()),
+    )
+    assert branding.main(["verify", str(mixed_bundle), "--show-legacy-cutover"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["legacy_cutover_required"] == list(legacy_pairs())
+    assert result["legacy_cutover_prerequisites"]
+    assert branding.main(["verify", str(mixed_bundle)]) == 0
+    assert "legacy_cutover_required" not in json.loads(capsys.readouterr().out)
+
+
+def test_legacy_identifier_with_equals_is_preserved_and_not_uuid_coerced() -> None:
+    organization = {
+        "organization_id": "legacy=taller",
+        "minimum_write_protocol": 0,
+        "dataset_incarnation": "00000000-0000-4000-8000-000000000001",
+    }
+    pairs = ("legacy=taller=00000000-0000-4000-8000-000000000001",)
+    assert branding._confirm_legacy_cutover([organization], pairs, True) == 1
+    assert branding._legacy_pairs([organization]) == list(pairs)
+
+
+@pytest.mark.parametrize(
+    "incarnation_race", [False, True], ids=["completed", "changed-after-checks"]
+)
+def test_explicit_legacy_transition_refuses_old_sessions_checkpoints_and_clients(
+    mixed_bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, incarnation_race: bool
+) -> None:
+    """Real SQLite maintenance/auth, mocked dump restoration: not PG restore proof."""
+    from dataclasses import replace
+
+    from cycling_workshop.app import create_app
+    from cycling_workshop.db.base import Base
+    from cycling_workshop.db.registry import register_models
+    from cycling_workshop.identity.audit import IdentityAuditRecord
+    from cycling_workshop.identity.domain import Principal
+    from cycling_workshop.identity.models import UserRecord
+    from cycling_workshop.settings import Settings
+    from cycling_workshop.shared.ids import new_id
+    from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine, select, text
+    from sqlalchemy.orm import sessionmaker
+
+    url = f"sqlite+pysqlite:///{tmp_path / 'synthetic-cutover.db'}"
+    engine = create_engine(url)
+    register_models()
+    Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+        connection.execute(text("INSERT INTO alembic_version VALUES ('0011')"))
+    factory = sessionmaker(engine, expire_on_commit=False)
+    grants = ["customers.read", "customers.write", "sync.pull", "branding.read", "branding.write"]
+    state = mixed_snapshot()
+    with factory.begin() as session:
+        for row in state["organizations"]:
+            session.add(
+                OrganizationRecord(
+                    id=row["organization_id"],
+                    name="Synthetic",
+                    dataset_incarnation=row["dataset_incarnation"],
+                    minimum_write_protocol=row["minimum_write_protocol"],
+                )
+            )
+        session.flush()
+        session.add(
+            LocationRecord(
+                id="synthetic-location", organization_id="synthetic-org", name="Synthetic"
+            )
+        )
+        session.add(
+            UserRecord(
+                id="synthetic-owner",
+                organization_id="synthetic-org",
+                location_id=None,
+                username="synthetic",
+                display_name="Preserved account",
+                password_hash="synthetic-preserved-hash",
+                capabilities=grants,
+                is_active=True,
+                is_owner=False,
+                version=7,
+                session_version=3,
+            )
+        )
+    with engine.connect() as connection:
+        before_accounts = [
+            dict(row) for row in connection.execute(select(UserRecord.__table__)).mappings()
+        ]
+    settings = Settings(
+        environment="test",
+        database_url=url,
+        cutover_enabled=True,
+        auth_secret="synthetic-legacy-recovery-test-secret-at-least32",
+    )
+    app = create_app(settings, session_factory=factory)
+    principal = Principal(
+        "synthetic-owner",
+        "synthetic-org",
+        None,
+        frozenset(grants),
+        session_version=3,
+        dataset_incarnation=state["organizations"][0]["dataset_incarnation"],
+    )
+    stale = app.state.session_tokens.issue(principal)
+    legacy = app.state.session_tokens.issue(replace(principal, dataset_incarnation=None))
+    headers = {"Authorization": f"Bearer {stale}", "X-OCWP-Write-Protocol": "1"}
+    actual_activate, actual_recover = branding.activate_cutover, branding.recover_cutover
+    monkeypatch.setattr(postgres, "restore_backup_bundle", lambda *a, **kw: {})
+
+    def activate_after_checks(_settings: object, **kwargs: str) -> dict[str, object]:
+        if incarnation_race:
+            # Simulate a committed change after the restored metadata comparison,
+            # before the existing maintenance transaction acquires its org lock.
+            with factory.begin() as session:
+                session.get(
+                    OrganizationRecord, kwargs["organization_id"]
+                ).dataset_incarnation = new_id()
+        return actual_activate(settings, **kwargs)
+
+    monkeypatch.setattr(branding, "activate_cutover", activate_after_checks)
+    monkeypatch.setattr(
+        branding, "recover_cutover", lambda _settings, **kw: actual_recover(settings, **kw)
+    )
+    try:
+        with TestClient(app) as client:
+            assert client.get("/api/v1/auth/me", headers=headers).status_code == 200
+            assert (
+                client.get(
+                    "/api/v1/auth/me", headers={"Authorization": f"Bearer {legacy}"}
+                ).status_code
+                == 200
+            )
+            context = client.get(
+                "/api/v1/auth/context?selected_location_id=synthetic-location", headers=headers
+            )
+            assert context.status_code == 200, context.text
+            baseline = client.post(
+                "/api/v1/sync/baselines/start",
+                headers=headers,
+                json={
+                    "protocol": 1,
+                    "selected_location_id": "synthetic-location",
+                    "authorization_epoch": context.json()["authorization_epoch"],
+                    "request_id": new_id(),
+                },
+            )
+            assert baseline.status_code == 200, baseline.text
+            continuation = baseline.json()["continuation"]
+
+            def restore() -> dict[str, object]:
+                return branding.restore_branding_bundle(
+                    mixed_bundle,
+                    "postgresql://user@localhost/synthetic-target",
+                    asset_root=tmp_path / "fresh-assets",
+                    confirm_empty_target=True,
+                    confirm_legacy_cutover=legacy_pairs(),
+                    confirm_legacy_prerequisites=True,
+                    runner=Runner(),
+                    engine_factory=lambda *args, **kwargs: MagicMock(),
+                )
+
+            if incarnation_race:
+                with pytest.raises(postgres.BackupError, match="isolate both targets"):
+                    restore()
+                with factory() as session:
+                    assert (
+                        session.get(OrganizationRecord, "synthetic-org").minimum_write_protocol == 0
+                    )
+                    assert session.scalars(select(IdentityAuditRecord)).all() == []
+                with engine.connect() as connection:
+                    assert [
+                        dict(row)
+                        for row in connection.execute(select(UserRecord.__table__)).mappings()
+                    ] == before_accounts
+                assert (tmp_path / "fresh-assets" / ".ocwp-branding-restore").is_file()
+                return
+            result = restore()
+            assert result["legacy_organizations_activated"] == 2
+            for old in (stale, legacy):
+                assert (
+                    client.get(
+                        "/api/v1/auth/me", headers={"Authorization": f"Bearer {old}"}
+                    ).status_code
+                    == 401
+                )
+            with factory() as session:
+                current = session.get(OrganizationRecord, "synthetic-org")
+                fresh = app.state.session_tokens.issue(
+                    replace(principal, dataset_incarnation=current.dataset_incarnation)
+                )
+            fresh_headers = {"Authorization": f"Bearer {fresh}", "X-OCWP-Write-Protocol": "1"}
+            page = client.post(
+                "/api/v1/sync/baselines/page",
+                headers=fresh_headers,
+                json={"protocol": 1, "continuation": continuation},
+            )
+            assert page.status_code == 409 and page.json()["error"]["code"] == "context_changed"
+            old_client = client.post(
+                "/api/v1/customers",
+                headers={"Authorization": f"Bearer {fresh}"},
+                json={
+                    "customer_id": new_id(),
+                    "display_name": "Never created",
+                    "location_id": "synthetic-location",
+                },
+            )
+            assert (
+                old_client.status_code == 409
+                and old_client.json()["error"]["code"] == "client_upgrade_required"
+            )
+        with engine.connect() as connection:
+            after_accounts = [
+                dict(row) for row in connection.execute(select(UserRecord.__table__)).mappings()
+            ]
+            actions = connection.execute(
+                select(IdentityAuditRecord.organization_id, IdentityAuditRecord.action)
+            ).all()
+            organizations = connection.execute(
+                select(
+                    OrganizationRecord.id,
+                    OrganizationRecord.minimum_write_protocol,
+                    OrganizationRecord.dataset_incarnation,
+                ).order_by(OrganizationRecord.id)
+            ).all()
+        assert after_accounts == before_accounts
+        assert sorted(actions) == sorted(
+            [
+                ("synthetic-org", "organization.cutover_activated"),
+                ("synthetic-org", "organization.dataset_recovered"),
+                ("synthetic-org-b", "organization.dataset_recovered"),
+                ("synthetic-org-c", "organization.cutover_activated"),
+                ("synthetic-org-c", "organization.dataset_recovered"),
+            ]
+        )
+        assert all(
+            floor == 1 and incarnation != original["dataset_incarnation"]
+            for (org, floor, incarnation), original in zip(
+                organizations, state["organizations"], strict=True
+            )
+        )
+    finally:
+        engine.dispose()

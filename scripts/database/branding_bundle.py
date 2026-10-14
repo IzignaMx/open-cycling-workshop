@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from cycling_workshop.identity.cutover_cli import recover_cutover
+from cycling_workshop.identity.cutover_cli import activate_cutover, recover_cutover
 from cycling_workshop.settings import Settings
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Connection
@@ -35,6 +35,13 @@ MAX_ORGANIZATIONS = 2048
 MAX_ASSET_BYTES = 262144
 SCOPE = "postgresql-and-branding-assets"
 EXCLUDES = ["other-external-blob-payloads", "client-indexeddb", "configuration-and-secrets"]
+LEGACY_PREREQUISITES = (
+    "Explicit compatibility transition: all old writers are drained/stopped; original raw legacy "
+    "browser data and pending work are preserved; existing qualified cutover prerequisites "
+    "are met. "
+    "Every listed tenant will advance to protocol floor 1, require upgraded clients, and receive "
+    "a new dataset incarnation through the existing audited maintenance operations."
+)
 PALETTES = {
     "bosque",
     "arcilla",
@@ -181,6 +188,27 @@ def _snapshot_metadata(connection: Connection) -> dict[str, Any]:
     return result
 
 
+def _trusted_directory(descriptor: int, *, final: bool) -> None:
+    info = os.fstat(descriptor)
+    # Root-owned sticky ancestors (e.g. /tmp) cannot rename our owned child.
+    sticky_root = info.st_uid == 0 and bool(info.st_mode & stat.S_ISVTX)
+    if (
+        info.st_uid not in (0, os.geteuid())
+        or (info.st_mode & 0o022 and (final or not sticky_root))
+        or (final and info.st_uid != os.geteuid())
+    ):
+        raise postgres.BackupError("unsafe directory ownership or write permissions")
+
+
+def _trusted_file(info: os.stat_result) -> None:
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or info.st_uid not in (0, os.geteuid())
+        or info.st_mode & 0o022
+    ):
+        raise postgres.BackupError("unsafe regular file ownership or write permissions")
+
+
 @contextmanager
 def _directory(path: Path) -> Iterator[int]:
     """Walk from / without following symlinks, including intermediate components."""
@@ -190,14 +218,11 @@ def _directory(path: Path) -> Iterator[int]:
     descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
     try:
         for part in path.parts[1:]:
+            _trusted_directory(descriptor, final=False)
             child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
             os.close(descriptor)
             descriptor = child
-        mode = os.fstat(descriptor).st_mode
-        if mode & (stat.S_IWGRP | stat.S_IWOTH):
-            raise postgres.BackupError(
-                "unsafe writable directory; restrict its ownership/permissions"
-            )
+        _trusted_directory(descriptor, final=True)
         yield descriptor
     except OSError:
         raise postgres.BackupError(
@@ -224,7 +249,8 @@ def _read_file(path: Path, limit: int) -> bytes:
             )
             with os.fdopen(descriptor, "rb") as stream:
                 info = os.fstat(stream.fileno())
-                if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= limit:
+                _trusted_file(info)
+                if not 0 < info.st_size <= limit:
                     raise postgres.BackupError("manifest is empty, unsafe or oversized")
                 data = stream.read(limit + 1)
                 if len(data) != info.st_size or len(data) > limit:
@@ -232,6 +258,20 @@ def _read_file(path: Path, limit: int) -> bytes:
                 return data
         except OSError:
             raise postgres.BackupError("manifest is missing or unsafe") from None
+
+
+def _assert_trusted_archive(path: Path) -> None:
+    with _directory(path.parent) as parent:
+        try:
+            descriptor = os.open(
+                path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent
+            )
+            try:
+                _trusted_file(os.fstat(descriptor))
+            finally:
+                os.close(descriptor)
+        except OSError:
+            raise postgres.BackupError("archive is missing or unsafe") from None
 
 
 def _publish_manifest(path: Path, manifest: dict[str, Any]) -> None:
@@ -403,6 +443,7 @@ def verify_branding_bundle(
         for profile in manifest["profiles"]:
             if profile["logo_key"] is not None:
                 _asset_bytes(directory / "assets", profile)
+    _assert_trusted_archive(directory / "postgres" / postgres.DUMP_NAME)
     checked = postgres.verify_backup_bundle(directory / "postgres", runner=runner)
     return {
         "status": "branding_integrity_checked_not_restored",
@@ -430,12 +471,51 @@ def _reserve_assets(root: Path, digest: str) -> None:
         os.fsync(directory)
 
 
+def _legacy_pairs(organizations: list[dict[str, Any]]) -> list[str]:
+    return [
+        f"{row['organization_id']}={row['dataset_incarnation']}"
+        for row in organizations
+        if row["minimum_write_protocol"] == 0
+    ]
+
+
+def _confirm_legacy_cutover(
+    organizations: list[dict[str, Any]], pairs: tuple[str, ...], acknowledged: bool
+) -> int:
+    try:
+        _require(isinstance(pairs, tuple) and len(pairs) <= MAX_ORGANIZATIONS)
+        _require(type(acknowledged) is bool)
+        parsed: list[tuple[str, str]] = []
+        for pair in pairs:
+            _require(isinstance(pair, str) and len(pair) <= 73)
+            # Legacy tenant identifiers are not necessarily UUIDs and can contain '='.
+            organization, incarnation = pair.rsplit("=", 1)
+            _require(_identifier(organization) and str(UUID(incarnation)) == incarnation)
+            parsed.append((organization, incarnation))
+        _require(len(parsed) == len(set(parsed)))
+        expected = {
+            (row["organization_id"], row["dataset_incarnation"])
+            for row in organizations
+            if row["minimum_write_protocol"] == 0
+        }
+        _require(set(parsed) == expected)
+        _require(not expected or acknowledged)
+    except (ValueError, TypeError, AttributeError):
+        raise postgres.BackupError(
+            "floor-1 required unless exact legacy tenant/incarnation pairs and prerequisites "
+            "are explicitly confirmed; inspect verify --show-legacy-cutover"
+        ) from None
+    return len(expected)
+
+
 def restore_branding_bundle(
     directory: Path,
     target_url: str,
     *,
     asset_root: Path,
     confirm_empty_target: bool = False,
+    confirm_legacy_cutover: tuple[str, ...] = (),
+    confirm_legacy_prerequisites: bool = False,
     runner: postgres.Runner = postgres._run,
     engine_factory: postgres.EngineFactory = create_engine,
 ) -> dict[str, Any]:
@@ -452,10 +532,9 @@ def restore_branding_bundle(
         raise postgres.BackupError("asset target must be separate from the backup generation")
     checked = verify_branding_bundle(directory, runner=runner)
     manifest = checked["manifest"]
-    if any(row["minimum_write_protocol"] != 1 for row in manifest["organizations"]):
-        raise postgres.BackupError(
-            "branding recovery requires floor-1 organizations; keep targets isolated"
-        )
+    legacy_count = _confirm_legacy_cutover(
+        manifest["organizations"], confirm_legacy_cutover, confirm_legacy_prerequisites
+    )
     digest = hashlib.sha256(_read_file(directory / MANIFEST_NAME, MAX_MANIFEST_BYTES)).hexdigest()
     started = datetime.now(UTC)
     try:
@@ -491,6 +570,12 @@ def restore_branding_bundle(
         finally:
             engine.dispose()
         for organization in manifest["organizations"]:
+            if organization["minimum_write_protocol"] == 0:
+                activate_cutover(
+                    Settings(database_url=target_url, cutover_enabled=True),
+                    organization_id=organization["organization_id"],
+                    expected_incarnation=organization["dataset_incarnation"],
+                )
             recover_cutover(
                 Settings(database_url=target_url),
                 organization_id=organization["organization_id"],
@@ -504,7 +589,12 @@ def restore_branding_bundle(
         ) from None
     finished = datetime.now(UTC)
     return {
-        "status": "branding_restore_checked",
+        "status": (
+            "branding_restore_checked_with_explicit_legacy_cutover"
+            if legacy_count
+            else "branding_restore_checked"
+        ),
+        "legacy_organizations_activated": legacy_count,
         "scope": SCOPE,
         "branding_manifest_sha256": digest,
         "backup_sha256": checked["postgres_manifest"]["archive"]["sha256"],
@@ -527,8 +617,22 @@ def main(argv: list[str] | None = None) -> int:
         command.add_argument("directory", type=Path)
         if name != "verify":
             command.add_argument("--asset-root", type=Path, required=True)
+        if name == "verify":
+            command.add_argument("--show-legacy-cutover", action="store_true")
         if name == "restore":
             command.add_argument("--confirm-empty-target", action="store_true")
+            command.add_argument(
+                "--confirm-legacy-cutover",
+                action="append",
+                default=[],
+                metavar="ORGANIZATION_ID=EXPECTED_INCARNATION",
+                help="Explicitly authorize each exact floor-0 tenant/incarnation from the manifest",
+            )
+            command.add_argument(
+                "--confirm-legacy-prerequisites",
+                action="store_true",
+                help=LEGACY_PREREQUISITES,
+            )
     args = parser.parse_args(argv)
     try:
         if args.operation == "backup":
@@ -537,16 +641,26 @@ def main(argv: list[str] | None = None) -> int:
                 args.directory,
                 asset_root=args.asset_root,
             )
-            result = {"status": "branding_backup_created_not_restored", "scope": SCOPE}
+            result: dict[str, Any] = {
+                "status": "branding_backup_created_not_restored",
+                "scope": SCOPE,
+            }
         elif args.operation == "verify":
             checked = verify_branding_bundle(args.directory)
             result = {"status": checked["status"], "scope": SCOPE}
+            if args.show_legacy_cutover:
+                result["legacy_cutover_required"] = _legacy_pairs(
+                    checked["manifest"]["organizations"]
+                )
+                result["legacy_cutover_prerequisites"] = LEGACY_PREREQUISITES
         else:
             result = restore_branding_bundle(
                 args.directory,
                 postgres._url_from_environment("OCWP_RESTORE_DATABASE_URL"),
                 asset_root=args.asset_root,
                 confirm_empty_target=args.confirm_empty_target,
+                confirm_legacy_cutover=tuple(args.confirm_legacy_cutover),
+                confirm_legacy_prerequisites=args.confirm_legacy_prerequisites,
             )
         print(json.dumps(result, sort_keys=True))
         return 0
