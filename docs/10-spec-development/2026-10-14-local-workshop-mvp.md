@@ -1,7 +1,7 @@
 # Local workshop MVP: delivery and acceptance plan
 
 Status: accepted implementation direction; implementation and qualification in progress.
-Date: 2026-10-14. Baseline: main `b1df504`; inventory PR #22 and quote-domain PR #23 remain independent, unmerged proposals.
+Date: 2026-10-14. Baseline: main `b1df504`; inventory PR #22 was merged on 2026-10-14; quote-domain PR #23 remains independently pending.
 
 ## Product outcome and boundaries
 
@@ -12,7 +12,7 @@ An organization represents an independent business; locations represent its bran
 ## Coverage at baseline
 
 - Implemented: authentication and capability enforcement; customer, bicycle and service-order slices with offline queue/conflicts; product/ledger persistence; development Compose and backup wrapper.
-- Pending review: #22 inventory commands/derived stock and #23 immutable quote domain. Neither provides the complete money-and-parts user journey.
+- Integrated: #22 inventory commands/derived stock. Pending review: #23 immutable quote domain. Neither provides the complete money-and-parts user journey.
 - Specified, not implemented: user/role/location administration; supplier/purchase-order lifecycle; configurable BrandProfile and color schemes; complete server distribution.
 - Existing release gates remain: physical Windows/Android qualification, manual accessibility and operator recovery evidence.
 
