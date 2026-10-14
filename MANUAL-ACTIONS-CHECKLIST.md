@@ -789,3 +789,22 @@ new domain breadth remain later increments. See the
 The [applicability and evidence record](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md)
 accounts for all original 19 advisories, the bounded compatible upgrade and
 the advisory with an unset patched-version field. No finding was suppressed.
+
+## 2026-10-14 · Connected administration UI qualification
+
+- [ ] Obtain exact integrated-head CI for the connected account/runtime facade,
+      users/permissions/locations/self-session UI and all existing offline/probe
+      regressions. Unit/emulator checks do not qualify native storage or sessions.
+- [ ] Execute the actual-production administration browser journeys against
+      disposable floor1 PostgreSQL; keep direct, repeat and aggregate artifacts
+      separate. Verify zero-location/no-sync accounts and unconfirmed commands.
+- [ ] Inspect actual four-theme administration screenshots and prove mounted
+      drafts/focus, synchronous credential cleanup, keyboard/reflow/zoom/forced
+      colors. Source regex checks and axe are partial accessibility evidence.
+- [ ] Keep the pinned old-client/service-worker preservation and eleven-check
+      runtime/restore gates on their own exact-tree evidence. Never clear local
+      work, infer authors or replay ambiguous commands as a qualification shortcut.
+
+No real accounts, passwords, first-owner command, installation update or deployment
+was performed. Existing physical-device, screen-reader and operator recovery gates
+remain open. See the [evidence record](docs/10-spec-development/2026-10-14-connected-administration-ui.md).

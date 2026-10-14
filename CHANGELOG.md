@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Connected account administration
+
+- Add users/per-user permissions, location creation and self-session controls
+  using existing connected APIs, including account-only entry before opening a
+  workshop. Preserve exact session fences, four themes and local journals.
+- Capture versions, bound owner lookup, clear credential controls synchronously
+  and keep uncertain commands unconfirmed without replay. Self-security commands
+  lock operational context before dispatch.
+- Add synthetic production browser qualification and focused lifecycle/transport
+  regressions. Native browser, screenshot, PostgreSQL and disposable-runtime
+  evidence remains required on the exact published tree. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
 ## Unreleased · Recovery and selector presentation
 
 - Show closed Spanish labels for retained-work states, with a safe generic label

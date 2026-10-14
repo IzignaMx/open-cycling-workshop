@@ -243,6 +243,103 @@ def seed_historical_workshop_records(database_url: str) -> None:
     engine.dispose()
 
 
+# Stable synthetic tenants for administration journeys. Each case and its one
+# configured CI retry owns a separate tenant; no existing workshop fixture is
+# mutated by session/password, owner, location or directory experiments.
+ADMINISTRATION_CASES = (
+    "users",
+    "scope",
+    "zero",
+    "no-sync",
+    "empty",
+    "logout",
+    "password",
+    "lost-response",
+    "version",
+    "owner",
+    "themes",
+    "selector-secret",
+    "workshop-secret",
+    "suspended-secret",
+    "probe-secret",
+    "visual-states",
+)
+
+
+def administration_fixture_id(case_index: int, retry: int, entity: int) -> str:
+    return f"00000000-0000-7000-8000-{10000 + retry * 1000 + case_index * 10 + entity:012d}"
+
+
+def seed_administration_identities(database_url: str) -> None:
+    """Dedicated synthetic floor-one accounts, never installation accounts."""
+    from cycling_workshop.identity.cutover_cli import activate_cutover, cutover_status
+    from cycling_workshop.identity.models import UserRecord
+    from cycling_workshop.identity.roles import CAPABILITIES
+    from cycling_workshop.identity.security import PasswordService
+    from cycling_workshop.settings import Settings
+    from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
+
+    # Keep this entry point guarded even if called without main().
+    validate_e2e_database_url(database_url)
+    engine = create_engine(normalize_database_url(database_url))
+    password_hash = PasswordService().hash(E2E_PASSWORD)
+    try:
+        for retry in range(2):
+            for index, case in enumerate(ADMINISTRATION_CASES):
+                organization_id = administration_fixture_id(index, retry, 0)
+                with Session(engine) as session:
+                    session.add(
+                        OrganizationRecord(
+                            id=organization_id, name=f"Disposable administration {case} {retry}"
+                        )
+                    )
+                    session.flush()
+                    if case != "zero":
+                        session.add_all(
+                            LocationRecord(
+                                id=administration_fixture_id(index, retry, entity),
+                                organization_id=organization_id,
+                                name=f"Taller administración {letter}",
+                            )
+                            for entity, letter in ((1, "A"), (2, "B"))
+                        )
+                        session.flush()
+                    session.add(
+                        UserRecord(
+                            id=administration_fixture_id(index, retry, 3),
+                            organization_id=organization_id,
+                            location_id=None,
+                            username="e2e-administration-owner",
+                            display_name="Responsable administración sintética",
+                            password_hash=password_hash,
+                            capabilities=sorted(CAPABILITIES),
+                            is_owner=True,
+                            is_active=True,
+                            session_version=1,
+                        )
+                    )
+                    session.commit()
+                activated = activate_cutover(
+                    Settings(database_url=database_url, cutover_enabled=True),
+                    organization_id=organization_id,
+                )
+                assert activated["organization_id"] == organization_id
+                assert activated["minimum_write_protocol"] == 1
+                assert activated["changed"] is True
+                # Re-read the committed per-tenant state rather than relying on
+                # the baseline organization's activation or a global switch.
+                persisted = cutover_status(
+                    Settings(database_url=database_url, cutover_enabled=True),
+                    organization_id=organization_id,
+                )
+                assert persisted["organization_id"] == organization_id
+                assert persisted["minimum_write_protocol"] == 1
+                assert persisted["cutover_enabled"] is True
+                assert persisted["dataset_incarnation"] == activated["dataset_incarnation"]
+    finally:
+        engine.dispose()
+
+
 def main() -> int:
     database_url = os.environ.get("OCWP_E2E_DATABASE_URL")
     if not database_url:
@@ -252,6 +349,7 @@ def main() -> int:
     run_migrations(database_url)
     seed_browser_identity(database_url, authenticated=True)
     seed_legacy_upgrade_identity(database_url)
+    seed_administration_identities(database_url)
     print(f"E2E database ready for organization {E2E_ORGANIZATION_ID}")
     return 0
 
