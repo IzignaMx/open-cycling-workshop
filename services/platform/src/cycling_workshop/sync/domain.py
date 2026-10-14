@@ -12,12 +12,19 @@ MutationOperation = Literal["create", "update"]
 class SyncConflict(RuntimeError):
     """A mutation cannot be merged automatically without risking data loss."""
 
+    def __init__(self, message: str, *, error_code: str = "sync_conflict") -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
 
 @dataclass(frozen=True, slots=True)
 class SyncApplicationContext:
     """Trusted caller identity supplied by the server, never a wire payload."""
 
     actor_id: str
+    write_protocol: int = 0
+    canonical_digest: str | None = None
+    admitted_session_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

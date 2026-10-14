@@ -21,6 +21,7 @@ from alembic import command
 from alembic.config import Config
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.app import create_app
+from cycling_workshop.identity.cutover import WriteAdmission
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.security import PasswordService
@@ -60,12 +61,12 @@ class FeedDatabase:
 
     def apply(self, mutation: MutationEnvelope) -> int:
         with self.factory.begin() as session:
-            SyncService(session).apply(mutation)
+            SyncService.for_fixtures(session).apply(mutation)
             return cursor_for(session, mutation.entity_id)
 
     def page(self, organization: str = "org-a", after: int = 0) -> ChangePage:
         with self.factory() as session:
-            return SyncService(session).pull_changes(
+            return SyncService.for_fixtures(session).pull_changes(
                 organization_id=organization,
                 location_id=None,
                 capabilities=frozenset({"customers.read"}),
@@ -186,7 +187,7 @@ def test_same_organization_cursor_allocation_waits_for_commit_or_rollback(
     first, second = db.mutation(), db.mutation()
     with ThreadPoolExecutor(max_workers=1) as executor:
         with db.factory() as writer_a:
-            SyncService(writer_a).apply(first)
+            SyncService.for_fixtures(writer_a).apply(first)
             first_cursor = cursor_for(writer_a, first.entity_id)
             future = executor.submit(db.apply, second)
             try:
@@ -220,7 +221,7 @@ def test_other_organization_commits_while_first_cursor_is_uncommitted(
     db = feed_database
     first, other = db.mutation(), db.mutation("org-b")
     with ThreadPoolExecutor(max_workers=1) as executor, db.factory() as writer_a:
-        SyncService(writer_a).apply(first)
+        SyncService.for_fixtures(writer_a).apply(first)
         first_cursor = cursor_for(writer_a, first.entity_id)
         future = executor.submit(db.apply, other)
         try:
@@ -268,7 +269,7 @@ def test_waiting_writer_reloads_actor_authority(
         with db.factory.begin() as session:
             stale = session.get(UserRecord, principal.user_id)
             assert stale is not None and "customers.write" in stale.capabilities
-            return lock_writer(session, principal)
+            return lock_writer(session, principal, WriteAdmission.for_fixtures())
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         with db.factory() as administrator:
@@ -340,7 +341,7 @@ def test_rest_writer_waits_behind_sync_transaction(feed_database: FeedDatabase) 
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         with db.factory() as writer_a:
-            SyncService(writer_a).apply(first)
+            SyncService.for_fixtures(writer_a).apply(first)
             first_cursor = cursor_for(writer_a, first.entity_id)
             future = executor.submit(rest_writer)
             try:
@@ -367,7 +368,7 @@ def test_identical_concurrent_mutation_replays_only_after_first_commit(
     mutation = db.mutation()
     with ThreadPoolExecutor(max_workers=1) as executor:
         with db.factory() as writer_a:
-            SyncService(writer_a).apply(mutation)
+            SyncService.for_fixtures(writer_a).apply(mutation)
             first_cursor = cursor_for(writer_a, mutation.entity_id)
             future = executor.submit(db.apply, mutation)
             try:
@@ -433,7 +434,7 @@ def test_http_writer_denied_after_grants_revoked_during_administration_wait(
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         with db.factory() as administrator:
-            actor, _ = AdministrationService(administrator).lock_actor(principal)
+            actor, _ = AdministrationService.for_fixtures(administrator).lock_actor(principal)
             future = executor.submit(rest_writer)
             try:
                 # The dependency authorized the old grants; the request is now

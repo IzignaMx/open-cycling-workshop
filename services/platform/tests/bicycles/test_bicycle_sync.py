@@ -67,7 +67,7 @@ def test_bicycle_create_applies_and_writes_change_record() -> None:
     try:
         _seed(session)
 
-        result = SyncService(session).apply(
+        result = SyncService.for_fixtures(session).apply(
             _mutation(
                 "mut-1",
                 "bike-1",
@@ -101,7 +101,7 @@ def test_bicycle_create_requires_existing_customer() -> None:
         _seed(session)
 
         with pytest.raises(SyncConflict, match="customer does not exist"):
-            SyncService(session).apply(
+            SyncService.for_fixtures(session).apply(
                 _mutation("mut-2", "bike-2", payload={"customer_id": "ghost", "brand": "X"})
             )
     finally:
@@ -112,7 +112,7 @@ def test_bicycle_update_honors_base_version() -> None:
     session = _build_session()
     try:
         _seed(session)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         service.apply(
             _mutation("mut-3", "bike-3", payload={"customer_id": "customer-1", "brand": "Cube"})
         )

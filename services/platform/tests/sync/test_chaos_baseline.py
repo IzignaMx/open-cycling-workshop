@@ -41,7 +41,7 @@ def test_duplicate_and_reordered_independent_mutations_converge_without_duplicat
 
         delivery = unique + unique[::2] + unique[::3]
         random.Random(20260807).shuffle(delivery)
-        service = SyncService(session)
+        service = SyncService.for_fixtures(session)
         for mutation in delivery:
             service.apply(mutation)
             session.commit()
