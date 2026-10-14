@@ -12,6 +12,7 @@ from cycling_workshop.sync.baseline_queries import BaselineQueries
 from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateSchema, DropSchema
+from sqlalchemy.sql.elements import TextClause
 from test_administration_postgres import _configured_postgres_url, _migration_config
 
 
@@ -50,26 +51,38 @@ def _nodes(plan: dict[str, Any]) -> Iterator[dict[str, Any]]:
         yield from _nodes(child)
 
 
+def _sparse_feed_seed_statements() -> tuple[TextClause, TextClause]:
+    return (
+        text("""
+            INSERT INTO sync_changes (organization_id, location_id, entity_type, entity_id,
+                operation, entity_version, occurred_at, payload)
+            SELECT 'org', 'loc', 'hidden', 'a', 'update', 1, now(),
+                   json_build_object('hidden', true)
+            FROM generate_series(1, 200000)
+        """),
+        text("""
+            INSERT INTO sync_changes (organization_id, location_id, entity_type, entity_id,
+                operation, entity_version, occurred_at, payload)
+            VALUES ('org','loc','customer','a','update',2,now(),
+                    json_build_object('historical', true)),
+                   ('org','else','customer','a','update',3,now(),
+                    json_build_object('foreign', true)),
+                   ('org','loc','bicycle','b','update',1,now(),
+                    json_build_object('historical', true))
+        """),
+    )
+
+
+def test_sparse_feed_seed_has_no_accidental_bind_parameters() -> None:
+    for statement in _sparse_feed_seed_statements():
+        assert statement.compile().construct_params() == {}
+
+
 def test_sparse_authorized_feed_has_bounded_index_plan(baseline_query_postgres: Engine) -> None:
     engine = baseline_query_postgres
     with engine.begin() as connection:
-        connection.execute(
-            text("""
-            INSERT INTO sync_changes (organization_id, location_id, entity_type, entity_id,
-                operation, entity_version, occurred_at, payload)
-            SELECT 'org', 'loc', 'hidden', 'a', 'update', 1, now(), '{"hidden":true}'::json
-            FROM generate_series(1, 200000)
-        """)
-        )
-        connection.execute(
-            text("""
-            INSERT INTO sync_changes (organization_id, location_id, entity_type, entity_id,
-                operation, entity_version, occurred_at, payload)
-            VALUES ('org','loc','customer','a','update',2,now(),'{"historical":true}'::json),
-                   ('org','else','customer','a','update',3,now(),'{"foreign":true}'::json),
-                   ('org','loc','bicycle','b','update',1,now(),'{"historical":true}'::json)
-        """)
-        )
+        for statement in _sparse_feed_seed_statements():
+            connection.execute(statement)
         connection.execute(text("ANALYZE sync_changes"))
     captured: list[tuple[str, Any]] = []
 

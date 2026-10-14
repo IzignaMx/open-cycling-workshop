@@ -128,3 +128,30 @@ environment blockers (PostgreSQL URL, Docker, psql, managed-browser benchmark
 policy, native E2E database setup). All code, generated contracts, static checks
 and PWA build are green locally. PostgreSQL/native/physical/restore evidence
 remains pending and snapshot advertisement stays null.
+
+## First hosted PostgreSQL checkpoint and fixture correction
+
+PR #34 head `40cdcf25` (tree `304799e8`; GitHub test merge `3e62351a` has
+that same tree) ran CI 38576303339. Direct Python: 1241 passed, 4 skipped,
+1 failed. The failure occurred before seed execution: SQLAlchemy `text()`
+parsed the sparse-feed fixture's JSON `:true` as a missing bind parameter.
+The correction uses `json_build_object` and a database-independent compile
+regression against the exact shared seed statements. That regression was red
+with the original literals, then green. Product source, 200,000 hidden rows,
+EXPLAIN ANALYZE/BUFFERS, index/buffer/cardinality assertions and timeouts are
+unchanged. The corrected query-plan proof requires a new hosted exact-head run.
+
+The four direct skips were: the restore test lacks matching PostgreSQL 18 CLI
+clients; the SQLite parameter cannot test PostgreSQL access-exclusive downgrade
+locking; the SQLite parameter cannot test TRUNCATE; and the PostgreSQL parameter
+cannot test SQLite INSERT OR REPLACE. PostgreSQL baseline lifecycle, concurrent
+downgrade, decompressed size and race tests were not skipped. Runtime workflow
+38576303519 separately passed all 11 amd64 stack/persistence/restore checks;
+three ARM64 image builds passed, without a physical-hardware claim.
+
+The always-run qualifier repeated the seed failure. Its 24 browser cases could
+not launch the missing Chromium executable because installation had been skipped
+after the direct Python failure. These are prerequisite failures, not executed
+browser assertions. Direct/retry-free-repeat/kernel browser phases did not run.
+The qualifier's 24 passing and 2 failing checks do not qualify this head. Preserve
+these phase boundaries and require full corrected-head CI before integration.
