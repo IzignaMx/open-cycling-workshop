@@ -147,3 +147,36 @@ test('stale login responses never escape and login does not declare a write prot
       e instanceof RuntimeHttpError && e.code === 'stale_request' && !e.message.includes('secret'),
   )
 })
+
+test('received refusal statuses cannot become a network failure through an interrupted body', async () => {
+  for (const [status, code] of [
+    [401, 'invalid_session'],
+    [403, 'capability_denied'],
+    [409, 'invalid_response'],
+    [500, 'invalid_response'],
+    [200, 'network_error'],
+  ]) {
+    const transport = createRuntimeTransport({
+      apiRealm: realm,
+      fetch: async (url) => {
+        const r = new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError('interrupted'))
+            },
+          }),
+          {
+            status,
+            headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+          },
+        )
+        Object.defineProperty(r, 'url', { value: url })
+        return r
+      },
+    })
+    await assert.rejects(
+      transport.me(auth),
+      (error) => error instanceof RuntimeHttpError && error.code === code,
+    )
+  }
+})

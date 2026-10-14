@@ -112,6 +112,13 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       await cancelResponse(response)
       fail()
     }
+    // An already received refusal cannot become offline authority if its body fails.
+    if (!response.ok) {
+      await cancelResponse(response)
+      if (response.status === 401) fail('invalid_session')
+      if (response.status === 403) fail('capability_denied')
+      fail()
+    }
     let value: unknown
     try {
       value = await readBoundedJson(response, limit)
@@ -123,11 +130,6 @@ export function createRuntimeTransport(options: { apiRealm: string; fetch: typeo
       )
     }
     if (!current()) fail('stale_request')
-    if (!response.ok) {
-      if (response.status === 401) fail('invalid_session')
-      if (response.status === 403) fail('capability_denied')
-      fail()
-    }
     return value
   }
   return Object.freeze({
