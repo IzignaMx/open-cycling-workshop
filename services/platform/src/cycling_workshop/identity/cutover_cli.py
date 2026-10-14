@@ -75,20 +75,25 @@ def cutover_status(settings: Settings, *, organization_id: str) -> dict[str, obj
 
 
 def _change(
-    settings: Settings, *, organization_id: str, expected_incarnation: str | None
+    settings: Settings,
+    *,
+    organization_id: str,
+    expected_incarnation: str | None,
+    activation_expected_incarnation: str | None = None,
 ) -> dict[str, object]:
     if expected_incarnation is None and not settings.cutover_enabled:
         raise ApiError(
             409, "cutover_composition_disabled", "qualified cutover composition required"
         )
-    if expected_incarnation is not None:
-        try:
-            if str(UUID(expected_incarnation)) != expected_incarnation:
-                raise ValueError
-        except (ValueError, TypeError, AttributeError):
-            raise ApiError(
-                422, "invalid_incarnation", "canonical expected incarnation required"
-            ) from None
+    for expected in (expected_incarnation, activation_expected_incarnation):
+        if expected is not None:
+            try:
+                if str(UUID(expected)) != expected:
+                    raise ValueError
+            except (ValueError, TypeError, AttributeError):
+                raise ApiError(
+                    422, "invalid_incarnation", "canonical expected incarnation required"
+                ) from None
     engine = build_engine(settings)
     correlation = request_id_var.set(f"cli-{new_id()}")
     try:
@@ -99,6 +104,17 @@ def _change(
             organization = lock_compatibility(session, organization_id)
             before = _state(organization)
             if expected_incarnation is None:
+                # Optional recovery consent is bound to this exact locked incarnation.
+                # Default explicit activation retains its original behavior.
+                if (
+                    activation_expected_incarnation is not None
+                    and organization.dataset_incarnation != activation_expected_incarnation
+                ):
+                    raise ApiError(
+                        409,
+                        "incarnation_precondition_failed",
+                        "inspect current state and audit before activation",
+                    )
                 if organization.minimum_write_protocol == 1:
                     return before | {"changed": False}
                 organization.minimum_write_protocol = 1
@@ -137,8 +153,15 @@ def _change(
         engine.dispose()
 
 
-def activate_cutover(settings: Settings, *, organization_id: str) -> dict[str, object]:
-    return _change(settings, organization_id=organization_id, expected_incarnation=None)
+def activate_cutover(
+    settings: Settings, *, organization_id: str, expected_incarnation: str | None = None
+) -> dict[str, object]:
+    return _change(
+        settings,
+        organization_id=organization_id,
+        expected_incarnation=None,
+        activation_expected_incarnation=expected_incarnation,
+    )
 
 
 def recover_cutover(

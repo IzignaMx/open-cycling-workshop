@@ -235,3 +235,35 @@ def test_operator_refuses_unqualified_schema_without_effects(installation, revis
     with Session(engine) as session:
         org = session.get(OrganizationRecord, "org")
         assert org.dataset_incarnation == incarnation and org.minimum_write_protocol == 0
+
+
+def test_activation_optional_incarnation_cas_is_checked_before_floor_or_audit(installation):
+    engine, settings = installation
+    initial = cutover_status(settings, organization_id="org")
+    with pytest.raises(ApiError) as refused:
+        activate_cutover(settings, organization_id="org", expected_incarnation=str(uuid4()))
+    assert refused.value.code == "incarnation_precondition_failed"
+    assert cutover_status(settings, organization_id="org") == initial
+    assert audit_rows(engine) == []
+    activated = activate_cutover(
+        settings, organization_id="org", expected_incarnation=initial["dataset_incarnation"]
+    )
+    assert activated["minimum_write_protocol"] == 1
+    assert activated["dataset_incarnation"] == initial["dataset_incarnation"]
+    assert len(audit_rows(engine)) == 1
+
+
+def test_activation_cas_refuses_target_changed_after_snapshot_inspection(installation):
+    engine, settings = installation
+    snapshot = cutover_status(settings, organization_id="org")["dataset_incarnation"]
+    changed = str(uuid4())
+    with Session(engine) as session:
+        session.get(OrganizationRecord, "org").dataset_incarnation = changed
+        session.commit()
+    with pytest.raises(ApiError) as refused:
+        activate_cutover(settings, organization_id="org", expected_incarnation=snapshot)
+    assert refused.value.code == "incarnation_precondition_failed"
+    current = cutover_status(settings, organization_id="org")
+    assert current["minimum_write_protocol"] == 0
+    assert current["dataset_incarnation"] == changed
+    assert audit_rows(engine) == []
