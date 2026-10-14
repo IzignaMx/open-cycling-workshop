@@ -35,9 +35,9 @@ required; emulator checks do not prove the hosted fix.
 
 The initial combined controller/transport regression run had 28 passing and six
 failing tests: the observed stale-hint reload, four scope mismatches, and received
-refusal status classification. The completed focused matrix passes 45 tests;
-the full affected frontend core passes 507, with web/offline types and touched
-lint/format/whitespace checks passing. The 507 total includes the separately
+refusal status classification. The completed focused matrix passes 53 tests;
+the full affected frontend core passes 515, with web/offline types and touched
+lint/format/whitespace checks passing. The 515 total includes the separately
 reviewed phase-only runtime diagnostic cases; it is not a new full repository
 aggregate.
 
@@ -49,3 +49,27 @@ binding/journal/delivery and both historical/pending customer projections. This
 is local route/emulator evidence, not native Chromium, PostgreSQL or Docker
 restore qualification. Exact hosted rerun and independent candidate review remain
 required before merge.
+
+## Interrupted successful response and explicit retry
+
+A validated HTTP200 header followed by an interrupted body contains no complete
+new authenticated identity or authority. Its transport-network classification
+may use only the already retained, unchanged bounded lease. A completed malformed
+JSON/body, wrong response URL/headers, or any received non-success status never
+qualifies. Explicit controller tests distinguish these cases.
+
+The exact captured snapshot remains mandatory through the offline claim and
+through the refreshed post-`remember` source until READY publication. A stale
+failure catch must not blank a same-token/binding metadata replacement. A later
+replacement while preferences are loading must not publish the prior user's
+view. Independent review reproduced both post-remember replacement variants;
+those failing probes are retained as regression tests.
+
+The existing deliberate **Sincronizar ahora**/reconnect action still requests
+server-authoritative verification. If that explicit retry cannot reach `/me`,
+it enters the visible verification-required hold rather than reporting success
+or renewing the cached lease. Pending journal/delivery, partition and original
+context/deadline remain intact; a later offline reload cannot undo that explicit
+verification fence. Recovery requires successful online verification. Ordinary
+local edits do not trigger this transition after offline admission. This narrow
+correction does not add reconnect fallback or change reachable-denial handling.

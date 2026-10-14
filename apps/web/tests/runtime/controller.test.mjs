@@ -586,11 +586,30 @@ for (const status of [401, 403, 409, 500]) {
   })
 }
 
-for (const mode of ['malformed', 'different_principal']) {
+for (const mode of [
+  'malformed',
+  'different_principal',
+  'malformed_json',
+  'wrong_url',
+  'wrong_headers',
+]) {
   test(`reachable ${mode} me fails closed and cannot fall back on a later offline reload`, async (t) => {
     const { first } = await retainedReload(t)
     const server = {
-      fetch: async (url) => response(url, mode === 'malformed' ? { broken: true } : user('B')),
+      fetch: async (url) => {
+        if (mode === 'malformed') return response(url, { broken: true })
+        if (mode === 'different_principal') return response(url, user('B'))
+        if (mode === 'wrong_url') return response('https://other.test/api/v1/auth/me', user())
+        const raw = mode === 'malformed_json' ? '{broken' : JSON.stringify(user())
+        const value = new Response(raw, {
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': mode === 'wrong_headers' ? 'public' : 'no-store',
+          },
+        })
+        Object.defineProperty(value, 'url', { value: url })
+        return value
+      },
     }
     const second = setup(t, { name: first.name, storage: first.storage, server })
     await second.runtime.start()
@@ -854,4 +873,133 @@ test('organization-wide account keeps null account scope and its concrete select
   assert.equal(second.runtime.getSnapshot().user.location_id, null)
   assert.equal(second.runtime.getSnapshot().context.accountLocationId, null)
   assert.equal(second.runtime.getSnapshot().context.selectedLocationId, 'loc')
+})
+
+test('same-token metadata replacement during awaited offline claim is not blanked by its stale catch', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  const second = setup(t, { name: first.name, storage: first.storage, online: false })
+  let reached, release
+  const barrier = new Promise((resolve) => {
+    reached = resolve
+  })
+  const resume = second.runtime.kernel.resumeOffline.bind(second.runtime.kernel)
+  second.runtime.kernel.resumeOffline = async (...args) => {
+    reached()
+    await new Promise((resolve) => {
+      release = resolve
+    })
+    return resume(...args)
+  }
+  let held = 0
+  const hold = second.runtime.held.bind(second.runtime)
+  second.runtime.held = (...args) => {
+    held++
+    return hold(...args)
+  }
+  const pending = second.runtime.start()
+  await barrier
+  const replacement = JSON.parse(first.storage.getItem('ocwp.session.v2'))
+  replacement.user.user_id = 'B'
+  first.storage.setItem('ocwp.session.v2', JSON.stringify(replacement))
+  release()
+  await pending
+  assert.equal(held, 0)
+  assert.equal(second.runtime.sessionStore.getSnapshot().user.user_id, 'B')
+  assert.deepEqual(await second.database.deviceControl.get('device'), evidence.control)
+})
+
+test('interrupted successful me body may resume only the unchanged previously verified lease', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    server: {
+      fetch: async (url) => {
+        const value = new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError('connection lost'))
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+          },
+        )
+        Object.defineProperty(value, 'url', { value: url })
+        return value
+      },
+    },
+  })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready', second.runtime.getSnapshot().message)
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  assert.deepEqual(second.runtime.getSnapshot().context, evidence.context)
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+})
+
+for (const mode of ['user', 'admission']) {
+  test(`exact refreshed snapshot survives late ${mode} replacement before ready publication`, async (t) => {
+    const { first } = await retainedReload(t)
+    const second = setup(t, {
+      name: first.name,
+      storage: first.storage,
+      server: {
+        fetch: async () => {
+          throw new TypeError('offline')
+        },
+      },
+    })
+    const remember = second.runtime.sessionStore.remember.bind(second.runtime.sessionStore)
+    second.runtime.sessionStore.remember = (...args) => {
+      remember(...args)
+      queueMicrotask(() => {
+        const changed = JSON.parse(first.storage.getItem('ocwp.session.v2'))
+        if (mode === 'user') changed.user.user_id = 'B'
+        else changed.admission.owner.tabAttemptId = 'replaced'
+        first.storage.setItem('ocwp.session.v2', JSON.stringify(changed))
+      })
+    }
+    await second.runtime.start()
+    assert.notEqual(second.runtime.getSnapshot().phase, 'ready')
+    assert.equal(second.runtime.getSnapshot().customers.length, 0)
+  })
+}
+
+test('deliberate sync after fallback remains real verification and holds unreachable retry without losing history', async (t) => {
+  const { first, evidence } = await retainedReload(t)
+  let calls = 0
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    server: {
+      fetch: async () => {
+        calls++
+        throw new TypeError('offline')
+      },
+    },
+  })
+  await second.runtime.start()
+  assert.equal(second.runtime.getSnapshot().phase, 'ready')
+  assert.equal(second.runtime.getSnapshot().sync, 'offline')
+  await second.runtime.sync()
+  assert.equal(calls, 2)
+  assert.equal(second.runtime.getSnapshot().phase, 'held')
+  assert.equal(second.runtime.getSnapshot().customers.length, 0)
+  assert.match(second.runtime.getSnapshot().message, /verificar la sesión/)
+  assert.notEqual(second.runtime.getSnapshot().sync, 'synced')
+  assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+  assert.deepEqual(await second.database.operationDelivery.toArray(), evidence.delivery)
+  const retained = await second.database.accessContexts.get(evidence.control.activePartitionId)
+  assert.deepEqual(retained.context, evidence.context)
+  assert.equal(
+    (await second.database.deviceControl.get('device')).activePartitionId,
+    evidence.control.activePartitionId,
+  )
+  second.runtime.dispose()
+  const third = setup(t, { name: first.name, storage: first.storage, online: false })
+  await third.runtime.start()
+  assert.equal(third.runtime.getSnapshot().phase, 'held')
+  assert.deepEqual(await third.database.operationJournal.toArray(), evidence.journal)
 })

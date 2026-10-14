@@ -289,7 +289,8 @@ export class WorkshopController {
     )
   }
   private async resumeStoredOffline(saved: SessionSnapshot, sequence: number): Promise<void> {
-    const current = () => this.exactSession(sequence, saved)
+    let captured = saved
+    const current = () => this.exactSession(sequence, captured)
     try {
       if (!this.retainedScopeMatches(saved)) throw new Error('Offline session scope changed')
       const resumed = await this.kernel.resumeOffline(
@@ -299,11 +300,11 @@ export class WorkshopController {
       )
       if (!current()) return
       this.sessionStore.remember(resumed.admission, saved.token)
-      const refreshed = this.sessionStore.getSnapshot()!
-      const source = this.makeSession(refreshed, resumed.ticket, resumed.context, sequence)
-      await this.ready(source, refreshed.user!, sequence, false)
+      captured = this.sessionStore.getSnapshot()!
+      const source = this.makeSession(captured, resumed.ticket, resumed.context, sequence, true)
+      await this.ready(source, captured.user!, sequence, false)
     } catch {
-      if (this.current(sequence, saved)) this.held('offline_expired')
+      if (current()) this.held('offline_expired')
     }
   }
   private makeSession(
@@ -311,6 +312,7 @@ export class WorkshopController {
     ticket: ContextTicket,
     context: VerifiedAccessContext,
     sequence: number,
+    exact = false,
   ): BaselineSession {
     const identity = {
       apiRealm: this.options.apiRealm,
@@ -327,7 +329,7 @@ export class WorkshopController {
       context: structuredClone(context),
       identity,
       bearerToken: saved.token,
-      isCurrent: () => this.current(sequence, saved),
+      isCurrent: () => (exact ? this.exactSession(sequence, saved) : this.current(sequence, saved)),
     }
   }
   async login(input: LoginRequestPayload): Promise<void> {
@@ -550,7 +552,7 @@ export class WorkshopController {
     } catch {
       /* Preference copy failure does not affect operational admission. */
     }
-    if (!this.current(sequence, saved)) return
+    if (!current()) return
     this.publish({
       phase: 'ready',
       user,
