@@ -205,7 +205,8 @@ def test_golden_slice_requires_service_worker_offline_reload_evidence() -> None:
     spec = (ROOT / "apps/web/e2e/customer-offline-sync.spec.ts").read_text(encoding="utf-8")
     assert "navigator.serviceWorker.ready" in spec
     assert "firstPage.reload" in spec
-    assert "getByText('Operación de taller que no se detiene cuando falla Internet.')" in spec
+    # Authenticated functional content survives regardless of the selected theme headline.
+    assert "getByRole('heading', { name: 'Órdenes de servicio', exact: true })" in spec
 
 
 def test_repository_has_manual_actions_and_master_agent_loop_v02() -> None:

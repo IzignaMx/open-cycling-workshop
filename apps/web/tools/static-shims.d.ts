@@ -1,4 +1,7 @@
 declare namespace JSX {
+  interface IntrinsicAttributes {
+    key?: string | number
+  }
   interface IntrinsicElements {
     [name: string]: any
   }
@@ -6,7 +9,15 @@ declare namespace JSX {
 
 declare module 'react' {
   export type ReactNode = any
+  export type CSSProperties = Record<string, string | number | undefined>
+  export function useRef<T>(value: T): { current: T }
+  export function useRef<T>(value: T | null): { current: T | null }
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T }
+  export type KeyboardEvent<T = Element> = {
+    key: string
+    currentTarget: T
+    stopPropagation(): void
+  }
   export type ChangeEvent<T = Element> = { currentTarget: T }
   export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T
   export function useCallback<T extends (...args: any[]) => any>(

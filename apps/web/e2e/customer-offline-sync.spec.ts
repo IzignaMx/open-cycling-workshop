@@ -90,7 +90,7 @@ test('customer persists offline, syncs after reconnect, and converges in a secon
 
   await firstPage.reload({ waitUntil: 'domcontentloaded' })
   await expect(
-    firstPage.getByText('Operación de taller que no se detiene cuando falla Internet.'),
+    firstPage.getByRole('heading', { name: 'Órdenes de servicio', exact: true }),
   ).toBeVisible()
   await expect(firstPage.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
   await expect.poll(() => readIndexedDbCustomerNames(firstPage)).toContain(CUSTOMER_NAME)

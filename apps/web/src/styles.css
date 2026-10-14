@@ -36,3 +36,950 @@ textarea {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Structural presentation is scoped to one stable shell. Domain nodes never move
+   between React parents when a theme changes. Semantic colors are protected. */
+.workshop-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  color: var(--ocwp-color-ink);
+  background: var(--ocwp-color-canvas);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.workshop-shell[data-scheme='dark'] {
+  color-scheme: dark;
+}
+.workshop-shell[data-scheme='light'] {
+  color-scheme: light;
+}
+.workshop-shell *,
+.workshop-shell *::before,
+.workshop-shell *::after {
+  box-sizing: border-box;
+}
+.workshop-shell [hidden] {
+  display: none !important;
+}
+.workshop-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px 20px;
+  background: var(--ocwp-color-nav);
+  color: var(--ocwp-color-nav-ink);
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+}
+.workshop-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  text-decoration: none;
+  min-height: 56px;
+}
+.workshop-identity strong {
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+}
+.workshop-identity small,
+.workshop-user small {
+  display: block;
+  font-size: 0.75rem;
+}
+.workshop-monogram {
+  display: grid;
+  place-content: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+}
+.workshop-logo {
+  max-width: 100%;
+  width: 160px;
+  height: 48px;
+  object-fit: contain;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #65776e;
+  border-radius: 4px;
+}
+.workshop-links {
+  display: grid;
+  gap: 8px;
+}
+.workshop-links a,
+.settings-trigger {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--ocwp-radius-sm);
+  text-decoration: none;
+}
+.workshop-links a:hover,
+.settings-trigger:hover {
+  border-color: currentColor;
+}
+.workshop-links a:first-child {
+  background: var(--ocwp-color-accent);
+  color: var(--ocwp-color-on-accent);
+  font-weight: 700;
+}
+.settings-trigger {
+  justify-content: center;
+  border-color: currentColor;
+  cursor: pointer;
+  font-weight: 650;
+}
+.workshop-user {
+  margin-top: auto;
+  font-size: 0.875rem;
+}
+.workshop-body {
+  min-width: 0;
+  padding: 32px;
+}
+.workshop-body > main {
+  display: grid;
+  gap: 28px;
+  max-width: 1400px;
+  margin: auto;
+  outline: none;
+}
+.workshop-heading,
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.workshop-heading h1 {
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin: 6px 0 10px;
+}
+.workshop-heading p:not(.eyebrow),
+.muted {
+  color: var(--ocwp-color-muted);
+}
+.eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+.workshop-shell h2 {
+  font-size: 1.25rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.workshop-panel {
+  background: var(--ocwp-color-surface);
+  border: 1px solid var(--ocwp-color-border);
+  border-radius: var(--ocwp-radius-md);
+  padding: 24px;
+  min-width: 0;
+}
+.workshop-panel > h2 {
+  margin-bottom: 20px;
+}
+.workshop-notice {
+  border: 1px solid var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-sm);
+  padding: 12px 16px;
+  background: var(--ocwp-color-surface);
+}
+.workshop-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 4px 0 24px;
+  border-bottom: 1px solid var(--ocwp-color-border);
+  gap: 20px;
+}
+.workshop-metrics > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: end;
+  padding: 0 16px;
+  border-right: 1px solid var(--ocwp-color-border);
+}
+.workshop-metrics > div:last-child {
+  border-right: 0;
+}
+.workshop-metrics dt {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.workshop-metrics dd {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 750;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--ocwp-radius-sm);
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: center;
+}
+.primary-button {
+  background: var(--ocwp-color-accent);
+  color: var(--ocwp-color-on-accent);
+  border: 1px solid transparent;
+}
+.primary-button:hover {
+  background: var(--ocwp-color-accent-strong);
+}
+.secondary-button {
+  background: var(--ocwp-color-surface);
+  color: var(--ocwp-color-ink);
+  border: 1px solid var(--ocwp-color-control-border);
+}
+.secondary-button:hover {
+  background: var(--ocwp-color-accent-soft);
+}
+.workshop-shell button:disabled,
+.workshop-shell fieldset:disabled {
+  cursor: not-allowed;
+}
+.workshop-shell button:disabled {
+  opacity: 0.6;
+}
+.workshop-shell input:not([type='radio']):not([type='checkbox']),
+.workshop-shell select,
+.workshop-shell textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-sm);
+  background: var(--ocwp-color-surface);
+  color: var(--ocwp-color-ink);
+  padding: 10px 12px;
+}
+.workshop-shell input::placeholder {
+  color: var(--ocwp-color-muted);
+  opacity: 1;
+}
+.workshop-shell input[type='checkbox'],
+.workshop-shell input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--ocwp-color-accent);
+}
+.workshop-shell input[type='file'] {
+  font-size: 0.875rem;
+}
+.workshop-shell input[type='file']::file-selector-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  margin-right: 12px;
+  border: 1px solid var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-sm);
+  background: var(--ocwp-color-surface);
+  color: var(--ocwp-color-ink);
+}
+.workshop-shell summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  font-weight: 650;
+}
+.workshop-shell :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #111827 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #fff !important;
+}
+.workshop-shell :is(section, h2, main) {
+  scroll-margin-top: 24px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  transform: translateY(-160%);
+  padding: 12px;
+  background: #fff;
+  color: #111827;
+}
+.skip-link:focus {
+  transform: none;
+}
+.order-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+.order-tools label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 280px;
+  max-width: 460px;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.order-tools p {
+  font-size: 0.875rem;
+  padding-bottom: 10px;
+}
+.order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+}
+.order-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--ocwp-color-border);
+  background: var(--ocwp-color-surface);
+  min-width: 0;
+}
+.order-card + .order-card {
+  border-top: 0;
+}
+.order-card:first-child {
+  border-radius: var(--ocwp-radius-md) var(--ocwp-radius-md) 0 0;
+}
+.order-card:last-child {
+  border-radius: 0 0 var(--ocwp-radius-md) var(--ocwp-radius-md);
+}
+.order-card:only-child {
+  border-radius: var(--ocwp-radius-md);
+}
+.order-summary {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.order-summary > small {
+  color: var(--ocwp-color-muted);
+  font-size: 0.75rem;
+}
+.order-summary > strong {
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+.order-summary > span {
+  font-size: 0.875rem;
+}
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.order-actions .secondary-button {
+  font-size: 0.875rem;
+}
+.order-history,
+.order-error {
+  grid-column: 1 / -1;
+  font-size: 0.875rem;
+}
+.order-history ol {
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.order-error {
+  color: #8d3028;
+  background: #fce9e7;
+  padding: 12px;
+}
+.order-column-labels {
+  display: none;
+}
+.empty-state {
+  background: var(--ocwp-color-surface);
+  padding: 28px;
+  border: 1px dashed var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-md);
+  color: var(--ocwp-color-muted);
+}
+.reception-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 24px;
+  align-items: start;
+}
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.session-actions > div {
+  flex-basis: 100%;
+}
+.session-actions h2 {
+  margin-bottom: 6px;
+}
+.workshop-footer {
+  color: var(--ocwp-color-muted);
+  font-size: 0.75rem;
+  padding: 4px 0;
+}
+[data-tone='success'] {
+  --state-ink: #22593b;
+  --state-bg: #e3f3e8;
+}
+[data-tone='warning'] {
+  --state-ink: #77501a;
+  --state-bg: #fff0d2;
+}
+[data-tone='danger'] {
+  --state-ink: #8d3028;
+  --state-bg: #fce9e7;
+}
+[data-tone='info'] {
+  --state-ink: #234d86;
+  --state-bg: #e6effc;
+}
+.state-badge {
+  color: var(--state-ink);
+  background: var(--state-bg);
+  border: 1px solid currentColor;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 750;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.sync-banner {
+  color: var(--state-ink);
+  background: var(--state-bg);
+  border-left: 4px solid currentColor;
+  border-radius: var(--ocwp-radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.sync-banner > strong {
+  font-size: 0.875rem;
+}
+.sync-detail {
+  font-size: 0.8125rem;
+}
+.personalization-panel {
+  max-width: 1400px;
+  margin: 0 auto 28px;
+  display: grid;
+  gap: 20px;
+}
+.personalization-panel > p {
+  font-size: 0.875rem;
+}
+.personalization-panel fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+.personalization-panel legend {
+  font-weight: 750;
+  margin-bottom: 12px;
+}
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.theme-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-content: start;
+  padding: 14px;
+  border: 2px solid var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-md);
+  cursor: pointer;
+  min-height: 44px;
+}
+.theme-option[data-selected='true'] {
+  border-color: var(--ocwp-color-accent);
+  background: var(--ocwp-color-accent-soft);
+}
+.theme-option > strong,
+.theme-option > small {
+  grid-column: 1 / -1;
+}
+.theme-option > small {
+  color: var(--ocwp-color-muted);
+  font-size: 0.75rem;
+}
+.theme-miniature {
+  display: flex;
+  gap: 4px;
+  height: 44px;
+  pointer-events: none;
+}
+.theme-miniature > i {
+  width: 22%;
+  background: var(--ocwp-color-accent);
+  border-radius: 2px;
+}
+.theme-miniature > span {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+.theme-miniature b {
+  background: var(--ocwp-color-control-border);
+  opacity: 0.75;
+  border-radius: 1px;
+}
+.theme-miniature[data-preview='plano'] {
+  flex-direction: column;
+}
+.theme-miniature[data-preview='plano'] > i {
+  width: 100%;
+  height: 10px;
+}
+.theme-miniature[data-preview='ritmo'] > span {
+  grid-template-columns: 1fr 1fr;
+}
+.theme-miniature[data-preview='noche'] > span {
+  grid-template-columns: 1fr 1fr;
+}
+.theme-miniature[data-preview='noche'] b:first-child {
+  grid-row: span 3;
+}
+.preference-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.preference-fields > label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  min-width: 0;
+}
+.preference-fields > .workshop-mode {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  gap: 12px;
+  cursor: pointer;
+}
+.workshop-mode small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ocwp-color-muted);
+  font-weight: 400;
+}
+.personalization-panel fieldset > button {
+  justify-self: start;
+}
+.logo-settings {
+  padding-top: 16px;
+  border-top: 1px solid var(--ocwp-color-border);
+}
+.logo-settings > p,
+.logo-settings > small {
+  color: var(--ocwp-color-muted);
+  font-size: 0.875rem;
+}
+.logo-settings > label {
+  display: grid;
+  gap: 8px;
+  max-width: 32rem;
+  font-weight: 650;
+}
+.logo-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.logo-preview img {
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #65776e;
+  padding: 8px;
+}
+.preference-status {
+  padding: 12px;
+  border: 1px solid var(--ocwp-color-control-border);
+  border-radius: var(--ocwp-radius-sm);
+}
+
+/* Plano: horizontal navigation and aligned comparison rows, with real labels. */
+.workshop-shell[data-theme='plano'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+[data-theme='plano'] .workshop-navigation {
+  position: static;
+  height: auto;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--ocwp-color-border);
+  gap: 20px;
+}
+[data-theme='plano'] .workshop-links {
+  display: flex;
+  flex-wrap: wrap;
+}
+[data-theme='plano'] .workshop-user {
+  margin: 0 0 0 auto;
+}
+[data-theme='plano'] .workshop-identity {
+  flex-wrap: nowrap;
+}
+[data-theme='plano'] .order-column-labels {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(9rem, 0.65fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 20px;
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  background: var(--ocwp-color-accent-soft);
+}
+[data-theme='plano'] .order-card {
+  grid-template-columns: minmax(0, 1.2fr) minmax(9rem, 0.65fr) minmax(0, 1fr);
+  border-radius: 0;
+}
+[data-theme='plano'] .order-actions {
+  grid-column: auto;
+}
+[data-theme='plano'] .orders-workspace {
+  border-top: 2px solid var(--ocwp-color-ink);
+  padding-top: 20px;
+}
+
+/* Ritmo: four metric modules and a genuine card grid, never a carousel. */
+[data-theme='ritmo'] .workshop-metrics {
+  border: 0;
+  padding: 0;
+}
+[data-theme='ritmo'] .workshop-metrics > div {
+  padding: 16px 20px;
+  background: var(--ocwp-color-surface);
+  border: 1px solid var(--ocwp-color-border);
+  border-radius: var(--ocwp-radius-md);
+}
+[data-theme='ritmo'] .order-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+[data-theme='ritmo'] .order-card {
+  border: 1px solid var(--ocwp-color-border);
+  border-radius: var(--ocwp-radius-md);
+  grid-template-columns: minmax(0, 1fr);
+  padding: 24px;
+}
+[data-theme='ritmo'] .order-summary > strong {
+  font-size: 1.25rem;
+}
+[data-theme='ritmo'] .order-actions {
+  align-self: end;
+}
+
+/* Noche: the first deterministic order remains first in both DOM and display. */
+[data-theme='noche'] .order-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  align-items: start;
+}
+[data-theme='noche'] .order-card {
+  border: 0;
+  border-top: 1px solid var(--ocwp-color-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 20px 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+[data-theme='noche'] .order-card:first-child {
+  grid-column: 1;
+  grid-row: 1 / span var(--order-queue-rows);
+  border: 1px solid var(--ocwp-color-border);
+  border-left: 4px solid var(--ocwp-color-accent);
+  border-radius: var(--ocwp-radius-md);
+  background: var(--ocwp-color-surface);
+  padding: 24px;
+}
+[data-theme='noche'] .order-card:first-child .order-summary > strong {
+  font-size: 1.75rem;
+}
+[data-theme='noche'] .order-card:first-child .order-actions {
+  margin-top: 24px;
+}
+[data-theme='noche'] .order-card:first-child .order-actions > button:first-child {
+  background: var(--ocwp-color-accent);
+  color: var(--ocwp-color-on-accent);
+  min-height: 56px;
+  width: 100%;
+}
+[data-theme='noche'] .order-card:nth-child(n + 2) {
+  grid-column: 2;
+}
+
+.workshop-shell[data-density='workshop'] {
+  font-size: 18px;
+}
+[data-density='workshop']
+  :is(
+    button,
+    .primary-button,
+    .secondary-button,
+    .workshop-links a,
+    summary,
+    input:not([type='radio']):not([type='checkbox']),
+    select,
+    textarea,
+    .theme-option
+  ) {
+  min-height: 56px;
+  min-width: 56px;
+}
+[data-density='workshop'] .order-actions .secondary-button,
+[data-density='workshop'] .order-summary > span {
+  font-size: 1rem;
+}
+
+@media (max-width: 1279px) {
+  .workshop-shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+  .workshop-body {
+    padding: 24px;
+  }
+  .theme-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preference-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reception-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-theme='ritmo'] .order-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 344px), 1fr));
+  }
+}
+@media (max-width: 1023px) {
+  .workshop-shell {
+    display: block;
+  }
+  .workshop-navigation,
+  [data-theme='plano'] .workshop-navigation {
+    position: static;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 16px 24px;
+    gap: 16px;
+  }
+  .workshop-identity {
+    flex-wrap: nowrap;
+  }
+  .workshop-logo {
+    width: 100px;
+  }
+  .workshop-links,
+  [data-theme='plano'] .workshop-links {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 6px;
+  }
+  .workshop-links a {
+    justify-content: center;
+    padding: 10px 6px;
+  }
+  .workshop-user,
+  [data-theme='plano'] .workshop-user {
+    margin: 0;
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .settings-trigger {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  [data-theme='plano'] .order-column-labels {
+    display: none;
+  }
+  [data-theme='plano'] .order-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  [data-theme='plano'] .order-actions {
+    grid-column: 1 / -1;
+  }
+  [data-theme='noche'] .order-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-theme='noche'] .order-card:first-child {
+    grid-row: auto;
+  }
+  [data-theme='noche'] .order-card:nth-child(n + 2) {
+    grid-column: 1;
+  }
+}
+@media (max-width: 639px) {
+  .workshop-body {
+    padding: 20px 16px;
+  }
+  .workshop-navigation,
+  [data-theme='plano'] .workshop-navigation {
+    padding: 16px;
+    gap: 12px;
+  }
+  .settings-trigger {
+    padding: 8px;
+    font-size: 0.8125rem;
+  }
+  .workshop-identity {
+    gap: 8px;
+  }
+  .workshop-identity strong {
+    font-size: 1rem;
+  }
+  .workshop-identity small {
+    font-size: 0.6875rem;
+  }
+  .workshop-monogram {
+    width: 36px;
+    height: 36px;
+  }
+  .workshop-logo {
+    width: 64px;
+    height: 44px;
+  }
+  .workshop-links a {
+    font-size: 0.8125rem;
+  }
+  .workshop-heading > .primary-button {
+    width: 100%;
+  }
+  .workshop-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 8px;
+  }
+  .workshop-metrics > div {
+    padding: 0 8px;
+  }
+  .workshop-metrics > div:nth-child(2) {
+    border: 0;
+  }
+  .workshop-panel {
+    padding: 18px;
+  }
+  .workshop-body > main {
+    gap: 24px;
+  }
+  .order-card,
+  [data-theme='plano'] .order-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+  .order-actions > button {
+    flex: 1 1 140px;
+  }
+  .theme-options,
+  .preference-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theme-option {
+    grid-template-columns: 20px 60px minmax(0, 1fr);
+  }
+  .theme-option > strong {
+    grid-column: 3;
+  }
+  .theme-option > small {
+    grid-column: 2 / -1;
+  }
+  .personalization-panel .section-heading > button {
+    width: 100%;
+  }
+  [data-theme='ritmo'] .order-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .session-actions > button {
+    width: 100%;
+  }
+}
+@media (pointer: coarse), (hover: none) {
+  .workshop-shell {
+    font-size: 18px;
+  }
+  .workshop-shell
+    :is(
+      button,
+      .primary-button,
+      .secondary-button,
+      .workshop-links a,
+      summary,
+      input:not([type='radio']):not([type='checkbox']),
+      select,
+      textarea,
+      .theme-option
+    ) {
+    min-height: 56px;
+  }
+  .order-actions .secondary-button {
+    font-size: 1rem;
+  }
+}
+@media (forced-colors: active) {
+  .workshop-shell,
+  .workshop-panel,
+  .order-card,
+  .workshop-navigation,
+  .theme-option,
+  .sync-banner,
+  .state-badge,
+  .primary-button,
+  .secondary-button {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+  .workshop-shell :is(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid Highlight !important;
+    box-shadow: none !important;
+  }
+  .theme-option[data-selected='true'] {
+    border-color: Highlight;
+  }
+  .workshop-links a:first-child {
+    background: Highlight;
+    color: HighlightText;
+  }
+}

@@ -26,7 +26,7 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
         <button
           type="button"
           onClick={() => void onRefresh()}
-          className="min-h-11 rounded-[var(--ocwp-radius-sm)] border border-[var(--ocwp-color-border)] px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-accent)]"
+          className="min-h-11 rounded-[var(--ocwp-radius-sm)] border border-[var(--ocwp-color-control-border)] px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-accent)]"
         >
           Actualizar
         </button>
@@ -41,14 +41,14 @@ export function ConflictCenter({ conflicts, onRefresh }: ConflictCenterProps) {
           {items.map((item) => (
             <li
               key={item.mutationId}
-              className="rounded-xl border border-[var(--ocwp-color-border)] bg-white p-4"
+              className="rounded-xl border border-[var(--ocwp-color-border)] bg-[var(--ocwp-color-surface)] p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="grid gap-1">
                   <strong>{item.title}</strong>
                   <span className="text-sm text-[var(--ocwp-color-muted)]">{item.description}</span>
                 </div>
-                <span className="text-sm font-semibold text-[var(--ocwp-color-danger)]">
+                <span data-tone="danger" className="state-badge">
                   {item.statusLabel}
                 </span>
               </div>
