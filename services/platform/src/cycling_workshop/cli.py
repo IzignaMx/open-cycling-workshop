@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn
@@ -14,6 +15,11 @@ from sqlalchemy.orm import Session
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.db.session import build_engine
 from cycling_workshop.identity.admin_cli import create_first_owner
+from cycling_workshop.identity.cutover_cli import (
+    activate_cutover,
+    cutover_status,
+    recover_cutover,
+)
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.repository import (
     SqlAlchemyUserRepository,
@@ -64,8 +70,20 @@ def bootstrap_admin(
     engine = build_engine(settings)
     try:
         with Session(engine) as session:
-            if session.scalar(select(UserRecord.id).limit(1)) is not None:
-                raise RuntimeError("bootstrap admin refused because a user already exists")
+            # No organization exists to provide the normal row barrier. All
+            # supported bootstraps serialize before checking the complete fresh-
+            # installation predicate. These are transaction-scoped locks.
+            if engine.dialect.name == "postgresql":
+                session.execute(text("SELECT pg_advisory_xact_lock(1329813328, 1)"))
+            elif engine.dialect.name == "sqlite":
+                session.execute(text("BEGIN IMMEDIATE"))
+            else:
+                raise RuntimeError("bootstrap admin requires a supported database")
+            if any(
+                session.scalar(select(model.id).limit(1)) is not None
+                for model in (OrganizationRecord, LocationRecord, UserRecord)
+            ):
+                raise RuntimeError("bootstrap admin requires a fresh installation")
             organization = OrganizationRecord(id=organization_id, name=organization_name.strip())
             location = LocationRecord(
                 id=location_id, organization_id=organization_id, name=location_name.strip()
@@ -137,12 +155,53 @@ def _build_parser() -> argparse.ArgumentParser:
     owner.add_argument("--username", required=True)
     owner.add_argument("--display-name", required=True)
     owner.add_argument("--password-file", type=Path, required=True)
+    cutover = subcommands.add_parser("cutover", help="Explicit local cutover maintenance")
+    cutover_commands = cutover.add_subparsers(
+        dest="cutover_command", required=True, parser_class=_SafeArgumentParser
+    )
+    for action in ("status", "activate", "recover"):
+        operation = cutover_commands.add_parser(action, allow_abbrev=False)
+        operation.add_argument("--organization-id", required=True)
+        if action == "recover":
+            operation.add_argument("--expected-incarnation", required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    if args.command == "cutover" and not (
+        os.getenv("OCWP_DATABASE_URL") or os.getenv("OCWP_DATABASE_URL_FILE")
+    ):
+        print(
+            json.dumps(
+                {"changed": False, "error": "database_configuration_required"}, sort_keys=True
+            )
+        )
+        return 1
     settings = Settings.from_env()
+    if args.command == "cutover":
+        try:
+            if args.cutover_command == "recover":
+                report = recover_cutover(
+                    settings,
+                    organization_id=args.organization_id,
+                    expected_incarnation=args.expected_incarnation,
+                )
+            else:
+                operation = (
+                    activate_cutover if args.cutover_command == "activate" else cutover_status
+                )
+                report = operation(settings, organization_id=args.organization_id)
+        except ApiError as exc:
+            print(json.dumps({"changed": False, "error": exc.code}, sort_keys=True))
+            return 1
+        except (OSError, UnicodeError, ValidationError, SQLAlchemyError):
+            print(
+                json.dumps({"changed": False, "error": "cutover_operation_failed"}, sort_keys=True)
+            )
+            return 1
+        print(json.dumps(report, sort_keys=True))
+        return 0
     if args.command == "access" and args.access_command == "create-first-owner":
         try:
             report = create_first_owner(

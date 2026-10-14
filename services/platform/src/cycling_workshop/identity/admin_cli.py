@@ -13,13 +13,13 @@ from cycling_workshop.api.middleware import request_id_var
 from cycling_workshop.db.session import build_engine
 from cycling_workshop.identity.admin_schemas import CreateUserRequest
 from cycling_workshop.identity.audit import append_audit, user_snapshot
+from cycling_workshop.identity.cutover import admit_protocol, lock_compatibility
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.identity.repository import normalize_username
 from cycling_workshop.identity.roles import CAPABILITIES
 from cycling_workshop.identity.security import PasswordService
 from cycling_workshop.settings import Settings
 from cycling_workshop.shared.ids import new_id
-from cycling_workshop.tenancy.models import OrganizationRecord
 
 
 def create_first_owner(
@@ -49,13 +49,10 @@ def create_first_owner(
     correlation = request_id_var.set(f"cli-{new_id()}")
     try:
         with Session(engine) as session:
-            organization = session.scalar(
-                select(OrganizationRecord)
-                .where(OrganizationRecord.id == organization_id)
-                .with_for_update()
-            )
-            if organization is None:
-                raise ApiError(404, "organization_not_found", "organization not found")
+            organization = lock_compatibility(session, organization_id)
+            # This compiled maintenance writer implements protocol 1 and does
+            # not depend on the optional HTTP baseline composition.
+            admit_protocol(organization, 1, True)
             if (
                 session.scalar(
                     select(UserRecord.id)
