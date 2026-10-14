@@ -33,6 +33,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
+    'tests/pwa/navigation-policy.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
     'tests/sync/retry-policy.test.mjs',
