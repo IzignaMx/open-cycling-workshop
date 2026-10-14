@@ -73,3 +73,11 @@ context/deadline remain intact; a later offline reload cannot undo that explicit
 verification fence. Recovery requires successful online verification. Ordinary
 local edits do not trigger this transition after offline admission. This narrow
 correction does not add reconnect fallback or change reachable-denial handling.
+
+## Automatic reconnection follow-on
+
+The next hosted attempt proved retained offline reload but reproduced missing
+reconnection events. The bounded automatic probe and its distinct authority,
+lease and publication fences are specified in
+[Automatic reconnect after retained offline admission](2026-10-14-automatic-offline-reconnect.md).
+Explicit manual retry semantics above remain unchanged.

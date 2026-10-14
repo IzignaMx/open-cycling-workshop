@@ -8,6 +8,17 @@
   coverage to the existing genuine authenticated browser journey. Hosted visual
   requalification remains required.
 
+## Unreleased · Automatic offline reconnect
+
+- Recover retained offline work automatically when connectivity events/hints are
+  stale, using original-lease-bounded, single-flight read-only reachability probes
+  before authoritative context verification and any dispatch.
+- Preserve exact source/owner/session fences, terminal refusals, pending history
+  and disconnects during READY publication; support stale false hints through a
+  required new baseline. Local regression evidence does not replace pending
+  exact-head hosted browser and eleven-check runtime/restore qualification. See
+  [scope and invariants](docs/10-spec-development/2026-10-14-automatic-offline-reconnect.md).
+
 ## Unreleased · Offline reload and browser acceptance corrections
 
 - Admit retained offline reload after a genuine network failure even when the
