@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Audited Python dependency correction
+
+- Upgrade the compatible FastAPI/Starlette pair and PyJWT to bounded patched
+  releases, retaining existing application authorization and wire contracts.
+- Add regression coverage for malformed Host private-cache policy, JWT parsing
+  and preserved signature/expiry rules. The real locked Linux dependency audit
+  changes from 19 advisory matches to zero without ignores. Independent local
+  review is complete; integrated hosted browser/runtime/security gates remain
+  pending. See [applicability and evidence](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md).
+
 ## Unreleased · Security scan coverage
 
 - Correct falsely green secret-history scanning with owner-matched, digest-pinned
