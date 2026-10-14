@@ -2,7 +2,32 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
-## Current qualification summary · 2026-10-14
+## Shared workshop branding · 2026-10-14 candidate gates
+
+The new increment starts from merged main39 `eef9559d8c3e528e79c99898360892188b23b55e`.
+Its postmerge 27/27 aggregate controls, 43 direct/aggregate browser cases, runtime,
+authenticated restore, security and three ARM64 builds passed. See the separate
+[inherited evidence](docs/10-spec-development/2026-10-14-shared-workshop-branding.md#inherited-baseline).
+Earlier qualification below does not qualify these new changes. Shared name,
+curated palette, canonical logo, explicit inheritance and admitted offline cache
+are implemented; exact integrated evidence remains pending.
+
+- [ ] Exact-head PostgreSQL0010→0011/migration/lock/revocation tests.
+- [ ] Native authenticated schema6→7 preservation, first-admission preferences,
+      scope/offline/reload/takeover and old-client regression.
+- [ ] Four-theme desktop/tablet/320px and keyboard/zoom/forced-colors screenshots,
+      followed by actual pixel review; source/collection is not execution.
+- [ ] Same-snapshot database+assets restore into fresh targets, authenticated
+      decoded-logo byte comparison, corrupt-latest refusal/earlier recovery and
+      stale-token/checkpoint rejection, including mixed-floor operator safeguards.
+- [ ] Docker private-volume ownership/runtime, exact dependency audit and ARM64
+      builds/resource tests. Cross-building is not Raspberry hardware qualification.
+- [ ] Real deployment/content/grant adoption only after separate operator authority;
+      no real account, credential, image or installation was changed by implementation.
+- [ ] Physical Windows/Android, screen-reader/glare and realistic-capacity recovery
+      gates remain open. Public contacts and profile interchange remain follow-on scope.
+
+## Historical administration candidate summary · 2026-10-14
 
 The authoritative inherited source baseline is main38
 `79cb4055aeb34344f2182d77e244c8187e9bb71b`. Its authenticated client C **has

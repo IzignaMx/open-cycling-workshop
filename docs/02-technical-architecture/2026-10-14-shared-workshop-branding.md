@@ -1,0 +1,171 @@
+# ADR · Shared workshop branding and admitted read cache
+
+Date: 2026-10-14. Status: implemented, exact integrated hosted/runtime evidence pending.
+Base: merged main39 `eef9559d8c3e528e79c99898360892188b23b55e`.
+
+## Scope and invariants
+
+One shared profile belongs to one organization and one concrete workshop/location.
+It contains a display name, one of the existing twelve palettes and an optional
+canonical PNG. Two branches can have different brands. A display name is not a
+legal tenancy name and never rewrites historical documents. Scope covers a bounded
+part of FR-WL-001/002 and FR-WL-003/004; public contacts and FR-WL-005 per-profile
+interchange remain follow-on work. Domains, arbitrary CSS/colors, portal/document/
+message branding, feature flags and production certification are excluded.
+
+The persistent Banco/Plano/Ritmo/Noche shell and operational form ownership remain
+unchanged. Palette and logo inheritance are render-only composition. A valid v1
+palette, including the default value, remains an explicit personal override.
+Absent logo records inherit; stored null remains an explicit hidden logo; stored
+local images remain local. v2 writes occur only on explicit changes. The legacy
+first-admission copier preserves provenance without rewriting original bytes.
+Personal theme, scheme and density remain available offline. No local image is
+uploaded automatically.
+
+## Compatible authority and catalog contract
+
+`branding.read` and `branding.write` are independent, explicit-only grants. The
+immutable legacy wildcard set contains exactly the original seventeen business,
+sync and administration capabilities. Effective authority is that fixed set when
+`*` is present, plus recognized explicit literals. Role names and owner designation
+are never capability shortcuts. Token/current-record intersections remain
+restrictive; adoption invalidates prior sessions and requires fresh admission.
+
+GET `/api/v1/admin/roles` retains its exact original closed response and seventeen-
+grant role snapshots. Existing v1 role-string POST/PATCH aliases also retain those
+snapshots. Freezing only the GET catalog would silently widen old role requests.
+GET `/api/v2/admin/roles` advertises `catalog_version: 2`, the current catalog and
+`legacy_wildcard_capabilities`. New clients expand selected roles into explicit
+capabilities before dispatch. The same-origin v2 request does not change the
+`/api/v1` realm used in session, partition or offline bindings. There is no unsafe
+v1 fallback when v2 is unavailable.
+
+Existing established organization-wide owners with all original grants can retain
+their exact stored grants/scope/owner status on unrelated edits. Name-only PATCH
+stays minimal; legacy wildcard snapshots are not resubmitted as new assignments.
+Unknown grants and malformed owners remain fail-closed. Creation, promotion and
+explicit owner grant/scope replacement require the full current owner grant set.
+Old clients cannot create/promote a full new owner through a legacy role alias;
+they must upgrade. Old clients seeing new literals safely refuse unknown-grant
+editing. The narrow local adoption command is never run by migration/startup and
+was exercised only on synthetic fixtures.
+Apply the complete migration chain before any explicitly authorized adoption;
+adopting grants against an older schema is unsupported, and grants alone do not
+provide the missing profile storage.
+
+### Policy revision clarification
+
+The authenticated-context ADR requires a policy bump for a catalog/read-map or
+epoch-policy change. This additive explicit-only catalog is compatible with its
+existing semantics: every prior concrete/wildcard account publishes the same
+seventeen-or-fewer effective grants and the epoch calculation is unchanged.
+Existing operational maps/entities and baseline contract are unchanged. Therefore
+`ocwp-access-baseline-2` is retained to preserve the old client's closed parser.
+Adding/removing actual branding literals changes the existing authority-derived
+epoch; adoption also increments session version. A future change to prior grant
+resolution, epoch calculation or operational read maps still requires a negotiated
+policy revision. A brand name/palette/version change never rotates authority.
+
+## Profile transport and persistence
+
+SQL migration0011 adds `workshop_brand_profiles`, keyed by organization/location
+with composite tenant FKs, descriptor consistency constraints and positive saved
+versions. Absent profiles have explicit version0 responses; first save is CAS0.
+The unimplemented quote reservation moves to SQL0012. No applied migration is
+rewritten; destructive downgrade is refused before DDL/DML.
+
+GET/PUT `/api/v1/locations/{location_id}/branding` use protocol1 admission and closed
+DTOs. PUT contains only expected_version, display_name, palette_id and nullable
+logo_png_base64. Name normalization is NFC/trim, 1–160 Unicode codepoints, <=640
+UTF8 bytes, no Unicode control/private/surrogate/unassigned categories. Version0
+normalizes the permitted location label for display only and falls back to Taller
+when old tenancy values cannot meet this contract.
+
+Responses repeat organization/location/incarnation, schema1/version, name/palette,
+update metadata and explicit logo states. `none` has no descriptor, `available`
+embeds canonical bytes, `unavailable` retains the descriptor with a safe diagnostic
+and no bytes. Missing/corrupt assets never become deliberate removal or reuse old
+image bytes. Write-only success returns only the newly submitted replacement; read
+permission is independently required for display/cache. Request/response envelopes
+are bounded to384KiB, PNG to256KiB. Streaming checks do not trust Content-Length.
+All paths, including validation/auth failures, redirects, unsupported methods and
+unexpected errors, carry no-store. Validation failures are constant bounded
+messages rather than echoed input arrays.
+
+The service decodes before long-lived DB locks, then acquires organization before
+current actor, validates protocol/incarnation/expiry, intersects current authority,
+validates concrete location, locks/CASes profile and publishes immutable bytes
+before SQL reference/audit commit. Final admission revalidation remains mandatory.
+Reads use the same coherent current authorization boundary. Audit stores bounded
+IDs/versions/palette/digest/change fields, never names, original files or base64.
+409 requires explicit reload/review; lost/malformed success is unconfirmed, never
+an automatic retry or inferred success from a matching later read.
+
+## Assets and recovery
+
+Pillow12.3.0 is pinned in the lock. PNG framing/CRC/chunk/dimension/ancillary checks
+precede full isolated decode/re-encode. One killable child per API worker has no
+waiting queue, a two-second wall limit and a128MiB Linux limit. Canonical output is
+metadata-free 8-bit RGB/RGBA PNG, <=512px per side. No SVG, URLs, animation or APNG.
+See [decoder/storage evidence](../03-security-privacy/2026-10-14-branding-image-storage.md).
+
+Organization namespaces derive from server-validated IDs. Opened directory/file
+descriptors, no-follow checks, bounded reads, digest verification, exclusive temp
+creation, file fsync, atomic no-replace hardlink publication and directory fsync
+protect immutable content. Old referenced files are retained; no online GC or
+replacement/removal deletion is introduced. API gets a narrow named volume; backup
+access is read-only and an explicit fresh restore target is separate. Worker and
+edge get no asset mount. Docker ownership/ARM runtime remain evidence gates.
+
+The existing PostgreSQL-only bundle stays truthful. A separate branding bundle
+collects exact asset references inside the exported repeatable-read snapshot used
+by pg_dump, then copies those immutable bytes and publishes its manifest last.
+Restore requires trusted provenance, fresh targets, all references/hash/bytes and
+metadata checks, then the established expected-incarnation recovery fence before
+API reopening. No tenant or browser journal is excluded. Checksums establish
+integrity, not authenticity. See the [operator procedure](../07-operations/2026-10-14-branding-recovery.md).
+
+Shared branding does not implicitly activate a protocol-floor0 organization.
+Full-instance bundles preserve every floor0/floor1 tenant, including tenants with
+no branding profile. By default restore refuses any floor0 tenant before changing
+either target. `verify --show-legacy-cutover` is read-only. A separate, sensitive
+operator decision may supply the exact complete set of floor0 organization/source-
+incarnation pairs and acknowledge drained old writers, raw legacy preservation
+and existing audited cutover prerequisites. Missing, extra, duplicate or stale
+pairs fail before target modification. All restored metadata and asset bytes are
+verified before existing audited activation/recovery; activation checks the same
+incarnation atomically under the organization lock. These flags authorize an
+actual compatibility transition when an operator runs them. A partial failure
+leaves both targets quarantined. Implementation and tests authorize no real
+installation transition.
+
+## Authenticated offline display
+
+Only the separate authenticated database gains schema7 `brandingSnapshots`; legacy
+`ocwp` is not upgraded. Future quote local schema is8. Branding is not an operational
+sync entity and never enters journals, receipts, baseline records or mutation
+transports. The dedicated cache repeats realm/org/user/location/epoch/policy/
+incarnation/partition/lease and validates canonical data. Current device ownership
+and READY/OFFLINE_READY admission are checked transactionally. Offline reload uses
+its new valid owner ticket under the same existing lease; stored provenance never
+grants admission. Monotonic elapsed time fences delayed digest/IDB work.
+
+The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
+request/save. Exact saved session, current ticket/source generation, lease and
+currentness surround all awaits and publication. Logout, takeover, held/expired
+admission and current refusals synchronously hide content. Older versions cannot
+replace newer accepted profiles. Quota failure may retain verified content in
+memory with a visible warning, without evicting operational work. Only superseded
+branding caches are boundedly pruned. Cross-device convergence occurs on refresh;
+there is no immediate push claim or public/service-worker image cache.
+
+## Evidence boundary
+
+Unit, injected-network and fake-IDB tests establish their own boundaries only.
+Real PostgreSQL locking/migration, native browser storage/DOM, actual screenshots,
+asset-inclusive authenticated restore, container ownership and ARM images require
+exact-tree hosted evidence. Physical Windows/Android, screen readers, glare,
+realistic capacity/RTO and actual installation recovery remain separate gates.
+The [increment evidence record](../10-spec-development/2026-10-14-shared-workshop-branding.md)
+separates executed local checks, inherited main39 evidence and authored hosted
+qualification.

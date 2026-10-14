@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Shared workshop branding
+
+- Add independently authorized per-workshop name, curated palette and bounded
+  canonical logo, explicit shared/personal inheritance and admitted offline reads.
+- Freeze historical wildcard/catalog/role-alias semantics, preserve established
+  owner edits, and provide explicit synthetic-tested grant adoption.
+- Add durable private assets and same-snapshot database-plus-logo recovery.
+  Native browser, PostgreSQL/restore, Docker/ARM and actual visual qualification
+  remain pending for this exact increment; no full MVP or production claim.
+
 ## Unreleased · Visible theme verification order
 
 - Verify the selected theme radio before closing its panel, retaining keyboard

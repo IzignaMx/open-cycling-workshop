@@ -445,7 +445,7 @@ inventory_quote_integration_2026_10_14:
   quote_combined_tree_local_python: 476_passed_8_postgresql_skips
   quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
   quote_main_merge: 98394826884020d9de2498cab551120087dd5334
-  quote_migration_reserved: '0011'
+  quote_migration_reserved: '0012'
   reservation_update: identity_administration_0008_priority_supersedes_earlier_quote_0008_reservation
   release_gates: unchanged
 
@@ -1167,3 +1167,33 @@ connected_administration_visible_theme_assertion_2026_10_14:
   local_core: 662_passed_zero_skips
   local_static: full_eslint_prettier_strict_affected_e2e_repository_passed
   browser_collection: all_43_cases_nine_files_not_executed_locally
+
+shared_workshop_branding_2026_10_14:
+  status: implemented_pending_evidence
+  base: eef9559d8c3e528e79c99898360892188b23b55e
+  branch: feat/shared-workshop-branding
+  scope: per_workshop_shared_name_curated_palette_canonical_logo_and_admitted_offline_read
+  sql: '0011'
+  future_quote_sql: '0012'
+  authenticated_local_schema: 7
+  future_quote_local_schema: 8
+  legacy_database: unchanged_no_upgrade_no_journal_or_preference_deletion
+  wire: v1_catalog_and_role_aliases_frozen17_v2_catalog_explicit_grants
+  wildcard: frozen17_plus_recognized_explicit_literals_branding_explicit_only
+  owner_compatibility: exact_established_snapshot_unrelated_edits_no_silent_adoption
+  policy_revision: ocwp-access-baseline-2_unchanged_prior_authority_and_epoch_semantics
+  image_decoder: Pillow12_3_0_one_killable_child_2_seconds_128MiB_per_worker
+  assets: private_tenant_namespaced_immutable_no_replace_fsync_no_online_gc
+  cache: exact_current_ticket_scope_epoch_incarnation_and_lease_no_authority_from_bytes
+  local_aggregate_checkpoint: 21_passed_controls_5_explicit_environment_blockers
+  local_python_checkpoint: 1865_passed_224_explicit_skips
+  local_core_checkpoint: 715_passed_zero_skips
+  inherited_main39: postmerge_27_controls_43_browser_11_native_runtime_restore_security_3_arm_builds_passed
+  local_native_postgresql_docker: unavailable_not_claimed
+  independent_review: frontend_175_plus_7_adversarial_backend_419_passed_30_pg_skips_no_open_source_findings
+  hosted_runtime_restore_arm_and_pixels: pending_exact_final_tree
+  public_contacts_profile_interchange: explicit_follow_on_FR_WL_002_005
+  actual_installation_credentials_accounts_adoption_deployment: not_performed
+  physical_windows_android_screen_reader: unchanged_open
+  adr: docs/02-technical-architecture/2026-10-14-shared-workshop-branding.md
+  evidence: docs/10-spec-development/2026-10-14-shared-workshop-branding.md
