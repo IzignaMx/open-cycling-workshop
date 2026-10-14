@@ -13,10 +13,11 @@ it automatically to an organization-wide owner would silently widen its scope
 and break the current PWA's non-null-location assumption.
 
 This work follows the [change-feed read-authorization prerequisite](2026-10-14-sync-read-authorization.md),
-PR #26, reconciled locally onto its published `833bf6e` head. That prerequisite
-must be integrated before this dependent increment; its merge remains a
-separate gate. This base includes runtime/bootstrap PR #25 merged at `0342799`
-and migration target-isolation fixes. Visual/theme changes remain independent.
+PR #26, merged at `c1e2230` after all seven checks passed. This branch includes
+that main ancestry, runtime/bootstrap PR #25 merged at `0342799` and migration
+target-isolation fixes. The initial hosted administration checkpoint is recorded
+in the increment specification; each later integration head requires fresh CI.
+Visual/theme changes remain independent.
 
 Account administration is the explicitly prioritized bounded increment before
 the remaining quote workflow. Inventory migration `0007` remains immutable.

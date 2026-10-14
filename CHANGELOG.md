@@ -96,13 +96,14 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Integration
 
-- Access administration is locally reconciled onto PR #26 sync read
-  authorization head `833bf6e`, including merged runtime PR #25 (`0342799`) and
-  migration target-isolation fixes. PR #26 merge/hosted status must still be
-  verified separately. Local verification passed 755 Python tests (60 skips),
-  74 frontend core tests and 21 aggregate checks; independent reconciliation
-  review found no defect. Exact-head hosted PostgreSQL qualification and
-  browser account/grant/scope cache reconciliation remain separate gates.
+- Access administration includes merged PR #26 main `c1e2230`, runtime PR #25
+  (`0342799`) and migration target-isolation fixes. Its initial PR #27 checkpoint
+  `0c37d46` passed PostgreSQL 18.4 CI: 812 Python tests (three explained skips),
+  74 frontend core tests, 30 browser executions (10 direct, 10 repeated sync,
+  10 qualification) and 27 aggregate checks. All four Local runtime jobs passed, including actual
+  backup/restore and three ARM64 image builds. Final integration-head CI and
+  browser account/grant/scope cache reconciliation remain separate gates; no
+  physical hardware, complete permission UI or production rollout is claimed.
 - PR #22 inventory API integrated on 2026-10-14 after fresh independent code review
   and exact-head CI/Security/DCO. Quote Task 4 passed combined-tree CI
   and independent review and was integrated through PR #23; no complete quote workflow or stable release is claimed.

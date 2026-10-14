@@ -404,12 +404,18 @@ evidence of a problem in a deployed database or authority to modify one.
 
 ### Integration and exact-head evidence
 
-- [ ] Verify the prerequisite PR #26 sync read-authorization fix is integrated
-      before delivering the dependent administration increment. Its reconciled
-      local base is published PR #26 head `833bf6e`, including merged runtime
-      PR #25 (`0342799`) and migration target-isolation fixes. Do not infer
-      PR #26 merge status from a local checkout; theme changes are independent.
-- [ ] Run exact-head hosted PostgreSQL 18.x tests for empty database → head and
+- [x] Verify the prerequisite PR #26 sync read-authorization fix is integrated:
+      merged at `c1e2230` after all seven checks passed. The administration
+      branch includes that main ancestry, merged runtime PR #25 (`0342799`)
+      and migration target-isolation fixes; theme changes are independent.
+- [x] Record the initial hosted PostgreSQL 18.4 proof at PR #27 head `0c37d46`:
+      CI run `38550525461`, qualification artifact `11886836617`, 812 Python
+      passed and three explained skips; all administration PostgreSQL cases ran.
+      Runtime run `38550525483` and artifact `11885889541` passed all 11 checks,
+      including PostgreSQL 18.4 backup/restore. See the increment specification
+      for the exact merge-ref/tree match and browser/ARM64 evidence.
+- [ ] Repeat exact-head hosted PostgreSQL 18.x tests after the final main/evidence
+      reconciliation. Cover empty database → head and
       representative `0007` → `0008` preservation. Prove tenant FKs, audit
       UPDATE/DELETE/TRUNCATE rejection, mutation/audit rollback, first-owner and
       last-owner races, stale versions and actor revocation while waiting for
@@ -421,8 +427,8 @@ evidence of a problem in a deployed database or authority to modify one.
       evidence and independent reconciliation review at `a077243`: 755 Python
       passed, 60 documented skips, 74 frontend core passed, 21 aggregate checks
       passed, zero failures and five environment blockers. The local branch
-      is reconciled onto `833bf6e`; PR #26 merge verification and exact-head
-      hosted PostgreSQL evidence remain separate unchecked gates above. See
+      was reconciled onto `833bf6e`; subsequent main/evidence reconciliation
+      requires the separate final-head gate above. See
       the increment specification for the historical checkpoint and review scope.
 
 ### Safe conditional upgrade to identity migration 0008

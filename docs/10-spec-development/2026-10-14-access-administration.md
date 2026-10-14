@@ -1,8 +1,8 @@
 # Local users, roles and workshop administration: bounded server increment
 
-Status: implemented pending hosted PostgreSQL evidence and prerequisite
-integration. Local verification of the bounded server slice is recorded below;
-this is not a declaration of release qualification.
+Status: implemented with an initial hosted PostgreSQL 18.4 checkpoint. The
+prerequisite is merged; final integration/evidence revisions require their own
+exact-head CI. This is not a declaration of release qualification.
 
 ## Scope and traceability
 
@@ -18,11 +18,10 @@ administration and complete end-user permission UX remain outside this slice.
 Normative design: [administration ADR](../02-technical-architecture/2026-10-14-access-administration.md),
 Foundation ADR-013, Security/Privacy §§7–10 and §18, Operations §§31–36.
 
-Dependency: PR #26 change-feed read authorization must be integrated before
-this dependent increment. The local branch is reconciled onto its published
-`833bf6e` head, which includes PR #25 runtime/bootstrap merged at `0342799` and
-the migration target-isolation fixes. PR #26 merge/hosted status remains a
-separate gate; visual/theme work is independent. The approved sequence
+Dependency: PR #26 change-feed read authorization merged at
+`c1e2230cdc18dfbb778254d9f28b0261ef32ca48` after all seven checks passed. This
+branch includes that main ancestry, runtime/bootstrap PR #25 (`0342799`) and
+the migration target-isolation fixes. Visual/theme work is independent. The approved sequence
 prioritizes access administration before the remaining quote
 workflow: identity migration `0008` follows `0007`, and future quote persistence
 is reserved as `0009`, following `0008`. Preserve one linear migration history.
@@ -202,6 +201,48 @@ based on published PR #26 head `833bf6e21017ce4e513291621515502f22256a72`:
 - PR #26 merge verification and exact-head hosted PostgreSQL 18.x qualification
   remain pending. Earlier PR/release results do not qualify the new migration
   or lock semantics. No real installation was modified.
+
+### Initial hosted checkpoint and final-base reconciliation
+
+[PR #27](https://github.com/IzignaMx/open-cycling-workshop/pull/27) head
+`0c37d46ffd24bc787716fe7b068f4ca02e3cc348` passed
+[CI 38550525461](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38550525461),
+Security, DCO and all four
+[Local runtime jobs](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38550525483).
+The artifacts identify GitHub merge ref `ca2f9695be85fc7de8e90bada9f216718ee2a7db`;
+its tree was verified identical to the PR head and reviewed local implementation:
+`a58efc6fce2da8aba89958d586108e9d8c16330a`.
+
+- Qualification artifact `11886836617` (`v0.1-qualification`) records **27 passing
+  checks, zero blockers**, Python 3.13.16, Node 22.16.0 and PostgreSQL **18.4**.
+- **812 Python tests passed, three skipped**: one generic backup test requires
+  matching major-18 host clients; the other two are deliberate dialect exclusions
+  (TRUNCATE on SQLite and INSERT OR REPLACE on PostgreSQL). All administration
+  PostgreSQL contention and migration cases ran successfully. This proves real
+  organization-lock serialization, last-owner and first-owner races, post-lock
+  reauthorization, versions, audit rollback/immutability and tenant constraints.
+- Frontend core **74 passed**, API-client core one passed; **10 browser journeys**
+  passed in the direct run and again in aggregate qualification (**20 executions**),
+  plus **10 repeated sync baseline/reconnect executions without retries**, for
+  **30 browser executions total**. The log reports 10 passed in each of the
+  direct (25.9 s), repeat (18.7 s) and qualification (26.0 s) runs. IndexedDB 100k records passed (39,898.2 ms write, 100.5 ms count/sample read on
+  hosted Chromium 151). These results are regression evidence, not proof of the
+  new browser account/capability/scope rollout gate below.
+- Runtime artifact `11885889541` (`local-runtime-evidence`) records **11 passing
+  checks** on amd64 with PostgreSQL 18.4, including fresh migration/readiness,
+  restricted application role, actual edge/offline/reconnect behavior,
+  backup/restore, persisted restart and credential-free logs. All three ARM64
+  image builds passed; physical ARM64/Windows/Android hardware was not tested.
+- PR #26 subsequently merged at `c1e2230`. Merging that main ancestry into the
+  local administration branch changed no files before this evidence update.
+  Administration source/contracts remain unchanged from the reviewed hosted
+  checkpoint. The next published integration/evidence head must pass its own CI;
+  these prior results do not automatically qualify a later SHA.
+- Fresh main-ancestry reconciliation replay passed **755 Python tests** with
+  60 documented local skips and all **21** available aggregate checks; the five
+  local environment blockers remain. Independent review inspected ancestry,
+  five evidence documents, hosted/local artifacts and CI logs, finding no
+  regression or evidence discrepancy. Repository/format/diff checks also pass.
 
 Required PostgreSQL coverage includes simultaneous last-owner removals,
 first-owner races, actor revocation while waiting for the organization lock,
