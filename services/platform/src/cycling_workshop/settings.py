@@ -29,6 +29,7 @@ class Settings:
     database_url: str = "postgresql+psycopg://ocwp:ocwp@localhost:5432/ocwp"
     log_level: str = "INFO"
     auth_secret: str = _DEFAULT_DEV_SECRET
+    cutover_enabled: bool = False
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -50,4 +51,5 @@ class Settings:
             database_url=database_url_from_env(),
             log_level=os.getenv("OCWP_LOG_LEVEL", "INFO").upper(),
             auth_secret=auth_secret,
+            cutover_enabled=os.getenv("OCWP_CUTOVER_ENABLED", "false") == "true",
         )

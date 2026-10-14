@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -10,6 +11,8 @@ class Principal:
     location_id: str | None
     capabilities: frozenset[str]
     session_version: int = 1
+    dataset_incarnation: str | None = None
+    expires_at: datetime | None = field(default=None, compare=False, repr=False)
 
 
 def authorize(
