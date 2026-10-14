@@ -3,7 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import Dexie from 'dexie'
 import { createKernelDatabase } from '../../.tmp-kernel/src/access-kernel/database.js'
-import { OcwpDatabase } from '../../.tmp-kernel/src/local/db.js'
+import { OcwpDatabase } from '../../.tmp-kernel/src/local/database.js'
 
 const SCHEMAS = {
   customers: ['customer_id', 'organization_id', 'location_id', 'display_name', 'updated_at'],
@@ -124,14 +124,14 @@ async function assertRows(db, names) {
   }
 }
 for (const nativeVersion of [1, 10, 20, 30, 40])
-  test(`native ${nativeVersion} upgrades losslessly to actual native50/logical5 without attribution`, async () => {
+  test(`native ${nativeVersion} upgrades losslessly to actual native60/logical6 without attribution`, async () => {
     const name = `migration-${crypto.randomUUID()}`
     const names = await seed(name, nativeVersion)
     const db = createKernelDatabase(name)
     try {
       await db.open()
-      assert.equal(db.verno, 5)
-      assert.equal(db.backendDB().version, 50)
+      assert.equal(db.verno, 6)
+      assert.equal(db.backendDB().version, 60)
       assert.equal(db.tables.length, 16)
       await assertRows(db, names)
       assert.deepEqual(await db.localMigrationState.get('identity-kernel-v5'), {
@@ -189,7 +189,7 @@ for (const failure of ['abort', 'quota'])
       await candidate.delete()
     }
   })
-test('versionchange closes the old connection; simulated future v6 carries all v5 data', async () => {
+test('versionchange closes the old connection; simulated future v7 carries all v6 data', async () => {
   const name = `future-${crypto.randomUUID()}`
   const names = await seed(name, 40)
   const db = createKernelDatabase(name)
@@ -210,11 +210,11 @@ test('versionchange closes the old connection; simulated future v6 carries all v
   })
   const future = createKernelDatabase(name)
   // Fixture only, never a reserved production store/migration.
-  future.version(6).stores({ futureQuoteFixture: 'id' })
+  future.version(7).stores({ futureQuoteFixture: 'id' })
   try {
     await future.open()
     assert.equal(db.isOpen(), false)
-    assert.equal(future.backendDB().version, 60)
+    assert.equal(future.backendDB().version, 70)
     await assertRows(future, names)
     assert.deepEqual(await future.operationJournal.get('owned'), journal)
     assert.equal(await future.cacheRecords.count(), 1)
@@ -224,8 +224,8 @@ test('versionchange closes the old connection; simulated future v6 carries all v
     await future.delete()
   }
 })
-test('factory cannot activate the production name; default production database remains v4', async () => {
-  assert.throws(() => createKernelDatabase('ocwp'), /production remains v4/)
+test('authenticated factory cannot open legacy name; legacy class remains v4', async () => {
+  assert.throws(() => createKernelDatabase('ocwp'), /distinct authenticated database name/)
   const database = new OcwpDatabase(`production-v4-${crypto.randomUUID()}`)
   try {
     await database.open()
@@ -238,7 +238,7 @@ test('factory cannot activate the production name; default production database r
   assert.equal(typeof Dexie, 'function')
 })
 
-test('activation blocker: legacy v4 Dexie opens v5 and can still write sealed legacy stores', async () => {
+test('activation blocker: legacy v4 Dexie opens v6 and can still write sealed legacy stores', async () => {
   const name = `old-bundle-${crypto.randomUUID()}`
   const upgraded = createKernelDatabase(name)
   await upgraded.open()
@@ -246,7 +246,7 @@ test('activation blocker: legacy v4 Dexie opens v5 and can still write sealed le
   const oldBundle = new OcwpDatabase(name)
   try {
     await oldBundle.open()
-    assert.equal(oldBundle.backendDB().version, 50)
+    assert.equal(oldBundle.backendDB().version, 60)
     await oldBundle.mutationQueue.add({
       mutation_id: 'old-bundle-write',
       payload: { preserved: true },
@@ -262,5 +262,92 @@ test('activation blocker: legacy v4 Dexie opens v5 and can still write sealed le
 test('isolated database names must be primitive strings before native coercion', () => {
   for (const name of [new String('ocwp'), { toString: () => 'ocwp' }, null, undefined, 7]) {
     assert.throws(() => createKernelDatabase(name), /isolated|name/i)
+  }
+})
+
+test('v5 to v6 adds pagination indices without attributing or rewriting any retained bytes', async () => {
+  const name = `v5-v6-${crypto.randomUUID()}`
+  const v5 = new OcwpDatabase(name)
+  v5.version(5).stores({
+    deviceControl: 'key',
+    accessContexts: 'partitionId',
+    cachePartitions: 'partitionId, principalKey',
+    cacheRecords: '[partitionId+entityType+entityId], [partitionId+entityType]',
+    operationJournal:
+      'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId]',
+    operationDelivery:
+      'mutationId, state, [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+    operationEvents: '++sequence, mutationId',
+    localMigrationState: 'key',
+  })
+  const journal = {
+    mutationId: 'original',
+    principalKey: 'principal',
+    locationId: 'location',
+    entityType: 'customer',
+    entityId: 'entity',
+    localSequence: 7,
+    envelope: { unknown: { exact: [1, null, 'retain'] } },
+    future: { retain: true },
+  }
+  const delivery = {
+    mutationId: 'original',
+    principalKey: 'principal',
+    locationId: 'location',
+    entityType: 'customer',
+    entityId: 'entity',
+    localSequence: 7,
+    state: 'applied',
+    result: { status: 'applied', unknown: 'original result' },
+    unknown: { retained: true },
+  }
+  const event = {
+    sequence: 12,
+    mutationId: 'original',
+    kind: 'result',
+    details: { unchanged: [null, 7] },
+    unknown: 'original event',
+  }
+  await v5.open()
+  await v5.table('operationJournal').add(journal)
+  await v5.table('operationDelivery').add(delivery)
+  await v5.table('operationEvents').add(event)
+  v5.close()
+  const current = createKernelDatabase(name)
+  try {
+    await current.open()
+    assert.equal(current.backendDB().version, 60)
+    assert.deepEqual(await current.operationJournal.toArray(), [journal])
+    assert.deepEqual(await current.operationDelivery.toArray(), [delivery])
+    assert.deepEqual(await current.operationEvents.toArray(), [event])
+    assert.ok(current.operationJournal.schema.idxByName['[principalKey+locationId+localSequence]'])
+    assert.ok(current.operationEvents.schema.idxByName['[mutationId+sequence]'])
+    assert.ok(
+      current.operationDelivery.schema.idxByName[
+        '[principalKey+locationId+entityType+state+localSequence]'
+      ],
+    )
+    assert.ok(
+      current.operationDelivery.schema.idxByName[
+        '[principalKey+locationId+entityType+state+retryAt]'
+      ],
+    )
+    assert.deepEqual(
+      await current.operationDelivery
+        .where('[principalKey+locationId+entityType+state+localSequence]')
+        .between(
+          ['principal', 'location', 'customer', 'applied', 0],
+          ['principal', 'location', 'customer', 'applied', 99],
+        )
+        .toArray(),
+      [delivery],
+    )
+    assert.equal(
+      (await current.operationJournal.get('original')).authoredDatasetIncarnation,
+      undefined,
+    )
+  } finally {
+    current.close()
+    await current.delete()
   }
 })

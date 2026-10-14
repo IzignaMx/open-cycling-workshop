@@ -1,3 +1,4 @@
+import { readBoundedJson, cancelResponse } from './bounded-http.js'
 import { isDatasetIncarnation, validateVerifiedContext } from './context.js'
 import type { VerifiedAccessContext, VerificationAttempt } from './types.js'
 
@@ -210,9 +211,11 @@ export function createServerContextAdapter(options: ServerContextAdapterOptions)
             .some((part) => part.trim().toLowerCase() === 'no-store') ||
           response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() !==
             'application/json'
-        )
+        ) {
+          await cancelResponse(response)
           return reject()
-        const body: unknown = await response.json()
+        }
+        const body = await readBoundedJson(response, 16_384)
         const finished = clock()
         if (!current() || !Number.isFinite(finished) || finished < started) return reject()
         const context = convertServerContext(body, identity, finished)

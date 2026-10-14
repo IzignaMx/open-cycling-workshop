@@ -184,6 +184,7 @@ export async function openBaselineQualification(name: string, resume = false) {
         entityType: 'customer',
         entityId,
         authoredUnderEpoch: ticket.authorizationEpoch,
+        authoredDatasetIncarnation: verified.context.datasetIncarnation,
         localSequence: 1,
         dependsOn: [],
         envelope,

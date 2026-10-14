@@ -1,124 +1,241 @@
 import { expect, test, type Page } from '@playwright/test'
+import {
+  createCaseIdentity,
+  createCustomer,
+  kernelSnapshot,
+  LOCATION_ID,
+  login,
+  ORGANIZATION_ID,
+  sessionToken,
+  waitForApplied,
+  waitForConfirmed,
+  waitForReady,
+} from './helpers/authenticated-workshop.js'
 
-const ORGANIZATION_ID = '00000000-0000-7000-8000-000000000001'
-const LOCATION_ID = '00000000-0000-7000-8000-000000000002'
-const USERNAME = 'e2e-admin'
-const PASSWORD = 'ocwp-e2e-password'
-const MIGRATED_CUSTOMER_NAME = 'Cliente Migrado v1'
-
-/**
- * Create the application database by hand in the exact layout Dexie schema
- * version 1 used (before version 2 added the scope indexes), seeded with a
- * pending mutation. The app must upgrade the store in place and still push
- * the preserved queue entry — offline history may never be lost to a schema
- * migration.
- */
-async function seedVersionOneDatabase(page: Page): Promise<void> {
-  await page.evaluate(
-    async ({ organizationId, locationId, displayName }) => {
-      const request = indexedDB.open('ocwp', 1)
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        request.onupgradeneeded = () => {
-          const db = request.result
-          const customers = db.createObjectStore('customers', { keyPath: 'customer_id' })
-          customers.createIndex('organization_id', 'organization_id')
-          customers.createIndex('location_id', 'location_id')
-          customers.createIndex('display_name', 'display_name')
-          customers.createIndex('updated_at', 'updated_at')
-          const mutationQueue = db.createObjectStore('mutationQueue', { keyPath: 'mutation_id' })
-          mutationQueue.createIndex('state', 'state')
-          mutationQueue.createIndex('organization_id', 'organization_id')
-          mutationQueue.createIndex('location_id', 'location_id')
-          mutationQueue.createIndex('entity_type', 'entity_type')
-          mutationQueue.createIndex('queued_at', 'queued_at')
-          db.createObjectStore('syncState', { keyPath: 'key' })
-          const conflicts = db.createObjectStore('conflicts', { keyPath: 'mutation_id' })
-          conflicts.createIndex('entity_type', 'entity_type')
-          conflicts.createIndex('entity_id', 'entity_id')
-          conflicts.createIndex('recorded_at', 'recorded_at')
+/** Raw logical-v1 fixture, not evidence for the separately tested installed old PWA/SW. */
+async function seedVersionOneDatabase(page: Page) {
+  return page.evaluate(
+    async ({ organizationId, locationId }) => {
+      const open = indexedDB.open('ocwp', 10)
+      open.onupgradeneeded = () => {
+        const schema = {
+          customers: 'customer_id,organization_id,location_id,display_name,updated_at',
+          mutationQueue: 'mutation_id,state,organization_id,location_id,entity_type,queued_at',
+          syncState: 'key',
+          conflicts: 'mutation_id,entity_type,entity_id,recorded_at',
         }
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
+        for (const [name, definition] of Object.entries(schema)) {
+          const [keyPath, ...indexes] = definition.split(',')
+          const store = open.result.createObjectStore(name, { keyPath })
+          for (const index of indexes) store.createIndex(index, index)
+        }
+      }
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        open.onsuccess = () => resolve(open.result)
+        open.onerror = () => reject(open.error)
       })
       try {
-        const transaction = database.transaction('mutationQueue', 'readwrite')
-        const store = transaction.objectStore('mutationQueue')
-        const record = {
-          mutation_id: crypto.randomUUID(),
+        const id = crypto.randomUUID(),
+          mutationId = crypto.randomUUID()
+        const tx = db.transaction(
+          ['customers', 'mutationQueue', 'syncState', 'conflicts'],
+          'readwrite',
+        )
+        tx.objectStore('customers').put({
+          customer_id: id,
+          display_name: 'Cliente legado privado sin autor',
+          organization_id: organizationId,
+          location_id: locationId,
+          version: 1,
+          custom_unknown: { archived: false, opaque: ['keep', 17, null] },
+        })
+        tx.objectStore('mutationQueue').put({
+          mutation_id: mutationId,
           entity_type: 'customer',
-          entity_id: crypto.randomUUID(),
+          entity_id: id,
           operation: 'create',
           organization_id: organizationId,
           location_id: locationId,
           base_version: null,
-          occurred_at: new Date().toISOString(),
-          payload: { display_name: displayName },
+          occurred_at: '2026-10-13T10:00:00Z',
+          payload: {
+            display_name: 'Cliente legado privado sin autor',
+            extension: { preserve: true },
+          },
           state: 'pending',
-          queued_at: new Date().toISOString(),
-        }
-        await new Promise<void>((resolve, reject) => {
-          const put = store.put(record)
-          put.onsuccess = () => resolve()
-          put.onerror = () => reject(put.error)
+          queued_at: '2026-10-13T10:00:00Z',
+          actor_id: 'unverified-historical-actor',
+          unknown_delivery: { maybe_applied: true, receipt: ['untrusted'] },
         })
+        tx.objectStore('syncState').put({
+          key: 'cursor:legacy',
+          cursor: 927,
+          unknown_checkpoint: 'never-adopt',
+        })
+        tx.objectStore('conflicts').put({
+          mutation_id: mutationId,
+          entity_type: 'customer',
+          entity_id: id,
+          recorded_at: '2026-10-13T11:00:00Z',
+          reason: 'Conflicto legado privado',
+          unknown_history: [{ action: 'preserve' }],
+        })
+        await new Promise<void>((resolve, reject) => {
+          tx.oncomplete = () => resolve()
+          tx.onabort = () => reject(tx.error)
+          tx.onerror = () => reject(tx.error)
+        })
+        return { id, mutationId }
       } finally {
-        database.close()
+        db.close()
       }
     },
-    {
-      organizationId: ORGANIZATION_ID,
-      locationId: LOCATION_ID,
-      displayName: MIGRATED_CUSTOMER_NAME,
-    },
+    { organizationId: ORGANIZATION_ID, locationId: LOCATION_ID },
   )
 }
 
-test('dexie schema upgrade preserves queued mutations and syncs them', async ({ page }) => {
-  // Load the shell first, seed a version-1 database before logging in (the
-  // app only opens IndexedDB once a session exists), then let Dexie upgrade
-  // the store when the session starts syncing.
-  await page.goto('/')
-  await seedVersionOneDatabase(page)
-
-  await page.getByLabel('Organización').fill(ORGANIZATION_ID)
-  await page.getByLabel('Usuario').fill(USERNAME)
-  await page.getByLabel('Contraseña').fill(PASSWORD)
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
-  await expect(page.getByText('Sesión:')).toBeVisible()
-
-  // The preserved pre-upgrade mutation is applied and the queue drains.
-  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado', {
-    timeout: 20_000,
+async function rawEvidence(page: Page) {
+  return page.evaluate(async () => {
+    const open = indexedDB.open('ocwp')
+    open.onupgradeneeded = () => open.transaction!.abort()
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result)
+      open.onerror = () => reject(open.error)
+    })
+    try {
+      const names = Array.from(db.objectStoreNames)
+      const tx = db.transaction(names, 'readonly')
+      const stores = await Promise.all(
+        names.map((name) => {
+          const store = tx.objectStore(name)
+          return new Promise((resolve, reject) => {
+            const all = store.getAll()
+            all.onsuccess = () =>
+              resolve({
+                name,
+                keyPath: store.keyPath,
+                indexes: Array.from(store.indexNames).map((key) => {
+                  const index = store.index(key)
+                  return {
+                    name: key,
+                    keyPath: index.keyPath,
+                    unique: index.unique,
+                    multiEntry: index.multiEntry,
+                  }
+                }),
+                rows: all.result,
+              })
+            all.onerror = () => reject(all.error)
+          })
+        }),
+      )
+      return { version: db.version, stores }
+    } finally {
+      db.close()
+    }
   })
+}
 
-  const migrated = await page.evaluate(
-    async ({ displayName }) => {
-      const request = indexedDB.open('ocwp')
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-      })
-      try {
-        const queue = database.transaction('mutationQueue', 'readonly').objectStore('mutationQueue')
-        const pending = await new Promise<number>((resolve, reject) => {
-          const count = queue.count()
-          count.onsuccess = () => resolve(count.result)
-          count.onerror = () => reject(count.error)
-        })
-        const customers = database.transaction('customers', 'readonly').objectStore('customers')
-        const rows = await new Promise<{ display_name: string }[]>((resolve, reject) => {
-          const all = customers.getAll()
-          all.onsuccess = () => resolve(all.result)
-          all.onerror = () => reject(all.error)
-        })
-        return { pending, found: rows.some((row) => row.display_name === displayName) }
-      } finally {
-        database.close()
-      }
-    },
-    { displayName: MIGRATED_CUSTOMER_NAME },
+test('raw v1 legacy evidence and late old-tab additions remain exact, unknown and never replayed', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/')
+  const original = await seedVersionOneDatabase(page)
+  const before = await rawEvidence(page)
+  expect(before.version).toBe(10)
+  const sentIds: string[] = []
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/v1/sync/mutations')
+      sentIds.push(
+        ...(request.postDataJSON() as { mutations: Array<{ mutation_id: string }> }).mutations.map(
+          (item) => item.mutation_id,
+        ),
+      )
+  })
+  // Supersedes the unsafe expectation that a new login claims/replays old v1 work.
+  // Known-author unchanged-ID replay across reload is covered in sync-chaos.
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
+  await expect(page.getByText(/Hay datos de una versión anterior/)).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Cliente legado privado sin autor')
+  await expect(page.locator('body')).not.toContainText('Conflicto legado privado')
+  expect(await rawEvidence(page)).toEqual(before)
+  expect((await kernelSnapshot(page)).journal).toHaveLength(0)
+  expect((await kernelSnapshot(page)).records.some((item) => item.entityId === original.id)).toBe(
+    false,
   )
 
-  expect(migrated.pending).toBe(0)
-  expect(migrated.found).toBe(true)
+  // A second raw connection represents a late legacy writer. It intentionally
+  // does not impersonate the exact historical bundle tested by legacy-cutover.
+  const oldTab = await page.context().newPage()
+  await oldTab.goto('/manifest.webmanifest')
+  const late = await oldTab.evaluate(async () => {
+    const open = indexedDB.open('ocwp')
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result)
+      open.onerror = () => reject(open.error)
+    })
+    try {
+      const tx = db.transaction('mutationQueue', 'readwrite')
+      const mutationId = crypto.randomUUID()
+      tx.objectStore('mutationQueue').put({
+        mutation_id: mutationId,
+        entity_id: crypto.randomUUID(),
+        state: 'pending',
+        unknown_late_work: { exact: ['late', 23], author: null },
+        payload: { display_name: 'Trabajo privado tardío' },
+      })
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onabort = () => reject(tx.error)
+      })
+      return mutationId
+    } finally {
+      db.close()
+    }
+  })
+  const afterLate = await rawEvidence(oldTab)
+  expect(afterLate).not.toEqual(before)
+  expect(afterLate.version).toBe(10)
+  await oldTab.close()
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await waitForReady(page)
+  await expect(page.getByText(/Hay datos de una versión anterior/)).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Trabajo privado tardío')
+  expect(await rawEvidence(page)).toEqual(afterLate)
+  const fresh = await createCustomer(page, `Cliente actual ${crypto.randomUUID()}`)
+  await waitForApplied(page, fresh.mutationId)
+  await waitForConfirmed(page, fresh)
+  expect(sentIds).toContain(fresh.mutationId)
+  expect(sentIds).not.toContain(original.mutationId)
+  expect(sentIds).not.toContain(late)
+  const missing = await request.get(`/api/v1/customers/${original.id}`, {
+    headers: { Authorization: `Bearer ${await sessionToken(page)}` },
+  })
+  expect(missing.status()).toBe(404)
+  expect(await rawEvidence(page)).toEqual(afterLate)
+  expect((await kernelSnapshot(page)).journal).toEqual([fresh])
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  const otherIdentity = await createCaseIdentity(request)
+  await login(page, otherIdentity)
+  await expect(page.locator('body')).not.toContainText('Cliente legado privado sin autor')
+  expect((await kernelSnapshot(page)).journal).toHaveLength(0)
+  expect(await rawEvidence(page)).toEqual(afterLate)
+})
+
+test('fresh authenticated login leaves an absent legacy database absent', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/')
+  expect(
+    await page.evaluate(async () => (await indexedDB.databases()).some((db) => db.name === 'ocwp')),
+  ).toBe(false)
+  const identity = await createCaseIdentity(request)
+  await login(page, identity)
+  expect(
+    await page.evaluate(async () => (await indexedDB.databases()).some((db) => db.name === 'ocwp')),
+  ).toBe(false)
+  await expect(page.getByText(/Hay datos de una versión anterior/)).toHaveCount(0)
 })

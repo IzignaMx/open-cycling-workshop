@@ -61,7 +61,9 @@ test('SessionStore restores the validated user scope together with the token and
 
   store.setToken('token-2')
   store.setUser(user)
-  assert.deepEqual(store.getSnapshot(), { token: 'token-2', user })
+  assert.equal(store.getSnapshot().token, 'token-2')
+  assert.deepEqual(store.getSnapshot().user, user)
+  assert.ok(store.getSnapshot().bindingId)
 
   storage.values.set('ocwp.session.v2', '{broken')
   assert.equal(store.getSnapshot(), null)
@@ -82,4 +84,19 @@ test('local capability checks are deny-by-default while wildcard admin can proce
   assert.equal(hasCapability(['customers.read'], 'customers.write'), false)
   assert.equal(hasCapability(['customers.write'], 'customers.write'), true)
   assert.equal(hasCapability(['*'], 'customers.write'), true)
+})
+
+test('session binding changes with token, snapshots are immutable, old sessions cannot resume offline', () => {
+  const storage = new FakeStorage()
+  const store = new SessionStore(storage, () => 'binding-' + storage.values.size)
+  store.setToken('a')
+  const first = store.getSnapshot()
+  assert.equal(first.bindingId, 'binding-0')
+  assert.ok(Object.isFrozen(first))
+  store.setToken('b')
+  assert.notEqual(store.getSnapshot().bindingId, first.bindingId)
+  assert.equal(store.getSnapshot().admission, null)
+  storage.setItem('ocwp.session.v2', JSON.stringify({ token: 'old', user: null }))
+  assert.equal(store.getSnapshot().bindingId, null)
+  assert.equal(store.getSnapshot().admission, null)
 })

@@ -24,6 +24,7 @@ const outputs = [
   new URL('../.tmp-orders/', import.meta.url),
   new URL('../.tmp-personalization/', import.meta.url),
   new URL('../.tmp-kernel/', import.meta.url),
+  new URL('../.tmp-runtime/', import.meta.url),
 ]
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
@@ -36,6 +37,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.runtime-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
     'tests/access-kernel/context.test.mjs',
@@ -47,7 +49,24 @@ try {
     'tests/access-kernel/baseline-coordinator.test.mjs',
     'tests/access-kernel/kernel.test.mjs',
     'tests/access-kernel/migration.test.mjs',
+    'tests/access-kernel/session-admission.test.mjs',
+    'tests/access-kernel/client-provenance.test.mjs',
+    'tests/access-kernel/client-queries.test.mjs',
+    'tests/access-kernel/incremental-wire.test.mjs',
+    'tests/access-kernel/incremental-state.test.mjs',
+    'tests/access-kernel/incremental-transport.test.mjs',
+    'tests/access-kernel/incremental-coordinator.test.mjs',
+    'tests/access-kernel/push-runtime.test.mjs',
+    'tests/runtime/controller.test.mjs',
+    'tests/runtime/issues.test.mjs',
+    'tests/runtime/transport.test.mjs',
+    'tests/runtime/reachability-probe.test.mjs',
+    'tests/runtime/import-graph.test.mjs',
+    'tests/runtime/legacy-preservation.test.mjs',
     'tests/pwa/navigation-policy.test.mjs',
+    'tests/pwa/legacy-fixture.test.mjs',
+    'tests/pwa/upgrade-fixture.test.mjs',
+    '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
     'tests/sync/retry-policy.test.mjs',

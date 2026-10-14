@@ -1,5 +1,75 @@
 # Changelog
 
+## Unreleased · Recovery and selector presentation
+
+- Show closed Spanish labels for retained-work states, with a safe generic label
+  for unknown values; preserve original operations and diagnostic fields.
+- Separate workshop choices visually and add narrow-screen baseline-progress
+  coverage to the existing genuine authenticated browser journey. Hosted visual
+  requalification remains required.
+
+## Unreleased · Automatic offline reconnect
+
+- Recover retained offline work automatically when connectivity events/hints are
+  stale, using original-lease-bounded, single-flight read-only reachability probes
+  before authoritative context verification and any dispatch.
+- Preserve exact source/owner/session fences, terminal refusals, pending history
+  and disconnects during READY publication; support stale false hints through a
+  required new baseline. Local regression evidence does not replace pending
+  exact-head hosted browser and eleven-check runtime/restore qualification. See
+  [scope and invariants](docs/10-spec-development/2026-10-14-automatic-offline-reconnect.md).
+
+## Unreleased · Offline reload and browser acceptance corrections
+
+- Admit retained offline reload after a genuine network failure even when the
+  browser online hint is stale, preserving exact session snapshots, ownership
+  fences and existing lease limits through publication. Received refusals never
+  become offline authority.
+- Observe pinned old-client protocol refusals through a bounded passive fixture
+  recorder correlated to the exact request; retain old bundle and queue checks.
+- Align accessible order locators, restricted-account local-only expectations and
+  temporary-error fixtures with actual production contracts. Independent source
+  reviews pass; integrated hosted browser and restore evidence remains pending.
+
+## Unreleased · Audited Python dependency correction
+
+- Upgrade the compatible FastAPI/Starlette pair and PyJWT to bounded patched
+  releases, retaining existing application authorization and wire contracts.
+- Add regression coverage for malformed Host private-cache policy, JWT parsing
+  and preserved signature/expiry rules. The real locked Linux dependency audit
+  changes from 19 advisory matches to zero without ignores. Independent local
+  review is complete; integrated hosted browser/runtime/security gates remain
+  pending. See [applicability and evidence](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md).
+
+## Unreleased · Security scan coverage
+
+- Preserve content-free finding metadata and classify the six findings from the
+  first genuine hosted scan as exact synthetic-test or documentation matches.
+  Conjunction-scoped exceptions preserve all default rules/history; mandatory
+  real-scanner canaries detect modified values and the same values at other paths.
+
+- Correct falsely green secret-history scanning with owner-matched, digest-pinned
+  isolated Gitleaks execution and fail-closed error/coverage checks.
+- Audit the exact committed Python workspace dependency export with pinned
+  pip-audit, complete active-marker coverage and retained input/report evidence.
+- Preserve earlier workflow conclusions as historical badges, not proof of
+  secret-history or project-lock coverage. Exact-integrated-head hosted evidence
+  remains required; application locks and runtime behavior are unchanged. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-security-scan-coverage.md).
+
+## Unreleased · Authenticated workshop client C
+
+- Compose genuine authenticated workshop admission, concrete workshop selection,
+  captured transports, bounded ongoing deltas and offline reload for the existing
+  customer/bicycle/order workflow in a distinct local database.
+- Preserve immutable incarnation-bound journals, recovery holds, all four themes
+  and exactly scoped preferences; never attribute or replay unknown legacy work.
+- Add real pinned old App/SW and disposable floor1 restore acceptance fixtures.
+  Source integration and independent review are complete; 21 local aggregate
+  checks pass, with exact-final-tree hosted/native qualification still pending;
+  normal Compose remains opt-in disabled and no installation was activated. See
+  [scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
+
 ## Unreleased · Server cutover contract
 
 - Add forward-only migration0010, explicit organization compatibility floor and

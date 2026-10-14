@@ -7,7 +7,9 @@
 > PostgreSQL/upgrade and browser-isolation rollout gates in the
 > [current operator section](#2026-10-14--local-account-administration-operator-gates).
 > The [isolated identity-kernel rollout section](#2026-10-14--isolated-offline-identity-kernel-and-future-rollout)
-> adds future browser/baseline and legacy-recovery gates; production remains v4.
+> records historical browser/baseline and legacy-recovery gates. New C source
+> integrates a distinct authenticated database; its exact-head hosted/browser
+> and installation gates remain open in the C section below.
 > Neither a complete MVP nor a production/release qualification is claimed.
 
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
@@ -227,6 +229,7 @@
   - Evidence (2026-08-31): green on push `d60ed4e`, run 33356009981 — includes PostgreSQL 18.4 service, full static analysis, production PWA build, Playwright golden slice and the qualification verifier.
 - [x] **Run `.github/workflows/security.yml` manually once after repository consolidation.**
   - Evidence: green on push `d60ed4e`, run 33356010020 — gitleaks (pinned image v8.30.1), REUSE 216/216, pip-audit, Trivy 0.63.0 with zero CRITICAL/HIGH.
+  - Coverage qualification (2026-10-14): this preserves the historical workflow conclusion. PR38 later demonstrated that a green badge can conceal zero-history Gitleaks coverage and an audit without project input. Actual history/locked-project coverage requires separate current evidence; no assertion is made that the older run had the same specific failure.
 - [x] **Download and inspect `v0.1-qualification.json`.**
   - Evidence: schema 2, `ci: true`, 26/26 checks pass, overall `partial` only on environment/manual gates (psql client, IndexedDB 100k benchmark, physical devices).
 - [x] **Ensure the qualification artifact records the exact Git commit SHA and runtime versions.**
@@ -744,3 +747,45 @@ production activation is authorized or performed by this source increment. See
 See [server scope/evidence](docs/10-spec-development/2026-10-14-server-cutover-contract.md)
 and [operator procedure](docs/07-operations/2026-10-14-server-cutover.md). Physical
 device, screen-reader, real restore and broader product-scope gates are unchanged.
+
+## 2026-10-14 · Authenticated workshop client C gates
+
+- [ ] Qualify the exact integrated tree with genuine PostgreSQL/browser login,
+      complete baseline, ongoing checkpoint chain, offline reload, captured
+      push/ACK races, account/workshop switching and all four themes/accessibility.
+- [ ] Run the pinned real old App/SW journey: legacy-session 401, fresh-login old
+      transport 409, offline reload, actual SW update, preserved raw old data and
+      late old-tab edits. Reproducible built assets alone do not close this gate.
+- [ ] Inspect actual hosted selector/session-held and recovery UI captures at
+      desktop and 320px across all four existing themes. Passing test badges or
+      collected screenshot assertions alone do not establish visual readiness.
+- [ ] Run all eleven disposable runtime checks with floor1 backup/restore,
+      stopped writers, expected-incarnation rotation before restored API reopen,
+      stale session/checkpoint refusal and preserved pending recovery holds.
+- [ ] Before a separately authorized installation change, preserve local work
+      from every browser profile and verify backup/isolated restore; replace all
+      old server writers, opt in explicitly, and use forward-compatible recovery.
+      Never clear IndexedDB, infer authors, replay unknown legacy data or lower
+      compatibility floors. Normal Compose still defaults to disabled cutover.
+
+C uses the distinct `ocwp-authenticated-v1` database with additive schema6
+lookup indices. Future unimplemented quote-local stores reserve **v7**; prior
+v6 notes remain historical. Local emulator/unit/build evidence is not hosted
+SW/PG/restore or physical-device evidence. User/role CRUD administration UI and
+new domain breadth remain later increments. See the
+[C scope and evidence](docs/10-spec-development/2026-10-14-authenticated-workshop-client.md).
+
+## 2026-10-14 · Audited Python dependency remediation
+
+- [ ] Complete independent review and exact integrated-head hosted Security/CI
+      with both the project-graph scanner correction and the dependency patch.
+      Local pip-audit is clean for all 40 active Linux/Python 3.13 packages;
+      all 42 registry packages are represented in the hashed export. This is
+      not full-history/image, Windows or deployment qualification.
+- [ ] Retain the existing PostgreSQL, native browser/service-worker, restore,
+      physical-device and accessibility gates until their own evidence passes.
+      The dependency patch changes no production installation or credentials.
+
+The [applicability and evidence record](docs/03-security-privacy/2026-10-14-python-dependency-remediation.md)
+accounts for all original 19 advisories, the bounded compatible upgrade and
+the advisory with an unset patched-version field. No finding was suppressed.

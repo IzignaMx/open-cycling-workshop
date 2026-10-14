@@ -1,5 +1,5 @@
 import type { Table } from 'dexie'
-import { OcwpDatabase } from '../local/db.js'
+import { OcwpDatabase } from '../local/database.js'
 import type {
   AccessContextRecord,
   CachePartition,
@@ -11,7 +11,7 @@ import type {
   OwnedOperation,
 } from './types.js'
 
-/** Isolated factory only. No production import or schema activation is permitted yet. */
+/** Side-effect-free scoped factory. The legacy ocwp database is never opened here. */
 export class KernelDatabase extends OcwpDatabase {
   deviceControl!: Table<DeviceControl, string>
   accessContexts!: Table<AccessContextRecord, string>
@@ -24,7 +24,7 @@ export class KernelDatabase extends OcwpDatabase {
 
   constructor(name: string) {
     if (typeof name !== 'string' || !name.trim() || name === 'ocwp')
-      throw new Error('An isolated database name is required; production remains v4')
+      throw new Error('A distinct authenticated database name is required')
     super(name)
     this.version(5)
       .stores({
@@ -59,6 +59,14 @@ export class KernelDatabase extends OcwpDatabase {
           legacyAttribution: 'unknown',
         } satisfies LocalMigrationState)
       })
+    // v6 reserves bounded, author-scoped pagination indices. No history is rewritten.
+    this.version(6).stores({
+      operationJournal:
+        'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId], [principalKey+locationId+localSequence], [principalKey+locationId+entityType+entityId+localSequence]',
+      operationDelivery:
+        'mutationId, state, [principalKey+locationId+entityType+state+localSequence], [principalKey+locationId+entityType+state+retryAt], [principalKey+locationId+localSequence], [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+      operationEvents: '++sequence, mutationId, [mutationId+sequence]',
+    })
     this.on('populate', (transaction) =>
       transaction
         .table('localMigrationState')

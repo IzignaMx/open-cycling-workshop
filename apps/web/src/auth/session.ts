@@ -12,41 +12,119 @@ export interface SessionUserSnapshot {
   capabilities: string[]
 }
 
+/** Noncredential reload proof. The kernel validates every field transactionally. */
+export interface SessionAdmission {
+  format: 1
+  datasetIncarnation: string
+  sessionBindingId: string
+  owner: {
+    deviceGeneration: number
+    tabAttemptId: string
+    principalKey: string
+    partitionId: string
+    authorizationEpoch: string
+  }
+  binding: string
+}
 export interface SessionSnapshot {
-  token: string
-  user: SessionUserSnapshot | null
+  readonly token: string
+  readonly user: SessionUserSnapshot | null
+  readonly bindingId: string | null
+  readonly admission: SessionAdmission | null
 }
 
 const SESSION_KEY = 'ocwp.session.v2'
 
-function isUserSnapshot(value: unknown): value is SessionUserSnapshot {
+export function isUserSnapshot(value: unknown): value is SessionUserSnapshot {
   if (typeof value !== 'object' || value === null) return false
   const user = value as Record<string, unknown>
   return (
     typeof user.user_id === 'string' &&
+    user.user_id.length > 0 &&
+    user.user_id.length <= 36 &&
     typeof user.organization_id === 'string' &&
+    user.organization_id.length > 0 &&
+    user.organization_id.length <= 36 &&
     (typeof user.location_id === 'string' || user.location_id === null) &&
     typeof user.display_name === 'string' &&
+    user.display_name.length <= 256 &&
     Array.isArray(user.capabilities) &&
-    user.capabilities.every((capability) => typeof capability === 'string')
+    user.capabilities.length <= 100 &&
+    user.capabilities.every(
+      (capability) => typeof capability === 'string' && capability.length <= 128,
+    )
   )
 }
 
 export class SessionStore {
-  constructor(private readonly storage: SessionStorageLike) {}
+  constructor(
+    private readonly storage: SessionStorageLike,
+    private readonly newBinding = () => crypto.randomUUID(),
+  ) {}
 
   getSnapshot(): SessionSnapshot | null {
     const raw = this.storage.getItem(SESSION_KEY)
-    if (!raw) return null
+    if (!raw || raw.length > 65536) return null
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>
-      if (typeof parsed.token !== 'string' || !parsed.token) return null
+      if (typeof parsed.token !== 'string' || !parsed.token || parsed.token.length > 16384)
+        return null
       if (parsed.user !== null && parsed.user !== undefined && !isUserSnapshot(parsed.user))
         return null
-      return {
-        token: parsed.token,
-        user: parsed.user && isUserSnapshot(parsed.user) ? parsed.user : null,
+      const bindingId =
+        typeof parsed.bindingId === 'string' &&
+        parsed.bindingId.length > 0 &&
+        parsed.bindingId.length <= 128
+          ? parsed.bindingId
+          : null
+      const candidate = parsed.admission as SessionAdmission | null | undefined
+      // Unknown fields never enter durable admission metadata.
+      const owner = candidate?.owner
+      const admission: SessionAdmission | null =
+        bindingId &&
+        candidate?.format === 1 &&
+        Object.keys(candidate).length === 5 &&
+        candidate.sessionBindingId === bindingId &&
+        typeof candidate.binding === 'string' &&
+        candidate.binding.length <= 16384 &&
+        typeof candidate.datasetIncarnation === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+          candidate.datasetIncarnation,
+        ) &&
+        owner &&
+        Object.keys(owner).length === 5 &&
+        Number.isSafeInteger(owner.deviceGeneration) &&
+        owner.deviceGeneration >= 0 &&
+        [owner.tabAttemptId, owner.principalKey, owner.partitionId, owner.authorizationEpoch].every(
+          (value) => typeof value === 'string' && value.length > 0 && value.length <= 2048,
+        )
+          ? {
+              format: 1,
+              sessionBindingId: bindingId,
+              binding: candidate.binding,
+              datasetIncarnation: candidate.datasetIncarnation,
+              owner: { ...owner },
+            }
+          : null
+      const user =
+        parsed.user && isUserSnapshot(parsed.user)
+          ? {
+              user_id: parsed.user.user_id,
+              organization_id: parsed.user.organization_id,
+              location_id: parsed.user.location_id,
+              display_name: parsed.user.display_name,
+              capabilities: [...parsed.user.capabilities],
+            }
+          : null
+      if (user) {
+        Object.freeze(user.capabilities)
+        Object.freeze(user)
       }
+      if (admission) {
+        Object.freeze(admission.owner)
+        Object.freeze(admission)
+      }
+      return Object.freeze({ token: parsed.token, user, bindingId, admission })
     } catch {
       return null
     }
@@ -57,15 +135,46 @@ export class SessionStore {
   }
 
   setToken(token: string): void {
-    if (!token) throw new Error('session token must not be empty')
+    if (!token || token.length > 16384 || /\s/.test(token)) throw new Error('Invalid session token')
     const current = this.getSnapshot()
-    this.storage.setItem(SESSION_KEY, JSON.stringify({ token, user: current?.user ?? null }))
+    if (current?.token === token && current.bindingId) return
+    this.storage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ token, user: null, bindingId: this.newBinding(), admission: null }),
+    )
   }
 
   setUser(user: SessionUserSnapshot): void {
-    const token = this.getToken()
-    if (!token) throw new Error('cannot persist a session user without a token')
-    this.storage.setItem(SESSION_KEY, JSON.stringify({ token, user }))
+    const current = this.getSnapshot()
+    if (!current || !isUserSnapshot(user)) throw new Error('A valid authenticated user is required')
+    this.storage.setItem(
+      SESSION_KEY,
+      JSON.stringify({
+        ...current,
+        user,
+        admission:
+          current.user?.user_id === user.user_id &&
+          current.user.organization_id === user.organization_id
+            ? current.admission
+            : null,
+      }),
+    )
+  }
+
+  /** Upgrading an old snapshot is allowed only after successful online verification. */
+  bindVerifiedSession(token: string): string {
+    const current = this.getSnapshot()
+    if (!current || current.token !== token) throw new Error('Session changed')
+    const bindingId = current.bindingId ?? this.newBinding()
+    this.storage.setItem(SESSION_KEY, JSON.stringify({ ...current, bindingId }))
+    return bindingId
+  }
+
+  remember(admission: SessionAdmission, token: string): void {
+    const current = this.getSnapshot()
+    if (!current || current.token !== token || current.bindingId !== admission.sessionBindingId)
+      throw new Error('Session changed')
+    this.storage.setItem(SESSION_KEY, JSON.stringify({ ...current, admission }))
   }
 
   clear(): void {

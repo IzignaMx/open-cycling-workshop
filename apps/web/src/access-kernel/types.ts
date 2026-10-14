@@ -1,3 +1,5 @@
+import type { IncrementalMetadata } from './incremental-state.js'
+import type { RememberedAdmission } from './session-admission.js'
 import type { BaselineMetadata } from './baseline-state.js'
 import type { EntityType, MutationEnvelope, MutationResult } from '../sync/types.js'
 
@@ -62,6 +64,8 @@ export interface AccessContextRecord {
 export interface CachePartition {
   /** Additive non-indexed record format; v1–v5 schema history is unchanged. */
   baseline?: BaselineMetadata
+  incremental?: IncrementalMetadata
+  sessionAdmission?: RememberedAdmission
   partitionId: string
   principalKey: string
   locationId: string
@@ -92,6 +96,8 @@ export interface OwnedOperation {
   entityType: EntityType
   entityId: string
   authoredUnderEpoch: string
+  /** Required for newly authored records; absent legacy bytes remain recovery-only. */
+  authoredDatasetIncarnation: string
   localSequence: number
   dependsOn: readonly string[]
   envelope: MutationEnvelope
@@ -109,6 +115,7 @@ export type OperationState =
   | 'held_dependency'
   | 'held_integrity'
   | 'held_retry'
+  | 'held_recovery'
   | 'rejected'
   | 'applied'
 export interface OperationDelivery {

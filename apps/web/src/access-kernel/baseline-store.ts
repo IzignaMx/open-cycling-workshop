@@ -99,6 +99,8 @@ export class BaselineTransactions {
         cursor: null,
         baseline,
       }
+      // A replacement baseline owns a new private chain; preserve the old partition's evidence.
+      if ('incremental' in fresh) delete fresh.incremental
       validateBaselineMetadata(fresh, context)
       await this.db.cachePartitions.put({ ...partition, status: 'superseded' })
       await this.db.cachePartitions.add(fresh)

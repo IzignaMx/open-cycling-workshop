@@ -1,5 +1,15 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
+import {
+  createCaseIdentity,
+  WORKSHOP_CAPABILITIES,
+  DATABASE,
+  kernelSnapshot,
+  login,
+  ORGANIZATION_ID,
+  waitForReady,
+} from './helpers/authenticated-workshop.js'
+import { seedWorkshop, READ_CAPABILITIES, addScopedVisualUser } from './helpers/visual-fixture.js'
 
 const THEMES = [
   { id: 'banco', label: 'Banco de trabajo', palette: 'bosque' },
@@ -7,200 +17,18 @@ const THEMES = [
   { id: 'ritmo', label: 'Ritmo modular', palette: 'malva' },
   { id: 'noche', label: 'Turno nocturno', palette: 'lima' },
 ] as const
-const READ_CAPABILITIES = ['customers.read', 'bicycles.read', 'orders.read']
-const SCOPE = { organizationId: 'visual-org', userId: 'visual-user', locationId: 'visual-workshop' }
 const VALID_LOGO =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQCbD7DwADAAGyeEyo+gAAAABJRU5ErkJggg=='
 
-/** Exact Dexie v3 stores at physical IDB version 30, before presentation v4. All data is synthetic. */
-async function seedWorkshop(
-  page: Page,
-  capabilities = [...READ_CAPABILITIES, 'customers.write', 'orders.write'],
-) {
-  await page.route('**/api/**', (route) => route.abort('internetdisconnected'))
-  await page.goto('/')
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready
-  })
-  await page.evaluate(
-    async ({ scope, capabilities }) => {
-      const request = indexedDB.open('ocwp', 30)
-      request.onupgradeneeded = () => {
-        const schema = {
-          customers: 'customer_id,organization_id,location_id,display_name,updated_at',
-          mutationQueue: 'mutation_id,state,organization_id,location_id,entity_type,queued_at',
-          syncState: 'key,scope_key,organization_id,location_id',
-          conflicts:
-            'mutation_id,scope_key,organization_id,location_id,entity_type,entity_id,recorded_at',
-          bicycles: 'bicycle_id,organization_id,location_id,customer_id,updated_at',
-          serviceOrders: 'order_id,organization_id,location_id,customer_id,state,updated_at',
-          serviceOrderEvents: 'event_id,order_id,organization_id,occurred_at',
-        }
-        for (const [name, definition] of Object.entries(schema)) {
-          const [keyPath, ...indexes] = definition.split(',')
-          const store = request.result.createObjectStore(name, { keyPath: keyPath! })
-          for (const index of indexes) store.createIndex(index, index)
-        }
-      }
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-      })
-      const now = '2026-10-14T09:00:00Z'
-      const common = {
-        organization_id: scope.organizationId,
-        location_id: scope.locationId,
-        created_at: now,
-        updated_at: now,
-        version: 1,
-      }
-      const transaction = database.transaction(
-        [
-          'customers',
-          'bicycles',
-          'serviceOrders',
-          'serviceOrderEvents',
-          'mutationQueue',
-          'syncState',
-          'conflicts',
-        ],
-        'readwrite',
-      )
-      transaction.objectStore('customers').put({
-        ...common,
-        customer_id: 'visual-customer',
-        display_name: 'Cliente de prueba visual',
-        email: null,
-        phone: null,
-      })
-      transaction.objectStore('bicycles').put({
-        ...common,
-        bicycle_id: 'visual-bike',
-        customer_id: 'visual-customer',
-        brand: 'Prueba',
-        model: 'Visual',
-      })
-      for (const [index, state] of [
-        'IN_PROGRESS',
-        'WAITING_FOR_PARTS',
-        'READY',
-        'INTAKE',
-      ].entries()) {
-        transaction.objectStore('serviceOrders').put({
-          ...common,
-          order_id: `visual-order-${index}`,
-          customer_id: 'visual-customer',
-          bicycle_id: 'visual-bike',
-          state,
-          reported_problem: `Caso visual ${index + 1}: revisión de frenos y transmisión`,
-          intake_condition: null,
-          accessories: null,
-          diagnosis: null,
-          priority: 'normal',
-          created_at: `2026-10-14T09:00:0${index}Z`,
-        })
-      }
-      transaction.objectStore('serviceOrderEvents').put({
-        event_id: 'visual-event',
-        order_id: 'visual-order-0',
-        organization_id: scope.organizationId,
-        from_state: 'AUTHORIZED',
-        to_state: 'IN_PROGRESS',
-        action: 'start_work',
-        actor_id: scope.userId,
-        note: null,
-        occurred_at: now,
-      })
-      transaction.objectStore('syncState').put({
-        key: `cursor:${scope.organizationId}::${scope.locationId}`,
-        scope_key: `${scope.organizationId}::${scope.locationId}`,
-        organization_id: scope.organizationId,
-        location_id: scope.locationId,
-        cursor: 7,
-        updated_at: now,
-      })
-      transaction.objectStore('conflicts').put({
-        mutation_id: 'visual-conflict',
-        entity_type: 'customer',
-        entity_id: 'visual-customer',
-        organization_id: scope.organizationId,
-        location_id: scope.locationId,
-        scope_key: `${scope.organizationId}::${scope.locationId}`,
-        reason: 'Conflicto sintético preservado',
-        recorded_at: now,
-      })
-      transaction.objectStore('mutationQueue').put({
-        mutation_id: 'visual-pending',
-        entity_type: 'customer',
-        entity_id: 'visual-customer',
-        operation: 'create',
-        organization_id: scope.organizationId,
-        location_id: scope.locationId,
-        base_version: null,
-        occurred_at: now,
-        queued_at: now,
-        state: 'pending',
-        payload: { display_name: 'Cliente de prueba visual' },
-      })
-      await new Promise<void>((resolve, reject) => {
-        transaction.oncomplete = () => resolve()
-        transaction.onerror = () => reject(transaction.error)
-      })
-      database.close()
-      sessionStorage.setItem(
-        'ocwp.session.v2',
-        JSON.stringify({
-          token: 'synthetic-visual-test',
-          user: {
-            user_id: scope.userId,
-            organization_id: scope.organizationId,
-            location_id: scope.locationId,
-            display_name: 'Usuario de prueba',
-            capabilities,
-          },
-        }),
-      )
-    },
-    { scope: SCOPE, capabilities },
-  )
-  const beforeUpgrade = await operationalSnapshot(page)
-  expect(beforeUpgrade.version).toBe(30)
-  await page.reload()
-  await expect(page.getByText('Sesión:')).toBeVisible()
-  await expect(page.locator('.order-card')).toHaveCount(4)
-  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
-  await page.context().setOffline(true)
-  const afterUpgrade = await operationalSnapshot(page)
-  expect(afterUpgrade.version).toBe(40)
-  expect({ ...afterUpgrade, version: 30 }).toEqual(beforeUpgrade)
-}
-
 async function operationalSnapshot(page: Page) {
-  return page.evaluate(async () => {
-    const request = indexedDB.open('ocwp')
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
-    const data: Record<string, unknown> = { version: database.version }
-    for (const name of [
-      'customers',
-      'bicycles',
-      'serviceOrders',
-      'serviceOrderEvents',
-      'mutationQueue',
-      'syncState',
-      'conflicts',
-    ]) {
-      data[name] = await new Promise((resolve, reject) => {
-        const read = database.transaction(name).objectStore(name).getAll()
-        read.onsuccess = () => resolve(read.result)
-        read.onerror = () => reject(read.error)
-      })
-    }
-    database.close()
-    return data
-  })
+  const snapshot = await kernelSnapshot(page)
+  return {
+    version: snapshot.version,
+    journal: snapshot.journal,
+    delivery: snapshot.delivery,
+    events: snapshot.events,
+    records: snapshot.records,
+  }
 }
 
 async function openSettings(page: Page) {
@@ -260,16 +88,17 @@ async function assertSingleLine(control: Locator) {
 }
 
 for (const theme of THEMES) {
-  test(`${theme.id}: keyboard preserves drafts, history, focus and v3 pending queue offline`, async ({
+  test(`${theme.id}: keyboard preserves drafts, history, focus and authenticated pending journal offline`, async ({
     page,
+    request,
   }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
-    await seedWorkshop(page)
+    await seedWorkshop(page, request)
     if (theme.id === 'banco') await attachScreenshot(page, info, 'banco-default-desktop')
     const before = await operationalSnapshot(page)
-    expect(before.version).toBe(40)
-    expect((before.mutationQueue as unknown[]).length).toBe(1)
-    expect((before.bicycles as unknown[]).length).toBe(1)
+    expect(before.version).toBe(60)
+    expect(before.journal).toHaveLength(1)
+    expect(before.records.filter((row) => row.entityType === 'bicycle')).toHaveLength(1)
     await page.locator('.workshop-identity').focus()
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name: 'Personalización', exact: true })).toBeFocused()
@@ -282,7 +111,7 @@ for (const theme of THEMES) {
     await page.getByLabel('Agregar bicicleta').check()
     await page.getByLabel('Marca', { exact: true }).fill('Bicicleta en borrador')
     await page.getByLabel('Buscar órdenes').fill('Caso')
-    await page.getByText('Historial (1)', { exact: true }).click()
+    await page.getByText('Historial (3)', { exact: true }).click()
     const draft = await page.getByLabel('Problema reportado').elementHandle()
     await draft!.evaluate((element) => (element as HTMLTextAreaElement).setSelectionRange(3, 8))
     await openSettings(page)
@@ -355,8 +184,9 @@ test.describe('touch and narrow reflow', () => {
   for (const theme of THEMES) {
     test(`${theme.id}: touch targets, protected states, tablet and 320px reflow`, async ({
       page,
+      request,
     }, info) => {
-      await seedWorkshop(page)
+      await seedWorkshop(page, request)
       await openSettings(page)
       await page.getByText(theme.label, { exact: true }).tap()
       await page.getByLabel('Paleta personal').selectOption(theme.palette)
@@ -428,10 +258,15 @@ test.describe('touch and narrow reflow', () => {
   }
 })
 
-test('personal logo remains available offline, is location scoped, and restore does not remove it', async ({
+test('personal logo survives offline, follows its workshop, and never another user', async ({
   page,
+  request,
 }) => {
-  await seedWorkshop(page)
+  const identity = await createCaseIdentity(request, {
+    locationId: null,
+    capabilities: [...WORKSHOP_CAPABILITIES, 'locations.read'],
+  })
+  await login(page, identity, 'Taller E2E')
   await openSettings(page)
   await page.getByLabel('Archivo de logo local').setInputFiles({
     name: 'unsafe.svg',
@@ -447,30 +282,44 @@ test('personal logo remains available offline, is location scoped, and restore d
   await expect(page.getByAltText('Vista previa del logo local')).toBeVisible()
   await page.getByRole('button', { name: 'Usar logo en mi vista' }).click()
   await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
-  await expect(page.locator('.workshop-logo')).toBeVisible()
   await page.getByRole('button', { name: 'Restablecer mi apariencia' }).click()
   await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
+  await page.getByRole('radio', { name: /Ritmo modular/ }).check()
+  await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
+  await page.context().setOffline(true)
   await page.reload()
+  await waitForReady(page)
   await expect(page.locator('.workshop-logo')).toBeVisible()
   expect(
     await page
       .locator('.workshop-logo')
       .evaluate((element) => (element as HTMLImageElement).naturalWidth),
   ).toBeGreaterThan(0)
-  await page.evaluate(() => {
-    const session = JSON.parse(sessionStorage.getItem('ocwp.session.v2')!)
-    session.user.location_id = 'other-workshop'
-    sessionStorage.setItem('ocwp.session.v2', JSON.stringify(session))
-  })
-  await page.reload()
+  await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'ritmo')
+  await page.context().setOffline(false)
+  await waitForReady(page)
+  await page.getByRole('button', { name: 'Cambiar taller', exact: true }).click()
+  await page.getByRole('button', { name: 'Segundo taller E2E', exact: true }).click()
+  await waitForReady(page)
   await expect(page.locator('.workshop-monogram')).toBeVisible()
-  await expect(page.locator('.order-card')).toHaveCount(0)
+  await expect(page.locator('.workshop-logo')).toHaveCount(0)
+  await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'ritmo')
+  await page.getByRole('button', { name: 'Cambiar taller', exact: true }).click()
+  await page.getByRole('button', { name: 'Taller E2E', exact: true }).click()
+  await waitForReady(page)
+  await expect(page.locator('.workshop-logo')).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  const otherIdentity = await createCaseIdentity(request)
+  await login(page, otherIdentity)
+  await expect(page.locator('.workshop-logo')).toHaveCount(0)
+  await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'banco')
 })
 
 test('read-only permissions, corrupt configuration and failed saves keep the workshop usable', async ({
   page,
+  request,
 }) => {
-  await seedWorkshop(page, READ_CAPABILITIES)
+  const fixture = await seedWorkshop(page, request, READ_CAPABILITIES)
   await openSettings(page)
   for (const theme of THEMES) {
     await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
@@ -478,26 +327,32 @@ test('read-only permissions, corrupt configuration and failed saves keep the wor
     await expect(page.locator('.order-actions button')).toHaveCount(0)
   }
   await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
-  await page.evaluate(async (scope) => {
-    const request = indexedDB.open('ocwp')
-    const db = await new Promise<IDBDatabase>((resolve) => {
-      request.onsuccess = () => resolve(request.result)
-    })
-    const tx = db.transaction('presentationPreferences', 'readwrite')
-    tx.objectStore('presentationPreferences').put({
-      key: JSON.stringify(['appearance', scope.organizationId, scope.userId]),
-      organizationId: scope.organizationId,
-      userId: scope.userId,
-      locationId: null,
-      kind: 'appearance',
-      value: { schemaVersion: 1, themeId: 'hostile-theme' },
-    })
-    await new Promise<void>((resolve) => {
-      tx.oncomplete = () => resolve()
-    })
-    db.close()
-  }, SCOPE)
+  const before = await operationalSnapshot(page)
+  await page.evaluate(
+    async ({ name, organizationId, userId }) => {
+      const request = indexedDB.open(name)
+      const db = await new Promise<IDBDatabase>((resolve) => {
+        request.onsuccess = () => resolve(request.result)
+      })
+      const tx = db.transaction('presentationPreferences', 'readwrite')
+      tx.objectStore('presentationPreferences').put({
+        key: JSON.stringify(['appearance', organizationId, userId]),
+        organizationId,
+        userId,
+        locationId: null,
+        kind: 'appearance',
+        value: { schemaVersion: 1, themeId: 'hostile-theme' },
+      })
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onabort = () => reject(tx.error)
+      })
+      db.close()
+    },
+    { name: DATABASE, organizationId: ORGANIZATION_ID, userId: fixture.userId },
+  )
   await page.reload()
+  await waitForReady(page)
   await openSettings(page)
   await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'banco')
   await expect(page.locator('.preference-status')).toContainText('no es válida')
@@ -513,69 +368,35 @@ test('read-only permissions, corrupt configuration and failed saves keep the wor
   await expect(page.locator('.preference-status')).toContainText('no pudo guardarse')
   await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'ritmo')
   await expect(page.locator('.order-card')).toHaveCount(4)
+  expect(await operationalSnapshot(page)).toEqual(before)
 })
 
-test("same-workshop restricted user cannot render another reader's cached data in any theme", async ({
+test("same-workshop restricted user cannot render another reader's cached data or drafts in any theme", async ({
   page,
+  request,
 }) => {
-  await seedWorkshop(page)
+  const fixture = await seedWorkshop(page, request)
   await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toContainText(
     'Cliente de prueba visual',
   )
-  // v3 hardcoded every conflict as customer; retain the row but hide its ambiguous details.
-  await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
-  await page.evaluate(async (scope) => {
-    const request = indexedDB.open('ocwp')
-    const database = await new Promise<IDBDatabase>((resolve) => {
-      request.onsuccess = () => resolve(request.result)
-    })
-    const tx = database.transaction('conflicts', 'readwrite')
-    tx.objectStore('conflicts').put({
-      mutation_id: 'verified-customer-conflict',
-      organization_id: scope.organizationId,
-      location_id: scope.locationId,
-      scope_key: `${scope.organizationId}::${scope.locationId}`,
-      entity_type: 'customer',
-      entity_type_source: 'queued_mutation',
-      entity_id: 'visual-customer',
-      reason: 'Conflicto verificado de cliente',
-      recorded_at: '2026-10-14T10:00:00Z',
-    })
-    await new Promise<void>((resolve) => {
-      tx.oncomplete = () => resolve()
-    })
-    database.close()
-  }, SCOPE)
-  await page.getByRole('button', { name: 'Actualizar', exact: true }).click()
-  await expect(page.getByText('Conflicto verificado de cliente', { exact: true })).toBeVisible()
   await expect(page.locator('.order-summary').first()).toContainText('con bicicleta')
-  await page.getByLabel('Nombre', { exact: true }).fill('Cliente creado antes del cambio')
-  await page.getByRole('button', { name: 'Guardar cliente' }).click()
-  await expect(page.getByText('Último cliente local:')).toContainText(
-    'Cliente creado antes del cambio',
-  )
-  const before = await operationalSnapshot(page)
-  expect((before.mutationQueue as unknown[]).length).toBe(2)
-  await page.evaluate(() => {
-    const session = JSON.parse(sessionStorage.getItem('ocwp.session.v2')!)
-    session.user.user_id = 'restricted-user-same-workshop'
-    session.user.display_name = 'Usuario sin lectura'
-    // A write capability must never imply permission to read the retained cache.
-    session.user.capabilities = ['customers.write', 'orders.write']
-    sessionStorage.setItem('ocwp.session.v2', JSON.stringify(session))
-  })
-  await page.reload()
-  await expect(page.getByText('Usuario sin lectura', { exact: true })).toBeVisible()
+  await page.getByLabel('Nombre', { exact: true }).fill('Borrador privado de cliente')
+  await page.getByLabel('Problema reportado').fill('Borrador privado de orden')
+  const original = await kernelSnapshot(page)
+  const restricted = await addScopedVisualUser(request, fixture.locationId, [
+    'customers.write',
+    'orders.write',
+  ])
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await page.context().setOffline(false)
+  await login(page, restricted, undefined, 'local-only')
   await openSettings(page)
   for (const theme of THEMES) {
     await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
     await expect(page.locator('.order-card')).toHaveCount(0)
     await expect(page.getByLabel('Buscar órdenes')).toHaveCount(0)
     await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveCount(0)
-    await expect(page.getByText('Historial (1)', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Conflicto verificado de cliente', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Último cliente local:')).toHaveCount(0)
+    await expect(page.locator('.order-history')).toHaveCount(0)
     await expect(page.locator('.workshop-metrics dd')).toHaveText([
       'Sin acceso',
       'Sin acceso',
@@ -583,41 +404,43 @@ test("same-workshop restricted user cannot render another reader's cached data i
       'Sin acceso',
     ])
     await expect(page.locator('main')).not.toContainText('Cliente de prueba visual')
-    await expect(page.locator('main')).not.toContainText('Cliente creado antes del cambio')
+    await expect(page.locator('main')).not.toContainText('Cliente pendiente de prueba visual')
     await expect(page.locator('main')).not.toContainText('Caso visual')
+    await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('')
   }
-  expect(await operationalSnapshot(page)).toEqual(before)
+  expect((await kernelSnapshot(page)).journal).toHaveLength(0)
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await login(page, fixture)
+  expect((await kernelSnapshot(page)).journal).toEqual(original.journal)
+  await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Problema reportado')).toHaveValue('')
 })
 
-test('partial reads hide bicycle association and customer conflicts without changing order payloads', async ({
+test('partial reads hide bicycle association without changing retained order payloads', async ({
   page,
+  request,
 }) => {
-  await seedWorkshop(page, ['orders.read', 'orders.write'])
+  const fixture = await seedWorkshop(page, request, [
+    'orders.read',
+    'orders.write',
+    'sync.pull',
+    'sync.push',
+  ])
   const before = await operationalSnapshot(page)
   await expect(page.locator('.order-card')).toHaveCount(4)
-  for (const summary of await page.locator('.order-summary').all()) {
+  for (const summary of await page.locator('.order-summary').all())
     await expect(summary).not.toContainText('con bicicleta')
-  }
-  await expect(page.getByText('Conflicto sintético preservado', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveCount(0)
-  await expect(page.getByText('Para seleccionar un cliente necesitas el permiso')).toBeVisible()
   await expect(page.locator('.workshop-metrics dd').last()).toHaveText('Sin acceso')
+  expect(before.records.filter((item) => item.entityType !== 'service_order')).toHaveLength(0)
   await page.getByRole('button', { name: 'Marcar lista', exact: true }).click()
   await expect(page.locator('.order-card').first().locator('.state-badge')).toHaveText('Lista')
   const after = await operationalSnapshot(page)
-  const changedOrder = (after.serviceOrders as { order_id: string; bicycle_id: string }[]).find(
-    (row) => row.order_id === 'visual-order-0',
-  )
-  expect(changedOrder?.bicycle_id).toBe('visual-bike')
-  expect(after.bicycles).toEqual(before.bicycles)
-  expect(after.customers).toEqual(before.customers)
-  expect(after.conflicts).toEqual(before.conflicts)
-  expect((after.mutationQueue as unknown[]).length).toBe(2)
-  const transition = (after.mutationQueue as { entity_type: string; payload: unknown }[]).find(
-    (row) => row.entity_type === 'service_order',
-  )
-  expect(transition?.payload).toEqual({
-    transition: { action: 'mark_ready', actor_id: SCOPE.userId, note: null },
+  expect(after.records).toEqual(before.records)
+  expect(after.journal).toHaveLength(1)
+  expect(after.journal[0]?.optimistic.bicycle_id).toBe(fixture.bicycleId)
+  expect(after.journal[0]?.envelope.payload).toEqual({
+    transition: { action: 'mark_ready', actor_id: fixture.userId, note: null },
   })
 })
 
@@ -664,5 +487,119 @@ test('shared login button keeps its production styling, keyboard focus and disab
     await expect(login).toBeEnabled()
   } finally {
     release()
+  }
+})
+
+test('real selector, baseline progress and server upgrade hold remain keyboard accessible', async ({
+  page,
+  request,
+}, info) => {
+  const identity = await createCaseIdentity(request, {
+    locationId: null,
+    capabilities: [...WORKSHOP_CAPABILITIES, 'locations.read'],
+  })
+  await page.goto('/')
+  await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
+  await page.getByLabel('Usuario', { exact: true }).fill(identity.username)
+  await page.getByLabel('Contraseña', { exact: true }).fill('ocwp-e2e-password')
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await expect(page.locator('[data-runtime-state="SELECTOR"]')).toBeVisible()
+  const assertAccessible = async () => {
+    const result = await new AxeBuilder({ page }).analyze()
+    expect(
+      result.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? '')),
+    ).toEqual([])
+  }
+  const assertSelectorSpacing = async () => {
+    await expect
+      .poll(() =>
+        page.locator('[data-runtime-state="SELECTOR"] li > button').evaluateAll((buttons) => {
+          if (buttons.length < 2) return 0
+          const boxes = buttons.map((button) => button.getBoundingClientRect())
+          return Math.min(...boxes.slice(1).map((box, index) => box.top - boxes[index]!.bottom))
+        }),
+      )
+      .toBeGreaterThanOrEqual(12)
+  }
+  await assertAccessible()
+  await assertSelectorSpacing()
+  await attachScreenshot(page, info, 'authenticated-workshop-selector')
+  await page.setViewportSize({ width: 320, height: 900 })
+  await assertAccessible()
+  await assertSelectorSpacing()
+  await attachScreenshot(page, info, 'authenticated-workshop-selector-320', true)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const workshop = page.getByRole('button', { name: 'Taller E2E', exact: true })
+  await workshop.focus()
+  await expect(workshop).toBeFocused()
+  let releaseBaseline = () => {},
+    releaseRefusal = () => {}
+  const baselineGate = new Promise<void>((resolve) => {
+    releaseBaseline = resolve
+  })
+  const refusalGate = new Promise<void>((resolve) => {
+    releaseRefusal = resolve
+  })
+  await page.route('**/api/v1/sync/baselines/start', async (route) => {
+    const response = await route.fetch()
+    expect(response.status()).toBe(200)
+    await baselineGate
+    await route.fulfill({ response })
+  })
+  try {
+    await workshop.press('Enter')
+    await expect(page.locator('[data-runtime-state="BASELINE"]')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Preparando el taller' })).toBeVisible()
+    await expect(page.locator('.order-card')).toHaveCount(0)
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-baseline-progress')
+    await page.setViewportSize({ width: 320, height: 900 })
+    await expect(page.locator('[data-runtime-state="BASELINE"]')).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true)
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-baseline-progress-320', true)
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    releaseBaseline()
+    await waitForReady(page)
+    await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+    expect((await kernelSnapshot(page)).context.principal.userId).toBe(identity.userId)
+    const originalPartition = (await kernelSnapshot(page)).partition.partitionId
+    let refusalHeld = false
+    await page.route('**/api/v1/sync/mutations', async (route) => {
+      const headers = { ...route.request().headers() }
+      delete headers['x-ocwp-write-protocol']
+      // Exercise the actual floor-1 server refusal, not a manufactured error object.
+      const response = await route.fetch({ headers })
+      expect(response.status()).toBe(409)
+      expect(await response.text()).toContain('client_upgrade_required')
+      refusalHeld = true
+      await refusalGate
+      await route.fulfill({ response })
+    })
+    await page.getByLabel('Nombre', { exact: true }).fill(`Cliente retenido ${crypto.randomUUID()}`)
+    await page.getByRole('button', { name: 'Guardar cliente', exact: true }).click()
+    await expect.poll(() => refusalHeld).toBe(true)
+    const authored = (await kernelSnapshot(page)).journal
+    expect(authored).toHaveLength(1)
+    releaseRefusal()
+    await expect(page.locator('[data-runtime-state="HELD"]')).toBeVisible()
+    await expect(page.locator('.order-card')).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: 'Verificar sesión y reintentar', exact: true }),
+    ).toBeEnabled()
+    expect((await kernelSnapshot(page, originalPartition)).journal).toEqual(authored)
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-upgrade-held')
+    await page.setViewportSize({ width: 320, height: 900 })
+    await assertAccessible()
+    await attachScreenshot(page, info, 'authenticated-upgrade-held-320', true)
+  } finally {
+    releaseBaseline()
+    releaseRefusal()
+    await page.unrouteAll({ behavior: 'wait' })
   }
 })

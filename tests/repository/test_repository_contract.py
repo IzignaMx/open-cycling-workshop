@@ -118,7 +118,11 @@ def test_root_scripts_and_ci_use_normative_uv_and_static_quality_gates() -> None
 def test_security_workflow_uses_uv_for_python_auditing() -> None:
     workflow = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
     assert "astral-sh/setup-uv@" in workflow
-    assert "uvx pip-audit" in workflow
+    assert "python scripts/ci/security_scan.py dependencies" in workflow
+    audit = (ROOT / "scripts/ci/security_scan.py").read_text(encoding="utf-8")
+    assert 'PIP_AUDIT = "pip-audit==2.9.0"' in audit
+    assert '"uvx"' in audit
+    assert '"--requirement"' in audit
     assert "python -m pip install" not in workflow
 
 
@@ -204,7 +208,10 @@ def test_ci_publishes_a_v01_qualification_artifact() -> None:
 def test_golden_slice_requires_service_worker_offline_reload_evidence() -> None:
     spec = (ROOT / "apps/web/e2e/customer-offline-sync.spec.ts").read_text(encoding="utf-8")
     assert "navigator.serviceWorker.ready" in spec
-    assert "firstPage.reload" in spec
+    assert "await page.reload({ waitUntil: 'domcontentloaded' })" in spec
+    assert "await waitForReady(page)" in spec
+    assert "expect(restored.journal).toContainEqual(original)" in spec
+    assert "await waitForConfirmed(page, original)" in spec
     # Authenticated functional content survives regardless of the selected theme headline.
     assert "getByRole('heading', { name: 'Órdenes de servicio', exact: true })" in spec
 

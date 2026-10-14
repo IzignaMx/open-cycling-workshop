@@ -1,7 +1,15 @@
 declare module 'dexie' {
+  export function liveQuery<T>(query: () => Promise<T>): {
+    subscribe(observer: { next(value: T): void; error(error: unknown): void }): {
+      unsubscribe(): void
+    }
+  }
+
   export interface Collection<T> {
     limit(value: number): Collection<T>
     toArray(): Promise<T[]>
+    keys(): Promise<unknown[]>
+    uniqueKeys(): Promise<unknown[]>
     first(): Promise<T | undefined>
     reverse(): Collection<T>
     count(): Promise<number>

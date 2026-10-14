@@ -79,6 +79,7 @@ def test_sync_push_duplicate_and_pull_change() -> None:
     first = client.post("/api/v1/sync/mutations", json=payload)
     second = client.post("/api/v1/sync/mutations", json=payload)
     assert first.status_code == second.status_code == 200
+    assert first.headers["cache-control"] == second.headers["cache-control"] == "no-store"
     assert first.json()["results"][0]["entity_version"] == 1
     assert second.json()["results"][0]["entity_version"] == 1
 
@@ -255,3 +256,11 @@ def test_batch_with_one_conflict_preserves_independent_valid_mutations() -> None
     assert "Cliente Valido Antes" in created_names
     assert "Cliente Valido Despues" in created_names
     assert "Edicion Obsoleta" not in str(feed.json())
+
+
+def test_sync_authentication_refusal_is_not_cacheable() -> None:
+    client = build_client()
+    client.headers.pop("Authorization")
+    response = client.post("/api/v1/sync/mutations", json={"mutations": []})
+    assert response.status_code == 401
+    assert response.headers["cache-control"] == "no-store"

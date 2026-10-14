@@ -3,6 +3,7 @@ import type { KernelDatabase } from './database.js'
 import {
   entityCapability,
   operationIntact,
+  operationProvenance,
   requireCapability,
   validateProjection,
 } from './operations.js'
@@ -20,12 +21,64 @@ export const heldDependencyStates = new Set([
   'held_dependency',
   'held_integrity',
   'held_retry',
+  'held_recovery',
 ])
+
+/** Confirmed prerequisites come only from the admitted current partition. */
+export async function hasConfirmedEntity(
+  db: KernelDatabase,
+  partitionId: string,
+  context: VerifiedAccessContext,
+  entityType: EntityType,
+  entityId: string,
+): Promise<boolean> {
+  if (!context.capabilities.includes(entityCapability(entityType, 'read'))) return false
+  const confirmed = await db.cacheRecords.get([partitionId, entityType, entityId])
+  if (!confirmed) return false
+  validateProjection(entityType, entityId, confirmed.payload, context)
+  if (confirmed.version !== confirmed.payload.version)
+    throw new Error('Confirmed projection version integrity mismatch')
+  return true
+}
+
+/** Old-incarnation implicit history cannot block independently confirmed current data.
+ * Explicit dependencies are still validated separately and never bypass this boundary.
+ * Pages stay bounded even after many retained recovery generations.
+ */
+export async function aggregateBoundary(
+  db: KernelDatabase,
+  context: VerifiedAccessContext,
+  prefix: readonly (string | number)[],
+  field: 'unresolved' | 'blocked',
+  confirmed: boolean,
+  upper = Number.MAX_SAFE_INTEGER,
+  reverse = false,
+): Promise<OperationDelivery | undefined> {
+  const index = `[principalKey+locationId+entityType+entityId+${field}+localSequence]`
+  let lower = 0,
+    before = upper
+  while (true) {
+    let query = db.operationDelivery
+      .where(index)
+      .between([...prefix, 1, lower], [...prefix, 1, before], false, !reverse)
+    if (reverse) query = query.reverse()
+    if (!confirmed) return query.first()
+    const page = await query.limit(100).toArray()
+    for (const delivery of page) {
+      const operation = await db.operationJournal.get(delivery.mutationId)
+      if (!operation || operationProvenance(operation, context)) return delivery
+    }
+    if (page.length < 100) return undefined
+    if (reverse) before = page.at(-1)!.localSequence
+    else lower = page.at(-1)!.localSequence
+  }
+}
 
 async function dependenciesVisible(
   db: KernelDatabase,
   operation: OwnedOperation,
   context: VerifiedAccessContext,
+  partitionId: string,
 ): Promise<boolean> {
   const pending = [operation]
   const visited = new Set<string>()
@@ -35,12 +88,23 @@ async function dependenciesVisible(
     visited.add(child.mutationId)
     // Per-aggregate order is an implicit dependency, even if the command did
     // not explicitly list its preceding local mutation.
-    const prefix = [child.principalKey, child.locationId, child.entityType, child.entityId, 1]
-    const predecessor = await db.operationDelivery
-      .where('[principalKey+locationId+entityType+entityId+unresolved+localSequence]')
-      .between([...prefix, 0], [...prefix, child.localSequence], true, false)
-      .reverse()
-      .first()
+    const prefix = [child.principalKey, child.locationId, child.entityType, child.entityId]
+    const confirmed = await hasConfirmedEntity(
+      db,
+      partitionId,
+      context,
+      child.entityType,
+      child.entityId,
+    )
+    const predecessor = await aggregateBoundary(
+      db,
+      context,
+      prefix,
+      'unresolved',
+      confirmed,
+      child.localSequence,
+      true,
+    )
     const dependencies = new Set([
       ...child.dependsOn,
       ...(predecessor ? [predecessor.mutationId] : []),
@@ -52,6 +116,7 @@ async function dependenciesVisible(
         !parent ||
         !delivery ||
         !operationIntact(parent) ||
+        !operationProvenance(parent, context) ||
         parent.principalKey !== operation.principalKey ||
         parent.locationId !== operation.locationId ||
         parent.localSequence >= child.localSequence ||
@@ -122,14 +187,16 @@ export async function readProjection(
     )
       throw new Error('Invalid applied projection metadata')
     const operation = await load(applied)
-    optimistic = operation.optimistic
-    optimisticStatus = 'applied_awaiting_projection'
-    overlaySequence = operation.localSequence
+    if (
+      operationProvenance(operation, context) &&
+      (await dependenciesVisible(db, operation, context, ticket.partitionId))
+    ) {
+      optimistic = operation.optimistic
+      optimisticStatus = 'applied_awaiting_projection'
+      overlaySequence = operation.localSequence
+    }
   }
-  const blocked = await db.operationDelivery
-    .where('[principalKey+locationId+entityType+entityId+blocked+localSequence]')
-    .between([...prefix, 1, 0], [...prefix, 1, Number.MAX_SAFE_INTEGER], true, true)
-    .first()
+  const blocked = await aggregateBoundary(db, context, prefix, 'blocked', confirmed !== undefined)
   if (context.capabilities.includes(entityCapability(entityType, 'write'))) {
     // Bound allocation even for a long offline chain. Continue to older pages
     // when newer dependency chains are held; never silently lose an eligible overlay.
@@ -146,7 +213,10 @@ export async function readProjection(
       for (const delivery of page) {
         if (!replayableStates.has(delivery.state) && delivery.state !== 'inflight') continue
         const operation = await load(delivery)
-        if (await dependenciesVisible(db, operation, context)) {
+        if (
+          operationProvenance(operation, context) &&
+          (await dependenciesVisible(db, operation, context, ticket.partitionId))
+        ) {
           optimistic = operation.optimistic
           optimisticStatus = 'pending'
           found = true

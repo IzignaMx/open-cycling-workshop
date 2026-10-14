@@ -204,6 +204,11 @@ body {
 .workshop-panel > h2 {
   margin-bottom: 20px;
 }
+.workshop-selector-options {
+  display: grid;
+  gap: 12px;
+  margin-block: 12px;
+}
 .workshop-notice {
   border: 1px solid var(--ocwp-color-control-border);
   border-radius: var(--ocwp-radius-sm);

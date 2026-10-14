@@ -8,6 +8,7 @@ export interface OrderListProps {
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
   canReadBicycleInfo: boolean
+  onTimeline?(orderId: string): Promise<void>
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
 }
 
@@ -17,12 +18,14 @@ function OrderRecord({
   onTransition,
   canTransition,
   canReadBicycleInfo,
+  onTimeline,
 }: {
   order: LocalServiceOrder
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
   canReadBicycleInfo: boolean
   onTransition: OrderListProps['onTransition']
+  onTimeline: OrderListProps['onTimeline']
 }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -87,6 +90,19 @@ function OrderRecord({
           </p>
         )}
       </div>
+      {onTimeline ? (
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => {
+            void onTimeline(order.order_id).catch(() =>
+              setMessage('No se pudo cargar el historial local.'),
+            )
+          }}
+        >
+          Ver historial
+        </button>
+      ) : null}
       {events.length > 0 ? (
         <details className="order-history">
           <summary>Historial ({events.length})</summary>
@@ -116,6 +132,7 @@ export function OrderList({
   onTransition,
   canTransition,
   canReadBicycleInfo,
+  onTimeline,
 }: OrderListProps) {
   const [query, setQuery] = useState('')
   const filtered = orders.filter((order) =>
@@ -163,6 +180,7 @@ export function OrderList({
                 onTransition={onTransition}
                 canTransition={canTransition}
                 canReadBicycleInfo={canReadBicycleInfo}
+                onTimeline={onTimeline}
               />
             ))}
           </ul>

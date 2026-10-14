@@ -152,3 +152,201 @@ def test_smoke_rejects_accidentally_exposed_database_port() -> None:
 
     with pytest.raises(AssertionError):
         validate_config({"services": {"postgres": {"ports": [{"host_ip": "0.0.0.0"}]}}})
+
+
+def test_cutover_opt_in_is_scoped_to_generated_disposable_environment(tmp_path) -> None:
+    from scripts.ci.local_compose_smoke import disposable_environment
+
+    inherited = {
+        "PATH": "/bin",
+        "COMPOSE_PROJECT_NAME": "operator-project",
+        "OCWP_DATABASE_URL": "postgresql://operator/private",
+        "OCWP_AUTH_SECRET": "operator-secret",
+        "OCWP_CUTOVER_ENABLED": "false",
+    }
+    env = disposable_environment(inherited)
+    assert env == {"PATH": "/bin", "OCWP_CUTOVER_ENABLED": "true"}
+    assert inherited["OCWP_CUTOVER_ENABLED"] == "false"
+    assert "OCWP_CUTOVER_ENABLED: ${OCWP_CUTOVER_ENABLED:-false}" in source(
+        "infra/compose/docker-compose.local.yml"
+    )
+
+
+def test_restore_override_changes_only_disposable_api_secret(tmp_path) -> None:
+    from scripts.ci.local_compose_smoke import restored_api_override
+
+    restore_file = tmp_path / "secrets" / "restore_url.txt"
+    config = restored_api_override(restore_file)
+    assert config == {
+        "services": {
+            "api": {
+                "environment": {"OCWP_DATABASE_URL_FILE": "/run/secrets/restore_url"},
+                "secrets": [{"source": "restore_url", "target": "restore_url"}],
+            }
+        },
+        "secrets": {"restore_url": {"file": str(restore_file)}},
+    }
+    assert "postgresql" not in str(config)
+
+
+def test_browser_handshake_is_bounded_and_does_not_echo_child_output() -> None:
+    import os
+    import sys
+
+    import pytest
+
+    from scripts.ci.local_compose_smoke import BrowserSmoke
+
+    secret = "test-secret-never-in-error"
+    for output in (secret, "x" * 5000, '{"phase":"wrong"}', '{"phase":"ready","token":"x"}'):
+        with BrowserSmoke(
+            [sys.executable, "-c", f"print({output!r}, flush=True)"],
+            env=dict(os.environ),
+            timeout=1,
+        ) as browser:
+            with pytest.raises(RuntimeError) as error:
+                browser.expect("ready")
+            assert secret not in str(error.value)
+            assert output not in str(error.value)
+
+
+def test_browser_handshake_retains_process_across_phases() -> None:
+    import os
+    import sys
+
+    from scripts.ci.local_compose_smoke import BrowserSmoke
+
+    script = (
+        "import json,sys; "
+        "first=json.loads(sys.stdin.readline()); "
+        "assert first['password']=='synthetic'; "
+        "print(json.dumps({'phase':'ready_for_backup'}),flush=True); "
+        "assert json.loads(sys.stdin.readline())=={'phase':'backup_verified'}; "
+        "print(json.dumps({'phase':'pending_preserved'}),flush=True)"
+    )
+    with BrowserSmoke([sys.executable, "-c", script], env=dict(os.environ), timeout=1) as browser:
+        browser.send({"password": "synthetic"})
+        browser.expect("ready_for_backup")
+        browser.send({"phase": "backup_verified"})
+        browser.expect("pending_preserved")
+        browser.finish()
+
+
+def test_browser_handshake_times_out_without_hanging() -> None:
+    import os
+    import sys
+    import time
+
+    import pytest
+
+    from scripts.ci.local_compose_smoke import BrowserSmoke
+
+    start = time.monotonic()
+    with (
+        BrowserSmoke(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            env=dict(os.environ),
+            timeout=0.05,
+        ) as browser,
+        pytest.raises(RuntimeError, match="timed out"),
+    ):
+        browser.expect("ready_for_backup")
+    assert time.monotonic() - start < 3
+
+
+def test_floor_one_restore_retains_all_eleven_substantive_checks() -> None:
+    import ast
+
+    smoke = source("scripts/ci/local_compose_smoke.py")
+    tree = ast.parse(smoke)
+    checks = {
+        node.args[0].value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "checks"
+        and node.func.attr == "append"
+    }
+    assert checks == {
+        "resolved_compose_private_ports_migration_dependency_and_networks",
+        "lan_caddy_configuration_parses_without_installing_trust",
+        "fresh_volume_secret_backed_migration_and_readiness",
+        "nonroot_processes_and_restricted_database_role",
+        "first_admin_bootstrap_guard_login_and_customer_creation",
+        "pwa_static_delivery_cache_policy_and_backend_404_isolation",
+        "caddy_pwa_offline_reload_queue_reconnect_two_browser_convergence",
+        "backend_outage_returns_502_without_spa_fallback",
+        "pg18_backup_restore_schema_counts_and_nonempty_target_refusal",
+        "down_up_retains_database_and_authentication",
+        "container_logs_do_not_contain_generated_credentials",
+    }
+    assert '"--expected-incarnation"' in smoke
+    assert '"--no-deps", "--force-recreate", "api", "edge"' in smoke
+    assert smoke.index('"backup_verified"') < smoke.index(
+        'compose("stop", "edge", "api", "worker")'
+    )
+    assert smoke.index('"pending_preserved"') < smoke.index("compose(*restore_args)")
+    compact = re.sub(r"\s+", "", smoke)
+    assert compact.index('"cutover","recover"') < compact.index('"restored_api_ready"')
+
+
+def test_log_check_catches_browser_tokens_without_transmitting_them() -> None:
+    import pytest
+
+    from scripts.ci.local_compose_smoke import assert_logs_safe
+
+    assert_logs_safe("GET /api/v1/auth/me HTTP/1.1 200 OK", ["generated-password"])
+    for log in ("generated-password", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"):
+        with pytest.raises(RuntimeError) as error:
+            assert_logs_safe(log, ["generated-password"])
+        assert log not in str(error.value)
+
+
+def test_browser_protocol_unit_cases() -> None:
+    import subprocess
+
+    result = subprocess.run(
+        ["node", "--test", "tests/operations/local_runtime_browser_protocol.test.mjs"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_browser_reads_current_partition_and_preserves_immutable_work() -> None:
+    browser = source("scripts/ci/local_runtime_browser_smoke.mjs")
+    for required in (
+        "ocwp-authenticated-v1",
+        "operationJournal",
+        "operationDelivery",
+        "cacheRecords",
+        "[principalKey+locationId]",
+        "[partitionId+entityType]",
+        "data-runtime-state",
+        "baselineComplete",
+        "historicalCustomerId",
+        "datasetIncarnation",
+        "held_recovery",
+        "assert.deepEqual(held.journal, pendingState.journal)",
+        "assert.equal(refused.status, 409)",
+        "'context_changed'",
+        "oldSession.token",
+        "pendingSession",
+        "backup_verified",
+        "restored_api_ready",
+        "recovery_verified",
+    ):
+        assert required in browser
+    for unsafe in ("page.route(", "context.route(", "recordVideo", "tracing.start", ".screenshot("):
+        assert unsafe not in browser
+    assert "indexedDB.open('ocwp')" not in browser
+
+
+def test_smoke_redacts_unexported_browser_jwt_from_failure_output() -> None:
+    from scripts.ci.local_compose_smoke import redact
+
+    token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"
+    assert redact(f"failure with {token}", []) == "failure with [redacted]"

@@ -119,6 +119,7 @@ def test_order_timeline_lists_events_newest_first() -> None:
     timeline = client.get(f"/api/v1/service-orders/{order_id}/events")
 
     assert timeline.status_code == 200
+    assert timeline.headers["cache-control"] == "no-store"
     events = timeline.json()
     assert [event["action"] for event in events] == [
         "start_diagnosis",
@@ -160,3 +161,11 @@ def test_sync_push_maps_entity_capabilities() -> None:
     response = customer_only.post("/api/v1/sync/mutations", json={"mutations": [stale_update]})
 
     assert response.status_code == 403
+
+
+def test_order_timeline_refusals_are_not_cacheable() -> None:
+    for capabilities, expected in [([], 403), (["orders.read"], 404)]:
+        client = build_client(capabilities=capabilities)
+        response = client.get("/api/v1/service-orders/00000000-0000-7000-8000-0000000000ff/events")
+        assert response.status_code == expected
+        assert response.headers["cache-control"] == "no-store"

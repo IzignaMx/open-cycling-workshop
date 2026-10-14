@@ -1,0 +1,21 @@
+title = "OCWP default rules with reviewed exact false-positive exceptions"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Invalid JWT-shaped log-redaction fixture; signature is a literal placeholder"
+condition = "AND"
+paths = ['''^tests/operations/test_local_compose_runtime\.py$''']
+regexTarget = "secret"
+regexes = ['''^eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiJhIn0\.signature$''']
+
+[[rules.allowlists]]
+description = "Historical README prose describing revocable sessions; not credential data"
+condition = "AND"
+paths = ['''^README\.md$''']
+regexTarget = "secret"
+regexes = ['''^signed/revocable$''']
