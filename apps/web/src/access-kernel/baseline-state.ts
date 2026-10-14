@@ -1,4 +1,9 @@
 import {
+  validateIncrementalMetadata,
+  incrementalRequiresBaseline,
+  type IncrementalPartition,
+} from './incremental-state.js'
+import {
   canonicalBaselineTimestamp,
   validateBaselineRequest,
   validateBaselineResponse,
@@ -215,7 +220,11 @@ export function validateBaselineMetadata(
       throw new Error('Invalid original baseline deadline')
   }
   if (value.phase === 'active') {
-    if (value.next !== null || !token(value.checkpoint) || partition.cursor !== value.checkpoint)
+    if (
+      value.next !== null ||
+      !token(value.checkpoint) ||
+      (!Object.hasOwn(partition, 'incremental') && partition.cursor !== value.checkpoint)
+    )
       throw new Error('Invalid baseline completion')
   } else {
     const next = object(value.next, ['kind', 'body'])
@@ -331,6 +340,8 @@ export function validateBaselineMetadata(
     )
       throw new Error('Invalid baseline hold')
   }
+  if (Object.hasOwn(partition, 'incremental'))
+    validateIncrementalMetadata(partition as IncrementalPartition, context)
   return value
 }
 export function completedBaseline(
@@ -344,7 +355,11 @@ export function completedBaseline(
       partition.baselineComplete &&
       partition.status === 'active' &&
       value.phase === 'active' &&
-      value.hold === null
+      value.hold === null &&
+      (!Object.hasOwn(partition, 'incremental') ||
+        !incrementalRequiresBaseline(
+          validateIncrementalMetadata(partition as IncrementalPartition, context),
+        ))
     )
   } catch {
     return false
