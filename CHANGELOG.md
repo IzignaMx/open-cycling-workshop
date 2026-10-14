@@ -31,6 +31,12 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Added
 
+- Unactivated authenticated offline-context endpoint with concrete location scope,
+  literal effective grants, durable authorization epoch and bounded signed-token
+  lease. Responses are no-store and advertise no snapshot protocol. See the
+  [increment record](docs/10-spec-development/2026-10-14-authenticated-offline-context.md);
+  no client cache activation, journal migration or deployment is included.
+
 - Bounded server-side local user, starter-role and workshop-location
   administration, with optimistic account versions, session revocation and
   credential-change endpoints. See the

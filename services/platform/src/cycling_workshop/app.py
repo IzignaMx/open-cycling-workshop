@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+import logging
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
+from starlette.middleware.base import RequestResponseEndpoint
 
 from cycling_workshop import __version__
 from cycling_workshop.api.errors import install_error_handlers
@@ -13,6 +16,7 @@ from cycling_workshop.bicycles.router import router as bicycles_router
 from cycling_workshop.customers.router import router as customers_router
 from cycling_workshop.db.registry import register_models
 from cycling_workshop.identity.admin_router import router as administration_router
+from cycling_workshop.identity.context import router as context_router
 from cycling_workshop.identity.router import router as identity_router
 from cycling_workshop.identity.security import SessionTokenService
 from cycling_workshop.inventory.router import router as inventory_router
@@ -39,7 +43,6 @@ def create_app(
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.session_tokens = SessionTokenService(secret=settings.auth_secret)
-    install_request_context(app)
     install_error_handlers(app)
 
     @app.get("/health/live", tags=["health"])
@@ -63,6 +66,24 @@ def create_app(
             return JSONResponse(status_code=503, content={"status": "unavailable"})
         return HealthReadyResponse(environment=settings.environment)
 
+    @app.middleware("http")
+    async def context_no_store(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        is_context = request.url.path.rstrip("/") == "/api/v1/auth/context"
+        try:
+            response = await call_next(request)
+        except Exception:
+            if not is_context:
+                raise
+            # Keep unexpected failures generic, without leaking driver/session
+            # details or allowing shared caches to retain a context response.
+            logging.getLogger(__name__).error("authenticated context request failed")
+            response = JSONResponse(status_code=500, content={"detail": "internal server error"})
+        if is_context:
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    install_request_context(app)
+    app.include_router(context_router)
     app.include_router(identity_router)
     app.include_router(administration_router)
     app.include_router(customers_router)

@@ -679,3 +679,25 @@ structural_workshop_themes_2026_10_14:
   corrected_hosted_evidence: pending_exact_color_web_first_assertions_unchanged_product_source
   exact_head_hosted_ci: pending
   release_gates: unchanged_physical_windows_android_screen_reader_and_manual_qualification
+
+authenticated_offline_context_prerequisite_2026_10_14:
+  status: implemented_pending_evidence
+  base: f87205157e298f5c1c7c3f08d024fe822d84582b
+  document: docs/10-spec-development/2026-10-14-authenticated-offline-context.md
+  adr: docs/02-technical-architecture/2026-10-14-authenticated-offline-context.md
+  scope: additive_authenticated_context_only_no_client_activation
+  snapshot_protocol: null
+  server_api_realm: null
+  authorization: literal_intersection_before_known_catalog_org_then_user_lock_revalidation
+  lease: min_validated_jwt_expiry_and_server_verified_at_plus_8_hours
+  migrations_and_credentials: none
+  initial_red: 30_context_failures_and_1_generated_literal_contract_failure
+  focused_context_tests: 43_passed
+  python_suite: 869_passed_81_skipped
+  new_postgresql_contention_cases: 16_collected_skipped_no_dedicated_database
+  postgresql_proof: blocked_OCWP_TEST_DATABASE_URL_unconfigured
+  static_contract_checks: ruff_format_mypy_openapi_generated_types_and_api_client_typescript_passed
+  independent_review: final_70_passed_16_postgresql_skips_no_blocking_findings
+  browser: not_run_no_frontend_changes_managed_access_denial_respected
+  hosted_exact_head_qualification: pending
+  rollout_gates: baseline_activation_realm_binding_journal_preservation_old_client_restore_devices_unchanged

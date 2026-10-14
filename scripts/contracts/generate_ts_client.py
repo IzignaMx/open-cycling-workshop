@@ -11,6 +11,8 @@ OUTPUT = ROOT / "packages/api-client/src/generated.ts"
 
 
 def ts_type(schema: dict[str, object]) -> str:
+    if "const" in schema:
+        return json.dumps(schema["const"])
     if "$ref" in schema:
         return str(schema["$ref"]).rsplit("/", 1)[-1]
     if "anyOf" in schema:

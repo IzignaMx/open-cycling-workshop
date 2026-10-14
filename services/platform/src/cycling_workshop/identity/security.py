@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -27,15 +29,38 @@ class PasswordService:
             return False
 
 
+@dataclass(frozen=True, slots=True)
+class ValidatedSession:
+    principal: Principal
+    expires_at: datetime
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 class SessionTokenService:
-    def __init__(self, *, secret: str, ttl: timedelta = timedelta(hours=8)) -> None:
+    def __init__(
+        self,
+        *,
+        secret: str,
+        ttl: timedelta = timedelta(hours=8),
+        clock: Callable[[], datetime] = utc_now,
+    ) -> None:
         if len(secret) < 32:
             raise ValueError("session secret must contain at least 32 characters")
         self._secret = secret
         self._ttl = ttl
+        self._clock = clock
+
+    def now(self) -> datetime:
+        now = self._clock()
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError("session clock must be timezone-aware")
+        return now.astimezone(UTC)
 
     def issue(self, principal: Principal) -> str:
-        now = datetime.now(UTC)
+        now = self.now()
         claims: dict[str, Any] = {
             "iss": "ocwp",
             "sub": principal.user_id,
@@ -51,13 +76,39 @@ class SessionTokenService:
         return jwt.encode(claims, self._secret, algorithm="HS256")
 
     def decode(self, token: str) -> Principal:
+        return self.decode_session(token).principal
+
+    def decode_session(self, token: str) -> ValidatedSession:
         claims = jwt.decode(
             token,
             self._secret,
             algorithms=["HS256"],
             issuer="ocwp",
-            options={"require": ["exp", "iat", "sub", "org", "caps"]},
+            options={
+                "require": ["exp", "iat", "sub", "org", "caps"],
+                # Validate temporal claims below against the same injected clock
+                # used for issue, post-lock revalidation and offline leases.
+                "verify_exp": False,
+                "verify_iat": False,
+                "verify_nbf": False,
+            },
         )
+        for name in ("exp", "iat", "nbf"):
+            if name not in claims and name == "nbf":
+                continue
+            if type(claims[name]) is not int:
+                raise jwt.InvalidTokenError("temporal claims must be finite integers")
+        now = self.now().timestamp()
+        if claims["iat"] > now or claims.get("nbf", claims["iat"]) > now:
+            raise jwt.ImmatureSignatureError("session is not yet valid")
+        if claims["exp"] <= now:
+            raise jwt.ExpiredSignatureError("session expired")
+        if claims["exp"] <= claims["iat"]:
+            raise jwt.InvalidTokenError("invalid session lifetime")
+        try:
+            expires_at = datetime.fromtimestamp(claims["exp"], UTC)
+        except (OverflowError, OSError, ValueError) as exc:
+            raise jwt.InvalidTokenError("invalid expiry") from exc
         capabilities = claims.get("caps")
         if not isinstance(capabilities, list) or not all(
             isinstance(value, str) for value in capabilities
@@ -66,10 +117,12 @@ class SessionTokenService:
         location_id = claims.get("loc")
         if location_id is not None and not isinstance(location_id, str):
             raise jwt.InvalidTokenError("loc claim must be a string or null")
-        return Principal(
+        principal = Principal(
             user_id=str(claims["sub"]),
             organization_id=str(claims["org"]),
             location_id=location_id,
             capabilities=frozenset(capabilities),
             session_version=int(claims.get("sv", 1)),
         )
+
+        return ValidatedSession(principal=principal, expires_at=expires_at)

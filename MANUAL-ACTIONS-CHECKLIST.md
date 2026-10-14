@@ -564,3 +564,16 @@ ocwpctl access create-first-owner --organization-id ORGANIZATION_ID --username O
 
 Physical Windows/Android, accessibility, broader security/session and all other
 unproven release gates above remain open on their own evidence.
+
+### Authenticated context prerequisite qualification
+
+- [ ] Run the 16 real PostgreSQL context lock-wait cases on the exact integration
+      candidate with the existing dedicated `OCWP_TEST_DATABASE_URL` fixture.
+      Verify both organization/user barriers, persisted authority freshness and
+      signed expiry rejection. Local skips are not contention evidence.
+- [ ] Before any production context adapter/activation, qualify authoritative
+      baselines, verified endpoint realm binding, old-client/service-worker fencing,
+      restore/session invalidation and user-switch isolation. Keep every original
+      realm journal and pending mutation; never automatically retarget old work.
+      This server-only increment advertises `snapshot_protocol: null` and does not
+      close existing browser/device/accessibility/administration rollout gates.
