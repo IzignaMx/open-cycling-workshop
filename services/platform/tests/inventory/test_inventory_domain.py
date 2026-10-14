@@ -61,7 +61,7 @@ def test_movement_signs_follow_the_kind_contract() -> None:
     adjust_in = _movement(kind="ADJUST", quantity=10)
     assert adjust_in.quantity == 10
 
-    reserve = _movement(kind="RESERVE", quantity=5, order_id="order-1")
+    reserve = _movement(movement_id="reservation-1", kind="RESERVE", quantity=5, order_id="order-1")
     assert reserve.quantity == -5
     assert reserve.order_id == "order-1"
 
@@ -91,13 +91,17 @@ def test_reserve_requires_positive_quantity_and_an_order() -> None:
 
 
 def test_release_and_consume_require_reference_and_cannot_release_twice() -> None:
-    reserve = _movement(kind="RESERVE", quantity=5, order_id="order-1")
+    reserve = _movement(movement_id="reservation-1", kind="RESERVE", quantity=5, order_id="order-1")
 
     with pytest.raises(ValueError, match="reference"):
         _movement(kind="RELEASE", quantity=5, order_id="order-1")
 
     release = _movement(
-        kind="RELEASE", quantity=5, order_id="order-1", reference_movement_id=reserve.movement_id
+        movement_id="release-1",
+        kind="RELEASE",
+        quantity=5,
+        order_id="order-1",
+        reference_movement_id=reserve.movement_id,
     )
     # A second release against the same reservation is rejected at the domain
     # level when the caller marks the reservation consumed beforehand.
@@ -107,7 +111,7 @@ def test_release_and_consume_require_reference_and_cannot_release_twice() -> Non
             quantity=5,
             order_id="order-1",
             reference_movement_id=reserve.movement_id,
-            previously_released=[release.movement_id],
+            previously_released=[release.reference_movement_id],
         )
 
 

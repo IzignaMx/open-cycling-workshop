@@ -526,6 +526,170 @@
         "title": "LoginResponse",
         "type": "object"
       },
+      "MovementCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MovementKind"
+          },
+          "movement_id": {
+            "title": "Movement Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "product_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "maximum": 2147483647.0,
+            "minimum": -2147483647.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "reference_movement_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Movement Id"
+          }
+        },
+        "required": [
+          "movement_id",
+          "product_id",
+          "kind",
+          "quantity"
+        ],
+        "title": "MovementCreateRequest",
+        "type": "object"
+      },
+      "MovementKind": {
+        "enum": [
+          "ADJUST",
+          "RESERVE",
+          "RELEASE",
+          "CONSUME"
+        ],
+        "title": "MovementKind",
+        "type": "string"
+      },
+      "MovementResponse": {
+        "properties": {
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MovementKind"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "movement_id": {
+            "title": "Movement Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "reference_movement_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Movement Id"
+          }
+        },
+        "required": [
+          "movement_id",
+          "product_id",
+          "organization_id",
+          "location_id",
+          "kind",
+          "quantity",
+          "order_id",
+          "reference_movement_id",
+          "actor_id",
+          "note",
+          "occurred_at"
+        ],
+        "title": "MovementResponse",
+        "type": "object"
+      },
       "MutationRequest": {
         "properties": {
           "base_version": {
@@ -699,6 +863,109 @@
           "action"
         ],
         "title": "OrderTransitionRequest",
+        "type": "object"
+      },
+      "ProductCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "location_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Location Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "sku": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Sku",
+            "type": "string"
+          },
+          "unit": {
+            "default": "pieza",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location_id",
+          "sku",
+          "name"
+        ],
+        "title": "ProductCreateRequest",
+        "type": "object"
+      },
+      "ProductResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "organization_id",
+          "location_id",
+          "sku",
+          "name",
+          "unit",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "ProductResponse",
         "type": "object"
       },
       "PushMutationsRequest": {
@@ -979,6 +1246,34 @@
           "version"
         ],
         "title": "ServiceOrderResponse",
+        "type": "object"
+      },
+      "StockResponse": {
+        "properties": {
+          "available_quantity": {
+            "title": "Available Quantity",
+            "type": "integer"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "organization_id",
+          "location_id",
+          "available_quantity"
+        ],
+        "title": "StockResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -1454,6 +1749,272 @@
         "summary": "List Customer Bicycles",
         "tags": [
           "bicycles"
+        ]
+      }
+    },
+    "/api/v1/inventory/movements": {
+      "post": {
+        "operationId": "create_movement_api_v1_inventory_movements_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovementCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Movement",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/products": {
+      "get": {
+        "operationId": "list_products_api_v1_inventory_products_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "location_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "title": "Location Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProductResponse"
+                  },
+                  "title": "Response List Products Api V1 Inventory Products Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Products",
+        "tags": [
+          "inventory"
+        ]
+      },
+      "post": {
+        "operationId": "create_product_api_v1_inventory_products_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Product",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/products/{product_id}/stock": {
+      "get": {
+        "operationId": "get_stock_api_v1_inventory_products__product_id__stock_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Stock",
+        "tags": [
+          "inventory"
         ]
       }
     },
