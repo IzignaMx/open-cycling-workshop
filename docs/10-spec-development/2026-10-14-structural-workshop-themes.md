@@ -2,7 +2,10 @@
 
 Status: `implemented_pending_evidence`.
 Branch: `feat/structural-workshop-themes`.
-Base: `98394826884020d9de2498cab551120087dd5334`.
+Original base: `98394826884020d9de2498cab551120087dd5334`.
+Reconciled base: `273bc8f06bb8c367660c0afd354f4f6c0ae6864d`, containing
+merged sync-test/runtime PRs #24/#25 and the still-unmerged authorization PR #26.
+This dependency is explicit; publication waits for the parent integration decision.
 
 ## Scope
 
@@ -38,13 +41,13 @@ contains the justified adaptations from the visual reference boards.
 - Adversarial red: two failing tests for unsafe object coercion and corrupt PNG
   body; both repaired and green afterward.
 - Focused model/repository/logo/contrast suite: 11 passed; session lifetime guard: 5 passed.
-- Full frontend core suite: 88 passed. Real/offline typechecks, repository-wide
+- Full frontend core suite on the reconciled base: 90 passed. Real/offline typechecks, repository-wide
   ESLint and Prettier, and production PWA build pass. Final aggregate qualification after review fixes: 21 passing checks, zero
-  failures, five environment blockers; 476 Python tests passed, 8 PostgreSQL
+  failures, five environment blockers; 558 Python tests passed, 9 live PostgreSQL
   tests skipped. Remaining blockers are PostgreSQL integration, Docker/psql
   availability, managed-policy browser navigation and the browser E2E database. No frozen-install claim: offline package metadata was unavailable,
   and preinstalled cached dependencies were reused without changing the lockfile.
-- Browser suite collection: 19 cases, including ten new structural-theme cases.
+- Browser suite collection on the reconciled base: 20 cases, including ten new structural-theme cases.
   Collection is not execution. Each desktop/touch case attaches a screenshot;
   touch cases also attach a 320px screenshot.
 - Independent review: reported boundary/focus/evidence findings fixed and re-reviewed;

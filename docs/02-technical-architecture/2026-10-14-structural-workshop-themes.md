@@ -1,7 +1,10 @@
 # ADR · Stable structural themes and local personal presentation
 
-Status: implemented pending hosted browser evidence and independent review.
-Date: 2026-10-14. Base: `98394826884020d9de2498cab551120087dd5334`.
+Status: implemented pending hosted browser evidence; independent static review completed.
+Date: 2026-10-14. Original base: `98394826884020d9de2498cab551120087dd5334`.
+Reconciliation includes runtime/sync-test PRs #24/#25 and authorization
+PR #26 at `273bc8f06bb8c367660c0afd354f4f6c0ae6864d`; the latter was
+not merged when this local reconciliation was prepared.
 
 ## Context
 

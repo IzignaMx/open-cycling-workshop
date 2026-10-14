@@ -508,6 +508,8 @@ sync_chaos_setup_barrier_2026_10_13:
 structural_workshop_themes_2026_10_14:
   status: implemented_pending_evidence
   branch: feat/structural-workshop-themes
+  reconciliation_base: 273bc8f06bb8c367660c0afd354f4f6c0ae6864d
+  dependency: pr26_authorization_pending_main_merge
   base: 98394826884020d9de2498cab551120087dd5334
   document: docs/10-spec-development/2026-10-14-structural-workshop-themes.md
   adr: docs/02-technical-architecture/2026-10-14-structural-workshop-themes.md
@@ -517,9 +519,9 @@ structural_workshop_themes_2026_10_14:
   shared_organization_branding: pending_not_implemented
   quote_offline_schema_reservation: v5
   focused_tests: 11_personalization_and_5_session_guard_passed
-  frontend_core_tests: 88_passed
+  frontend_core_tests: 90_passed
   local_qualification: partial_21_passed_zero_failures_5_environment_blockers
-  local_python_tests: 476_passed_8_postgresql_skips
+  local_python_tests: 558_passed_9_live_postgresql_skips
   static_and_pwa_build: passed
   browser_cases: 10_added_collected_not_executed_locally
   local_browser: blocked_managed_url_policy_respected
