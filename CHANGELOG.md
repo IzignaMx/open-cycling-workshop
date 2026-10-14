@@ -10,6 +10,11 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Added
 
+- Pure quote domain with immutable labor/part/tax/discount lines, integer-minor-unit
+  totals, explicit currency, deterministic rounding and scoped discount allocation.
+- Quote revisions preserve historical prices, totals and line data. Persistence,
+  authorization, API and offline quote editing remain future increments.
+
 - V0.2 Increment 2 Task 3: capability- and location-scoped inventory product
   creation/listing, derived stock reads, and server-authoritative movement API.
 - Required UUIDv7 movement IDs provide idempotent command replay. PostgreSQL
@@ -43,9 +48,15 @@ release versions follow the Engineering specification's SemVer policy.
   for the net available balance.
 - No historical ledger rows are rewritten or inferred. Quote-table migration
   remains future work and now uses the next revision, 0008.
-- Task 3 verification evidence is tracked in the draft PR and
+- Task 3 verification evidence is tracked in PR #22 and
   [execution status](docs/10-spec-development/execution-state.yaml).
   Physical Windows/Android and other manual V0.1 gates remain open.
+
+### Integration
+
+- PR #22 inventory API integrated on 2026-10-14 after fresh independent code review
+  and exact-head CI/Security/DCO. Quote Task 4 passed combined-tree CI
+  and independent review and was integrated through PR #23; no complete quote workflow or stable release is claimed.
 
 ### Local workshop MVP foundation (pending hosted qualification)
 
@@ -56,4 +67,4 @@ release versions follow the Engineering specification's SemVer policy.
 - Add snapshot-consistent PostgreSQL bundles, integrity manifests and guarded
   fresh-target restore; database-only evidence excludes browser queues and assets.
 - Local runtime and recovery qualification are tracked in the execution state; this is not a stable release or physical Raspberry qualification.
-- Inventory API PR #22 is merged; quote-domain PR #23 remains a separate pending proposal.
+- Inventory API PR #22 and quote-domain PR #23 are merged; full quote workflow remains future work.

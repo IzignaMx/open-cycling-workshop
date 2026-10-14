@@ -1,7 +1,7 @@
 # Local workshop MVP: delivery and acceptance plan
 
 Status: accepted implementation direction; implementation and qualification in progress.
-Date: 2026-10-14. Baseline: main `b1df504`; inventory PR #22 was merged on 2026-10-14; quote-domain PR #23 remains independently pending.
+Date: 2026-10-14. Baseline: main `b1df504`; inventory PR #22 and quote-domain PR #23 were merged on 2026-10-14.
 
 ## Product outcome and boundaries
 
@@ -12,7 +12,7 @@ An organization represents an independent business; locations represent its bran
 ## Coverage at baseline
 
 - Implemented: authentication and capability enforcement; customer, bicycle and service-order slices with offline queue/conflicts; product/ledger persistence; development Compose and backup wrapper.
-- Integrated: #22 inventory commands/derived stock. Pending review: #23 immutable quote domain. Neither provides the complete money-and-parts user journey.
+- Integrated: #22 inventory commands/derived stock and #23 immutable quote domain. Neither provides the complete money-and-parts user journey.
 - Specified, not implemented: user/role/location administration; supplier/purchase-order lifecycle; configurable BrandProfile and color schemes; complete server distribution.
 - Existing release gates remain: physical Windows/Android qualification, manual accessibility and operator recovery evidence.
 
@@ -39,7 +39,7 @@ Implement audited user creation/deactivation, capability bundles (Owner/Administ
 
 ## Increment C: complete money-and-parts vertical slice
 
-Review and integrate #22/#23 only with merge authorization; reconcile their overlapping documentation. Continue the existing Increment 2 plan: authorization evidence, migrations, sync fan-out, quote API, offline draft storage, quote editor/inventory panel, reservation lifecycle E2E, qualification. Financial and stock truth remain server authoritative; no offline stock promises.
+PR #22 and #23 are integrated with explicit owner approval. Continue the existing Increment 2 plan: authorization evidence, migrations, sync fan-out, quote API, offline draft storage, quote editor/inventory panel, reservation lifecycle E2E, qualification. Financial and stock truth remain server authoritative; no offline stock promises.
 
 ## Increment D: purchasing
 

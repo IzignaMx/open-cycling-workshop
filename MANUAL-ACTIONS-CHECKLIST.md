@@ -339,6 +339,16 @@ Add durable evidence below instead of editing completed checklist history away.
       Chromium policy block was respected. Physical-device qualification and
       TC-SYNC-003 server-restart evidence remain separate, unresolved gates.
 
+## 2026-10-13 · Quote domain Task 4
+
+- Quote arithmetic and immutable revisions have 106 focused tests passing locally;
+  [Task 4 evidence](docs/10-spec-development/2026-10-13-quote-domain.md) tracks final
+  qualification and hosted CI. This is a pure-domain increment, not a working
+  quote workflow or a qualified release.
+- No new operator action is required for the pure calculations. PostgreSQL,
+  browser, physical-device and other existing manual release gates remain open
+  where their own evidence is absent. Inventory API Task 3 was integrated through PR #22 on 2026-10-14.
+
 ## Inventory API · Migration 0007 operator boundary
 
 - If migration 0007 reports duplicate reservation finalizations, stop inventory

@@ -26,7 +26,7 @@ class Runner:
 def source_metadata() -> dict[str, object]:
     return {
         "postgres_version_num": 180004,
-        "schema_revisions": ["0006"],
+        "schema_revisions": backup._schema_heads(),
         "tables": [
             {"schema": "public", "name": "alembic_version", "rows": 1},
             {"schema": "public", "name": "customers", "rows": 2},
@@ -54,7 +54,7 @@ def bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_bundle_captures_snapshot_manifest_and_integrity(bundle: Path) -> None:
     manifest = json.loads((bundle / "manifest.json").read_text())
     assert manifest["format_version"] == 1
-    assert manifest["database"]["schema_revisions"] == ["0006"]
+    assert manifest["database"]["schema_revisions"] == backup._schema_heads()
     assert manifest["database"]["tables"][1]["rows"] == 2
     assert manifest["application"]["version"]
     assert manifest["scope"] == "postgresql-only"

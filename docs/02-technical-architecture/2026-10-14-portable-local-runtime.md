@@ -5,7 +5,7 @@ Status: accepted for implementation; qualification pending
 
 ## Context
 
-The owner prioritizes a complete workshop MVP running locally in Docker on a laptop and later a Raspberry server. The repository already specifies Docker Compose, PostgreSQL, Caddy, a PWA and amd64/arm64 distribution. Existing development Compose serves only backend components and contains development credentials. Inventory PR #22 is merged; quote PR #23 remains pending.
+The owner prioritizes a complete workshop MVP running locally in Docker on a laptop and later a Raspberry server. The repository already specifies Docker Compose, PostgreSQL, Caddy, a PWA and amd64/arm64 distribution. Existing development Compose serves only backend components and contains development credentials. Inventory PR #22 and quote PR #23 are merged.
 
 ## Decision
 

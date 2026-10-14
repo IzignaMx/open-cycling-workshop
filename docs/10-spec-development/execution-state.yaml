@@ -357,6 +357,24 @@ sync_pull_scope_integrity_2026_10_13:
   independent_review: no_code_defects_traceability_corrections_applied
   release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
 
+# Historical independent Task 4 checkpoint; see the later integration record.
+quote_domain_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-quote-domain.md
+  adr: docs/02-technical-architecture/2026-10-13-quote-arithmetic-and-history.md
+  plan: v02_increment_2_task_4
+  status: implemented_pending_evidence
+  requirements: [FR-SVC-007, FR-SVC-008, BR-004, NFR-009]
+  scope: pure_quote_domain_no_persistence_api_authorization_sync_or_ui
+  branch_base: b1df504bfd7d7050ee915df0bd43c55d19811a3f
+  focused_tests: 106_passed
+  python_tests: 282_passed_1_postgresql_skip
+  typecheck: mypy_passed_66_files
+  independent_review: no_implementation_defects_3000_independent_allocation_cases
+  local_qualification: partial_21_checks_passed_zero_failed_5_environment_blockers
+  hosted_ci_security_dco: see_draft_pr_for_exact_head_post_publication_evidence
+  package_versions: unchanged_development_baselines
+  release_gates: unchanged_physical_windows_android_and_manual_qualification_open
+
 inventory_api_2026_10_13:
   plan: docs/superpowers/plans/2026-09-01-v0.2-increment-2-budgets-inventory.md
   task: 3_inventory_api
@@ -373,19 +391,43 @@ inventory_api_2026_10_13:
   next_plan_task: 4_quote_domain_and_versioning
   release_gates: physical_windows_android_and_other_manual_v01_gates_unchanged
 
+inventory_quote_integration_2026_10_14:
+  inventory_pr: 22
+  inventory_main_merge: b1d3a5d4c06fc792488410c56794d1d42f6c99b1
+  inventory_review: https://github.com/IzignaMx/open-cycling-workshop/pull/22#issuecomment-6165122870
+  inventory_exact_head_ci: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38424747553
+  quote_pr: 23
+  reconciliation: documentation_only_preserves_both_domains
+  quote_combined_tree_local_python: 476_passed_8_postgresql_skips
+  quote_combined_tree_hosted_verification: 484_python_9_browser_27_qualification_passed
+  quote_main_merge: 98394826884020d9de2498cab551120087dd5334
+  quote_migration_reserved: 0008
+  release_gates: unchanged
+
 local_workshop_mvp_2026_10_14:
   status: implemented_pending_hosted_qualification
   baseline: b1df504bfd7d7050ee915df0bd43c55d19811a3f
   plan: docs/10-spec-development/2026-10-14-local-workshop-mvp.md
   adr: docs/02-technical-architecture/2026-10-14-portable-local-runtime.md
   scope: additive_local_compose_and_database_recovery
-  inventory_pr_merged: 22
-  pending_independent_prs: [23]
+  integrated_prs: [22, 23]
+  integration_base: 98394826884020d9de2498cab551120087dd5334
   next_slice: audited_user_role_location_administration
   hardware: raspberry_model_ram_storage_os_unknown
-  local_python_tests: 241_passed_2_live_postgresql_skips
+  local_python_tests: 541_passed_9_live_postgresql_skips
   frontend_core_tests: 74_passed
   local_qualification: 21_passed_0_failed_5_environment_blockers
   independent_review: complete_no_unresolved_findings_after_safety_fixes
   qualification: pending_combined_final_tree_and_hosted_runtime
   release: development_versions_retained_no_production_readiness_claim
+
+local_workshop_mvp_first_hosted_2026_10_14:
+  head: 26bdb9f4a8da71a1e5ab4b5ea54e089f3f70b638
+  run: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38543107957
+  artifact: 11883570934
+  synthetic_test_merge: 45a8bedde7502d06794465098693979d64c8834b
+  amd64_runtime: 11_passed_including_pwa_offline_pg_restore_restart_and_log_redaction
+  arm64_builds: platform_web_operations_passed_no_image_publication
+  physical_hardware: not_tested
+  later_integration: main_9839482_plus_current_schema_fixture_correction
+  final_exact_head_evidence: pending_pr_25_ci

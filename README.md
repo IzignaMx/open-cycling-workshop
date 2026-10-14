@@ -4,6 +4,14 @@ Open source, local-first, offline-first operating platform for bicycle workshops
 
 > Status: **V0.1 automated foundations have hosted evidence; physical Tier 1 qualification and manual reviews remain open. V0.2 Workshop Core increment 1 is complete; increment 2 adds inventory products/ledger and the scoped inventory API.** This repository is not a production release. See [changelog](CHANGELOG.md) and [execution status](docs/10-spec-development/execution-state.yaml) for implemented scope and verification limits.
 
+## V0.2 Increment 2 progress
+
+Task 4 adds the [pure quote domain](docs/10-spec-development/2026-10-13-quote-domain.md):
+integer-only labor/part/tax/discount calculations and immutable version history.
+Quote persistence, authorization, API, sync and UI remain unimplemented.
+Inventory API Task 3 was merged through PR #22 on 2026-10-14. See [Unreleased changes](CHANGELOG.md);
+development versions and existing physical/manual release gates are unchanged.
+
 ## Principles
 
 - Offline First and Local First
