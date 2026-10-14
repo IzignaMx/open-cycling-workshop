@@ -144,6 +144,30 @@ a separate login keyboard/busy-disabled journey, an unbroken refresh label and
 distinct forced-colors foreground/background. There are now 23 collected cases;
 the new tree still needs exact-head hosted execution and screenshot review.
 
+## Transition-aware browser assertion checkpoint
+
+Head `ac2be4827a270a872be2e6528b5699ca5d02b01b`, tested merge
+`779c9ac20152abe0eb9dfa998963f39a408de260`, matches tree
+`c9f8e4edd0a56a50970bb2eec5c51d28fd2d7316`. CI `38555698599` failed
+its direct browser run: 22/23 passed; Noche's new immediate computed-color
+assertion sampled a legitimate CSS transition before reaching the exact token.
+The first sample was `rgb(165, 199, 249)` instead of `rgb(166, 200, 250)`;
+the retry sampled foreground interpolation. The aggregate rerun passed all 23,
+but that does not erase the observed flake or the skipped sync-repeat gate.
+The correction uses normal web-first `toHaveCSS` assertions for the exact final
+foreground/background; login capture also waits for its exact focus-token outline
+color and requires the existing solid 2px outline. No product styles, timeout, color tolerance, geometry,
+font, focus or accessibility threshold is relaxed.
+
+Artifact `11890422559` contains the aggregate run's actual full-page desktop,
+tablet, 320px, settings, forced-colors and login captures. Its verified SHA-256 is
+`af050a319c9757183142d10361156c7f1cf1d78ec56d37ef48b452de36667c22`.
+Inspection confirms the restored shared buttons, unbroken refresh label and
+readable active high-contrast navigation in these captured states. A clean
+exact-head CI result remains pending. Runtime `38555698570` (artifact
+`11890561786`), Security and DCO passed on their first attempts for this head;
+the prior checkpoint's infrastructure retries remain historical evidence.
+
 ## Remaining work
 
 Shared organization/workshop branding, server persistence, permissioned editing

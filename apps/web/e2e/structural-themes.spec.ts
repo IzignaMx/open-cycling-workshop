@@ -235,9 +235,11 @@ async function assertSharedButtonPresentation(button: Locator, minimum = 44) {
     probe.remove()
     return result
   })
-  expect(appearance.background).toBe(appearance.expectedBackground)
-  expect(appearance.foreground).toBe(appearance.expectedForeground)
-  expect(appearance.background).not.toBe(appearance.foreground)
+  // Theme changes legitimately animate Button colors. Wait for exact resolved
+  // tokens with normal web-first assertions, rather than sample interpolation.
+  await expect(button).toHaveCSS('background-color', appearance.expectedBackground)
+  await expect(button).toHaveCSS('color', appearance.expectedForeground)
+  expect(appearance.expectedBackground).not.toBe(appearance.expectedForeground)
   expect(appearance.paddingX).toBeGreaterThanOrEqual(16)
   expect(appearance.paddingY).toBeGreaterThanOrEqual(8)
   expect(appearance.radius).toBeGreaterThanOrEqual(4)
@@ -641,6 +643,16 @@ test('shared login button keeps its production styling, keyboard focus and disab
     await expect(login).toBeFocused()
     expect(await login.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
     await expect(login).toHaveCSS('outline-style', 'solid')
+    await expect(login).toHaveCSS('outline-width', '2px')
+    const focusColor = await login.evaluate((element) => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--ocwp-color-focus)'
+      element.append(probe)
+      const color = getComputedStyle(probe).color
+      probe.remove()
+      return color
+    })
+    await expect(login).toHaveCSS('outline-color', focusColor)
     await attachScreenshot(page, info, 'login-shared-button-keyboard')
     await page.keyboard.press('Enter')
     const busy = page.getByRole('button', { name: 'Ingresando…', exact: true })
