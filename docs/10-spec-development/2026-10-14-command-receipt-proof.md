@@ -47,7 +47,20 @@ The authenticated actor is persisted separately from this digest. The client nei
 All IDs and names below are synthetic. The first input has timestamp `2026-10-14T12:30:00.123456+02:30`, negative zero in its payload, and nested combining/noncombining Unicode keys. Its canonical JSON after the prefix is:
 
 ```json
-{"base_version":null,"entity_id":"01929840-0000-7000-8000-000000000002","entity_type":"customer","location_id":"loc-1","mutation_id":"01929840-0000-7000-8000-000000000001","occurred_at":"2026-10-14T10:00:00.123456Z","operation":"create","organization_id":"org-1","payload":{"display_name":"Ána 🚲","ignored":[null,true,false,0,1.25,{"é":"é","é":"é"}]}}
+{
+  "base_version": null,
+  "entity_id": "01929840-0000-7000-8000-000000000002",
+  "entity_type": "customer",
+  "location_id": "loc-1",
+  "mutation_id": "01929840-0000-7000-8000-000000000001",
+  "occurred_at": "2026-10-14T10:00:00.123456Z",
+  "operation": "create",
+  "organization_id": "org-1",
+  "payload": {
+    "display_name": "Ána 🚲",
+    "ignored": [null, true, false, 0, 1.25, { "é": "é", "é": "é" }]
+  }
+}
 ```
 
 SHA-256: `2df7459256df801b5f752e17a6efb632daf13fd1bdd6cf7612b77a67cd432c42`.
@@ -55,7 +68,17 @@ SHA-256: `2df7459256df801b5f752e17a6efb632daf13fd1bdd6cf7612b77a67cd432c42`.
 The second vector fixes controls, array ordering, explicit base version and zero fractional timestamp:
 
 ```json
-{"base_version":0,"entity_id":"01929840-0000-7000-8000-000000000002","entity_type":"customer","location_id":"loc-1","mutation_id":"01929840-0000-7000-8000-000000000001","occurred_at":"2026-10-14T10:00:00.000000Z","operation":"update","organization_id":"org-1","payload":{"a":[1,2,3],"z":"\n\t\u0000"}}
+{
+  "base_version": 0,
+  "entity_id": "01929840-0000-7000-8000-000000000002",
+  "entity_type": "customer",
+  "location_id": "loc-1",
+  "mutation_id": "01929840-0000-7000-8000-000000000001",
+  "occurred_at": "2026-10-14T10:00:00.000000Z",
+  "operation": "update",
+  "organization_id": "org-1",
+  "payload": { "a": [1, 2, 3], "z": "\n\t\u0000" }
+}
 ```
 
 SHA-256: `bda4c6ebe1a5969752a5e0257a4a517900a4113bb77f0b86fc240add670b2d3e`.
