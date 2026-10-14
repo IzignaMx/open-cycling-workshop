@@ -10,6 +10,8 @@ from cycling_workshop.bicycles.domain import Bicycle
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
+from cycling_workshop.identity.cutover import WriteAdmission
+from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.service_orders.domain import (
     InvalidStateTransitionError,
     ServiceOrder,
@@ -62,19 +64,56 @@ class SyncService:
         service._fixture_only = True
         return service
 
-    def _require_context(self, context: SyncApplicationContext | None) -> None:
-        if not self._fixture_only and (
-            context is None
-            or context.admitted_session_id != id(self._session)
-            or not self._session.in_transaction()
-        ):
-            raise RuntimeError("sync application requires transaction-owned admission")
+    def _require_context(
+        self, mutation: MutationEnvelope, context: SyncApplicationContext | None
+    ) -> None:
         if context is not None and (
             not valid_actor(context.actor_id)
             or type(context.write_protocol) is not int
             or context.write_protocol not in (0, 1)
         ):
             raise RuntimeError("sync application context is invalid")
+        if self._fixture_only:
+            return
+        record = self._session.info.get("ocwp_write_admission")
+        transaction = self._session.get_transaction()
+        if (
+            context is None
+            or context.admitted_session_id != id(self._session)
+            or transaction is None
+            or not transaction.is_active
+            or not isinstance(record, tuple)
+            or len(record) != 3
+        ):
+            raise RuntimeError("sync application requires transaction-owned admission")
+        admitted_transaction, principal, admission = record
+        if (
+            admitted_transaction is not transaction
+            or not isinstance(principal, Principal)
+            or not isinstance(admission, WriteAdmission)
+            or context.actor_id != principal.user_id
+            or context.write_protocol != admission.protocol
+            or mutation.organization_id != principal.organization_id
+        ):
+            raise RuntimeError("sync application requires matching transaction-owned admission")
+        # The record comes from the actual org/actor barrier, not a caller-created
+        # context or an active Session alone. Preserve router authorization here
+        # too, so another internal caller cannot broaden the admitted authority.
+        admission.check_expiry(principal)
+        capability = {
+            "customer": "customers.write",
+            "bicycle": "bicycles.write",
+            "service_order": "orders.write",
+        }.get(mutation.entity_type)
+        if capability is None or mutation.operation not in ("create", "update"):
+            raise SyncConflict("unsupported mutation command")
+        for required in ("sync.push", capability):
+            authorize(
+                principal,
+                capability=required,
+                organization_id=mutation.organization_id,
+                location_id=mutation.location_id,
+            )
 
     @staticmethod
     def _incoming_digest(mutation: MutationEnvelope, context: SyncApplicationContext | None) -> str:
@@ -157,7 +196,7 @@ class SyncService:
     def apply(
         self, mutation: MutationEnvelope, *, context: SyncApplicationContext | None = None
     ) -> MutationResult:
-        self._require_context(context)
+        self._require_context(mutation, context)
         # Domain constructors may trim/collapse IDs. Reject ambiguous identity
         # strings before lookup or effects instead of storing a receipt that an
         # identical raw envelope cannot safely replay. Do not normalize aliases.

@@ -269,7 +269,9 @@ def test_normal_service_requires_transaction_owned_admission_but_fixture_path_is
         with session.begin():
             with pytest.raises(RuntimeError, match="transaction-owned"):
                 service.apply(mutation, context=replace(context, admitted_session_id=-1))
-            assert service.apply(mutation, context=context).status == "applied"
+            with pytest.raises(RuntimeError, match="transaction-owned"):
+                service.apply(mutation, context=context)
+        assert all(rows == [] for rows in _history(session).values())
 
 
 def test_receipt_result_contract_rejects_unknown_unbounded_error_codes() -> None:
@@ -283,3 +285,105 @@ def test_receipt_result_contract_rejects_unknown_unbounded_error_codes() -> None
             entity_id="synthetic",
             error_code="unbounded_unknown_code",
         )
+
+
+def _admit(session, *, capabilities=frozenset({"sync.push", "customers.write"}), protocol=1):
+    from datetime import UTC, datetime
+
+    from cycling_workshop.identity.cutover import WriteAdmission
+    from cycling_workshop.identity.domain import Principal
+    from cycling_workshop.identity.models import UserRecord
+    from cycling_workshop.sync.writes import lock_writer
+
+    if session.get(UserRecord, "actor") is None:
+        session.add(
+            UserRecord(
+                id="actor",
+                organization_id="org-1",
+                location_id="loc-1",
+                username="actor",
+                display_name="Synthetic actor",
+                password_hash="unused",
+                is_active=True,
+                session_version=1,
+                capabilities=sorted(capabilities),
+            )
+        )
+        session.commit()
+    principal = Principal(
+        "actor",
+        "org-1",
+        "loc-1",
+        capabilities,
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
+    )
+    # Exercise the real barrier and normal expiry checks; no fixture admission.
+    admission = WriteAdmission(protocol=protocol, enabled=True, tokens=None)
+    return lock_writer(session, principal, admission)
+
+
+def test_real_writer_admission_permits_bound_service_application_and_savepoints() -> None:
+    with build_session() as session:
+        _admit(session)
+        service = SyncService(session)
+        for mutation in (customer_create_mutation(), customer_create_mutation()):
+            with session.begin_nested():
+                context = replace(_context(mutation), admitted_session_id=id(session))
+                assert service.apply(mutation, context=context).status == "applied"
+        session.commit()
+        assert all(len(rows) == 2 for rows in _history(session).values())
+
+
+@pytest.mark.parametrize("end", ["commit", "rollback"])
+def test_completed_transaction_record_cannot_authorize_a_later_transaction(end: str) -> None:
+    with build_session() as session:
+        _admit(session)
+        old_record = session.info["ocwp_write_admission"]
+        getattr(session, end)()
+        mutation = customer_create_mutation()
+        with session.begin():
+            assert session.info["ocwp_write_admission"] is old_record
+            assert session.get_transaction() is not old_record[0]
+            with pytest.raises(RuntimeError, match="transaction-owned"):
+                SyncService(session).apply(
+                    mutation,
+                    context=replace(_context(mutation), admitted_session_id=id(session)),
+                )
+        assert all(rows == [] for rows in _history(session).values())
+
+
+@pytest.mark.parametrize("mismatch", ["actor", "protocol", "organization"])
+def test_admitted_service_cannot_substitute_actor_protocol_or_organization(mismatch: str) -> None:
+    with build_session() as session:
+        _admit(session)
+        mutation = customer_create_mutation()
+        context = replace(_context(mutation), admitted_session_id=id(session))
+        if mismatch == "actor":
+            context = replace(context, actor_id="different-actor")
+        elif mismatch == "protocol":
+            context = replace(context, write_protocol=0)
+        else:
+            mutation = replace(mutation, organization_id="org-2", location_id="loc-2")
+        with pytest.raises(RuntimeError, match="transaction-owned"):
+            SyncService(session).apply(mutation, context=context)
+        assert all(rows == [] for rows in _history(session).values())
+
+
+@pytest.mark.parametrize("denial", ["sync", "entity", "location"])
+def test_real_admitted_principal_still_requires_sync_entity_and_location_authority(
+    denial: str,
+) -> None:
+    with build_session() as session:
+        capabilities = {"sync.push", "customers.write"}
+        if denial == "sync":
+            capabilities.remove("sync.push")
+        elif denial == "entity":
+            capabilities.remove("customers.write")
+        _admit(session, capabilities=frozenset(capabilities))
+        mutation = customer_create_mutation()
+        if denial == "location":
+            mutation = replace(mutation, location_id="loc-2")
+        context = replace(_context(mutation), admitted_session_id=id(session))
+        with pytest.raises(PermissionError):
+            SyncService(session).apply(mutation, context=context)
+        assert all(rows == [] for rows in _history(session).values())
