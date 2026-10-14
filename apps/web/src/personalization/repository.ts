@@ -2,6 +2,7 @@ import {
   DEFAULT_PREFERENCES,
   preferenceScopeKey,
   validatePreferences,
+  validateLogoPreference,
   type PreferenceScope,
   type PresentationPreferences,
 } from './preferences.js'
@@ -81,18 +82,25 @@ export class PreferenceRepository {
       appearance === undefined ? DEFAULT_PREFERENCES : (appearance as PreferenceRecord).value
     const checked = validatePreferences(value)
     if (!checked.valid) return checked
-    const dataUrl = logo === undefined ? null : (logo as PreferenceRecord).value
-    if (dataUrl !== null && !isSafeStoredLogo(dataUrl)) return validatePreferences(null)
+    const checkedLogo =
+      logo === undefined
+        ? { logoMode: 'workshop' as const, logoDataUrl: null }
+        : validateLogoPreference((logo as PreferenceRecord).value)
+    if (!checkedLogo) return validatePreferences(null)
     return {
       valid: true,
-      preferences: { ...checked.preferences, logoDataUrl: dataUrl as string | null },
+      preferences: {
+        ...checked.preferences,
+        logoMode: checkedLogo.logoMode,
+        logoDataUrl: checkedLogo.logoDataUrl,
+      },
     }
   }
   async saveAppearance(
     scope: PreferenceScope,
     preferences: PresentationPreferences,
   ): Promise<void> {
-    const checked = validatePreferences({ ...preferences, logoDataUrl: null })
+    const checked = validatePreferences({ ...preferences, logoMode: 'workshop', logoDataUrl: null })
     if (!checked.valid) throw new Error('La preferencia visual es inválida.')
     await this.write(scope, {
       organizationId: scope.organizationId,
@@ -110,7 +118,16 @@ export class PreferenceRepository {
       ...scope,
       kind: 'logo',
       key: preferenceScopeKey(scope, 'logo'),
-      value: logoDataUrl,
+      value: { schemaVersion: 2, logoMode: logoDataUrl === null ? 'none' : 'local', logoDataUrl },
+    })
+  }
+  async saveLogoMode(scope: PreferenceScope, mode: 'workshop' | 'none'): Promise<void> {
+    if (mode !== 'workshop' && mode !== 'none') throw new Error('El modo de logo es inválido.')
+    await this.write(scope, {
+      ...scope,
+      kind: 'logo',
+      key: preferenceScopeKey(scope, 'logo'),
+      value: { schemaVersion: 2, logoMode: mode, logoDataUrl: null },
     })
   }
 }
