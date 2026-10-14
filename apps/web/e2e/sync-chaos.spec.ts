@@ -136,7 +136,18 @@ test('temporary server failure retries with backoff and converges', async ({ pag
     attempts.push({ body: route.request().postData()!, at: Date.now() })
     if (failures < 2) {
       failures += 1
-      await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+      await route.fulfill({
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+        json: {
+          error: {
+            code: 'temporary_unavailable',
+            message: 'Synthetic temporary server failure',
+            details: {},
+            request_id: 'synthetic-transient-failure',
+          },
+        },
+      })
     } else await route.continue()
   })
   const original = await createCustomer(page, `Cliente Caos 503 ${crypto.randomUUID()}`)

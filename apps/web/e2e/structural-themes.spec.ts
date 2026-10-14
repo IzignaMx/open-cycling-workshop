@@ -389,7 +389,7 @@ test("same-workshop restricted user cannot render another reader's cached data o
   ])
   await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
   await page.context().setOffline(false)
-  await login(page, restricted)
+  await login(page, restricted, undefined, 'local-only')
   await openSettings(page)
   for (const theme of THEMES) {
     await page.getByRole('radio', { name: new RegExp(theme.label) }).check()

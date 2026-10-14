@@ -151,7 +151,12 @@ export async function waitForReady(page: Page) {
     .toBe(true)
 }
 
-export async function login(page: Page, identity: WorkshopIdentity | string, workshop?: string) {
+export async function login(
+  page: Page,
+  identity: WorkshopIdentity | string,
+  workshop?: string,
+  syncExpectation: 'synced' | 'local-only' = 'synced',
+) {
   const username = typeof identity === 'string' ? identity : identity.username
   await page.goto('/')
   await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
@@ -173,7 +178,18 @@ export async function login(page: Page, identity: WorkshopIdentity | string, wor
     expect(snapshot.context.accountLocationId).toBe(identity.locationId)
     if (identity.locationId) expect(snapshot.context.selectedLocationId).toBe(identity.locationId)
   }
-  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+  if (syncExpectation === 'local-only') {
+    // This explicit exception proves the restricted account, not a relaxed sync barrier.
+    expect(snapshot.context.capabilities).not.toContain('sync.push')
+    expect(
+      ['customers', 'bicycles', 'orders'].some(
+        (entity) =>
+          snapshot.context.capabilities.includes(`${entity}.write`) &&
+          !snapshot.context.capabilities.includes(`${entity}.read`),
+      ),
+    ).toBe(true)
+    await expect(page.getByLabel('Estado de sincronización')).toContainText('Guardado localmente')
+  } else await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
 }
 
 export async function sessionToken(page: Page): Promise<string> {

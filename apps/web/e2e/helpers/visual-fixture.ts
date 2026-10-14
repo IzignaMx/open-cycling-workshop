@@ -122,5 +122,6 @@ export async function addScopedVisualUser(
     },
   })
   expect(response.status(), await response.text()).toBe(201)
-  return username
+  const userId = ((await response.json()) as { user_id: string }).user_id
+  return { username, userId, locationId }
 }

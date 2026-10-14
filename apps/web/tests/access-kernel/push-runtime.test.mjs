@@ -233,3 +233,70 @@ test('transport rejects ticket epoch or incarnation mismatches before any HTTP',
   )
   assert.equal(calls, 0)
 })
+
+for (const scenario of [
+  { name: 'closed private 503', malformed: false, private: true, retryable: true },
+  { name: '503 with malformed body', malformed: true, private: true, retryable: false },
+  { name: '503 without no-store', malformed: false, private: false, retryable: false },
+]) {
+  test(`${scenario.name} preserves the captured batch and uses the exact retry/hold class`, async () => {
+    const original = structuredClone(batch)
+    let deferred,
+      disabled = 0,
+      acknowledged = 0,
+      requests = 0
+    const transport = createPushTransport({
+      apiRealm: context.principal.apiRealm,
+      now: () => Date.parse(context.verifiedAt),
+      fetch: async () => {
+        requests++
+        const r = response(
+          scenario.malformed
+            ? {}
+            : {
+                error: {
+                  code: 'temporary_unavailable',
+                  message: 'Synthetic temporary server failure',
+                  details: {},
+                  request_id: 'synthetic-transient-failure',
+                },
+              },
+          503,
+        )
+        if (!scenario.private) r.headers.delete('cache-control')
+        return r
+      },
+    })
+    const coordinator = createPushCoordinator({
+      transport,
+      kernel: {
+        async listDispatchable() {
+          return batch
+        },
+        async applyPushResult() {
+          acknowledged++
+        },
+        async deferDispatch(t, b, reason, current) {
+          assert.ok(current())
+          assert.deepEqual(t, ticket)
+          assert.deepEqual(b, original)
+          deferred = reason
+        },
+        disableBaselineSession(t, current) {
+          assert.ok(current())
+          assert.deepEqual(t, ticket)
+          disabled++
+        },
+      },
+    })
+    assert.deepEqual(await coordinator.step(source()), {
+      state: scenario.retryable ? 'RETRY_LATER' : 'HELD',
+      reason: scenario.retryable ? 'temporary_unavailable' : 'invalid_response',
+    })
+    assert.equal(deferred, scenario.retryable ? 'transient' : 'integrity')
+    assert.equal(disabled, scenario.retryable ? 0 : 1)
+    assert.equal(acknowledged, 0)
+    assert.equal(requests, 1)
+    assert.deepEqual(batch, original)
+  })
+}

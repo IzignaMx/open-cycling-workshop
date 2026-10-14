@@ -7,7 +7,7 @@ import {
 } from './authenticated-workshop.js'
 
 export async function fillIntake(page: Page, customerId: string, problem: string, bicycle = true) {
-  const select = page.getByLabel('Cliente', { exact: true })
+  const select = page.getByRole('combobox', { name: 'Cliente', exact: true })
   while (!(await select.locator(`option[value="${customerId}"]`).count())) {
     const previous = await select.textContent()
     await page.getByRole('button', { name: 'Más clientes', exact: true }).click()
@@ -19,7 +19,7 @@ export async function fillIntake(page: Page, customerId: string, problem: string
   await page.getByLabel('Problema reportado').fill(problem)
   await page.getByLabel('Condición al recibir').fill('Manubrio rayado')
   await page.getByLabel('Accesorios', { exact: true }).fill('Canasto')
-  await page.getByLabel('Prioridad', { exact: true }).selectOption('high')
+  await page.getByRole('combobox', { name: 'Prioridad', exact: true }).selectOption('high')
   if (bicycle) {
     await page.getByLabel('Agregar bicicleta').check()
     await page.getByLabel('Marca', { exact: true }).fill('Trek Marlin')
