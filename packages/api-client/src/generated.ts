@@ -96,6 +96,32 @@ export interface LoginResponse {
   token_type?: string
 }
 
+export interface MovementCreateRequest {
+  kind: MovementKind
+  movement_id: string
+  note?: string | null
+  order_id?: string | null
+  product_id: string
+  quantity: number
+  reference_movement_id?: string | null
+}
+
+export type MovementKind = "ADJUST" | "RESERVE" | "RELEASE" | "CONSUME"
+
+export interface MovementResponse {
+  actor_id: string
+  kind: MovementKind
+  location_id: string
+  movement_id: string
+  note: string | null
+  occurred_at: string
+  order_id: string | null
+  organization_id: string
+  product_id: string
+  quantity: number
+  reference_movement_id: string | null
+}
+
 export interface MutationRequest {
   base_version?: number | null
   entity_id: string
@@ -120,6 +146,26 @@ export interface MutationResultResponse {
 export interface OrderTransitionRequest {
   action: "start_diagnosis" | "authorize" | "reject" | "start_work" | "request_parts" | "resume_work" | "mark_ready" | "close" | "cancel"
   note?: string | null
+}
+
+export interface ProductCreateRequest {
+  location_id: string
+  name: string
+  product_id?: string | null
+  sku: string
+  unit?: string
+}
+
+export interface ProductResponse {
+  created_at: string
+  location_id: string
+  name: string
+  organization_id: string
+  product_id: string
+  sku: string
+  unit: string
+  updated_at: string
+  version: number
 }
 
 export interface PushMutationsRequest {
@@ -167,6 +213,13 @@ export interface ServiceOrderResponse {
   state: string
   updated_at: string
   version: number
+}
+
+export interface StockResponse {
+  available_quantity: number
+  location_id: string
+  organization_id: string
+  product_id: string
 }
 
 export interface ValidationError {

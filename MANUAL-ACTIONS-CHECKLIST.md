@@ -347,4 +347,17 @@ Add durable evidence below instead of editing completed checklist history away.
   quote workflow or a qualified release.
 - No new operator action is required for the pure calculations. PostgreSQL,
   browser, physical-device and other existing manual release gates remain open
-  where their own evidence is absent. Inventory API Task 3 is a separate draft.
+  where their own evidence is absent. Inventory API Task 3 was integrated through PR #22 on 2026-10-14.
+
+## Inventory API · Migration 0007 operator boundary
+
+- If migration 0007 reports duplicate reservation finalizations, stop inventory
+  writes, take a verified backup, and review the conflicting RELEASE/CONSUME
+  history before retrying. The migration deliberately blocks instead of
+  deleting or rewriting movements. Do not bypass the guard by removing rows.
+- Legacy standalone CONSUME entries are not automatically repaired: an existing
+  physical-issue ADJUST may be unlinked. Reconciliation needs operator evidence
+  and a reviewed history-preserving procedure.
+- See `docs/02-technical-architecture/2026-10-13-inventory-command-atomicity.md`.
+  This is a conditional operational boundary, not evidence that deployed data
+  contains duplicates. Existing physical-device qualification remains open.

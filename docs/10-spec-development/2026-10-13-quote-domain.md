@@ -9,7 +9,7 @@
 - Arithmetic decision: [quote arithmetic and history ADR](../02-technical-architecture/2026-10-13-quote-arithmetic-and-history.md).
 
 This is an independent pure-domain increment based on `b1df504`. The inventory
-API Task 3 remains a separate pending draft and is not a dependency of this
+API Task 3 was merged through PR #22 on 2026-10-14 and is not a dependency of this
 in-memory calculation. No quote persistence/migrations, REST/authorization,
 sync, UI or payment behavior is claimed. Tasks 5–12 remain open. Stable release
 versions and physical/manual qualification gates are unchanged.
@@ -50,4 +50,4 @@ CI is authorization to merge, tag or deploy it.
 Next dependent work must add authorization evidence, atomic revision persistence
 with optimistic concurrency, and transport validation before exposing quotes.
 Read current `main` and migration head before allocating any future migration;
-the parallel inventory work may add its own migration.
+inventory migration 0007 is present; the next quote-table migration is 0008.

@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +64,14 @@ class InventoryMovementRecord(Base):
             ["products.id", "products.organization_id"],
             name="fk_inventory_movement_product_tenant",
             ondelete="RESTRICT",
+        ),
+        Index(
+            "uq_inventory_reservation_finalization",
+            "organization_id",
+            "reference_movement_id",
+            unique=True,
+            postgresql_where=text("kind IN ('RELEASE', 'CONSUME')"),
+            sqlite_where=text("kind IN ('RELEASE', 'CONSUME')"),
         ),
         Index("ix_inventory_movements_product", "organization_id", "product_id"),
         Index("ix_inventory_movements_order", "organization_id", "order_id"),

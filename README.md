@@ -2,14 +2,14 @@
 
 Open source, local-first, offline-first operating platform for bicycle workshops, stores, cooperatives, fleets, and cycling-related service organizations.
 
-> Status: **V0.1 foundations proven (hosted CI/Security green, all automatable gates) · V0.2 Workshop Core increment 1 complete: bicycles + service orders with offline lifecycle, conflict convergence and E2E coverage · remaining: physical device qualification (Tier 1) and V0.1 manual reviews**. This repository is not yet a production release.
+> Status: **V0.1 automated foundations have hosted evidence; physical Tier 1 qualification and manual reviews remain open. V0.2 Workshop Core increment 1 is complete; increment 2 adds inventory products/ledger and the scoped inventory API.** This repository is not a production release. See [changelog](CHANGELOG.md) and [execution status](docs/10-spec-development/execution-state.yaml) for implemented scope and verification limits.
 
 ## V0.2 Increment 2 progress
 
 Task 4 adds the [pure quote domain](docs/10-spec-development/2026-10-13-quote-domain.md):
 integer-only labor/part/tax/discount calculations and immutable version history.
 Quote persistence, authorization, API, sync and UI remain unimplemented.
-Inventory API Task 3 is a separate pending draft. See [Unreleased changes](CHANGELOG.md);
+Inventory API Task 3 was merged through PR #22 on 2026-10-14. See [Unreleased changes](CHANGELOG.md);
 development versions and existing physical/manual release gates are unchanged.
 
 ## Principles
@@ -58,7 +58,12 @@ Run the locally available V0.1 verification suite:
 python scripts/ci/verify_v01.py --allow-blocked
 ```
 
-The verifier distinguishes failures from environment-dependent blockers. In this execution environment the Python suite, real Uvicorn HTTP smoke, TypeScript core tests, generated API client tests, fallback frontend typecheck, repository contract and OpenAPI drift checks can run. Frozen Python/TypeScript installs, Ruff, mypy, frontend checks and the production PWA build can run. Docker/PostgreSQL runtime and browser navigation remain unavailable or policy-blocked locally; runtime evidence is separately tracked in hosted CI. Physical qualification remains manual.
+The verifier distinguishes failures from environment-dependent blockers. Run it
+in the current environment and inspect its exact-commit report rather than
+assuming another machine's tools or evidence apply. Local PostgreSQL/Docker or
+browser navigation may be unavailable; unit/static/build checks do not replace
+those runtime gates. Hosted CI supplies PostgreSQL and production-PWA browser
+qualification, while physical-device and operator reviews remain separate.
 
 ## Development commands
 
