@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased · Structural personal themes
+
+- Four structural workshop layouts in Personalización: Banco de trabajo (default),
+  Plano técnico, Ritmo modular and Turno nocturno, with twelve curated palettes,
+  independent surface schemes and larger Workshop Mode controls.
+- Versioned personal preferences in an additive Dexie v4 store; appearance is
+  user/organization-local, and a safe offline raster logo also belongs to the
+  current location. Shared organization branding and sync are not implemented.
+- Shared forms/operations remain mounted during theme changes; order transition
+  controls consistently honor the existing orders.write capability.
+- Session-generation guards reject late view updates from a previous login or
+  scope, preserving current-user conflict/customer context.
+- Browser acceptance and screenshots are added; hosted/physical verification
+  remains pending until recorded for the exact implementation.
+
 Relevant changes for operators, developers and integrations. Development work
 below is unreleased; it does not declare V0.1 physically qualified or V1.0 ready.
 Core/API version identifiers retain the current development baseline until an

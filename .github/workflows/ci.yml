@@ -124,3 +124,12 @@ jobs:
           name: v0.1-qualification
           path: artifacts/v0.1-qualification.json
           if-no-files-found: error
+      - name: Upload browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-evidence-${{ github.sha }}
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          if-no-files-found: warn

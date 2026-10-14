@@ -386,3 +386,17 @@ These entries do not close existing physical/manual V0.1 gates or authorize depl
       DCO passed. The exact-three conflict assertions remain intact. Subsequent
       base/evidence reconciliation commits require their own exact-head CI;
       see the dedicated sync-chaos setup document and current PR #24 checks.
+
+## 2026-10-14 · Structural themes and personal presentation
+
+- [ ] Review hosted screenshots for Banco, Plano, Ritmo and Noche at desktop,
+      touch-tablet and 320px widths. Confirm the same data/actions remain
+      accessible and that layout changes are structural, not only palette swaps.
+- [ ] Run the existing physical Windows/Android and screen-reader protocols on
+      the four themes, including 200% zoom, glare and touch use. Numeric palette
+      checks and hosted Chromium/axe do not close these manual gates.
+- Local implementation evidence and exact hosted/review status are tracked in
+  `docs/10-spec-development/2026-10-14-structural-workshop-themes.md`.
+- Shared organization/workshop branding is still pending; the current logo is an
+  explicitly personal, device-local override. No operator should treat it as
+  organization-wide branding or assume cross-device synchronization.
