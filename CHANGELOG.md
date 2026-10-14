@@ -10,6 +10,11 @@ release versions follow the Engineering specification's SemVer policy.
 
 ### Added
 
+- Pure quote domain with immutable labor/part/tax/discount lines, integer-minor-unit
+  totals, explicit currency, deterministic rounding and scoped discount allocation.
+- Quote revisions preserve historical prices, totals and line data. Persistence,
+  authorization, API and offline quote editing remain future increments.
+
 - V0.2 Increment 2 Task 3: capability- and location-scoped inventory product
   creation/listing, derived stock reads, and server-authoritative movement API.
 - Required UUIDv7 movement IDs provide idempotent command replay. PostgreSQL
@@ -23,7 +28,8 @@ release versions follow the Engineering specification's SemVer policy.
 - Sync chaos setup now waits for durable baseline acknowledgement and proves the
   server baseline/version before constructing the three-operation conflict batch.
   A deterministic delayed-completion/ACK regression and retry-free CI repetitions
-  guard the setup race; hosted green evidence is tracked in draft PR #24.
+  guard the setup race. Hosted red-to-green evidence and ten retry-free
+  repetitions are recorded in draft PR #24.
 
 - Consumption now commits its hold finalization and physical stock deduction
   atomically through the API; consuming a reserved item cannot replenish stock.
@@ -48,6 +54,12 @@ release versions follow the Engineering specification's SemVer policy.
   for the net available balance.
 - No historical ledger rows are rewritten or inferred. Quote-table migration
   remains future work and now uses the next revision, 0008.
-- Task 3 verification evidence is tracked in the draft PR and
+- Task 3 verification evidence is tracked in PR #22 and
   [execution status](docs/10-spec-development/execution-state.yaml).
   Physical Windows/Android and other manual V0.1 gates remain open.
+
+### Integration
+
+- PR #22 inventory API integrated on 2026-10-14 after fresh independent code review
+  and exact-head CI/Security/DCO. Quote Task 4 remains subject to combined-tree CI
+  and review in PR #23; no complete quote workflow or stable release is claimed.

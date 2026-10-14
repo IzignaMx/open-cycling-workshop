@@ -357,6 +357,24 @@ sync_pull_scope_integrity_2026_10_13:
   independent_review: no_code_defects_traceability_corrections_applied
   release_gates: unchanged_physical_windows_android_and_other_manual_qualification_remain_open
 
+# Historical independent Task 4 checkpoint; see the later integration record.
+quote_domain_2026_10_13:
+  document: docs/10-spec-development/2026-10-13-quote-domain.md
+  adr: docs/02-technical-architecture/2026-10-13-quote-arithmetic-and-history.md
+  plan: v02_increment_2_task_4
+  status: implemented_pending_evidence
+  requirements: [FR-SVC-007, FR-SVC-008, BR-004, NFR-009]
+  scope: pure_quote_domain_no_persistence_api_authorization_sync_or_ui
+  branch_base: b1df504bfd7d7050ee915df0bd43c55d19811a3f
+  focused_tests: 106_passed
+  python_tests: 282_passed_1_postgresql_skip
+  typecheck: mypy_passed_66_files
+  independent_review: no_implementation_defects_3000_independent_allocation_cases
+  local_qualification: partial_21_checks_passed_zero_failed_5_environment_blockers
+  hosted_ci_security_dco: see_draft_pr_for_exact_head_post_publication_evidence
+  package_versions: unchanged_development_baselines
+  release_gates: unchanged_physical_windows_android_and_manual_qualification_open
+
 inventory_api_2026_10_13:
   plan: docs/superpowers/plans/2026-09-01-v0.2-increment-2-budgets-inventory.md
   task: 3_inventory_api
@@ -373,9 +391,21 @@ inventory_api_2026_10_13:
   next_plan_task: 4_quote_domain_and_versioning
   release_gates: physical_windows_android_and_other_manual_v01_gates_unchanged
 
+inventory_quote_integration_2026_10_14:
+  inventory_pr: 22
+  inventory_main_merge: b1d3a5d4c06fc792488410c56794d1d42f6c99b1
+  inventory_review: https://github.com/IzignaMx/open-cycling-workshop/pull/22#issuecomment-6165122870
+  inventory_exact_head_ci: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38424747553
+  quote_pr: 23
+  reconciliation: documentation_only_preserves_both_domains
+  quote_combined_tree_local_python: 476_passed_8_postgresql_skips
+  quote_combined_tree_hosted_verification: pending
+  quote_migration_reserved: 0008
+  release_gates: unchanged
+
 sync_chaos_setup_barrier_2026_10_13:
   document: docs/10-spec-development/2026-10-13-sync-chaos-setup-barrier.md
-  status: implemented_pending_evidence
+  status: verified
   incident_ci_run: 38426124042
   incident_job: 115395858982
   incident: qualification_repeat_expected_three_queued_mutations_received_four_retry_passed
@@ -391,8 +421,24 @@ sync_chaos_setup_barrier_2026_10_13:
   remote_update: require_matching_mutation_and_entity_applied_at_version_two
   repeat_gate: both_affected_journeys_five_times_each_zero_retries
   local_qualification: partial_21_pass_zero_fail_five_environment_blockers
-  local_python_tests: 370_pass_eight_postgresql_skips
+  local_python_tests: 476_pass_eight_postgresql_skips
   local_frontend_core_tests: 72_pass
   local_e2e_static: strict_typecheck_and_discovery_passed_not_browser_execution
-  hosted_green: pending
+  hosted_green_checkpoint:
+    head: 01f7c5e013655d23732e83eb6f71387e866ff925
+    tested_merge: 9c510a78503033ad38dd094d3a8149d13522177b
+    tree_equals_head: 7b3ea97007a2a5031048b0ad19e41a288c277b82
+    ci_run: 38542610878
+    job: 115780814286
+    initial_browser_suite: 10_passed_zero_flakes
+    retry_free_repeat_gate: 10_passed_five_each_zero_retries
+    qualification_browser_repeat: 10_passed_zero_flakes
+    qualification_artifact: 11883580431_passed_27_checks_zero_blockers
+    python_tests: 378_passed_zero_skips
+    security_run: 38542610839_passed
+    dco_run: 38542610803_passed
+  reconciliation_base: 98394826884020d9de2498cab551120087dd5334
+  reconciliation_scope: preserve_merged_inventory_pr22_quote_pr23_with_unchanged_sync_code
+  current_head_evidence: exact_head_ci_required_on_pr24_after_reconciliation
+  independent_review: no_defects_targeted_checks_independently_passed
   release_gates: unchanged

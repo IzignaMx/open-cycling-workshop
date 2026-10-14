@@ -77,10 +77,42 @@ browser schedules are covered. No assertion or timeout is weakened.
 - Added unique scenario names and a retry-free CI repeat gate.
 - Initial independent review validated the transaction hook and suggested unique
   names and specific rejection diagnostics; both suggestions are incorporated.
-- Status: implemented pending hosted green evidence; production code unchanged.
+- Status: the corrective setup is verified at the hosted green checkpoint below;
+  production code is unchanged. Later base/evidence commits still require their
+  own exact-head CI on PR #24.
 - Local corrected-tree qualification after integrating inventory main `b1d3a5d`:
   21 checks passed, zero failed, five environment blockers; Python 370 passed /
   eight PostgreSQL skips, frontend core 72 passed, API client one passed, static
   checks/contracts/typechecks/PWA build passed. Focused strict TypeScript compile
   of the E2E spec passed; both normal and repeat-gate test discovery passed.
-  Discovery is not execution. Hosted corrected-tree browser proof is pending.
+  Discovery is not execution; hosted runtime proof is recorded below.
+
+## Hosted green checkpoint · 2026-10-14
+
+- Head `01f7c5e013655d23732e83eb6f71387e866ff925`; tested synthetic merge
+  `9c510a78503033ad38dd094d3a8149d13522177b`. Both trees equal
+  `7b3ea97007a2a5031048b0ad19e41a288c277b82`.
+- CI run `38542610878`, job `115780814286`, passed. Initial browser suite:
+  10/10 passed in 26.5 s. Dedicated five-per-journey repeat gate: 10/10 passed in
+  17.9 s with zero retries. Qualification reran the full suite: 10/10 passed in
+  24.6 s. No flaky/retry classifications occurred in any of those runs.
+- Qualification artifact `11883580431`: passed, all 27 checks passed, zero
+  blockers. PostgreSQL Python suite: 378 passed, zero skips. Frontend core: 72;
+  API client: one. Security run `38542610839` and DCO run `38542610803` passed.
+- The code/CI correction received independent review with no defects. Targeted
+  lint/format, strict E2E TypeScript, normal discovery and exact repeat-gate
+  discovery were also independently run successfully.
+
+## Base reconciliation
+
+Inventory PR #22 and quote-domain PR #23 are now merged into main
+`98394826884020d9de2498cab551120087dd5334`. This branch preserves both changes and
+all their documentation. Its sync spec and CI repeat gate are unchanged from the
+verified checkpoint. Fresh reconciled local qualification passed 21 checks with
+zero failures and the same five environment blockers: Python 476 passed / eight
+PostgreSQL skips, frontend core 72, API client one. Strict E2E TypeScript also
+passed again. The local-runtime work in draft PR #25 is separate and is
+not imported here. No PR #24 merge or deployment is part of this increment.
+Current-head checks and artifact links on PR #24 must be inspected after this
+base/evidence reconciliation; the checkpoint above remains historical evidence.
+Physical Windows/Android and other manual release gates remain open.

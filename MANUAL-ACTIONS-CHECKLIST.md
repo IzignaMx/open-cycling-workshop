@@ -339,6 +339,16 @@ Add durable evidence below instead of editing completed checklist history away.
       Chromium policy block was respected. Physical-device qualification and
       TC-SYNC-003 server-restart evidence remain separate, unresolved gates.
 
+## 2026-10-13 · Quote domain Task 4
+
+- Quote arithmetic and immutable revisions have 106 focused tests passing locally;
+  [Task 4 evidence](docs/10-spec-development/2026-10-13-quote-domain.md) tracks final
+  qualification and hosted CI. This is a pure-domain increment, not a working
+  quote workflow or a qualified release.
+- No new operator action is required for the pure calculations. PostgreSQL,
+  browser, physical-device and other existing manual release gates remain open
+  where their own evidence is absent. Inventory API Task 3 was integrated through PR #22 on 2026-10-14.
+
 ## Inventory API · Migration 0007 operator boundary
 
 - If migration 0007 reports duplicate reservation finalizations, stop inventory
@@ -354,10 +364,12 @@ Add durable evidence below instead of editing completed checklist history away.
 
 ## 2026-10-14 · Sync chaos setup regression
 
-- [ ] Verify the corrected large-batch setup and deterministic regression on
-      hosted CI. Draft PR #24 red evidence is established: CI run 38541165450,
-      job 115775986709, diagnostic head 35118af. The original readiness helper
-      resolves while a real create remains queued. The fix preserves the exact
-      three-operation conflict scenario and adds five retry-free repetitions of
-      each affected journey. Green evidence remains pending; see the dedicated
-      sync-chaos setup document for the full incident and changelog.
+- [x] Verify the corrected large-batch setup and deterministic regression on
+      hosted CI. PR #24 red run 38541165450 reproduces the legacy readiness
+      helper resolving with a pending create. Green checkpoint 01f7c5e, run
+      38542610878, passed all ten browser journeys, ten retry-free repetitions
+      (five per affected journey), and a further ten-journey qualification pass.
+      Artifact 11883580431 passed all 27 checks with zero blockers. Security and
+      DCO passed. The exact-three conflict assertions remain intact. Subsequent
+      base/evidence reconciliation commits require their own exact-head CI;
+      see the dedicated sync-chaos setup document and current PR #24 checks.
