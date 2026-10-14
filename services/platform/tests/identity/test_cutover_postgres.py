@@ -300,3 +300,111 @@ def test_cross_organization_global_id_race_is_per_item_and_preserves_sibling(
         assert session.get(CustomerRecord, sibling["entity_id"]) is not None
         assert session.get(CustomerRecord, collision["entity_id"]) is None
         assert session.get(CustomerRecord, mutation.entity_id) is not None
+
+
+def test_restore_counter_collision_rotates_before_all_authenticated_paths(administration_postgres):
+    from cycling_workshop.identity.cutover_cli import recover_cutover
+
+    db = administration_postgres
+    db.app.state.settings = replace(db.app.state.settings, cutover_enabled=True)
+    actor = db.seed(location_id=db.location_id)
+    _floor(db, 1)
+    with db.factory.begin() as session:
+        user = session.get(UserRecord, actor)
+        assert user.session_version == 1  # Disposable logical backup at v1.
+        original_incarnation = session.get(
+            OrganizationRecord, db.organization_id
+        ).dataset_incarnation
+        user.session_version = 2
+    issued_after_backup = db.headers(actor)
+    current_context = db.request(
+        HttpCommand(
+            "GET",
+            f"/api/v1/auth/context?selected_location_id={db.location_id}",
+            issued_after_backup,
+        )
+    ).json()
+    old_start = db.request(
+        HttpCommand(
+            "POST",
+            "/api/v1/sync/baselines/start",
+            issued_after_backup,
+            {
+                "protocol": 1,
+                "selected_location_id": db.location_id,
+                "request_id": new_id(),
+                "authorization_epoch": current_context["authorization_epoch"],
+            },
+        )
+    )
+    assert old_start.status_code == 200, old_start.text
+    with db.factory.begin() as session:
+        session.get(UserRecord, actor).session_version = 1  # Logical restore of saved counter.
+    maintenance_settings = replace(
+        db.app.state.settings, database_url=db.engine.url.render_as_string(hide_password=False)
+    )
+    recovered = recover_cutover(
+        maintenance_settings,
+        organization_id=db.organization_id,
+        expected_incarnation=original_incarnation,
+    )
+    assert recovered["dataset_incarnation"] != original_incarnation
+    with db.factory.begin() as session:
+        assert session.get(UserRecord, actor).session_version == 1
+        # A later normal revocation reaches v2 again; old v2 token must stay invalid.
+        session.get(UserRecord, actor).session_version = 2
+    old_headers = {**issued_after_backup, "X-OCWP-Write-Protocol": "1"}
+    for path in (
+        "/api/v1/auth/me",
+        f"/api/v1/auth/context?selected_location_id={db.location_id}",
+        "/api/v1/sync/changes",
+        "/api/v1/admin/users",
+        f"/api/v1/inventory/products?location_id={db.location_id}",
+    ):
+        assert db.request(HttpCommand("GET", path, old_headers)).status_code == 401
+    refused_commands = [
+        _customer(db, old_headers),
+        HttpCommand("POST", "/api/v1/auth/logout-all", old_headers),
+        HttpCommand(
+            "POST",
+            "/api/v1/sync/baselines/page",
+            old_headers,
+            {"protocol": 1, "continuation": old_start.json()["continuation"]},
+        ),
+    ]
+    for command in refused_commands:
+        assert db.request(command).status_code == 401
+    fresh = db.headers(actor)
+    assert db.request(HttpCommand("GET", "/api/v1/auth/me", fresh)).status_code == 200
+    stale_family = db.request(
+        HttpCommand(
+            "POST",
+            "/api/v1/sync/baselines/page",
+            fresh,
+            {
+                "protocol": 1,
+                "continuation": old_start.json()["continuation"],
+            },
+        )
+    )
+    assert stale_family.status_code == 409
+    context = db.request(
+        HttpCommand("GET", f"/api/v1/auth/context?selected_location_id={db.location_id}", fresh)
+    ).json()
+    assert context["dataset_incarnation"] == recovered["dataset_incarnation"]
+    assert (
+        db.request(
+            HttpCommand(
+                "POST",
+                "/api/v1/sync/baselines/start",
+                fresh,
+                {
+                    "protocol": 1,
+                    "selected_location_id": db.location_id,
+                    "request_id": new_id(),
+                    "authorization_epoch": context["authorization_epoch"],
+                },
+            )
+        ).status_code
+        == 200
+    )

@@ -723,3 +723,24 @@ production activation is authorized or performed by this source increment. See
   unchanged. The narrow no-store correction does not qualify an administration
   UI or erase any stored client data. See the
   [scope and evidence](docs/10-spec-development/2026-10-14-inventory-authority-barrier.md).
+
+## 2026-10-14 · Server cutover B qualification
+
+- [ ] Obtain exact integrated-head PostgreSQL artifacts for forward migration and
+      unconditional downgrade refusal, two-process organization-barrier ordering,
+      cross-org receipt collision/savepoint preservation, operator CAS/rollback
+      and restored-counter collision. Local skips and SQLite are not PG evidence.
+- [ ] Obtain native Chromium evidence for the separate genuinely enabled floor1
+      ordinary adapter/coordinator case, retaining the real floor0/null refusal.
+- [ ] Complete C production integration and exact old-bundle/service-worker
+      queue preservation before claiming the authenticated production workflow.
+      Production App remains v4; no real activation has occurred.
+- [ ] For any separately authorized installation: preserve pending journals and
+      verified backup, drain/replace every pre-B writer, migrate forward, opt in
+      explicitly, and rotate incarnation on isolated restored targets before
+      reopening API/edge. Never lower the floor or increment restored counters
+      as a substitute for incarnation invalidation.
+
+See [server scope/evidence](docs/10-spec-development/2026-10-14-server-cutover-contract.md)
+and [operator procedure](docs/07-operations/2026-10-14-server-cutover.md). Physical
+device, screen-reader, real restore and broader product-scope gates are unchanged.
