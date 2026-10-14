@@ -58,7 +58,7 @@ export class IncrementalTransactions {
       control.generation !== ticket.deviceGeneration ||
       control.tabAttemptId !== ticket.tabAttemptId ||
       control.activePartitionId !== ticket.partitionId ||
-      !['READY', 'OFFLINE_READY', 'HELD'].includes(control.state) ||
+      control.state !== 'READY' ||
       partition.status !== 'active' ||
       !partition.baselineComplete ||
       partition.principalKey !== ticket.principalKey ||
@@ -251,7 +251,9 @@ export class IncrementalTransactions {
       const observedAt = this.now()
       await this.db.deviceControl.put({
         ...control,
-        state: reason === 'invalid_session' ? 'LOCKED' : 'HELD',
+        // Transient pull backoff owns only its metadata. It must neither grant
+        // online authority nor overwrite an independent push/session hold.
+        state: reason === 'invalid_session' ? 'LOCKED' : retryAt === null ? 'HELD' : 'READY',
         dispatchAttemptId: null,
         observedAt,
       })

@@ -409,3 +409,32 @@ for (const [name, corrupt] of [
     corrupt(p.incremental)
     assert.equal(completedBaseline(p, context), false)
   })
+
+for (const state of ['OFFLINE_READY', 'HELD']) {
+  test(`delta cannot admit ${state} or erase its independent authority fence`, async (t) => {
+    const f = await setup(t)
+    const expected = (await f.store.pending(ticket)).incremental.next
+    await f.db.deviceControl.update('device', { state })
+    const before = await f.db.cachePartitions.get('partition')
+    await assert.rejects(f.store.pending(ticket), /fenced/)
+    await assert.rejects(f.store.commit(ticket, expected, page(), identity), /fenced/)
+    await assert.rejects(f.store.hold(ticket, expected, 'network_error', NOW), /fenced/)
+    await assert.rejects(f.store.retry(ticket, expected), /fenced/)
+    assert.equal((await f.db.deviceControl.get('device')).state, state)
+    assert.deepEqual(await f.db.cachePartitions.get('partition'), before)
+  })
+}
+test('temporary delta backoff remains owned by metadata and cannot clear a later push hold', async (t) => {
+  const f = await setup(t)
+  const expected = (await f.store.pending(ticket)).incremental.next
+  await f.store.hold(ticket, expected, 'network_error', NOW)
+  assert.equal((await f.db.deviceControl.get('device')).state, 'READY')
+  assert.equal((await f.store.pending(ticket)).incremental.hold.reason, 'network_error')
+  await f.db.deviceControl.update('device', { state: 'HELD' })
+  await assert.rejects(f.store.retry(ticket, expected), /fenced/)
+  assert.equal((await f.db.deviceControl.get('device')).state, 'HELD')
+  assert.equal(
+    (await f.db.cachePartitions.get('partition')).incremental.hold.reason,
+    'network_error',
+  )
+})

@@ -170,7 +170,7 @@ test('equivalent verification and offline resume rebind incremental owner but pr
     resumed.ticket,
   )
   assert.equal(
-    (await reload.pendingIncremental(resumed.ticket)).incremental.initialCheckpoint,
+    (await db.cachePartitions.get(resumed.ticket.partitionId)).incremental.initialCheckpoint,
     original.baseline.checkpoint,
   )
 })
