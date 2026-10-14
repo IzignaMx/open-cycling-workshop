@@ -3,6 +3,31 @@ import test from 'node:test'
 import { AdministrationHttpError } from '../../.tmp-administration/src/features/administration/transport.js'
 import { AdministrationController } from '../../.tmp-administration/src/features/administration/controller.js'
 
+const legacy = [
+  'customers.read',
+  'customers.write',
+  'bicycles.read',
+  'bicycles.write',
+  'orders.read',
+  'orders.write',
+  'inventory.read',
+  'inventory.write',
+  'sync.pull',
+  'sync.push',
+  'users.read',
+  'users.write',
+  'users.grants.write',
+  'users.sessions.revoke',
+  'users.credentials.reset',
+  'locations.read',
+  'locations.create',
+]
+const catalog = {
+  catalog_version: 2,
+  legacy_wildcard_capabilities: legacy,
+  capabilities: [...legacy, 'branding.read', 'branding.write'],
+  roles: [],
+}
 const actor = {
   user_id: 'actor',
   organization_id: 'org',
@@ -50,7 +75,7 @@ function setup(http = {}, user = actor) {
   }
   const transport = {
     users: async () => ({ items: [], next_cursor: null }),
-    roles: async () => ({ capabilities: [], roles: [] }),
+    roles: async () => catalog,
     locations: async () => ({ items: [], next_cursor: null }),
     ...http,
   }
@@ -306,10 +331,7 @@ const createInput = {
   password: 'synthetic-password',
 }
 async function writerSetup(http = {}) {
-  const env = setup(
-    { roles: async () => ({ capabilities: writer.capabilities, roles: [] }), ...http },
-    writer,
-  )
+  const env = setup({ roles: async () => catalog, ...http }, writer)
   await env.controller.loadCatalog()
   return env
 }
@@ -396,4 +418,21 @@ test('self closure and name rebind invalidation never produce form receipts', as
   const self = setup({ logoutAll: async () => {} })
   assert.equal(await self.controller.logoutAll(), undefined)
   self.controller.dispose()
+})
+
+test('programmatic role selections become explicit v2 grants before legacy transport', async () => {
+  let sent
+  const { controller } = await writerSetup({
+    roles: async () => ({ ...catalog, roles: [{ name: 'Viewer', capabilities: ['users.read'] }] }),
+    createUser: async (_source, input) => {
+      sent = input
+      return row
+    },
+  })
+  const input = { ...createInput }
+  delete input.capabilities
+  assert.equal(await controller.createUser({ ...input, role: 'Viewer' }), 'confirmed')
+  assert.deepEqual(sent.capabilities, ['users.read'])
+  assert.equal(Object.hasOwn(sent, 'role'), false)
+  controller.dispose()
 })

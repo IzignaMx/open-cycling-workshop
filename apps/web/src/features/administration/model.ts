@@ -1,3 +1,4 @@
+import { LEGACY_WILDCARD_CAPABILITIES } from '../../auth/capabilities.js'
 import type { SessionUserSnapshot } from '../../auth/session.js'
 import type {
   OwnerHint,
@@ -29,6 +30,15 @@ export function matchingRole(
 ): string | null {
   return catalog.roles.find((role) => sameGrants(grants, role.capabilities))?.name ?? null
 }
+export function catalogSemantics(catalog: RoleCatalogResponse | undefined): boolean {
+  return (
+    !!catalog &&
+    catalog.catalog_version === 2 &&
+    Array.isArray(catalog.legacy_wildcard_capabilities) &&
+    sameGrants(catalog.legacy_wildcard_capabilities, LEGACY_WILDCARD_CAPABILITIES) &&
+    LEGACY_WILDCARD_CAPABILITIES.every((grant) => catalog.capabilities.includes(grant))
+  )
+}
 export function hasCapability(
   actor: SessionUserSnapshot,
   capability: string,
@@ -36,12 +46,30 @@ export function hasCapability(
 ): boolean {
   return (
     actor.capabilities.includes(capability) ||
-    (actor.capabilities.includes('*') && !!catalog?.capabilities.includes(capability))
+    (actor.capabilities.includes('*') &&
+      LEGACY_WILDCARD_CAPABILITIES.includes(capability) &&
+      (!catalog || catalogSemantics(catalog)))
   )
 }
 function concrete(grants: readonly string[], catalog: RoleCatalogResponse): string[] | null {
-  if (grants.some((g) => g !== '*' && !catalog.capabilities.includes(g))) return null
-  return grants.includes('*') ? [...catalog.capabilities] : [...grants]
+  if (
+    !catalogSemantics(catalog) ||
+    grants.some((g) => g !== '*' && !catalog.capabilities.includes(g))
+  )
+    return null
+  return [
+    ...new Set([
+      ...grants.filter((g) => g !== '*'),
+      ...(grants.includes('*') ? LEGACY_WILDCARD_CAPABILITIES : []),
+    ]),
+  ]
+}
+function preservesAuthority(original: UserResponse, proposed: UserDraft): boolean {
+  return (
+    original.location_id === proposed.location_id &&
+    original.is_owner === proposed.is_owner &&
+    sameGrants(original.capabilities, proposed.capabilities)
+  )
 }
 export function canAdminister(
   actor: SessionUserSnapshot,
@@ -49,6 +77,7 @@ export function canAdminister(
   proposed: UserDraft,
   owner: OwnerHint,
   catalog: RoleCatalogResponse,
+  replacement = false,
 ): boolean {
   if (
     target.organization_id !== actor.organization_id ||
@@ -63,11 +92,17 @@ export function canAdminister(
   const own = concrete(actor.capabilities, catalog),
     old = concrete(target.capabilities, catalog),
     next = concrete(proposed.capabilities, catalog)
-  if (!own || !old || !next || proposed.capabilities.includes('*')) return false
+  const preserved = !replacement && preservesAuthority(target, proposed)
+  if (!own || !old || !next || (proposed.capabilities.includes('*') && !preserved)) return false
   return (
     [...old, ...next].every((g) => own.includes(g)) &&
     (!proposed.is_owner ||
-      (proposed.location_id === null && sameGrants(next, catalog.capabilities)))
+      (proposed.location_id === null &&
+        (sameGrants(next, catalog.capabilities) ||
+          (preserved &&
+            target.is_owner &&
+            target.location_id === null &&
+            LEGACY_WILDCARD_CAPABILITIES.every((grant) => old.includes(grant))))))
   )
 }
 export function ownerHintFromPage(
@@ -88,22 +123,39 @@ export function ownerHintFromPage(
     return 'unknown'
   return row.is_owner ? 'owner' : 'non-owner'
 }
-export function validateUserDraft(draft: UserDraft, catalog?: RoleCatalogResponse): string[] {
+export function validateUserDraft(
+  draft: UserDraft,
+  catalog?: RoleCatalogResponse,
+  original?: UserResponse,
+): string[] {
+  const preserved = !!original && preservesAuthority(original, draft)
   const fields: string[] = []
   if (!validText(draft.display_name.trim(), 200)) fields.push('display_name')
   if (draft.location_id !== null && !validText(draft.location_id, 36)) fields.push('location_id')
   if (
+    (catalog && !catalogSemantics(catalog)) ||
     draft.capabilities.length > 100 ||
     new Set(draft.capabilities).size !== draft.capabilities.length ||
     draft.capabilities.some(
-      (g) => !validText(g, 128) || g === '*' || (catalog && !catalog.capabilities.includes(g)),
+      (g) =>
+        !validText(g, 128) ||
+        (g === '*' ? !preserved : catalog && !catalog.capabilities.includes(g)),
     )
   )
     fields.push('capabilities')
   if (
     draft.is_owner &&
     (draft.location_id !== null ||
-      (catalog && !sameGrants(draft.capabilities, catalog.capabilities)))
+      (catalog &&
+        !sameGrants(draft.capabilities, catalog.capabilities) &&
+        !(
+          preserved &&
+          original?.is_owner &&
+          original.location_id === null &&
+          LEGACY_WILDCARD_CAPABILITIES.every(
+            (grant) => original.capabilities.includes(grant) || original.capabilities.includes('*'),
+          )
+        )))
   )
     fields.push('is_owner')
   return fields
@@ -116,7 +168,7 @@ export function minimalUserPatch(
   if (
     !Number.isSafeInteger(original.version) ||
     original.version < 1 ||
-    validateUserDraft(draft, catalog).length
+    validateUserDraft(draft, catalog, original).length
   )
     throw new Error('invalid_form')
   const patch: PatchUserRequest = { expected_version: original.version }

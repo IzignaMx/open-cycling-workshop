@@ -1,6 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createAdministrationTransport } from '../../.tmp-administration/src/features/administration/transport.js'
+const legacy = [
+  'customers.read',
+  'customers.write',
+  'bicycles.read',
+  'bicycles.write',
+  'orders.read',
+  'orders.write',
+  'inventory.read',
+  'inventory.write',
+  'sync.pull',
+  'sync.push',
+  'users.read',
+  'users.write',
+  'users.grants.write',
+  'users.sessions.revoke',
+  'users.credentials.reset',
+  'locations.read',
+  'locations.create',
+]
 const apiRealm = 'https://example.test/api/v1'
 const user = {
   user_id: 'a',
@@ -161,7 +180,9 @@ test('catalog validates concrete snapshots and accepts empty TechnicalAdmin', as
     apiRealm,
     fetch: async (url) =>
       response(url, {
-        capabilities: ['users.read'],
+        catalog_version: 2,
+        legacy_wildcard_capabilities: legacy,
+        capabilities: [...legacy, 'branding.read', 'branding.write'],
         roles: [{ name: 'TechnicalAdmin', capabilities: [] }],
       }),
   })
@@ -372,7 +393,12 @@ test('native fetch-compatible receiver is preserved for every connected administ
       if (this !== globalThis) throw new TypeError('Illegal invocation')
       calls.push(url)
       const value = url.endsWith('/admin/roles')
-        ? { capabilities: ['users.read'], roles: [{ name: 'TechnicalAdmin', capabilities: [] }] }
+        ? {
+            catalog_version: 2,
+            legacy_wildcard_capabilities: legacy,
+            capabilities: [...legacy, 'branding.read', 'branding.write'],
+            roles: [{ name: 'TechnicalAdmin', capabilities: [] }],
+          }
         : { items: [], next_cursor: null }
       return Promise.resolve(response(url, value, init.method === 'POST' ? 204 : 200))
     },
