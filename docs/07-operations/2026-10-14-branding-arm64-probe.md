@@ -2,9 +2,11 @@
 
 Status: initial and diagnostic hosted image builds succeeded, but both qualifying
 QEMU decoder attempts **failed** on their exact candidates below. A narrow worker
-startup/import correction now has native source/test evidence and awaits new
-exact-tree hosted execution. This executor has no Docker. Physical Raspberry, laptop/Docker Desktop and hostile worst-case
-qualification remain separate. Named-volume/recovery evidence belongs to its
+startup/import correction has native x86_64 source/test evidence and awaits new
+exact-tree hosted execution. A separate standard hosted native ARM64 job is now
+implemented with local control-flow tests; actual native ARM64 execution is still
+pending publication and runner availability. This executor has no Docker. Physical
+Raspberry, laptop/Docker Desktop and hostile worst-case qualification remain separate. Named-volume/recovery evidence belongs to its
 own runtime artifact and does not change this ARM failure.
 
 ## Execution and artifact boundary
@@ -54,7 +56,7 @@ This is explicitly `installed_worker_source_checked` evidence combined with a
 real decoder invocation, **not** a child kernel-limit observation or RSS measure.
 The real production timeout/kill/reap and memory-limit tests remain separate.
 
-Every report labels execution `qemu-emulated-linux-arm64` and records
+Every emulated-job report labels execution `qemu-emulated-linux-arm64` and records
 `physical_device_qualified: false`. Its single elapsed interval is an emulated
 smoke diagnostic, not a Raspberry timing, RSS or worst-case capacity benchmark.
 QEMU may need address-space overhead incompatible with the unchanged 128 MiB
@@ -234,3 +236,92 @@ Ruff/format, documentation formatting, repository contract and diff checks passe
 Independent review reran all 84 decoder/probe cases and verified unchanged ASTs
 for the five functions and all six admission/resource constants. Local source
 checks do not replace the still-required exact-tree QEMU run.
+
+## Separate standard hosted native ARM64 qualification
+
+The additional `arm64-native-decoder` job uses the literal standard hosted runner
+`ubuntu-24.04-arm`. Its job-level guard requires both
+`github.event.repository.private == false` and
+`toJSON(github.event.repository.private) == 'false'`. The serialization check is
+required because GitHub expressions loosely equate null and false: private,
+missing/null, numeric zero, a string `"false"` and other nonboolean metadata must
+all skip this job. There is no larger-runner/custom-label fallback, permission
+expansion, external account, registry publication or paid-runner opt-in. Queueing
+or unavailable capacity remains a pending gate rather than a reason to switch
+targets. Hosted execution and its actual scheduling are not proven locally.
+
+This is a separate qualification path. The existing QEMU matrix, defaults,
+image-build cache settings, diagnostic second child and failure artifacts remain
+unchanged. A native pass cannot change either historical QEMU failure or close
+the current emulated gate. No physical Raspberry, device performance or supported
+installation claim follows from a hosted native pass.
+
+Before building or launching a container, the shell independently checks the
+host `uname -m` equals `aarch64`, the host Python ELF machine equals 183,
+`RUNNER_ARCH` equals `ARM64`, and the Docker daemon architecture is `aarch64` or
+`arm64`. The guest does not infer these host facts from its own uname. They are
+recorded as `workflow_validated_host_inputs`; the in-container process/ELF,
+UID/GID, Python isolation, capabilities and no-new-privileges checks remain
+separate evidence.
+
+The job runs plain local `docker build --platform linux/arm64` with the same
+`infra/docker/platform.local.Dockerfile` and exact checkout source. It adds no
+build-push action, registry push, artifact, build-record or remote-cache upload.
+The built image ID and platform are inspected, and the native container runs by
+that immutable image ID rather than resolving its tag again. The installed worker
+SHA256 must match the worker obtained directly from `git show` at the checked-out
+commit in the host-side validation step; report commit
+and image ID must match the checkout and inspected image exactly. Failed early
+phases may omit facts not yet observed, but cannot satisfy a passing report.
+The final source digest therefore binds a passing installed worker to this
+checkout without mounting source over the installed application.
+
+The native container keeps the same hardened settings and production decoder
+invocation/limits described above. It performs one qualifying attempt, with no
+second diagnostic child, retry, warm-up or relaxed budget. A native refusal is
+`decoder_unavailable_on_native_arm64`, with original attempt timing/process
+observations when available, and a nonzero exit. Native reports use the explicit
+`native-linux-arm64` execution label and `native_elapsed_seconds`; every report
+still sets `physical_device_qualified: false`. Elapsed time is a single synthetic
+smoke observation, not a benchmark or worst-case capacity estimate.
+
+The job has a 20-minute ceiling; its qualification step has 18 minutes. The build
+has a 900-second TERM deadline plus five-second KILL escalation, container run
+30 seconds plus five seconds, and targeted cleanup 10 seconds plus five seconds.
+Cleanup names only this run/attempt's ephemeral container and removes its own
+temporary report. The production decoder remains at two wall/CPU seconds and
+128 MiB address space; outer orchestration limits do not enlarge those limits.
+
+Container stdout is captured privately, and build/container diagnostics are
+suppressed. A host-side validator reads at most 4,096 bytes and accepts only a
+report strictly smaller than that bound. It rejects malformed/deep JSON,
+duplicate keys, unknown fields, unexpected types, nonfinite/out-of-range numbers,
+wrong source/image/host facts, mismatched status and process exit, or incomplete
+passing evidence. A pass requires all schema fields, the matching source digest,
+exact pixel/canonical-output evidence and one successfully exited, reaped child.
+Missing or invalid process-exit evidence cannot be normalized into a valid
+failed report. Any rejected/missing report becomes only a fixed safe failure
+object; neither raw output nor exception text is used as a fallback. Only the
+validated bounded JSON (or fixed bounded failure) reaches the job log/summary.
+No image bytes, private files or separate native artifact are uploaded.
+
+### Local source evidence and remaining hosted gate
+
+The recovered first implementation passed 89 helper/mock tests. Additional
+observed RED/GREEN cases covered duplicate root/nested keys, missing or invalid
+process status and the cleanup KILL escalation. The expanded focused suite passes
+112 cases. It pins the entire public-only guard and standard runner rather than
+checking permissive substrings, and covers nonboolean/missing metadata,
+source/image/host/schema/size/status refusals and native failure without a second
+child. Ten hermetic shell scenarios execute the workflow script with synthetic
+identity and Docker commands: host/ELF/runner/daemon mismatch, build/inspect
+failure, raw/empty output, a valid failure and an exit/status disagreement. They
+verify bounded sanitized output, preserved nonzero exit and cleanup of only the
+named ephemeral container. These are shell/control-flow tests, not actual Docker
+or ARM execution.
+
+Tests use this worktree's isolated Python 3.13.5 virtual environment with Pillow
+12.3.0; shared dependency trees are unchanged. Actual installed-image native
+ARM64 evidence still requires publication, standard-runner scheduling and a new
+exact-tree hosted run. Preserve that run's URL/job, checked commit, image ID and
+worker SHA256 with its outcome before changing the qualification status.

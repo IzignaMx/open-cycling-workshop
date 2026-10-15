@@ -15,6 +15,7 @@ import hashlib
 import importlib.metadata
 import inspect
 import json
+import math
 import os
 import platform
 import re
@@ -30,6 +31,9 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+EMULATED = "qemu-emulated-linux-arm64"
+NATIVE = "native-linux-arm64"
+
 FAILURES = frozenset(
     (
         "image_identity",
@@ -40,6 +44,9 @@ FAILURES = frozenset(
         "decoder_limit_contract",
         "decoder_process_contract",
         "decoder_unavailable_under_emulation",
+        "decoder_unavailable_on_native_arm64",
+        "native_host_identity",
+        "native_report_invalid",
         "decoder_rejected_fixture",
         "canonical_output",
         "unexpected_probe_failure",
@@ -475,18 +482,41 @@ def runtime_identity() -> dict[str, object]:
     }
 
 
-def empty_report() -> dict[str, object]:
+def empty_report(execution: str = EMULATED) -> dict[str, object]:
     return {
         "schema_version": 1,
-        "execution": "qemu-emulated-linux-arm64",
+        "execution": execution if execution in (EMULATED, NATIVE) else EMULATED,
         "fixture": "synthetic-2x2-rgba-metadata-png",
         "physical_device_qualified": False,
     }
 
 
-def run_probe(commit: str, image_id: str, image_platform: str) -> dict[str, object]:
-    result = empty_report()
+def native_host_identity(host: tuple[str, ...] | None) -> dict[str, object]:
+    require(
+        host in (("aarch64", "183", "ARM64", "aarch64"), ("aarch64", "183", "ARM64", "arm64")),
+        "native_host_identity",
+    )
+    assert host is not None
+    return {
+        "evidence_basis": "workflow_validated_host_inputs",
+        "machine": "aarch64",
+        "python_elf_machine": 183,
+        "runner_arch": "ARM64",
+        "docker_arch": host[3],
+    }
+
+
+def run_probe(
+    commit: str,
+    image_id: str,
+    image_platform: str,
+    execution: str = EMULATED,
+    host: tuple[str, ...] | None = None,
+) -> dict[str, object]:
+    result = empty_report(execution)
     try:
+        require(execution in (EMULATED, NATIVE), "probe_arguments")
+        require(execution == NATIVE or host is None, "probe_arguments")
         require(
             re.fullmatch(r"[a-f0-9]{40}", commit) is not None
             and re.fullmatch(r"sha256:[a-f0-9]{64}", image_id) is not None
@@ -494,6 +524,8 @@ def run_probe(commit: str, image_id: str, image_platform: str) -> dict[str, obje
             "image_identity",
         )
         result.update(commit=commit, image_id=image_id, image_platform=image_platform)
+        if execution == NATIVE:
+            result["host"] = native_host_identity(host)
         result["runtime"] = runtime_identity()
         from cycling_workshop.branding import images
 
@@ -520,9 +552,14 @@ def run_probe(commit: str, image_id: str, image_platform: str) -> dict[str, obje
         except images.InvalidLogo:
             raise ProbeFailure("decoder_rejected_fixture") from None
         finally:
-            result["emulated_elapsed_seconds"] = round(time.monotonic() - started, 6)
+            elapsed_key = (
+                "native_elapsed_seconds" if execution == NATIVE else "emulated_elapsed_seconds"
+            )
+            result[elapsed_key] = round(time.monotonic() - started, 6)
             result["qualifying_attempt"] = witness.attempt_evidence()
         if unavailable:
+            if execution == NATIVE:
+                raise ProbeFailure("decoder_unavailable_on_native_arm64")
             try:
                 result["diagnostic"] = run_diagnostic(installed)
             except Exception:
@@ -560,14 +597,206 @@ def run_probe(commit: str, image_id: str, image_platform: str) -> dict[str, obje
     return result
 
 
+def validate_native_report(
+    raw: bytes,
+    exit_code: int,
+    commit: str,
+    image_id: str,
+    worker_sha256: str,
+    host: tuple[str, ...],
+) -> str:
+    """Host-side closed-schema filter; never forward arbitrary container stdout."""
+    require(0 < len(raw) < 4096, "native_report_invalid")
+
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            require(key not in result, "native_report_invalid")
+            result[key] = value
+        return result
+
+    try:
+        report = json.loads(raw, object_pairs_hook=unique_object)
+    except (ValueError, UnicodeError, RecursionError):
+        raise ProbeFailure("native_report_invalid") from None
+
+    def number(value: object) -> bool:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return False
+        return 0 <= value <= 3600 and math.isfinite(value)
+
+    def digest(value: object) -> bool:
+        return isinstance(value, str) and re.fullmatch(r"[a-f0-9]{64}", value) is not None
+
+    def matches(value: object, expected: Any) -> bool:
+        if callable(expected):
+            return bool(expected(value))
+        if isinstance(expected, dict):
+            return (
+                isinstance(value, dict)
+                and value.keys() == expected.keys()
+                and all(matches(value[key], template) for key, template in expected.items())
+            )
+        return type(value) is type(expected) and value == expected
+
+    base = empty_report(NATIVE) | {
+        "commit": commit,
+        "image_id": image_id,
+        "image_platform": "linux/arm64",
+    }
+    schema: dict[str, Any] = base | {
+        "host": native_host_identity(host),
+        "runtime": {
+            "machine": "aarch64",
+            "executable_elf_machine": 183,
+            "uid": 10001,
+            "gid": 10001,
+            "isolated_python": True,
+            "no_new_privileges": True,
+            "effective_capabilities": 0,
+            "python": lambda value: (
+                isinstance(value, str) and re.fullmatch(r"3\.13\.[0-9]{1,3}", value) is not None
+            ),
+        },
+        "pillow_version": "12.3.0",
+        "worker_source_sha256": worker_sha256,
+        "decoder_limits": {
+            "evidence_basis": "installed_worker_source_checked",
+            "address_space_bytes": 134217728,
+            "cpu_seconds": 2,
+            "wall_seconds": 2.0,
+            "output_file_bytes": 262144,
+            "core_bytes": 0,
+            "open_files": 32,
+        },
+        "native_elapsed_seconds": number,
+        "qualifying_attempt": {
+            "outcome": lambda value: (
+                value in ("parent_wall_timeout", "launch_failed", "child_exit", "not_observed")
+            ),
+            "children": lambda value: type(value) is int and value in (0, 1),
+            "spawn_seconds": number,
+            "exit_code": lambda value: (
+                value is None or (type(value) is int and -255 <= value <= 255)
+            ),
+            "child_reaped": lambda value: type(value) is bool,
+            "child_user_cpu_seconds": number,
+            "child_system_cpu_seconds": number,
+        },
+        "decoder_process": {
+            "children": 1,
+            "isolated_python": True,
+            "environment_path_only": True,
+            "close_fds": True,
+            "diagnostics_discarded": True,
+            "exit_code": 0,
+            "same_executable": True,
+        },
+        "canonical_output": {
+            "width": 2,
+            "height": 2,
+            "byte_count": lambda value: type(value) is int and 0 < value <= 262144,
+            "sha256": digest,
+            "metadata_removed": True,
+            "pixels_verified": True,
+            "chunks": ["IHDR", "IDAT", "IEND"],
+        },
+        "status": lambda value: value in ("passed", "failed"),
+        "failure": lambda value: (
+            isinstance(value, str) and value in FAILURES - {"decoder_unavailable_under_emulation"}
+        ),
+    }
+    require(
+        re.fullmatch(r"[a-f0-9]{40}", commit) is not None
+        and re.fullmatch(r"sha256:[a-f0-9]{64}", image_id) is not None
+        and digest(worker_sha256)
+        and type(exit_code) is int
+        and 0 <= exit_code <= 255
+        and isinstance(report, dict)
+        and base.keys() <= report.keys() <= schema.keys()
+        and all(matches(value, schema[key]) for key, value in report.items()),
+        "native_report_invalid",
+    )
+    passed = report.get("status") == "passed"
+    require(
+        (passed and exit_code == 0 and report.keys() == schema.keys() - {"failure"})
+        or (
+            not passed
+            and exit_code != 0
+            and report.get("status") == "failed"
+            and "failure" in report
+        ),
+        "native_report_invalid",
+    )
+    if passed:
+        require(
+            report["qualifying_attempt"]["outcome"] == "child_exit"
+            and report["qualifying_attempt"]["children"] == 1
+            and report["qualifying_attempt"]["exit_code"] == 0
+            and report["qualifying_attempt"]["child_reaped"] is True,
+            "native_report_invalid",
+        )
+    encoded = json.dumps(report, sort_keys=True, allow_nan=False)
+    require(len(encoded) < 4096, "native_report_invalid")
+    return encoded
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(add_help=False, exit_on_error=False, allow_abbrev=False)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--image-id", required=True)
     parser.add_argument("--image-platform", required=True)
+    parser.add_argument("--execution", default=EMULATED)
+    parser.add_argument("--host-machine")
+    parser.add_argument("--host-elf-machine")
+    parser.add_argument("--runner-arch")
+    parser.add_argument("--docker-arch")
+    parser.add_argument("--validate-native-report")
+    parser.add_argument("--probe-exit-code", type=int)
+    parser.add_argument("--worker-sha256")
     try:
         args = parser.parse_args()
-        result = run_probe(args.commit, args.image_id, args.image_platform)
+        host = (args.host_machine, args.host_elf_machine, args.runner_arch, args.docker_arch)
+        if args.validate_native_report is not None:
+            status = args.probe_exit_code
+            status = status if type(status) is int and 0 <= status <= 255 else 1
+            try:
+                require(
+                    args.execution == NATIVE
+                    and args.image_platform == "linux/arm64"
+                    and type(args.probe_exit_code) is int
+                    and 0 <= args.probe_exit_code <= 255,
+                    "native_report_invalid",
+                )
+                with Path(args.validate_native_report).open("rb") as report:
+                    encoded = validate_native_report(
+                        report.read(4096),
+                        status,
+                        args.commit,
+                        args.image_id,
+                        args.worker_sha256,
+                        host,
+                    )
+            except (OSError, ProbeFailure):
+                failure = empty_report(NATIVE)
+                failure.update(
+                    status="failed", failure="native_report_invalid", probe_exit_code=status
+                )
+                if re.fullmatch(r"[a-f0-9]{40}", args.commit) and re.fullmatch(
+                    r"sha256:[a-f0-9]{64}", args.image_id
+                ):
+                    failure.update(commit=args.commit, image_id=args.image_id)
+                encoded = json.dumps(failure, sort_keys=True)
+                status = status or 1
+            print(encoded)
+            return status
+        result = run_probe(
+            args.commit,
+            args.image_id,
+            args.image_platform,
+            args.execution,
+            host if any(value is not None for value in host) else None,
+        )
     except argparse.ArgumentError:
         result = empty_report()
         result.update(status="failed", failure="probe_arguments")

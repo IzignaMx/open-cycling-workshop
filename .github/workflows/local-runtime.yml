@@ -38,6 +38,59 @@ jobs:
           path: artifacts/local-runtime.json
           if-no-files-found: error
 
+  arm64-native-decoder:
+    if: github.event.repository.private == false && toJSON(github.event.repository.private) == 'false'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qualify installed decoder on standard native ARM64, never Raspberry hardware
+        timeout-minutes: 18
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail() {
+            printf '{"schema_version":1,"execution":"native-linux-arm64","physical_device_qualified":false,"status":"failed","failure":"%s"}\n' "$1" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit "${2:-1}"
+          }
+          host_machine="$(uname -m)"
+          host_elf="$(python3 -I -c 'import runpy, sys; p = runpy.run_path("scripts/ci/branding_image_probe.py"); print(p["elf_machine"](open(sys.executable, "rb").read(20)))' 2>/dev/null)" || fail native_host_identity
+          docker_arch="$(docker info --format '{{.Architecture}}' 2>/dev/null)" || fail native_host_identity
+          if [[ "$host_machine" != aarch64 || "$host_elf" != 183 || "${RUNNER_ARCH:-}" != ARM64 ]]; then
+            fail native_host_identity
+          fi
+          if [[ "$docker_arch" != aarch64 && "$docker_arch" != arm64 ]]; then
+            fail native_host_identity
+          fi
+          commit="$(git rev-parse HEAD)"
+          worker_sha="$(git show "$commit:services/platform/src/cycling_workshop/branding/images.py" | sha256sum | cut -d ' ' -f 1)"
+          image="ocwp-branding-native-arm64:$commit"
+          timeout --signal=TERM --kill-after=5s 900s docker build --platform linux/arm64 \
+            --file infra/docker/platform.local.Dockerfile --tag "$image" . \
+            >/dev/null 2>&1 || fail native_image_build_failed "$?"
+          image_id="$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null)" || fail native_image_identity
+          image_platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image" 2>/dev/null)" || fail native_image_identity
+          report="$(mktemp "$RUNNER_TEMP/branding-native.XXXXXX")"
+          container="ocwp-branding-native-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'status=$?; timeout --signal=TERM --kill-after=5s 10s docker rm --force "$container" >/dev/null 2>&1 || true; rm -f "$report"; exit "$status"' EXIT
+          status=0
+          timeout --signal=TERM --kill-after=5s 30s docker run --rm --name "$container" \
+            --pull never --platform linux/arm64 \
+            --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --init --entrypoint python -i "$image_id" -I - \
+            --commit "$commit" --image-id "$image_id" --image-platform "$image_platform" \
+            --execution native-linux-arm64 --host-machine "$host_machine" \
+            --host-elf-machine "$host_elf" --runner-arch "$RUNNER_ARCH" --docker-arch "$docker_arch" \
+            < scripts/ci/branding_image_probe.py > "$report" 2>/dev/null || status=$?
+          python3 -I scripts/ci/branding_image_probe.py \
+            --commit "$commit" --image-id "$image_id" --image-platform "$image_platform" \
+            --execution native-linux-arm64 --host-machine "$host_machine" \
+            --host-elf-machine "$host_elf" --runner-arch "$RUNNER_ARCH" --docker-arch "$docker_arch" \
+            --worker-sha256 "$worker_sha" --validate-native-report "$report" --probe-exit-code "$status" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
   arm64-build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
