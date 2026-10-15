@@ -11,7 +11,7 @@ refusal and unchanged retained rows; PostgreSQL requalification is pending.
 The runtime passed fresh migration and seven checks, then timed out after the
 intentional API stop/start, before any backup. It retained no container logs;
 the underlying cause remains unknown. A bounded diagnostic-only runner change
-now awaits combined independent review and fresh hosted evidence. Do not retry the failed
+has combined independent source review and still awaits fresh hosted evidence. Do not retry the failed
 candidate or infer downstream restore passes. See the
 [retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
 

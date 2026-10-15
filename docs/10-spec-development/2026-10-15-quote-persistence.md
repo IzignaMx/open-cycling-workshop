@@ -200,8 +200,10 @@ results or permission to rerun until green:
   IndexedDB execution lacked Chromium after its direct installation step was
   skipped. Browser artifact `11958975259`, SHA-256
   `acab74db0e1ace569e31aa166a57a1e01b80a5faf04dc5bf6567bbe012801fa1`,
-  retains 106 first/retry trace records explicitly reporting the missing
-  `chromium_headless_shell-1234` executable. Automatic workflow/browser retries
+  has 53 retained trace payloads explicitly reporting the missing
+  `chromium_headless_shell-1234` executable, each duplicated in the report
+  directory (106 matching artifact entries, not 106 distinct executions).
+  Automatic workflow/browser retries
   are retained as failures, not used to claim qualified browser journeys.
 
 The diagnostic-only follow-up touches the existing disposable runner, not the
@@ -248,5 +250,11 @@ explicit PostgreSQL skips**. These checks do not qualify PostgreSQL behavior.
 The combined quote/runtime/branding/Compose/repository suite passes **535 tests
 with 188 explicit skips and one dependency warning**; the skip reasons remain
 retained rather than counted as database qualification.
-The combined diagnostic/fixture checkpoint still needs independent final-source
-review and fresh exact-tree hosted evidence; original failures remain retained.
+The combined source checkpoint `989e128d9496c2bd36350b01f576bd9e97077429`
+has independent review with no remaining blocker: the reviewer reproduced
+535 passes/188 skips and separately passed 42 adversarial probes (30 strict
+exception/retention cases and 12 diagnostic cases). Those scopes are not added
+together as aggregate coverage. Fresh exact-tree hosted evidence is still
+required; original failures remain retained.
+Combined review report SHA-256:
+`eb21e3a6186f02f0f6a0ddcf834afab9adbac69ca2726213182d50955f486719`.

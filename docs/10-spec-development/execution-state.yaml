@@ -1419,7 +1419,7 @@ quote_runtime_failure_diagnostics:
   first_ci_direct_python: two_varchar_exception_assertion_failures_2944_passed_23_skipped
   first_ci_aggregate: 24_passed_two_failed_one_blocked
   first_ci_aggregate_python: same_two_failures_2944_passed_23_skipped
-  first_ci_browser: missing_chromium_after_skipped_installation_106_failed_launch_trace_records
+  first_ci_browser: missing_chromium_after_skipped_installation_53_traces_plus53_report_copies
   first_ci_restore: skipped_no_recovery_artifact
   change: bounded_redacted_readonly_generated_project_diagnostics_before_cleanup
   safeguards: first_failure_preserved_readiness_assertions_and_cleanup_unchanged
@@ -1437,6 +1437,8 @@ quote_postgresql_varchar_fixture_correction:
   local_affected_groups: 24_sqlite_passed_24_postgresql_skipped
   combined_local: 535_passed_188_explicit_skips_one_warning
   production_schema_models_repository: unchanged
-  combined_independent_review: pending
+  combined_independent_review: no_remaining_blocker_535_passed_188_skipped_plus42_separate_probes
+  reviewed_followup_source: 989e128d9496c2bd36350b01f576bd9e97077429
+  combined_review_sha256: eb21e3a6186f02f0f6a0ddcf834afab9adbac69ca2726213182d50955f486719
   hosted_postgresql_and_restore: pending
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
