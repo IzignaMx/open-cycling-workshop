@@ -55,3 +55,13 @@ raw logs and CA material are never uploaded or installed as system trust.
 Current local source tests and mocked adversarial checks pass. Actual execution
 is blocked here because Docker is unavailable; CI must execute both modes before
 this increment is qualified.
+
+On failure the runner retains bounded safe diagnostics before removing the
+container: fixed phase, last health status/error category, container status/exit/
+OOM fields and separate upstream/container/directory cleanup outcomes. Startup
+log hints are fixed categories collected only before private synthetic queries.
+Combined command output is capped at 64 KiB while reading; timeout/output overflow
+kills and reaps the command. Raw log/exception/request/environment text is not
+published. Diagnostic hints do not establish a root cause by themselves, and a
+failure or incomplete cleanup still exits nonzero. The readiness limit stays
+30 seconds; no diagnostic retry relaxes forwarding, TLS or privacy requirements.

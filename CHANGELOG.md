@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased · Preserve bounded edge-probe failure diagnostics
+
+- Retain PR42's first actual Caddy readiness failure with its cause unproven;
+  the 43-case PostgreSQL proof passed independently. Browser launch failures
+  cascaded from the skipped Chromium installation and are not product failures.
+- Bound runner subprocess output to 64 KiB and preserve safe phase, health and
+  container-state diagnostics. Startup-only log hints publish fixed categories,
+  never raw requests, headers, bodies, environment or exception text.
+- Preserve original failures separately from container/upstream/directory cleanup
+  failures; attempt remaining resource releases. Keep the 30-second readiness
+  limit, actual configurations, TLS and every forwarding/privacy assertion.
+- This is diagnostic tooling, not a speculative Caddy fix or completed runtime
+  qualification. The changed head still requires actual hosted edge/browser proof.
+
 ## Unreleased · Bounded connected inventory visibility
 
 - Add read-only catalog, ledger-derived available quantity and bounded live

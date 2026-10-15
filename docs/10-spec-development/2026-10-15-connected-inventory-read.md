@@ -185,3 +185,57 @@ enables and restores only that logger through pytest monkeypatch, matching the
 existing identity-test convention; every privacy/context assertion and production
 logging byte remains unchanged. The original failure and causal RED/GREEN logs
 are retained. Corrected-source integrated qualification is required.
+
+## First hosted PR42 result and bounded diagnostic follow-up · 2026-10-15
+
+[PR42](https://github.com/IzignaMx/open-cycling-workshop/pull/42) first source head
+`ced9a493c729d242ed86c3ec0731cc358504cf95` and GitHub test merge
+`dc524f22c087fadbd2989aa057d1a0102e7227b9` share exact tree
+`b08a8c5b8267c0b906841d6c93635236eadeebe5`; the synthetic merge retains actual
+main41 plus the published source head. [CI38686652539](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38686652539)
+passed 2,654 Python tests with 14 explicit skips and three warnings. Its dedicated
+PostgreSQL18 run passed all 43 cases without skips; source hashes and the measured
+plan digest were verified from artifact 11950563024.
+
+The actual lock budgets returned safe 503 at 2.016767/2.017138 seconds, the statement
+budget at 5.009781 seconds and total transaction budget at 8.008180 seconds after
+two individually completed three-second waits. Cleanup took 17.9–19.6ms, retained
+unchanged inventory and permitted a subsequent writer and committed revocation.
+On 20,001 products/100,000 movements, catalog/stock/newest/middle plans measured
+57.159/27.993/52.811/36.404ms. Catalog used an external disk sort and histories used
+top-N sorts after existing index scans: this proves the bounded synthetic fixture,
+not general production scalability, browser latency or physical-device performance.
+
+The Caddy runner then failed its original 30-second readiness assertion for the
+first configuration. Its artifact is `incomplete`, with zero completed cases;
+terminal output contains no startup cause. Preserve that failure as **cause
+unproven**. Subsequent direct browser preparation/install was skipped. The separate
+always-run aggregate retained **25 passed controls, one failed browser control and
+one blocked benchmark**: 80 browser journeys were unexecuted, with 159 BeforeHooks
+launch failures due to absent Chromium. These are setup failures, not evidence of
+80 product defects or executed journeys. No original pixels were qualified.
+
+The narrow diagnostic follow-up changes only the runner/tests/documentation. It
+caps combined subprocess output during reading at 64 KiB, reaps subprocesses on
+failure, and records fixed phase/health categories plus allowlisted container
+status, exit code and OOM flag. Before any private synthetic query, bounded startup
+logs may produce fixed error hints only. Raw logs, URI/query/header/body values,
+environment and arbitrary exception text are never written to the artifact.
+Original failures remain distinct from upstream/container/temporary-directory
+cleanup failures; cleanup failure still prevents success. Independent review
+reproduced a temporary-directory masking defect in the initial patch, corrected
+with observed RED/GREEN and separate resource-release checks.
+
+The actual production configs, 30-second readiness budget, forwarding checks,
+verified TLS and private-query assertions remain unchanged. Local diagnostic
+checks are not actual Caddy proof; exact changed-head hosted qualification and
+remaining native browser/pixel/physical/operator gates remain open.
+
+Final local diagnostic checks passed 29 focused cases without skips and the full
+operations suite with 474 passes, three explicit PostgreSQL recovery skips and
+one warning. Full Ruff check/format (250 files), repository contract and touched
+document formatting passed. Independent review re-ran the 29 cases plus 14
+configuration/phase probes, six failure-order combinations and real subprocess
+boundary/reaping checks. A real BaseServer thread-start failure was observed RED
+(deadlock), then GREEN after guarding shutdown/join until the server thread starts.
+No actual local Docker/Caddy execution or changed-head hosted success is claimed.

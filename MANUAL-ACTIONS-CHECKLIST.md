@@ -68,6 +68,17 @@ inherited results qualify its new source.
 
 ## Connected inventory read · 2026-10-15 candidate gates
 
+First PR42 [hosted CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38686652539)
+ran exact tree `b08a8c5b8267c0b906841d6c93635236eadeebe5`: 2,654 Python passes
+(14 skips) and a separate 43-case actual PostgreSQL proof with verified source/plan
+hashes. Its Caddy probe failed the first configuration's readiness assertion;
+zero configurations completed and the startup cause remains unproven. A narrow
+safe-diagnostic runner follow-up preserves all production checks and limits.
+The always-run aggregate was 25 controls passed, one failed browser control and
+one blocked benchmark; missing Chromium after skipped installation caused 159
+BeforeHooks failures across 80 unexecuted journeys. No browser behavior or pixels
+were qualified. Keep the exact changed-head gates below open.
+
 The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
 cover catalog, ledger-derived available quantity and one live movement page only.
