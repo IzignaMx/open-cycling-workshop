@@ -39,3 +39,10 @@ test('read controls keep whole words while long labels reflow; scope change sync
   assert.match(controls, /min-inline-size: min-content/)
   assert.match(panel, /controller.clearSelection\(\)[\s\S]*?setLocation/)
 })
+
+test('organization-wide account without directory has an explicit authorized-scope explanation', () => {
+  assert.match(
+    source('features/inventory/InventoryPanel.tsx'),
+    /Tu cuenta no tiene acceso al directorio de talleres/,
+  )
+})

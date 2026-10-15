@@ -97,6 +97,14 @@ export function InventoryPanel({ controller }: { controller: InventoryController
       ) : (
         <>
           {state.access.message && <p role="status">{state.access.message}</p>}
+          {state.account.phase === 'connected' &&
+            state.account.user?.location_id === null &&
+            !hasCapability(state.account.user.capabilities, 'locations.read') && (
+              <p role="status">
+                Tu cuenta no tiene acceso al directorio de talleres. Necesitas un taller operativo
+                autorizado o una cuenta asignada a un taller para consultar inventario.
+              </p>
+            )}
           {canChoose && (
             <div className="inventory-scope">
               <label>
