@@ -1365,14 +1365,17 @@ quote_decision_domain_2026_10_15:
   evidence: docs/10-spec-development/2026-10-15-quote-decision-domain.md
 
 quote_persistence_boundary_2026_10_15:
-  status: architecture_accepted_repository_implementation_pending
+  status: schema_implemented_repository_implementation_in_progress
   scope: increment_2_task_6_repository_first_only
   base: d9381808c61b4682844666eb62967ccbf9afc5b9
   base_tree: ac1e5985e7bb89a274755e9ab0bcb2d1ec35778a
   reviewed_proposal_sha256: 01f27bd760033cda7c9fa92f1420d7c9ba8b5a123be736bc9d2826761023b250
   architecture_review_sha256: 2be3327b843e3be9e7471fc0c4662b9c8d8de4364a36fa0e0ff20fcfc4461758
   review: eight_findings_closed_no_remaining_design_blocker
-  schema: actual_sql0011_next_quote0012_local7_unchanged
+  schema: base_sql0011_candidate_quote0012_local7_unchanged
+  schema_local: 84_passed_84_explicit_skips
+  schema_independent: no_blocker_159_passed_107_explicit_skips_broader_scope
+  compatibility: recovery_cli_accepts0012_unknown_old_multiple_stamps_still_refused
   planned_only: models_migration_strict_reconstruction_atomic_repository_pg_restore_fixtures
   excluded: routes_catalog_grants_adoption_sync_ui_operational_enrollment
   local_postgresql_execution: blocked_no_test_url_psql_postgres_or_docker

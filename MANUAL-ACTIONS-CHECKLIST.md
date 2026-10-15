@@ -5,9 +5,10 @@
 ## Quote persistence · 2026-10-15 planned gates
 
 The [accepted boundary](docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
-authorizes repository-first Task 6 implementation only. No persistence or runtime
-qualification is claimed by accepting the design.
+authorizes repository-first Task 6 only. The additive schema has local SQLite
+and independent source evidence; PostgreSQL runtime qualification remains open.
 
+- [x] Additive SQL0012 schema, registration and immutable/tenant constraints on SQLite.
 - [ ] Exact-source SQL0011→0012 PostgreSQL migration, race and restore evidence.
 - [ ] Independent source review and complete available local/hosted qualification.
 - [ ] Separate application/grant/capability compatibility and all-ingress fences

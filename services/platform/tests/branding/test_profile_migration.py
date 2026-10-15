@@ -44,13 +44,13 @@ def test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery(
     assert "workshop_brand_profiles" in inspect(engine).get_table_names()
     with engine.connect() as connection:
         assert list(connection.execute(text("SELECT * FROM users")).mappings()) == before
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
     with Session(engine) as session:
         require_cutover_schema(session)
     with pytest.raises(RuntimeError, match="forward-only"):
         command.downgrade(config, "0010")
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
     params = {"now": datetime.now(UTC)}
     with pytest.raises(IntegrityError), engine.begin() as connection:
         connection.execute(

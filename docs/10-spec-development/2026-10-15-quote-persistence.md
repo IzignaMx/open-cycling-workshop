@@ -25,12 +25,33 @@ quote source was `9d8dcd5f80d036f0fb7a0407584bb761dad83e95`; merged main
 
 ## Implementation and qualification status
 
-Pending. No new migration, repository, persistence test or PostgreSQL/restore
-result is claimed at this checkpoint. Existing 243 quote tests, including the
-unchanged original 106, remain regression requirements tied to the inherited
-source, not proof of the new persistence boundary.
+The first schema slice implements six registered tables: quote lineages,
+revisions, typed lines, reference edges, decisions and terminal operations.
+Migration `0012` is additive after `0011`; it preserves previous rows and grants,
+uses scoped foreign keys and deferred root/head references, and guards immutable
+history against update, delete, truncate and SQLite replacement. Only the lineage
+head/version/sequence cursor is mutable. Reserved order-effect columns are not an
+activation mechanism.
 
-Reinspected SQL head is `0011`; intended additive quote revision is `0012`.
+Observed test-first evidence: two missing-table failures before implementation;
+a currency-NUL regression failed then passed; thirteen affected operator tests
+failed until the existing cutover schema allowlist narrowly accepted `0012`.
+Empty, old, unknown and multiple stamps still fail. No operator action ran.
+
+- Schema tests: 84 passed, 84 skipped (83 unavailable PostgreSQL cases and one
+  PostgreSQL-only TRUNCATE case on SQLite).
+- Affected migration/cutover tests: 93 passed, 50 PostgreSQL skips.
+- Independent schema review: no blocking finding; 159 passed, 107 explicit skips
+  across its broader selected scope. Independent probes also confirmed UNIQUE
+  and CHECK parity; those assertions are now retained in the schema suite.
+- Frozen migration/ORM parity, scoped Ruff, mypy for four touched source files and
+  whitespace checks passed. Generated PostgreSQL DDL is not live execution.
+
+Repository/codecs and real PostgreSQL/restore fixtures are in progress, not
+qualified by this schema checkpoint. Existing 243 quote tests, including the
+unchanged original 106, remain exact-source regression requirements.
+
+Reinspected base SQL head is `0011`; the candidate adds quote revision `0012`.
 Authenticated local schema stays 7. This executor currently has no configured
 PostgreSQL test URL or psql/postgres/docker binaries. Real migration, race and
 restore qualification must run in the existing authorized hosted PostgreSQL

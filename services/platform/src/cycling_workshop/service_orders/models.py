@@ -33,6 +33,7 @@ class ServiceOrderRecord(Base):
             name="fk_service_order_customer_tenant",
             ondelete="RESTRICT",
         ),
+        Index("uq_service_order_scope", "id", "organization_id", "location_id", unique=True),
         Index("ix_service_orders_org_state", "organization_id", "state"),
         Index("ix_service_orders_org_customer", "organization_id", "customer_id"),
     )

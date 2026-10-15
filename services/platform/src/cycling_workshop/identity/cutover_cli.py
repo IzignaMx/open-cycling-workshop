@@ -21,12 +21,13 @@ from cycling_workshop.tenancy.models import OrganizationRecord
 
 
 def require_cutover_schema(session: Session) -> None:
-    """Accept only the qualified cutover head and its additive branding successor."""
+    """Accept cutover and its reviewed additive branding/quote schema successors."""
     if not inspect(session.connection()).has_table("alembic_version"):
         raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
     if list(session.scalars(text("SELECT version_num FROM alembic_version"))) not in (
         ["0010"],
         ["0011"],
+        ["0012"],
     ):
         raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
 

@@ -4,8 +4,12 @@
 
 - Accept the independently reviewed repository-first quote persistence boundary:
   one lineage per order, immutable history/receipts and exact bounded money.
-- Keep implementation evidence pending and preserve the separate grants, routes,
-  all-ingress guards, mixed-writer rollout and operational execution gates.
+- Add migration 0012 with scoped immutable quote/evidence/receipt tables, deferred
+  head references and replacement/retention guards. Preserve existing history,
+  grants and local schema 7; extend the recovery tool's known-schema allowlist
+  without changing its old/unknown/multiple-stamp refusals.
+- Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
+  routes, all-ingress guards, mixed-writer rollout and operational execution gates.
 
 ## Unreleased · Pure quote decision evidence and partial pricing
 

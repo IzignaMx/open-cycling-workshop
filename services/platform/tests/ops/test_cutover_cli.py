@@ -19,7 +19,7 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 
-@pytest.fixture(params=["0010", "0011"])
+@pytest.fixture(params=["0010", "0011", "0012"])
 def installation(tmp_path, monkeypatch, request):
     url = f"sqlite+pysqlite:///{tmp_path / 'cutover.sqlite3'}"
     engine = create_engine(url)
@@ -211,12 +211,17 @@ def test_cutover_cli_refuses_fallback_database_configuration(monkeypatch, capsys
     assert json.loads(capsys.readouterr().out)["error"] == "database_configuration_required"
 
 
-@pytest.mark.parametrize("revision", [None, "0009", "0012"])
+@pytest.mark.parametrize("revision", [None, "0009", "0013", "multiple", "empty"])
 def test_operator_refuses_unqualified_schema_without_effects(installation, revision):
     engine, settings = installation
     with engine.begin() as connection:
         if revision is None:
             connection.execute(text("DROP TABLE alembic_version"))
+        elif revision == "multiple":
+            connection.execute(text("UPDATE alembic_version SET version_num='0010'"))
+            connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0011')"))
+        elif revision == "empty":
+            connection.execute(text("DELETE FROM alembic_version"))
         else:
             connection.execute(
                 text("UPDATE alembic_version SET version_num=:revision"), {"revision": revision}
