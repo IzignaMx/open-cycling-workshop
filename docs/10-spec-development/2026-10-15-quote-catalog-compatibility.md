@@ -6,7 +6,8 @@ Base: `fe4db4ea56fd522cfa0152741918e85b0d9387a3` (actual main).
 Scope: the capability prerequisite in the accepted
 [quote persistence and online-command ADR §4](../02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md#4-explicit-quote-grants-and-old-client-compatibility).
 Requirements: SEC-002/003; explicit scoped authority, old-client compatibility.
-This slice is independent of the unmerged pure read-DTO draft.
+This slice was developed independently of the pure read-DTO prerequisite;
+that prerequisite is now integrated from main46 as recorded below.
 
 - Add a separate immutable three-literal `QUOTE_CAPABILITIES` set:
   `quotes.read`, `quotes.write`, `quotes.authorize`.
@@ -142,3 +143,51 @@ run for this bounded slice. Earlier hosted results do not qualify this new tree.
 Publication, merge and deployment were not performed. The separate quote-only
 operator adoption, protected read routes and every stage-3 activation gate remain
 open.
+
+## Reconciliation with merged pure read contracts
+
+The normal integration joins PR47 head
+`9d334b2ae3bc3be9159fa4438e90b6ceb697aec9` and actual main46
+`c61e642d8e463e400a95e745556f659b69db8594` (tree
+`5d3663c4ee88e78a3e2f20b0365c917348271a8e`). Only the changelog, manual
+checklist and execution-state additions conflict; both histories are retained.
+Every production, test and generated blob from either branch is unchanged.
+The read-contract record now distinguishes its original no-catalog scope from
+the combined tree's explicit catalog prerequisite. No application service or
+quote route is introduced; old Owner19 still cannot delegate quote literals
+without the separately authorized future adoption procedure.
+
+Fresh local combined-tree evidence uses Python 3.13.5 and available Node 24.19.0.
+Node results are local evidence, not pinned Node22 or hosted qualification.
+Initial reuse of the older environment exposed eleven dependency-security
+failures (1,820 passes, eight skips, 477 deselected); isolated reproduction
+confirmed outdated PyJWT 2.13.0 behavior (reused Starlette 0.52.1). A separate worktree-local frozen uv sync with
+all workspace packages supplies the actual committed dependency lock. The initial
+root-only sync did not install workspace application dependencies. No source,
+security policy, test or dependency lock was changed to address these failures.
+Initial frontend attempts exposed stale workspace links and missing fake-IDB;
+local dependency links and the pinned fake-indexeddb 6.2.5 registry package
+corrected the environment without source edits. Missing PIL initially blocked
+mypy; Pillow 12.3.0 resolved it. Those failures remain retained in local logs.
+
+- Frozen all-workspace Python rerun: **1,831 passed, eight skipped, 477
+  deselected**, one existing Starlette/httpx deprecation warning. Three skips
+  require real PostgreSQL and five require the hosted scanner. Deselected cases
+  are not passes. Locked PyJWT 2.15.1 and Starlette 1.3.1 resolve all eleven
+  initial environment failures without source changes.
+- Complete frontend core: 912 passed, zero failures/skips; API-client core: one
+  passed. Web, API-client and offline TypeScript checks pass.
+- Full Ruff check/format (275 files), mypy (112 source files), ESLint, repository
+  validation, generated OpenAPI/TypeScript checks and full Prettier pass.
+- Current production PWA builds with its existing large-chunk warning. Native
+  browser execution and the pinned legacy build are not rerun here.
+- Independent source/union review found no production blocker; its focused
+  combined suite passed 129 cases with 65 explicit PostgreSQL-unconfigured skips.
+
+The existing single 16 MiB serializer-boundary test is included in the combined
+Python selection; it is not maximum-history capacity or PostgreSQL qualification.
+No full aggregate, native browser, live account/token/adoption, migration,
+capacity experiment, installation or deployment is performed. Previous hosted
+results remain tied to their original source. Exact-candidate hosted qualification
+and main46 postmerge acceptance remain external gates; no merge readiness is
+inferred from this local reconciliation.

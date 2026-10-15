@@ -14,6 +14,17 @@
   the existing frontend refusal of duplicate grant snapshots. No quote routes,
   adoption command, real account changes or operational activation are included.
 
+## Unreleased · Prepare bounded quote revision read contracts
+
+- Add closed, exact-integer revision metadata/detail projections from fully
+  reconstructed quote snapshots, with separate current lineage context.
+- Bound metadata pages to 25, responses to 1 MiB and allowlisted errors to 8 KiB;
+  keep proofs/evidence private and bind opaque positions to scope/head/sequence.
+- Verify small source-backed corruption, admission and projection cases only.
+  Application authority, HTTP/UI exposure and maximum capacity qualification
+  remain pending; explicit catalog compatibility is integrated separately.
+  No activation or Task 6 completion is claimed.
+
 ## Unreleased · Reconcile quote persistence with the reviewed expiry observer
 
 - Normally merge actual main `19882936`, preserving the fixture-only observer
