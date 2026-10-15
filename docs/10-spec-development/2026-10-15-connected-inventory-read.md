@@ -366,3 +366,69 @@ recovery skips and one warning. Full Ruff check/format (356 files), repository
 contract, touched Prettier and diff checks passed. Independent source review found
 no blocker and inspected the recorded RED/GREEN and signal evidence; it did not
 rerun those tests. This is agent-authored code and agent review, not human approval.
+
+## Terminal browser evidence and main43 reconciliation · 2026-10-15
+
+The terminal [CI38691900346](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38691900346)
+log confirms the kernel fixture traceback at 06:31:33: baseline-server calls
+seed_browser_identity, then validate_e2e_database_url rejects its SQLite URL.
+Its direct Python run passed 2,692 with 14 skips. The separate kernel startup
+failure skipped the direct 80-journey phase, but the always-run aggregate really
+executed all 80 journeys: **77 passed, three failed, zero flaky/skipped cases**.
+Each of the three failed twice. This does not inherit the earlier two runs'
+missing-Chromium setup diagnosis. The dedicated PostgreSQL/Caddy success above
+remains valid for its exact preceding tree, not automatically for the new merge.
+
+Aggregate artifact 11953836445 is 242,029,278 bytes, SHA256
+`bdce82c6daef00b08237fb50658a7cccef96fab8fc9db68c789461c0abad36e6`.
+Its CRC, 691 safe unique paths and embedded Playwright report were checked. The
+retained failures are:
+
+1. Administration narrow-reflow expected eleven labels but correctly rendered
+   twelve after adding Inventario. Both captured Banco320 geometry records show
+   complete visible identity, no longest-word overflow and all six navigation
+   labels on one line. The obsolete count stopped the remainder of that journey.
+2. Inventory preservation expected at least one event before any delivery attempt.
+   Customer creation supplies localEvents: []; this account lacks sync.push and
+   its durable operation is pending. The failure occurred before draft/navigation/
+   offline/reload assertions, so those behaviors were not proved by either attempt.
+3. Banco timed out opening the next appearance scene. Playwright check() returns
+   immediately for an already checked radio ([official locator contract](https://playwright.dev/docs/api/class-locator#locator-check));
+   Banco is the default, so focus stayed on the disclosure trigger. Escape is
+   handled inside the panel, as exercised by the existing structural-theme tests.
+   The next toggle closed the still-open panel and hid its surface selector.
+
+The two-file correction replaces assumptions, not product behavior. Administration
+now compares exact ordered identity/settings/four-metric labels and all six link
+labels/hrefs. Inventory positively checks the exact created journal row, one
+pending delivery with unresolved=1, attempts=0, null attempt/result, the correct
+empty history, and no observed non-read API request from before creation through
+navigation, disconnection and reload. Full journal/delivery/history equality is
+retained at every boundary. The unsent name remains checked while mounted,
+including disconnection; this does not promise unsubmitted form persistence after
+page reload. Reload still must retain durable pending work and hide volatile
+inventory. Connected local-only and offline status messages are checked separately.
+
+Each theme now selects a focused radio using Space, asserts checked/focused,
+presses Escape, then requires hidden panel, collapsed trigger and returned focus.
+This preserves the established keyboard-in-panel contract, including default
+Banco. It does not remove Escape or change product focus handling, test timeouts,
+retry policy, complete-word/target-size/reflow/axe checks or screenshot privacy.
+Original failed attempts remain retained; the failed inventory cases captured no
+pixels because they stopped before their assertion-backed captures. Selected
+retained administration pixels were inspected; that is not full visual acceptance.
+
+Local focused verification passed 871 frontend core tests, web and explicit
+strict two-file E2E TypeScript checks, ESLint, Prettier and diff checks. Playwright
+collected 33 affected cases; none ran locally. Hosted RED is observed; corrected
+native GREEN remains required. Independent agent review inspects the exact
+source, recorded results and actual failures; it is not human GitHub approval.
+
+Actual main43 `d9381808c61b4682844666eb62967ccbf9afc5b9`, tree
+`ac1e5985e7bb89a274755e9ab0bcb2d1ec35778a`, is reconciled by local merge
+`bcde3c9eb7478a25d1aed7c86e1e5d1f2ce04079` with that real second parent.
+Both additive documentation histories are retained; every incoming quote source,
+test, plan, ADR and evidence blob exactly matches main43. No new quote work is
+part of this correction. Exact combined hosted kernel/direct/repetitions/aggregate,
+PostgreSQL/Caddy, runtime/security/native/build and pixel proof remain required.
+Physical-device/operator gates and the inherited signal-cleanup limits remain open.

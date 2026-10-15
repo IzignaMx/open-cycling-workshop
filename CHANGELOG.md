@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased · Bind inventory browser checks to real UI contracts
+
+- Preserve the actual PR42 aggregate result: 77 of 80 browser journeys passed;
+  three failed on both attempts, with no flaky passes or skipped aggregate cases.
+- Verify all six navigation labels and destinations, including Inventario, while
+  retaining complete-word, identity, focus, draft, reflow and accessibility checks.
+- Prove local-only customer work remains pending with zero attempts, unchanged
+  journal/delivery/history and no observed API write requests through inventory
+  navigation, disconnection and reload. Do not invent a customer or delivery event.
+- Exercise focused radio selection with Space and Escape in every theme; require
+  the panel to close and focus to return to its trigger, including default Banco.
+- Reconcile actual main43 without changing its quote decision/history sources.
+  Hosted corrected kernel/direct/repetition/aggregate and pixel gates remain open.
+
 ## Unreleased · Restore the owned kernel-browser fixture
 
 - Keep shared PostgreSQL reset/migration/seed guards closed; seed the isolated

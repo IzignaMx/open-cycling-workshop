@@ -2,6 +2,22 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Inherited main43 reconciliation · 2026-10-15
+
+[PR43](https://github.com/IzignaMx/open-cycling-workshop/pull/43) is merged as
+`d9381808c61b4682844666eb62967ccbf9afc5b9`, tree
+`ac1e5985e7bb89a274755e9ab0bcb2d1ec35778a`. Inventory merge `bcde3c9e`
+retains that real commit as its second parent. Every incoming quote source/test,
+plan, ADR and evidence blob matches main43; only additive changelog/state conflicts
+needed reconciliation, retaining both histories.
+
+- [x] Exact-main [runtime/native/three-build gates](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424876)
+      and [security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424847)
+      passed with independently verified artifacts. Native ARM64 took 0.264746s.
+- [ ] Main43 CI review is still pending at this checkpoint; inherited results do
+      not qualify the combined inventory candidate. The [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424792)
+      failed and remains non-qualifying. Physical/operator acceptance stays open.
+
 ## Inherited main41 reconciliation · 2026-10-15
 
 [PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) is merged as
@@ -97,8 +113,16 @@ exit0 under the same restrictions. This establishes the tested incompatibility,
 not the exact historical exit255 cause. Kernel-browser startup then failed;
 local reproduction isolates the owned SQLite fixture calling the guarded
 PostgreSQL seed helper. Its narrow correction preserves the guard and browser
-assertions. Corrected hosted kernel/direct/repeat/aggregate and pixel gates stay
-open; no native-browser or whole-candidate success is inferred.
+assertions. The terminal log confirms that exact guard failure. The always-run
+aggregate subsequently executed all 80 journeys: **77 passed and three failed on
+both attempts**, zero flaky/skipped cases (artifact 11953836445). This differs
+from the earlier missing-Chromium cascades: these were real browser executions.
+The stale navigation count, nonexistent customer/delivery event assumption and
+already-selected Banco radio focus assumption are corrected with stronger exact
+navigation, pending/no-write, and focused Escape/closure assertions. All draft,
+journal, geometry and accessibility checks remain. Corrected hosted kernel/direct/
+repeat/aggregate and pixel gates stay open; local 871 core passes and 33 collected
+affected browser cases are not a corrected browser execution result.
 
 The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
