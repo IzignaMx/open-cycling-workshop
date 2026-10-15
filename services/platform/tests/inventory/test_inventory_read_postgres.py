@@ -97,7 +97,9 @@ def postgres_evidence_run():
     )
     write_evidence()
     yield
-    _EVIDENCE["status"] = "complete" if set(_EVIDENCE["cases"]) == EXPECTED_CASES else "incomplete"
+    _EVIDENCE["status"] = (
+        "cases_complete" if set(_EVIDENCE["cases"]) == EXPECTED_CASES else "incomplete"
+    )
     _EVIDENCE["finished_at"] = datetime.now(UTC).isoformat()
     write_evidence()
 

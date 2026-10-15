@@ -222,6 +222,8 @@ def main() -> None:
         "source_sha256": {},
         "cases": [],
     }
+    # Invalidate prior success even if a required source cannot be read.
+    destination.write_text(json.dumps(evidence, indent=2) + "\n")
     for name in (
         "infra/edge/Caddyfile",
         "infra/edge/Caddyfile.lan",

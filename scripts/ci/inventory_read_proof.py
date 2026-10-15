@@ -26,7 +26,7 @@ SOURCES = {
 
 def check_evidence(directory: Path, root: Path, started: str, sources: set[str] = SOURCES) -> None:
     proof = json.loads((directory / "backend-postgres-evidence.json").read_text())
-    assert proof["status"] == "complete", "PostgreSQL evidence is incomplete or skipped"
+    assert proof["status"] == "cases_complete", "PostgreSQL evidence is incomplete or skipped"
     assert datetime.fromisoformat(proof["started_at"]) >= datetime.fromisoformat(started), (
         "Stale PostgreSQL evidence"
     )
@@ -60,19 +60,34 @@ def main() -> None:
 
     validate_e2e_database_url(url)
     env = {**os.environ, "OCWP_INVENTORY_READ_EVIDENCE_DIR": str(directory)}
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "-q",
-            "services/platform/tests/inventory/test_inventory_read_postgres.py",
-        ],
-        cwd=ROOT,
-        env=env,
-        check=True,
-    )
-    check_evidence(directory, ROOT, started)
+    path = directory / "backend-postgres-evidence.json"
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "services/platform/tests/inventory/test_inventory_read_postgres.py",
+            ],
+            cwd=ROOT,
+            env=env,
+            check=True,
+        )
+        check_evidence(directory, ROOT, started)
+    except (Exception, KeyboardInterrupt):
+        try:
+            failed = json.loads(path.read_text())
+            if not isinstance(failed, dict):
+                failed = {}
+        except (OSError, ValueError):
+            failed = {}
+        failed.update(status="failed", failure="test_run_or_evidence_verification_failed")
+        path.write_text(json.dumps(failed, indent=2) + "\n")
+        raise
+    proof = json.loads(path.read_text())
+    proof.update(status="complete", qualified_at=datetime.now(UTC).isoformat())
+    path.write_text(json.dumps(proof, indent=2) + "\n")
     print(
         "All 43 actual PostgreSQL inventory cases passed with fresh source-bound measured evidence."
     )

@@ -130,3 +130,19 @@ def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch)
     with pytest.raises(subprocess.CalledProcessError):
         probe.probe("Caddyfile", tmp_path)
     assert reached == [True]
+
+
+def test_missing_source_replaces_old_complete_evidence_before_hashing(
+    tmp_path, monkeypatch
+) -> None:
+    from scripts.ci import inventory_edge_probe as probe
+
+    path = tmp_path / "artifacts/inventory-read/edge-runtime-evidence.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"status":"complete","run_id":"old"}')
+    monkeypatch.setattr(probe, "ROOT", tmp_path)
+    with pytest.raises(FileNotFoundError):
+        probe.main()
+    evidence = json.loads(path.read_text())
+    assert evidence["status"] == "incomplete" and evidence["cases"] == []
+    assert evidence["run_id"] != "old"

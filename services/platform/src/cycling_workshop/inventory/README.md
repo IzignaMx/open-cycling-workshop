@@ -59,7 +59,9 @@ projection, current authorization, read-only preservation and actual Uvicorn log
 PostgreSQL server is an explicit skip, never a pass. Plan evidence is written to
 `artifacts/inventory-read/backend-postgres-explain.json` only when that test runs.
 `backend-postgres-evidence.json` is initialized incomplete for each test run and
-becomes complete only after all 43 real PostgreSQL cases finish their assertions.
+emits `cases_complete` after all 43 real PostgreSQL assertions. Only the dedicated
+runner promotes it to `complete` after pytest exits successfully (including fixture
+teardown) and fresh source/plan verification succeeds. Failures are marked `failed`.
 It records safe elapsed timings, cleanup results, source hashes and the scrubbed
 plan file's digest. `OCWP_INVENTORY_READ_EVIDENCE_DIR` can isolate direct from
 aggregate evidence. No index is added and no budget may be raised to hide an
