@@ -175,3 +175,13 @@ when no developer PYTHONPATH was present. A narrow direct-entry bootstrap and
 isolated subprocess regression now reach the safe invalid-target guard. Three
 runner tests and seven independent orchestration probes pass; no database or
 browser is launched by this check.
+
+The first reconciled local aggregate at `8f8aab3` retained one failed logging
+assertion (2,405 Python passes, 262 explicit skips; all other 20 controls passed).
+A three-test causal sequence reproduced it: an identity error creates the logger,
+an Alembic migration disables existing loggers, and the inventory capture sees no
+records. The focused inventory test alone passed. Its capture now explicitly
+enables and restores only that logger through pytest monkeypatch, matching the
+existing identity-test convention; every privacy/context assertion and production
+logging byte remains unchanged. The original failure and causal RED/GREEN logs
+are retained. Corrected-source integrated qualification is required.

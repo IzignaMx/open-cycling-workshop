@@ -52,8 +52,14 @@ def test_existing_inventory_statuses_are_no_store(privacy_api: InventoryAPI, sta
 
 
 def test_private_inventory_error_retains_safe_context_only(
-    privacy_api: InventoryAPI, caplog: pytest.LogCaptureFixture
+    privacy_api: InventoryAPI,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Alembic fileConfig in earlier migration tests disables existing loggers.
+    # Isolate this capture and restore that prior state; do not change production
+    # logging configuration or weaken any redaction/context assertion.
+    monkeypatch.setattr(logging.getLogger("cycling_workshop.app"), "disabled", False)
     client = privacy_api.client()
 
     @client.app.get(ROOT + "/internal-error")
