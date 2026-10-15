@@ -1,5 +1,9 @@
 import { fixtureHttp, fixtureJson } from './helpers/inventory-http.mjs'
-import { isUnexpectedApiWrite, observeInventoryContext } from './helpers/inventory-observation.mjs'
+import {
+  installInventoryContextObserver,
+  isUnexpectedApiWrite,
+  observeInventoryContext,
+} from './helpers/inventory-observation.mjs'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
@@ -129,6 +133,7 @@ for (const floor of ['floor-zero', 'floor-one'] as const) {
   }, info) => {
     const f = fixture(floor, info),
       requests = trackReads(page)
+    await installInventoryContextObserver(page)
     await login(page, f)
     const observed = await observeInventoryContext(page, f.locationA, () => openInventory(page))
     expect(observed.snapshotProtocol).toBe(floor === 'floor-zero' ? null : 'baseline-v1')
@@ -293,6 +298,7 @@ for (const mode of ['idle', 'background'] as const) {
     const f = fixture(`expiry-${mode}`, info),
       requests = trackReads(page)
     await page.clock.install()
+    await installInventoryContextObserver(page)
     await login(page, f)
     const { expiresAt } = await observeInventoryContext(page, f.locationA, () =>
       openInventory(page),
