@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -350,3 +352,321 @@ def test_smoke_redacts_unexported_browser_jwt_from_failure_output() -> None:
 
     token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"
     assert redact(f"failure with {token}", []) == "failure with [redacted]"
+
+
+def test_failure_diagnostic_capture_redacts_complete_output() -> None:
+    import os
+    import sys
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"
+    result = diagnostic_capture(
+        [sys.executable, "-c", f"import sys; print('generated-password {token}', file=sys.stderr)"],
+        env=dict(os.environ),
+        secrets=["generated-password"],
+    )
+    assert result == {"status": "captured", "returncode": 0, "output": "[redacted] [redacted]\n"}
+
+
+def test_failure_diagnostic_overflow_discards_partial_secret_and_reaps_child() -> None:
+    import os
+    import sys
+    import time
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    started = time.monotonic()
+    result = diagnostic_capture(
+        [
+            sys.executable,
+            "-c",
+            "import sys,time; print('prefix-'+'secret'*1000, flush=True); time.sleep(30)",
+        ],
+        env=dict(os.environ),
+        secrets=["secret" * 1000],
+        max_bytes=100,
+    )
+    assert result == {"status": "output_limit"}
+    assert time.monotonic() - started < 3
+
+
+def test_failure_diagnostic_timeout_and_missing_command_never_echo_raw_output() -> None:
+    import os
+    import sys
+    import time
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    started = time.monotonic()
+    result = diagnostic_capture(
+        [
+            sys.executable,
+            "-c",
+            "import time; print('unlisted-sensitive-output',flush=True); time.sleep(30)",
+        ],
+        env=dict(os.environ),
+        secrets=[],
+        timeout=0.05,
+    )
+    assert result == {"status": "timeout"}
+    assert time.monotonic() - started < 3
+    assert diagnostic_capture(
+        ["/definitely-missing-diagnostic-command"], env=dict(os.environ), secrets=[]
+    ) == {"status": "unavailable"}
+
+
+def test_failure_diagnostics_use_project_bound_read_only_commands_and_allowlisted_states(
+    monkeypatch,
+) -> None:
+    import json
+
+    from scripts.ci import local_compose_smoke as module
+
+    command = ["docker", "compose", "-p", "ocwp-smoke-fixture", "-f", "/fixture/compose.yml"]
+    calls = []
+
+    def capture(parts, **kwargs):
+        calls.append((parts, kwargs))
+        if "ps" in parts:
+            output = json.dumps(
+                [
+                    {
+                        "Service": "api",
+                        "State": "running",
+                        "Health": "healthy",
+                        "ExitCode": 0,
+                        "Command": "never-emit-command",
+                        "Publishers": "never-emit-network-details",
+                    },
+                    {"Service": "operator-service", "State": "running", "ExitCode": 0},
+                    {"Service": "edge", "State": "unexpected-sensitive-state", "ExitCode": True},
+                ]
+            )
+        else:
+            output = "safe diagnostic log\n"
+        return {"status": "captured", "returncode": 0, "output": output}
+
+    monkeypatch.setattr(module, "diagnostic_capture", capture)
+    result = module.failure_diagnostics(command, env={"PATH": "/bin"}, secrets=["synthetic"])
+    assert result["containers"] == [
+        {"service": "api", "state": "running", "health": "healthy", "exit_code": 0},
+        {"service": "edge", "state": "unknown", "health": "unknown", "exit_code": None},
+    ]
+    assert set(result["logs"]) == {"api", "edge", "migrate", "postgres", "worker"}
+    serialized = json.dumps(result)
+    for forbidden in ("never-emit", "operator-service", "unexpected-sensitive-state"):
+        assert forbidden not in serialized
+    assert len(calls) == 6
+    assert calls[0][0] == [*command, "ps", "--all", "--format", "json"]
+    for parts, kwargs in calls:
+        assert parts[: len(command)] == command
+        assert kwargs == {"env": {"PATH": "/bin"}, "secrets": ["synthetic"]}
+        if "logs" in parts:
+            assert parts[len(command) : -1] == ["logs", "--no-color", "--tail", "40"]
+
+
+def test_failure_diagnostics_are_recorded_before_cleanup_without_changing_readiness() -> None:
+    smoke = source("scripts/ci/local_compose_smoke.py")
+    handler = smoke.split("except Exception as exc:", 1)[1]
+    assert handler.index('evidence["error"]') < handler.index("failure_diagnostics(")
+    assert handler.index("failure_diagnostics(") < handler.index("browser.close()")
+    assert handler.index("failure_diagnostics(") < handler.index("branding_probe.cleanup()")
+    assert handler.index("failure_diagnostics(") < handler.index('"--volumes"')
+    assert "time.monotonic() + 180" in smoke
+    assert "time.sleep(2)" in smoke
+
+
+def test_completed_diagnostic_terminates_same_group_descendant_with_detached_stdio() -> None:
+    import os
+    import signal
+    import sys
+    import time
+    from contextlib import suppress
+
+    import pytest
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    if sys.platform != "linux":
+        pytest.skip("Linux hosted process-group regression uses /proc state")
+    script = (
+        "import subprocess,sys; "
+        "child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'],"
+        "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); "
+        "print(child.pid,flush=True)"
+    )
+    result = diagnostic_capture([sys.executable, "-c", script], env=dict(os.environ), secrets=[])
+    assert result["status"] == "captured" and result["returncode"] == 0
+    pid = int(str(result["output"]).strip())
+    state_file = Path(f"/proc/{pid}/stat")
+    deadline = time.monotonic() + 1
+    try:
+        while state_file.exists() and time.monotonic() < deadline:
+            try:
+                state = state_file.read_text().split()[2]
+            except (FileNotFoundError, ProcessLookupError):
+                return  # init reaped the terminated orphan after exists().
+            if state == "Z":
+                return  # Orphan is terminated; only its adopting init can reap it.
+            time.sleep(0.01)
+        assert not state_file.exists(), "completed diagnostic left its descendant running"
+    finally:
+        with suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
+
+
+RESTART_PHASES = (
+    "stopping",
+    "checking_outage",
+    "checking_static",
+    "starting",
+    "waiting_ready",
+    "checking_branding",
+)
+
+
+def restart_fixture(monkeypatch, *, failure=None, responses=None):
+    from scripts.ci import local_compose_smoke as module
+
+    calls = []
+    cycles = []
+    original = RuntimeError("synthetic first failure")
+
+    def step(phase):
+        cycle = len(cycles)
+        assert cycles[-1]["phase"] == phase
+        assert cycles[-1]["status"] == "running"
+        calls.append((cycle, phase))
+        if failure == (cycle, phase):
+            raise original
+
+    def compose(*parts):
+        assert parts in (("stop", "api"), ("start", "api"))
+        step("stopping" if parts[0] == "stop" else "starting")
+
+    def request(base, path):
+        assert base == "http://synthetic.test"
+        assert path in ("/api/v1/auth/me", "/")
+        phase = "checking_outage" if path.endswith("/me") else "checking_static"
+        step(phase)
+        if responses and phase in responses:
+            return responses[phase]
+        return (502, {}, b"upstream unavailable") if path.endswith("/me") else (200, {}, b"pwa")
+
+    def ready(base):
+        assert base == "http://synthetic.test"
+        step("waiting_ready")
+
+    def branding():
+        step("checking_branding")
+
+    monkeypatch.setattr(module, "request", request)
+    monkeypatch.setattr(module, "wait_ready", ready)
+    return module, compose, branding, cycles, calls, original
+
+
+def test_api_restart_qualification_requires_three_complete_ordered_cycles(monkeypatch):
+    import math
+
+    module, compose, branding, cycles, calls, _ = restart_fixture(monkeypatch)
+    module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert calls == [(cycle, phase) for cycle in (1, 2, 3) for phase in RESTART_PHASES]
+    assert len(cycles) == 3
+    for number, record in enumerate(cycles, 1):
+        assert record.keys() == {"cycle", "status", "phase", "elapsed_seconds"}
+        assert record["cycle"] == number
+        assert record["status"] == "passed" and record["phase"] == "complete"
+        assert math.isfinite(record["elapsed_seconds"]) and record["elapsed_seconds"] >= 0
+
+
+@pytest.mark.parametrize("cycle", (1, 2, 3))
+@pytest.mark.parametrize("phase", RESTART_PHASES)
+def test_api_restart_failure_preserves_evidence_and_never_retries(monkeypatch, cycle, phase):
+    module, compose, branding, cycles, calls, original = restart_fixture(
+        monkeypatch, failure=(cycle, phase)
+    )
+    with pytest.raises(RuntimeError) as raised:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert raised.value is original
+    expected = [(number, item) for number in (1, 2, 3) for item in RESTART_PHASES]
+    assert calls == expected[: expected.index((cycle, phase)) + 1]
+    assert len(cycles) == cycle
+    assert all(record["status"] == "passed" for record in cycles[:-1])
+    assert cycles[-1]["cycle"] == cycle
+    assert cycles[-1]["status"] == "failed" and cycles[-1]["phase"] == phase
+    assert cycles[-1]["elapsed_seconds"] >= 0
+
+
+@pytest.mark.parametrize(
+    ("phase", "response"),
+    (
+        ("checking_outage", (200, {}, b"unexpected success")),
+        ("checking_outage", (502, {}, b'<div id="root">')),
+        ("checking_static", (503, {}, b"unavailable")),
+    ),
+)
+def test_api_restart_keeps_outage_and_static_assertions(monkeypatch, phase, response):
+    module, compose, branding, cycles, calls, _ = restart_fixture(
+        monkeypatch, responses={phase: response}
+    )
+    with pytest.raises(AssertionError):
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert calls[-1] == (1, phase)
+    assert len(cycles) == 1 and cycles[0]["status"] == "failed"
+
+
+def test_restart_evidence_is_attached_before_calls_and_check_after_all_cycles():
+    main = source("scripts/ci/local_compose_smoke.py").split("def main()", 1)[1]
+    assert main.index('evidence["api_restart_cycles"] = restart_cycles') < main.index(
+        "qualify_api_restarts("
+    )
+    assert main.index("qualify_api_restarts(") < main.index(
+        'checks.append("backend_outage_returns_502_without_spa_fallback")'
+    )
+
+
+@pytest.mark.parametrize("clock_result", ("raises", float("nan"), float("inf"), -1))
+def test_restart_timing_cannot_replace_failure_or_emit_invalid_duration(monkeypatch, clock_result):
+    module, compose, branding, cycles, _, original = restart_fixture(
+        monkeypatch, failure=(1, "waiting_ready")
+    )
+    calls = 0
+
+    def clock():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return 0
+        if clock_result == "raises":
+            raise RuntimeError("synthetic timing failure")
+        return clock_result
+
+    monkeypatch.setattr(module.time, "monotonic", clock)
+    with pytest.raises(RuntimeError) as raised:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert raised.value is original
+    assert cycles == [{"cycle": 1, "status": "failed", "phase": "waiting_ready"}]
+
+
+@pytest.mark.parametrize("failure", (None, (2, "waiting_ready")))
+def test_unavailable_initial_restart_clock_does_not_skip_qualification(monkeypatch, failure):
+    module, compose, branding, cycles, calls, original = restart_fixture(
+        monkeypatch, failure=failure
+    )
+
+    def unavailable():
+        raise RuntimeError("synthetic initial timing failure")
+
+    monkeypatch.setattr(module.time, "monotonic", unavailable)
+    if failure is None:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+        assert calls == [(cycle, phase) for cycle in (1, 2, 3) for phase in RESTART_PHASES]
+        assert all(record["status"] == "passed" for record in cycles)
+    else:
+        with pytest.raises(RuntimeError) as raised:
+            module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+        assert raised.value is original
+        assert calls[-1] == failure
+        assert cycles[0]["status"] == "passed" and cycles[1]["status"] == "failed"
+    assert all("elapsed_seconds" not in record for record in cycles)

@@ -2,6 +2,90 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote/main45 reconciliation · 2026-10-15 current checkpoint
+
+Normal local merge `d45c22e1`, tree `d8f978f6`, joins reviewed quote parent
+`ae249f96` with actual main `19882936`. The incoming observer correction remains
+test-only. Both shared documentation histories, SQL0012/local schema 7, the quote
+recovery wrapper, three-cycle runtime and mandatory expiry guards are retained.
+
+- [x] Previous combined PR44 head `3dd88d32`, tree `b43c6c94`, passed independently
+      reviewed CI 38713762360 on attempt 1: 27 controls, direct/aggregate Python
+      each 3,330/23 skips, matching-PG18 quote/branding 24 without skips, inventory 43
+      and all 218 browser executions including ten retry-free expiry cases.
+- [x] That same earlier tree passed Runtime 38713762511, Security 38713762346,
+      three ARM64 builds and the native decoder gate. All11 runtime checks and
+      three restart cycles passed. The original restart cause remains unknown;
+      successful runs did not exercise hosted failure diagnostics.
+- [x] New merge source reviewed independently: 735 passes/188 explicit PG skips,
+      observer 12 and configured static checks. Available full local aggregate:
+      21 passes, zero failures, five environment blockers; Python 2,898/455 skips,
+      core 883. One lost execution session produced no result; the separate full
+      second attempt completed. Neither skipped tests nor the lost run are passes.
+- [ ] Main45 postmerge CI 38759501221 must finish and have its actual evidence
+      reviewed before coordinator publication. No green main45 CI claim is made
+      at this checkpoint; its separate runtime/security evidence is not CI.
+- [ ] New exact published candidate requires full hosted PostgreSQL/restore,
+      direct/aggregate browser, ten retry-free expiry, three-cycle runtime,
+      security/native/three-build and DCO qualification before merge.
+- [ ] Maximum persisted quote fixtures under unchanged resource limits remain
+      unqualified. Exact codec ceilings do not establish PostgreSQL runtime
+      capacity; complete Task 6 qualification stays open. The accepted ADR retains
+      the capacity gate before activation/stage 3.
+- [ ] Routes, grants/adoption, enrollment, all-ingress fences, offline/work/stock
+      integration and physical/operator gates remain separate and unactivated.
+
+See the [source-bound reconciliation evidence](docs/10-spec-development/2026-10-15-quote-persistence.md#actual-main45-reconciliation).
+Earlier sections below retain their checkpoint-specific pending states and
+original failures; they are not substituted for the current candidate's gates.
+
+## Quote persistence · 2026-10-15 planned gates
+
+The candidate now normally merges actual inventory main `5ab7dd7c` at
+`3e3b120e`, preserving both source boundaries and all hosted gates. Its full
+available local aggregate passed 21 controls with zero failures and five
+environment blockers: 2,898 Python passes / 455 skips and 877 frontend passes.
+Independent combined review is closed; this is not fresh hosted PostgreSQL,
+native browser, expiry repetition or three-cycle runtime qualification.
+
+PR44's first hosted candidate failed direct Python tests and AMD64 runtime.
+Direct and aggregate Python each retained two varchar-refusal assertion failures,
+2,944 passes and 23 skips. The two tests now require the exact backend-specific
+refusal and unchanged retained rows; PostgreSQL requalification is pending.
+The runtime passed fresh migration and seven checks, then timed out after the
+intentional API stop/start, before any backup. It retained no container logs;
+the underlying cause remains unknown. A bounded diagnostic-only runner change
+has combined independent source review. Follow-up head `26b589be` passed all
+eleven runtime checks and Security on their first attempts, including its single
+API restart and generic PostgreSQL restore; this does not explain the original
+failure or exercise the new failure diagnostics. A separately reviewed
+qualification proposal and its implementation now require three consecutive
+fail-fast restart cycles with unchanged readiness deadlines; independent source
+review is closed. Exact changed-head hosted evidence remains
+pending. Do not retry the failed candidate or infer quote-specific restore passes. See the
+[retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
+
+The [accepted boundary](docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
+authorizes repository-first Task 6 only. The additive schema has local SQLite
+and independent source evidence; PostgreSQL runtime qualification remains open.
+
+- [x] Additive SQL0012 schema, registration and immutable/tenant constraints on SQLite.
+- [x] Bounded private storage codecs/semantic commands and independent boundary review.
+- [ ] Exact-source hosted aggregate/security/DCO and SQL0011→0012 PostgreSQL
+      migration, race, restore and maximum-fixture runtime evidence.
+- [ ] Exact-head three-cycle API restart qualification and all remaining runtime
+      checks. Retain the unknown original failure cause even if these pass.
+- [x] Implement atomic repository/reconstruction and retain discovered failure regressions.
+- [x] Final independent source review and available local qualification: 21 pass,
+      zero fail, five environment blockers; hosted/runtime gates remain open.
+- [ ] Separate application/grant/capability compatibility and all-ingress fences
+      before any quote mutation route is exposed.
+- [ ] Separate operator authority, backup/restore and replacement of every old
+      server/maintenance writer before first real enrollment. Protocol 1 alone
+      cannot fence an old server binary.
+- [ ] Later line-coverage, work/reservation, post-transition consent and offline
+      integration; initial consent is not an operational quote/inventory journey.
+
 ## Main42 postmerge expiry blocker · 2026-10-15
 
 [PR42](https://github.com/IzignaMx/open-cycling-workshop/pull/42) merged normally as

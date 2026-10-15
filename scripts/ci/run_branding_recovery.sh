@@ -51,6 +51,7 @@ with _directory(Path.cwd()):
 PREPARE
 export BRANDING_RECOVERY_STARTED_NS="$(date +%s%N)"
 uv run pytest -q tests/operations/test_branding_recovery_postgres.py \
+  services/platform/tests/quotes/test_quote_repository_postgres.py \
   --basetemp=artifacts/branding-recovery
 uv run python - <<'PY'
 import json

@@ -251,7 +251,7 @@ def administration_postgres(monkeypatch: pytest.MonkeyPatch) -> Iterator[Adminis
             assert int(connection.scalar(text("SHOW server_version_num"))) >= 180000
         command.upgrade(_migration_config(isolated_url), "head")
         with engine.connect() as connection:
-            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
         factory = sessionmaker(engine, expire_on_commit=False)
         organization, location, other_location, foreign_organization, foreign_location = (
             new_id() for _ in range(5)

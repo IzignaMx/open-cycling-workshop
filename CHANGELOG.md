@@ -1,5 +1,74 @@
 # Changelog
 
+## Unreleased · Reconcile quote persistence with the reviewed expiry observer
+
+- Normally merge actual main `19882936`, preserving the fixture-only observer
+  correction, all mandatory expiry gates and the quote SQL0012/runtime sources.
+- Retain the earlier combined PR44 tree's independently verified 27-control
+  hosted pass, populated quote restore and three consecutive restart cycles as
+  source-bound history; they do not qualify this newly reconciled tree.
+- Complete available local qualification: 21 passing controls, zero failures and
+  five environment blockers; 2,898 Python passes and 883 frontend passes.
+- Keep main45 postmerge CI and new exact-candidate hosted qualification pending.
+  Maximum quote capacity, full Task 6 and operational activation remain open.
+
+## Unreleased · Reconcile quote persistence with actual inventory main
+
+- Normally merge main `5ab7dd7c`, preserving its connected inventory read guards,
+  privacy/expiry qualification and source exactly alongside quote SQL0012.
+- Retain both additive documentation histories and the quote recovery-wrapper
+  extension. Full available combined local qualification passed 21 controls
+  with five explicit environment blockers; exact merged-head hosted proof remains.
+
+## Unreleased · Require three consecutive API restart qualification cycles
+
+- Strengthen the existing disposable runtime check with three mandatory
+  stop/outage/static/start/readiness/branding cycles on the same project.
+- Fail immediately on the first error, retaining completed and active cycle
+  evidence before existing diagnostics and cleanup. Keep readiness deadlines,
+  production startup and the eleven-check total unchanged.
+- Preserve the original unexplained restart failure; later one-cycle success
+  does not establish its cause. Exact-head three-cycle hosted evidence is pending.
+
+## Unreleased · Match exact PostgreSQL varchar refusal in negative tests
+
+- Preserve the two first-hosted quote schema failures and recognize PostgreSQL's
+  exact `StringDataRightTruncation`/`22001` only for the 501-character description
+  and reason cases. SQLite still requires its integrity error; other constraint
+  cases retain their original exception expectations.
+- Assert all six quote tables remain unchanged after each rejected transaction.
+  No production schema, bounds or repository behavior changes.
+
+## Unreleased · Retain disposable runtime failure diagnostics
+
+- Capture bounded, redacted container states and log tails before the generated
+  Compose fixture is cleaned up. Preserve the original failure and discard
+  partial diagnostic output on timeout or overflow.
+- Retain PR44's first stop/start readiness failure with unknown cause. Readiness
+  deadlines, substantive checks and cleanup remain unchanged; fresh hosted
+  runtime and PostgreSQL/restore qualification are still required.
+
+## Unreleased · Quote persistence boundary
+
+- Accept the independently reviewed repository-first quote persistence boundary:
+  one lineage per order, immutable history/receipts and exact bounded money.
+- Add migration 0012 with scoped immutable quote/evidence/receipt tables, deferred
+  head references and replacement/retention guards. Preserve existing history,
+  grants and local schema 7; extend the recovery tool's known-schema allowlist
+  without changing its old/unknown/multiple-stamp refusals.
+- Add bounded immutable storage codecs and finite create/revise/decision proofs,
+  with exact safe integers, canonical IDs/time, detached inputs and controlled
+  cyclic/deep-input refusals. Preserve existing pure arithmetic and decisions.
+- Add transaction-owned quote append/replay and complete-history reconstruction,
+  scoped receipt lookup, fresh read-expiry checks and privacy-minimized quote
+  outbox facts. Retain caller rollback even with SQLite legacy savepoints.
+- Add PostgreSQL contention/restore fixtures to the existing recovery wrapper;
+  local skips are explicit and do not claim those gates passed.
+- Close independent source findings and pass all available local checks while
+  retaining explicit PostgreSQL/restore and hosted qualification gates.
+- Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
+  routes, all-ingress guards, mixed-writer rollout and operational execution gates.
+
 ## Unreleased · Observe expiry inside the disposable browser fixture
 
 - Preserve postmerge main42's mandatory expiry result: nine passes and one CDP

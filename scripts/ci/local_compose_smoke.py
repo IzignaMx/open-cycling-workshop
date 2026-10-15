@@ -5,15 +5,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import selectors
+import signal
 import socket
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
+from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -146,6 +150,124 @@ def assert_logs_safe(logs: str, secrets: list[str]) -> None:
         raise RuntimeError("Container logs contain generated credentials")
 
 
+def diagnostic_capture(
+    parts: list[str],
+    *,
+    env: dict[str, str],
+    secrets: list[str],
+    timeout: float = 5,
+    max_bytes: int = 16384,
+) -> dict[str, object]:
+    """Bound one disposable-project probe; never publish partial raw output.
+
+    Redact only a complete capture, so byte truncation cannot split a credential
+    into an unrecognizable fragment. Timeout/overflow output is discarded. The
+    direct child is reaped and its owned group terminated before fixture cleanup.
+    """
+    try:
+        process = subprocess.Popen(
+            parts,
+            cwd=ROOT,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    except OSError:
+        return {"status": "unavailable"}
+    try:
+        assert process.stdout is not None
+        output = bytearray()
+        deadline = time.monotonic() + timeout
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not selector.select(remaining):
+                    return {"status": "timeout"}
+                chunk = os.read(process.stdout.fileno(), min(4096, max_bytes + 1 - len(output)))
+                if not chunk:
+                    break
+                output.extend(chunk)
+                if len(output) > max_bytes:
+                    return {"status": "output_limit"}
+        try:
+            code = process.wait(timeout=max(0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            return {"status": "timeout"}
+        return {
+            "status": "captured",
+            "returncode": code,
+            "output": redact(output.decode("utf-8", errors="replace"), secrets),
+        }
+    except OSError:
+        return {"status": "unavailable"}
+    finally:
+        # A normally exited CLI can leave same-group plugin descendants whose
+        # stdio is detached. Terminate those too, not only the timeout path.
+        with suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=1)
+        if process.stdout is not None:
+            process.stdout.close()
+
+
+def failure_diagnostics(
+    command: list[str], *, env: dict[str, str], secrets: list[str]
+) -> dict[str, object]:
+    """Read only the existing random Compose project before it is removed."""
+    services = ("api", "edge", "migrate", "postgres", "worker")
+    probe = diagnostic_capture(
+        [*command, "ps", "--all", "--format", "json"], env=env, secrets=secrets
+    )
+    containers = []
+    state_status = probe["status"]
+    if state_status == "captured" and probe.get("returncode") == 0:
+        try:
+            raw = str(probe["output"])
+            rows = (
+                json.loads(raw)
+                if raw.lstrip().startswith("[")
+                else [json.loads(line) for line in raw.splitlines() if line.strip()]
+            )
+            if not isinstance(rows, list):
+                raise ValueError("unexpected state shape")
+            for row in rows:
+                if not isinstance(row, dict) or row.get("Service") not in services:
+                    continue
+                state, health, code = row.get("State"), row.get("Health"), row.get("ExitCode")
+                containers.append(
+                    {
+                        "service": row["Service"],
+                        "state": state
+                        if state
+                        in (
+                            "created",
+                            "running",
+                            "paused",
+                            "restarting",
+                            "removing",
+                            "exited",
+                            "dead",
+                        )
+                        else "unknown",
+                        "health": health
+                        if health in ("healthy", "unhealthy", "starting")
+                        else "unknown",
+                        "exit_code": code if type(code) is int and 0 <= code <= 255 else None,
+                    }
+                )
+        except (ValueError, TypeError):
+            state_status = "invalid_output"
+    logs = {
+        service: diagnostic_capture(
+            [*command, "logs", "--no-color", "--tail", "40", service], env=env, secrets=secrets
+        )
+        for service in services
+    }
+    return {"container_status": state_status, "containers": containers, "logs": logs}
+
+
 def validate_config(config: dict[str, object]) -> None:
     services = config["services"]
     assert isinstance(services, dict)
@@ -200,6 +322,50 @@ def wait_ready(base: str) -> None:
             pass
         time.sleep(2)
     raise RuntimeError("edge/API did not become ready within 180 seconds")
+
+
+def qualify_api_restarts(
+    compose: Callable[..., object],
+    base: str,
+    verify_branding: Callable[[], None],
+    cycles: list[dict[str, object]],
+) -> None:
+    """Three mandatory same-project cycles; the first failure is never retried."""
+    for number in range(1, 4):
+        record: dict[str, object] = {
+            "cycle": number,
+            "status": "running",
+            "phase": "stopping",
+        }
+        cycles.append(record)
+        started = None
+        with suppress(Exception):
+            started = time.monotonic()
+        try:
+            compose("stop", "api")
+            record["phase"] = "checking_outage"
+            code, _, body = request(base, "/api/v1/auth/me")
+            assert code == 502 and b'<div id="root">' not in body
+            record["phase"] = "checking_static"
+            assert request(base, "/")[0] == 200
+            record["phase"] = "starting"
+            compose("start", "api")
+            record["phase"] = "waiting_ready"
+            wait_ready(base)
+            record["phase"] = "checking_branding"
+            verify_branding()
+            record["phase"] = "complete"
+            record["status"] = "passed"
+        except Exception:
+            record["status"] = "failed"
+            raise
+        finally:
+            # Optional timing must never replace the original qualification error.
+            with suppress(Exception):
+                if started is not None:
+                    elapsed = time.monotonic() - started
+                    if math.isfinite(elapsed) and elapsed >= 0:
+                        record["elapsed_seconds"] = round(elapsed, 3)
 
 
 def main() -> int:
@@ -475,14 +641,10 @@ def main() -> int:
             else:
                 evidence["browser"] = "not run (pass --browser to require it)"
                 evidence["authenticated_recovery"] = "not run (requires --browser)"
-            compose("stop", "api")
-            code, _, body = request(base, "/api/v1/auth/me")
-            assert code == 502 and b'<div id="root">' not in body
-            assert request(base, "/")[0] == 200
-            compose("start", "api")
-            wait_ready(base)
+            restart_cycles: list[dict[str, object]] = []
+            evidence["api_restart_cycles"] = restart_cycles
+            qualify_api_restarts(compose, base, branding_probe.verify_restart, restart_cycles)
             checks.append("backend_outage_returns_502_without_spa_fallback")
-            branding_probe.verify_restart()
             # The backup/restore drill uses only a fresh, dedicated DB in this
             # generated Compose project; it cannot target an existing installation.
             compose("run", "--rm", "-T", "operations", "backup", "/backups/generation-1")
@@ -653,6 +815,13 @@ def main() -> int:
         except Exception as exc:
             evidence["error"] = redact(str(exc), secrets)
             print(evidence["error"], file=sys.stderr)
+            try:
+                evidence["failure_diagnostics"] = failure_diagnostics(
+                    command, env=env, secrets=secrets
+                )
+            except Exception:
+                # Diagnostic failure must not replace the first failure or prevent cleanup.
+                evidence["failure_diagnostics"] = {"status": "unavailable"}
         finally:
             if browser is not None:
                 browser.close()

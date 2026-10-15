@@ -11,6 +11,7 @@ def register_models() -> None:
     from cycling_workshop.identity import models as identity_models  # noqa: F401
     from cycling_workshop.inventory import models as inventory_models  # noqa: F401
     from cycling_workshop.jobs import models as job_models  # noqa: F401
+    from cycling_workshop.quotes import models as quote_models  # noqa: F401
     from cycling_workshop.service_orders import models as service_order_models  # noqa: F401
     from cycling_workshop.sync import baseline_models as baseline_models
     from cycling_workshop.sync import models as sync_models  # noqa: F401
