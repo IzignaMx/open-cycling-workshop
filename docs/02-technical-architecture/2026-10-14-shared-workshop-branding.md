@@ -149,6 +149,26 @@ incarnation/partition/lease and validates canonical data. Current device ownersh
 and READY/OFFLINE_READY admission are checked transactionally. Offline reload uses
 its new valid owner ticket under the same existing lease; stored provenance never
 grants admission. Monotonic elapsed time fences delayed digest/IDB work.
+The original operation-entry wall timestamp separately fences rollback behind
+the verified context, device control and snapshot observation. Waiting cannot
+erase an invalid entry time; expiry checks continue advancing through final
+transactional admission. Concurrent newer trusted evidence may conservatively
+refuse an older operation, without deleting the snapshot or operational work.
+An explicit refresh requested during a branding flight is coalesced into one
+freshly captured and validated trailing flight. The trailing flight cannot queue
+another, and a null cache result does not itself retry. This preserves rollback
+refusal while honoring the offline transition's already-requested recovery.
+Offline readmission also requests a refresh after its initial operational page
+and issue reads finish: their kernel transactions may advance trusted observation
+time after the first cache read began. The completion request requires the same
+still-current active source and uses the existing finite coalescer. It is not a
+retry triggered by cache refusal and does not run for connected startup.
+Connected admission keeps one source-bound completion request until its first
+settled sync finishes the final operational reads. Intermediate progress or
+transient retry does not consume it; cancellation, offline transition and a new
+admission replace it. Consume only after rechecking the current source following
+terminal publication. Subsequent sync polls and page changes do not request more
+branding. Both paths use the unchanged finite coalescer, not a cache-null loop.
 
 The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
 request/save. Exact saved session, current ticket/source generation, lease and

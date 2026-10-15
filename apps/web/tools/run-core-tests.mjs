@@ -76,6 +76,7 @@ try {
     'tests/administration/transport.test.mjs',
     'tests/administration/controller.test.mjs',
     'tests/administration/panels.test.mjs',
+    'tests/administration/browser-clock.test.mjs',
     'tests/administration/draft-revision.test.mjs',
     'tests/administration/draft-state.test.mjs',
     'tests/runtime/issues.test.mjs',

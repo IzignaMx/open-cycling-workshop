@@ -884,8 +884,13 @@ test('UI lifecycle: automatic probe revalidation clears a newly entered administ
   await loginAccount(page, f)
   await page.getByRole('button', { name: 'Taller administración A', exact: true }).click()
   await waitForReady(page)
-  await page.clock.install()
-  await page.clock.pauseAt(new Date())
+  // Freeze Date before pausing timers so delivery latency cannot move the
+  // running browser clock past the host target. Restore advancing Date while
+  // paused: runFor must still advance Date as well as the probe timer.
+  const probeClockTime = new Date()
+  await page.clock.setFixedTime(probeClockTime)
+  await page.clock.pauseAt(probeClockTime)
+  await page.clock.setSystemTime(probeClockTime)
   // A synthetic offline event leaves LAN requests reachable, modeling the
   // runtime's existing navigator-offline-but-server-reachable probe seam.
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))

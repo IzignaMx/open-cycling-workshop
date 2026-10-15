@@ -118,11 +118,14 @@ export class BrandingSnapshotRepository {
   private async admitted(
     ticket: ContextTicket,
     context: VerifiedAccessContext,
+    enteredAt: number,
     now: () => number,
     write: boolean,
   ): Promise<boolean> {
     try {
-      validateVerifiedContext(context, now())
+      // Async work must not let a rolled-back entry clock catch up to trusted
+      // evidence. Only lease expiry uses advancing monotonic elapsed time.
+      validateVerifiedContext(context, enteredAt)
       if (
         !context.capabilities.includes('branding.read') ||
         context.snapshotProtocol !== 'baseline-v1' ||
@@ -146,7 +149,7 @@ export class BrandingSnapshotRepository {
           ? control.state !== 'READY'
           : control.state !== 'READY' && control.state !== 'OFFLINE_READY') ||
         !Number.isFinite(control.observedAt) ||
-        control.observedAt > now() ||
+        control.observedAt > enteredAt ||
         partition.partitionId !== ticket.partitionId ||
         partition.status !== 'active' ||
         !partition.baselineComplete ||
@@ -175,9 +178,9 @@ export class BrandingSnapshotRepository {
       context = structuredClone(suppliedContext),
       currentTime = elapsedClock(now)
     const row = await this.db.transaction('r', this.tables(), async () => {
-      if (!(await this.admitted(ticket, context, currentTime, false))) return null
+      if (!(await this.admitted(ticket, context, now, currentTime, false))) return null
       const value = await this.db.brandingSnapshots.get(ticket.partitionId)
-      return snapshotBound(value, ticket, context, currentTime()) ? value : null
+      return snapshotBound(value, ticket, context, now) ? value : null
     })
     if (!row) return null
     let profile: BrandingProfile
@@ -189,10 +192,10 @@ export class BrandingSnapshotRepository {
     // WebCrypto cannot hold an IDB transaction. Recheck the exact row and owner
     // atomically after validation, so a late digest never publishes another session.
     return this.db.transaction('r', this.tables(), async () => {
-      if (!(await this.admitted(ticket, context, currentTime, false))) return null
+      if (!(await this.admitted(ticket, context, now, currentTime, false))) return null
       const latest = await this.db.brandingSnapshots.get(ticket.partitionId)
-      if (!(await this.admitted(ticket, context, currentTime, false))) return null
-      return snapshotBound(latest, ticket, context, currentTime()) &&
+      if (!(await this.admitted(ticket, context, now, currentTime, false))) return null
+      return snapshotBound(latest, ticket, context, now) &&
         JSON.stringify(latest) === JSON.stringify(row)
         ? profile
         : null
@@ -211,11 +214,11 @@ export class BrandingSnapshotRepository {
     if (!boundProfile(profile, context)) return false
     try {
       return await this.db.transaction('rw', this.tables(), async () => {
-        if (!(await this.admitted(ticket, context, currentTime, true))) return false
+        if (!(await this.admitted(ticket, context, now, currentTime, true))) return false
         const previous = await this.db.brandingSnapshots.get(ticket.partitionId)
         if (previous) {
           // Invalid provenance is never used to grant access or silently repair a cache.
-          if (!snapshotBound(previous, ticket, context, currentTime(), false))
+          if (!snapshotBound(previous, ticket, context, now, false))
             throw new Error('Branding cache provenance invalid')
           if (
             previous.version > profile.version ||
@@ -255,7 +258,7 @@ export class BrandingSnapshotRepository {
           if (partition?.status === 'superseded')
             await this.db.brandingSnapshots.delete(candidate.partitionId)
         }
-        if (!(await this.admitted(ticket, context, currentTime, true)))
+        if (!(await this.admitted(ticket, context, now, currentTime, true)))
           throw new BrandingCacheFenced()
         return true
       })

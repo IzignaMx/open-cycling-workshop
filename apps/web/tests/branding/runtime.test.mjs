@@ -194,3 +194,99 @@ test('older refresh paused after cache write cannot regress a newer confirmed pr
   await older
   assert.equal(env.controller.getSnapshot().profile.version, 2)
 })
+
+test('forced requests coalesce into one freshly admitted trailing read with a finite budget', async () => {
+  let release, entered, complete
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  const finished = new Promise((resolve) => {
+    complete = resolve
+  })
+  const times = []
+  let now = 100,
+    validations = 0
+  const env = setup({
+    now: () => now,
+    validate: async () => {
+      validations++
+      return true
+    },
+    repository: {
+      read: async (_ticket, _context, at) => {
+        times.push(at)
+        if (times.length === 1) {
+          entered()
+          await gate
+          return null
+        }
+        // Further requests during the trailing flight cannot create a loop.
+        for (let i = 0; i < 10; i++) void env.controller.refresh(true)
+        return profile
+      },
+      write: async () => {
+        assert.fail('offline write')
+      },
+    },
+  })
+  env.controller.subscribe(() => {
+    // Consumer notifications must not turn the trailing request into a loop.
+    if (env.controller.getSnapshot().loading || env.controller.getSnapshot().cached)
+      void env.controller.refresh(true)
+    if (env.controller.getSnapshot().cached && !env.controller.getSnapshot().loading) complete()
+  })
+  env.offline()
+  await started
+  for (let i = 0; i < 10; i++) await env.controller.refresh(true)
+  now = 200
+  release()
+  await finished
+  assert.deepEqual(times, [100, 200])
+  assert.equal(validations, 2)
+  assert.equal(env.counts().readCalls, 0)
+})
+
+for (const invalidation of ['clear', 'invalid admission', 'stale source']) {
+  test(`queued force cannot survive ${invalidation}`, async () => {
+    let release, entered
+    const gate = new Promise((resolve) => {
+      release = resolve
+    })
+    const started = new Promise((resolve) => {
+      entered = resolve
+    })
+    let reads = 0,
+      validations = 0,
+      live = true
+    const env = setup({
+      validate: async () => ++validations === 1 || invalidation !== 'invalid admission',
+      repository: {
+        read: async () => {
+          reads++
+          entered()
+          await gate
+          return null
+        },
+        write: async () => {
+          assert.fail('offline write')
+        },
+      },
+    })
+    const capture = env.env.capture
+    env.env.capture = () => ({ ...capture(), online: false, isCurrent: () => live })
+    const first = env.controller.refresh(true)
+    await started
+    await env.controller.refresh(true)
+    if (invalidation === 'clear') env.deny()
+    if (invalidation === 'stale source') live = false
+    release()
+    await first
+    // A queued attempt validates before reading; invalid admission clears it.
+    await Promise.resolve()
+    assert.equal(reads, 1)
+    assert.equal(env.controller.getSnapshot().profile, null)
+  })
+}

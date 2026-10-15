@@ -269,3 +269,21 @@ def test_browser_phase_evidence_paths_do_not_overlap() -> None:
     assert "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/retry-free-repeat" in workflow
     assert "--repeat-each=5 --retries=0 --workers=1" in workflow
     assert "path: apps/web/.tmp-kernel-browser-results/" in workflow
+
+
+def test_administration_clock_repetition_preserves_separate_retry_free_evidence() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    step = workflow.split("- name: Repeat administration probe clock without retries", 1)[1]
+    step = step.split("- name:", 1)[0]
+    assert "playwright test e2e/administration.spec.ts" in step
+    title = "automatic probe revalidation clears a newly entered administration secret"
+    assert f"--grep '{title}'" in step
+    assert "--repeat-each=5 --retries=0 --workers=1" in step
+    assert "OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/administration-clock-repeat" in step
+    assert "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/administration-clock-repeat" in step
+    upload = workflow.split("- name: Upload administration clock repetition evidence", 1)[1]
+    upload = upload.split("- name:", 1)[0]
+    assert "if: always()" in upload
+    assert "browser-administration-clock-repeat-${{ github.sha }}" in upload
+    assert "apps/web/test-results/administration-clock-repeat/" in upload
+    assert "apps/web/playwright-report/administration-clock-repeat/" in upload

@@ -45,7 +45,7 @@ export class BrandingDisplayController {
   #listeners = new Set<() => void>()
   #binding = ''
   #generation = 0
-  #flight: object | null = null
+  #flight: { followupAllowed: boolean; queued: boolean } | null = null
   #abort = new AbortController()
   #lastRefresh = -Infinity
   constructor(private readonly options: Options) {}
@@ -81,6 +81,9 @@ export class BrandingDisplayController {
     }
   }
   async refresh(force = false): Promise<void> {
+    await this.refreshOnce(force, true)
+  }
+  private async refreshOnce(force: boolean, followupAllowed: boolean): Promise<void> {
     const source = this.options.capture()
     if (!source) {
       this.clear()
@@ -91,9 +94,12 @@ export class BrandingDisplayController {
       this.#binding = source.binding
     }
     const now = this.options.now()
-    if (this.#flight || (!force && now >= this.#lastRefresh && now - this.#lastRefresh < 30000))
+    if (this.#flight) {
+      if (force && this.#flight.followupAllowed) this.#flight.queued = true
       return
-    const flight = {},
+    }
+    if (!force && now >= this.#lastRefresh && now - this.#lastRefresh < 30000) return
+    const flight = { followupAllowed, queued: false },
       generation = this.#generation,
       abort = this.#abort
     const current = () =>
@@ -156,8 +162,16 @@ export class BrandingDisplayController {
             'No se pudo actualizar la configuración compartida. La última copia verificada se conserva durante esta sesión.',
         })
     } finally {
-      if (this.#flight === flight) this.#flight = null
-      if (current()) this.publish({ loading: false })
+      if (this.#flight === flight) {
+        if (current()) this.publish({ loading: false })
+        if (this.#flight === flight) {
+          this.#flight = null
+          // Honor one coalesced explicit request with fresh admission/time.
+          // The trailing flight cannot queue another, even if notifications
+          // keep requesting refresh. A null cache result alone never retries.
+          if (current() && flight.queued) void this.refreshOnce(true, false)
+        }
+      }
     }
   }
   private acceptable(profile: BrandingProfile): boolean {
