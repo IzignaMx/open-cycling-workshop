@@ -350,6 +350,12 @@ def main() -> int:
     seed_browser_identity(database_url, authenticated=True)
     seed_legacy_upgrade_identity(database_url)
     seed_administration_identities(database_url)
+    if __package__:
+        from .branding_fixtures import seed_branding_identities
+    else:
+        from branding_fixtures import seed_branding_identities
+
+    seed_branding_identities(database_url)
     print(f"E2E database ready for organization {E2E_ORGANIZATION_ID}")
     return 0
 

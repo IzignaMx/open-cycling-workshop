@@ -1,5 +1,67 @@
 # Changelog
 
+## Unreleased · Readable transparent logos and native ARM execution criterion
+
+- Select a bounded, presentation-only light/dark image backing from already
+  decoded alpha-composited pixels, preserving original logo bytes and personal
+  inheritance. Reclaim nested branding-form width for complete button words at
+  320 CSS pixels and 200% CSS enlargement; keep existing control targets.
+- Require all three ARM64 builds and actual native installed-decoder execution.
+  Keep QEMU in a separate non-qualifying diagnostic workflow with its real failed
+  status and unproven cause visible. Harden native evidence timing consistency
+  without extending the production two-second wall/CPU limits.
+- Preserve the previous exact source's 63/63 direct and aggregate browser result
+  and native ARM pass. Actual review of 74 original captures found pale-logo and
+  enlarged-word defects, so corrected-source execution and pixel review remain
+  required. Physical Raspberry and other manual qualification remain open.
+
+## Unreleased · Separate native ARM64 decoder qualification
+
+- Add a public-repository-only standard ARM64 runner probe with verified host,
+  container, installed worker and unchanged production decoder bounds.
+- Keep QEMU qualification separate and unchanged. Emit only bounded validated
+  JSON to the job log/summary, without image, cache or build-record uploads.
+  Actual native execution remains pending and does not qualify Raspberry Pi.
+
+## Unreleased · Branding browser selectors and workshop-name reflow checks
+
+- Resolve wrapped palette/scheme selects by their exact accessible combobox
+  roles and names, preserving all values, behavior assertions and timeouts.
+- Qualify the complete workshop name and intact visible words instead of the
+  obsolete single-line `OCWP` assumption. Keep narrow/enlarged layout, focus,
+  draft, overflow and accessibility checks; label pre-assertion captures diagnostic.
+- Preserve the actual 55/63 browser result as partial evidence. New exact-source
+  browser and visual qualification remain required; product UI is unchanged.
+
+## Unreleased · Standalone branding decoder startup
+
+- Keep API-only imports, immutable response DTO and decoder lock out of the
+  standalone image child; retain its private immutable PNG record and the exact
+  parser, decoder, subprocess contract and resource bounds.
+- Preserve both failed QEMU attempts. Local canonical-byte and import-boundary
+  regressions pass, with a smaller import graph but no measured native latency
+  improvement. Exact changed-image QEMU qualification remains pending.
+
+## Unreleased · Branding qualification setup and ARM diagnostics
+
+- Prepare and validate the private artifact parent before the real recovery
+  fixtures run on a clean checkout; retain both required restore proofs.
+- Preserve the failed QEMU qualifying attempt and add bounded timeout, exit, CPU
+  and separately labelled phase diagnostics. Production decoder limits and
+  qualification outcomes are unchanged.
+
+## Unreleased · Shared workshop branding
+
+- Add independently authorized per-workshop name, curated palette and bounded
+  canonical logo, explicit shared/personal inheritance and admitted offline reads.
+- Freeze historical wildcard/catalog/role-alias semantics, preserve established
+  owner edits, and provide explicit synthetic-tested grant adoption.
+- Add durable private assets and same-snapshot database-plus-logo recovery.
+  Author separate named-volume API/restart/restored-byte and emulated ARM64
+  decoder probes while preserving existing runtime and browser recovery checks.
+  Native browser, PostgreSQL/restore, Docker/ARM and actual visual qualification
+  remain pending for this exact increment; no full MVP or production claim.
+
 ## Unreleased · Visible theme verification order
 
 - Verify the selected theme radio before closing its panel, retaining keyboard

@@ -3,10 +3,10 @@ import type { ContextTicket } from '../access-kernel/types.js'
 import {
   preferenceScopeKey,
   validatePreferences,
+  validateLogoPreference,
   type PreferenceScope,
 } from '../personalization/preferences.js'
 import type { PreferenceRecord } from '../personalization/repository.js'
-import { isSafeStoredLogo } from '../personalization/logo.js'
 
 /** No version requested: old schemas are never upgraded; absent DB creation is aborted. */
 async function openExisting(factory: IDBFactory, name: string): Promise<IDBDatabase | null> {
@@ -72,15 +72,10 @@ function checkedRecord(
     return null
   const normalized = kind === 'appearance' ? validatePreferences(row.value) : null
   if (kind === 'appearance' && !normalized?.valid) return null
-  if (kind === 'logo' && row.value !== null && !isSafeStoredLogo(row.value)) return null
-  return {
-    key: preferenceScopeKey(scope, kind),
-    organizationId: scope.organizationId,
-    userId: scope.userId,
-    locationId: kind === 'logo' ? scope.locationId : null,
-    kind,
-    value: kind === 'appearance' ? { ...normalized!.preferences, logoDataUrl: null } : row.value,
-  }
+  if (kind === 'logo' && !validateLogoPreference(row.value)) return null
+  // Copy validated owned records unchanged. Translation happens only on read;
+  // neither source bytes nor historical intent are rewritten on first admission.
+  return value as PreferenceRecord
 }
 export async function copyOwnedLegacyPreferences(options: {
   factory: IDBFactory

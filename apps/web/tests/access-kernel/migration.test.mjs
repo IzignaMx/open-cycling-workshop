@@ -124,15 +124,15 @@ async function assertRows(db, names) {
   }
 }
 for (const nativeVersion of [1, 10, 20, 30, 40])
-  test(`native ${nativeVersion} upgrades losslessly to actual native60/logical6 without attribution`, async () => {
+  test(`native ${nativeVersion} upgrades losslessly to actual native70/logical7 without attribution`, async () => {
     const name = `migration-${crypto.randomUUID()}`
     const names = await seed(name, nativeVersion)
     const db = createKernelDatabase(name)
     try {
       await db.open()
-      assert.equal(db.verno, 6)
-      assert.equal(db.backendDB().version, 60)
-      assert.equal(db.tables.length, 16)
+      assert.equal(db.verno, 7)
+      assert.equal(db.backendDB().version, 70)
+      assert.equal(db.tables.length, 17)
       await assertRows(db, names)
       assert.deepEqual(await db.localMigrationState.get('identity-kernel-v5'), {
         key: 'identity-kernel-v5',
@@ -189,7 +189,7 @@ for (const failure of ['abort', 'quota'])
       await candidate.delete()
     }
   })
-test('versionchange closes the old connection; simulated future v7 carries all v6 data', async () => {
+test('versionchange closes the old connection; simulated future v8 carries all v7 data', async () => {
   const name = `future-${crypto.randomUUID()}`
   const names = await seed(name, 40)
   const db = createKernelDatabase(name)
@@ -210,11 +210,11 @@ test('versionchange closes the old connection; simulated future v7 carries all v
   })
   const future = createKernelDatabase(name)
   // Fixture only, never a reserved production store/migration.
-  future.version(7).stores({ futureQuoteFixture: 'id' })
+  future.version(8).stores({ futureQuoteFixture: 'id' })
   try {
     await future.open()
     assert.equal(db.isOpen(), false)
-    assert.equal(future.backendDB().version, 70)
+    assert.equal(future.backendDB().version, 80)
     await assertRows(future, names)
     assert.deepEqual(await future.operationJournal.get('owned'), journal)
     assert.equal(await future.cacheRecords.count(), 1)
@@ -238,7 +238,7 @@ test('authenticated factory cannot open legacy name; legacy class remains v4', a
   assert.equal(typeof Dexie, 'function')
 })
 
-test('activation blocker: legacy v4 Dexie opens v6 and can still write sealed legacy stores', async () => {
+test('activation blocker: legacy v4 Dexie opens v7 and can still write sealed legacy stores', async () => {
   const name = `old-bundle-${crypto.randomUUID()}`
   const upgraded = createKernelDatabase(name)
   await upgraded.open()
@@ -246,7 +246,7 @@ test('activation blocker: legacy v4 Dexie opens v6 and can still write sealed le
   const oldBundle = new OcwpDatabase(name)
   try {
     await oldBundle.open()
-    assert.equal(oldBundle.backendDB().version, 60)
+    assert.equal(oldBundle.backendDB().version, 70)
     await oldBundle.mutationQueue.add({
       mutation_id: 'old-bundle-write',
       payload: { preserved: true },
@@ -265,7 +265,7 @@ test('isolated database names must be primitive strings before native coercion',
   }
 })
 
-test('v5 to v6 adds pagination indices without attributing or rewriting any retained bytes', async () => {
+test('v5 to v7 adds pagination indices and branding cache without attributing or rewriting any retained bytes', async () => {
   const name = `v5-v6-${crypto.randomUUID()}`
   const v5 = new OcwpDatabase(name)
   v5.version(5).stores({
@@ -316,7 +316,7 @@ test('v5 to v6 adds pagination indices without attributing or rewriting any reta
   const current = createKernelDatabase(name)
   try {
     await current.open()
-    assert.equal(current.backendDB().version, 60)
+    assert.equal(current.backendDB().version, 70)
     assert.deepEqual(await current.operationJournal.toArray(), [journal])
     assert.deepEqual(await current.operationDelivery.toArray(), [delivery])
     assert.deepEqual(await current.operationEvents.toArray(), [event])

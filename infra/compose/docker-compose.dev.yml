@@ -28,6 +28,9 @@ services:
       OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-dev-only@postgres:5432/ocwp
       OCWP_AUTH_SECRET_FILE: /run/secrets/auth_secret
       OCWP_LOG_LEVEL: INFO
+      OCWP_BRANDING_ASSET_ROOT: /var/lib/ocwp/branding-assets
+    volumes:
+      - branding_assets:/var/lib/ocwp/branding-assets
     secrets:
       - auth_secret
     depends_on:
@@ -72,6 +75,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  branding_assets:
   postgres_data:
 
 secrets:

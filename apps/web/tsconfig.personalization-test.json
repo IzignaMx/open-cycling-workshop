@@ -15,6 +15,7 @@
     "src/personalization/catalog.ts",
     "src/personalization/preferences.ts",
     "src/personalization/repository.ts",
-    "src/personalization/logo.ts"
+    "src/personalization/logo.ts",
+    "src/personalization/logo-backing.ts"
   ]
 }

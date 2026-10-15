@@ -1,4 +1,5 @@
 import type { Table } from 'dexie'
+import type { BrandingSnapshot } from '../branding/cache.js'
 import { OcwpDatabase } from '../local/database.js'
 import type {
   AccessContextRecord,
@@ -13,6 +14,7 @@ import type {
 
 /** Side-effect-free scoped factory. The legacy ocwp database is never opened here. */
 export class KernelDatabase extends OcwpDatabase {
+  brandingSnapshots!: Table<BrandingSnapshot, string>
   deviceControl!: Table<DeviceControl, string>
   accessContexts!: Table<AccessContextRecord, string>
   cachePartitions!: Table<CachePartition, string>
@@ -67,6 +69,8 @@ export class KernelDatabase extends OcwpDatabase {
         'mutationId, state, [principalKey+locationId+entityType+state+localSequence], [principalKey+locationId+entityType+state+retryAt], [principalKey+locationId+localSequence], [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
       operationEvents: '++sequence, mutationId, [mutationId+sequence]',
     })
+    // v7 adds one admitted shared-brand document per partition; existing bytes remain untouched.
+    this.version(7).stores({ brandingSnapshots: 'partitionId, principalKey' })
     this.on('populate', (transaction) =>
       transaction
         .table('localMigrationState')

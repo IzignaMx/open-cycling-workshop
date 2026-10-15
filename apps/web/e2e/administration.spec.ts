@@ -471,7 +471,7 @@ async function prepareFullPageCapture(page: Page) {
     await skip.evaluate((element) => element.getBoundingClientRect().bottom),
   ).toBeLessThanOrEqual(0)
 }
-async function expectReadableWorkshopSummary(page: Page) {
+async function expectReadableWorkshopSummary(page: Page, info: TestInfo, expectedIdentity: string) {
   const layout = await page.evaluate(() => {
     const zoom = Number(getComputedStyle(document.documentElement).zoom)
     const canvas = document.createElement('canvas')
@@ -501,9 +501,31 @@ async function expectReadableWorkshopSummary(page: Page) {
         parseFloat(style.borderRightWidth)
       return { text, availableWidth, longestWordWidth }
     })
-    const identity = document.querySelector('.workshop-identity strong')!
+    const identity = document.querySelector<HTMLElement>('.workshop-identity strong')!
     const range = document.createRange()
     range.selectNodeContents(identity)
+    const rectangle = (rect: DOMRect) => ({
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    })
+    const identityWords = []
+    const walker = document.createTreeWalker(identity, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/\S+/g)) {
+        const wordRange = document.createRange()
+        wordRange.setStart(node, word.index)
+        wordRange.setEnd(node, word.index + word[0].length)
+        identityWords.push({
+          text: word[0],
+          fragments: Array.from(wordRange.getClientRects(), rectangle),
+        })
+      }
+    }
+    const identityStyle = getComputedStyle(identity)
     const navigationLines = Array.from(document.querySelectorAll('.workshop-links a')).map(
       (link) => {
         const range = document.createRange()
@@ -511,15 +533,66 @@ async function expectReadableWorkshopSummary(page: Page) {
         return { text: link.textContent, lines: range.getClientRects().length }
       },
     )
-    return { labels, identityLines: range.getClientRects().length, navigationLines }
+    return {
+      labels,
+      navigationLines,
+      identity: {
+        text: identity.textContent?.trim() ?? '',
+        words: identityWords,
+        lines: range.getClientRects().length,
+        column: rectangle(identity.parentElement!.getBoundingClientRect()),
+        header: rectangle(identity.closest('.workshop-navigation')!.getBoundingClientRect()),
+        visibility: identityStyle.visibility,
+        opacity: Number(identityStyle.opacity),
+      },
+      viewportWidth: window.innerWidth,
+      zoom,
+      theme: document.querySelector('.workshop-shell')?.getAttribute('data-theme'),
+    }
   })
+  await info.attach(
+    `diagnostic-workshop-summary-${layout.theme}-${layout.viewportWidth}-${layout.zoom}`,
+    { body: JSON.stringify(layout, null, 2), contentType: 'application/json' },
+  )
   expect(layout.labels).toHaveLength(11) // four metrics, identity, settings, five links
   for (const label of layout.labels) {
     expect(label.availableWidth, `readable complete words: ${label.text}`).toBeGreaterThanOrEqual(
       label.longestWordWidth,
     )
   }
-  expect(layout.identityLines, 'OCWP identity must remain on one readable line').toBe(1)
+  // A real workshop name may wrap between complete words. The old single-line
+  // OCWP assertion rejected that legitimate reflow at 200% enlargement.
+  expect(layout.identity.text, 'complete current workshop identity').toBe(expectedIdentity)
+  expect(layout.identity.visibility).toBe('visible')
+  expect(layout.identity.opacity).toBeGreaterThan(0)
+  expect(layout.identity.words.map((word) => word.text)).toEqual(expectedIdentity.split(/\s+/))
+  expect(layout.identity.lines).toBeGreaterThanOrEqual(1)
+  expect(layout.identity.lines).toBeLessThanOrEqual(layout.identity.words.length)
+  for (const word of layout.identity.words) {
+    expect(word.fragments, `workshop identity word stays intact: ${word.text}`).toHaveLength(1)
+    for (const fragment of word.fragments) {
+      expect(fragment.width, `visible width: ${word.text}`).toBeGreaterThan(0)
+      expect(fragment.height, `visible height: ${word.text}`).toBeGreaterThan(0)
+      for (const [name, bounds] of [
+        ['identity column', layout.identity.column],
+        ['navigation header', layout.identity.header],
+      ] as const) {
+        // Account only for subpixel DOMRect rounding, not missing/clipped words.
+        expect(fragment.left, `${word.text} inside ${name}: left`).toBeGreaterThanOrEqual(
+          bounds.left - 1,
+        )
+        expect(fragment.right, `${word.text} inside ${name}: right`).toBeLessThanOrEqual(
+          bounds.right + 1,
+        )
+        expect(fragment.top, `${word.text} inside ${name}: top`).toBeGreaterThanOrEqual(
+          bounds.top - 1,
+        )
+        expect(fragment.bottom, `${word.text} inside ${name}: bottom`).toBeLessThanOrEqual(
+          bounds.bottom + 1,
+        )
+      }
+    }
+  }
   for (const link of layout.navigationLines) {
     expect(link.lines, `single-word navigation label stays intact: ${link.text}`).toBe(1)
   }
@@ -529,6 +602,7 @@ test('administration preserves mounted drafts across all themes with narrow refl
 }, info) => {
   test.setTimeout(120_000)
   const f = fixture('themes', info)
+  const expectedIdentity = 'Taller administración A'
   await loginAccount(page, f)
   await page.getByRole('button', { name: 'Taller administración A', exact: true }).click()
   await waitForReady(page)
@@ -549,7 +623,7 @@ test('administration preserves mounted drafts across all themes with narrow refl
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true)
-      if (width === 320) await expectReadableWorkshopSummary(page)
+      if (width === 320) await expectReadableWorkshopSummary(page, info, expectedIdentity)
       const accessibility = await new AxeBuilder({ page }).analyze()
       expect(
         accessibility.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? '')),
@@ -575,7 +649,18 @@ test('administration preserves mounted drafts across all themes with narrow refl
         noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       })),
     ).toEqual({ innerWidth: 640, effectiveCssWidth: 320, noHorizontalOverflow: true })
-    await expectReadableWorkshopSummary(page)
+    // Pre-assertion pixels are diagnostic only; verified captures remain below
+    // after the readability, mounted-node and draft checks all pass.
+    const diagnosticPath = info.outputPath(
+      `diagnostic-administration-theme-${index}-200-percent.png`,
+    )
+    await prepareFullPageCapture(page)
+    await page.screenshot({ path: diagnosticPath, fullPage: true })
+    await info.attach(`diagnostic-administration-theme-${index}-200-percent`, {
+      path: diagnosticPath,
+      contentType: 'image/png',
+    })
+    await expectReadableWorkshopSummary(page, info, expectedIdentity)
     expect(await handle!.evaluate((element) => element.isConnected)).toBe(true)
     await expect(input).toHaveValue('Borrador de ubicación con texto ampliado')
     const zoomThemePath = info.outputPath(`administration-theme-${index}-200-percent.png`)
@@ -624,7 +709,7 @@ test('administration preserves mounted drafts across all themes with narrow refl
     noHorizontalOverflow: true,
   })
   await expect(create).toBeFocused()
-  await expectReadableWorkshopSummary(page)
+  await expectReadableWorkshopSummary(page, info, expectedIdentity)
   const zoomPath = info.outputPath('administration-forced-colors-200-percent.png')
   await prepareFullPageCapture(page)
   await expect(create).toBeFocused()

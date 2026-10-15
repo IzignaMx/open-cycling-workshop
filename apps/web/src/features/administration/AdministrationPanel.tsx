@@ -1,3 +1,5 @@
+import { BrandingPanel } from '../branding/BrandingPanel.js'
+import type { BrandingEditorController } from '../branding/controller.js'
 import { useRef, useSyncExternalStore } from 'react'
 import type { AdministrationController } from './controller.js'
 import { UsersPanel } from './UsersPanel.js'
@@ -10,11 +12,13 @@ export interface AdministrationPanelProps {
   controller: AdministrationController
   selectedLocationId: string | null
   onClose?(): void
+  branding?: BrandingEditorController
 }
 export function AdministrationPanel({
   controller,
   selectedLocationId,
   onClose,
+  branding,
 }: AdministrationPanelProps) {
   const snapshot = useSyncExternalStore(
     controller.subscribe,
@@ -93,6 +97,9 @@ export function AdministrationPanel({
           <UsersPanel controller={controller} snapshot={snapshot} />
           <LocationsPanel controller={controller} snapshot={snapshot} />
           <SessionPanel controller={controller} snapshot={snapshot} />
+          {branding && (
+            <BrandingPanel controller={branding} selectedLocationId={selectedLocationId} />
+          )}
         </div>
       )}
     </section>

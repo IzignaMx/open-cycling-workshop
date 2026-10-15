@@ -73,14 +73,16 @@ export function UserForm({
     organization_id: actor.organization_id,
     version: 1,
   }
-  const subordinate = canAdminister(actor, target, draft, snapshot.ownerHint, catalog)
-  const valid = validateUserDraft(draft, catalog).length === 0
+  const subordinate = canAdminister(actor, target, draft, snapshot.ownerHint, catalog, !row)
+  const valid = validateUserDraft(draft, catalog, row ?? undefined).length === 0
   const security =
     !!row &&
     !!patch &&
     Object.keys(patch).some((key) => key !== 'expected_version' && key !== 'display_name')
   const self = !!row && !!patch && isSelfSecurityChange(actor, row, patch)
-  const unknown = draft.capabilities.filter((grant) => !catalog.capabilities.includes(grant))
+  const unknown = draft.capabilities.filter(
+    (grant) => grant !== '*' && !catalog.capabilities.includes(grant),
+  )
   function change(values: Partial<UserDraft>) {
     setDraft((previous) => ({ ...previous, ...values }))
     markEdited()

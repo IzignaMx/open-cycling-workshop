@@ -15,6 +15,7 @@ from cycling_workshop.identity.admin_schemas import (
     PatchUserRequest,
     ResetPasswordRequest,
     RoleCatalogResponse,
+    RoleCatalogV2Response,
     RoleResponse,
     ScopeId,
     UserPage,
@@ -26,7 +27,12 @@ from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, w
 from cycling_workshop.identity.dependencies import principal_from_request
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
-from cycling_workshop.identity.roles import CAPABILITIES, ROLE_BUNDLES
+from cycling_workshop.identity.roles import (
+    CAPABILITIES,
+    LEGACY_ROLE_BUNDLES,
+    LEGACY_WILDCARD_CAPABILITIES,
+    ROLE_BUNDLES,
+)
 from cycling_workshop.tenancy.models import LocationRecord
 
 router = APIRouter(tags=["administration"])
@@ -43,9 +49,23 @@ def roles(principal: Actor) -> RoleCatalogResponse:
     return RoleCatalogResponse(
         roles=[
             RoleResponse(name=name, capabilities=sorted(grants))
+            for name, grants in LEGACY_ROLE_BUNDLES.items()
+        ],
+        capabilities=sorted(LEGACY_WILDCARD_CAPABILITIES),
+    )
+
+
+@router.get("/api/v2/admin/roles", response_model=RoleCatalogV2Response)
+def roles_v2(principal: Actor) -> RoleCatalogV2Response:
+    require(principal, "users.read")
+    return RoleCatalogV2Response(
+        catalog_version=2,
+        roles=[
+            RoleResponse(name=name, capabilities=sorted(grants))
             for name, grants in ROLE_BUNDLES.items()
         ],
         capabilities=sorted(CAPABILITIES),
+        legacy_wildcard_capabilities=sorted(LEGACY_WILDCARD_CAPABILITIES),
     )
 
 

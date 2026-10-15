@@ -9,6 +9,7 @@ from sqlalchemy import select
 from cycling_workshop.identity.cutover import validate_compatibility, validate_incarnation
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository, UserAccount
+from cycling_workshop.identity.roles import concrete_capabilities
 from cycling_workshop.identity.security import SessionTokenService
 from cycling_workshop.tenancy.models import OrganizationRecord
 
@@ -88,7 +89,7 @@ def principal_from_request(
 
 def require_capability(capability: str) -> Callable[..., Principal]:
     def dependency(principal: Annotated[Principal, Depends(principal_from_request)]) -> Principal:
-        if capability not in principal.capabilities and "*" not in principal.capabilities:
+        if capability not in concrete_capabilities(principal.capabilities):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="capability denied")
         return principal
 

@@ -25,7 +25,7 @@ from cycling_workshop.identity.cutover import (
 from cycling_workshop.identity.dependencies import _extract_bearer, effective_principal
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.repository import SqlAlchemyUserRepository
-from cycling_workshop.identity.roles import CAPABILITIES
+from cycling_workshop.identity.roles import concrete_capabilities
 from cycling_workshop.identity.security import SessionTokenService, ValidatedSession
 from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 
@@ -100,9 +100,7 @@ def build_context(
     if location is None:
         # Do not distinguish nonexistent locations from another tenant's rows.
         raise HTTPException(status_code=403, detail="location denied")
-    capabilities = sorted(
-        CAPABILITIES if "*" in effective.capabilities else CAPABILITIES & effective.capabilities
-    )
+    capabilities = sorted(concrete_capabilities(effective.capabilities))
     organization = validate_compatibility(
         session.get(OrganizationRecord, effective.organization_id)
     )

@@ -17,8 +17,29 @@ const actor = {
   capabilities: ['users.write'],
 }
 const row = { ...actor, username: 'a', is_active: true, is_owner: false, version: 3 }
+const legacy = [
+  'customers.read',
+  'customers.write',
+  'bicycles.read',
+  'bicycles.write',
+  'orders.read',
+  'orders.write',
+  'inventory.read',
+  'inventory.write',
+  'sync.pull',
+  'sync.push',
+  'users.read',
+  'users.write',
+  'users.grants.write',
+  'users.sessions.revoke',
+  'users.credentials.reset',
+  'locations.read',
+  'locations.create',
+]
 const catalog = {
-  capabilities: ['users.write'],
+  catalog_version: 2,
+  legacy_wildcard_capabilities: legacy,
+  capabilities: [...legacy, 'branding.read', 'branding.write'],
   roles: [{ name: 'TechnicalAdmin', capabilities: [] }],
 }
 test('minimal patch preserves explicit null and version without unchanged grants', () => {

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from cycling_workshop.api.errors import ApiError
 from cycling_workshop.db.session import build_engine
 from cycling_workshop.identity.admin_cli import create_first_owner
+from cycling_workshop.identity.branding_cli import adopt_branding
 from cycling_workshop.identity.cutover_cli import (
     activate_cutover,
     cutover_status,
@@ -155,6 +156,14 @@ def _build_parser() -> argparse.ArgumentParser:
     owner.add_argument("--username", required=True)
     owner.add_argument("--display-name", required=True)
     owner.add_argument("--password-file", type=Path, required=True)
+    adoption = access_commands.add_parser(
+        "adopt-branding",
+        allow_abbrev=False,
+        help="Explicitly add only branding grants to one active established owner",
+    )
+    adoption.add_argument("--organization-id", required=True)
+    adoption.add_argument("--owner-id", required=True)
+    adoption.add_argument("--expected-version", type=int, required=True)
     cutover = subcommands.add_parser("cutover", help="Explicit local cutover maintenance")
     cutover_commands = cutover.add_subparsers(
         dest="cutover_command", required=True, parser_class=_SafeArgumentParser
@@ -169,9 +178,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    if args.command == "cutover" and not (
-        os.getenv("OCWP_DATABASE_URL") or os.getenv("OCWP_DATABASE_URL_FILE")
-    ):
+    if (
+        args.command == "cutover"
+        or (args.command == "access" and args.access_command == "adopt-branding")
+    ) and not (os.getenv("OCWP_DATABASE_URL") or os.getenv("OCWP_DATABASE_URL_FILE")):
         print(
             json.dumps(
                 {"changed": False, "error": "database_configuration_required"}, sort_keys=True
@@ -198,6 +208,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         except (OSError, UnicodeError, ValidationError, SQLAlchemyError):
             print(
                 json.dumps({"changed": False, "error": "cutover_operation_failed"}, sort_keys=True)
+            )
+            return 1
+        print(json.dumps(report, sort_keys=True))
+        return 0
+    if args.command == "access" and args.access_command == "adopt-branding":
+        try:
+            report = adopt_branding(
+                settings,
+                organization_id=args.organization_id,
+                owner_id=args.owner_id,
+                expected_version=args.expected_version,
+            )
+        except ApiError as exc:
+            print(json.dumps({"changed": False, "error": exc.code}, sort_keys=True))
+            return 1
+        except (OSError, UnicodeError, ValidationError, SQLAlchemyError):
+            print(
+                json.dumps({"changed": False, "error": "branding_adoption_failed"}, sort_keys=True)
             )
             return 1
         print(json.dumps(report, sort_keys=True))

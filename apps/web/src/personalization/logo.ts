@@ -31,7 +31,7 @@ function jpegDimensions(bytes: Uint8Array): { width: number; height: number } | 
 }
 
 export function validateLogoFile(file: { type: string; size: number }, bytes: Uint8Array) {
-  if (file.size <= 0 || file.size > MAX_LOGO_INPUT_BYTES)
+  if (file.size <= 0 || file.size > MAX_LOGO_INPUT_BYTES || bytes.length > MAX_LOGO_INPUT_BYTES)
     throw new Error('El logo debe pesar como máximo 2 MB.')
   if (file.type !== 'image/png' && file.type !== 'image/jpeg')
     throw new Error('Elige un archivo PNG o JPEG. SVG y enlaces externos no están permitidos.')
@@ -45,6 +45,8 @@ export function validateLogoFile(file: { type: string; size: number }, bytes: Ui
     dimensions.width * dimensions.height > 8_000_000
   )
     throw new Error('El logo debe medir como máximo 4096 px por lado y 8 megapíxeles.')
+  if (file.size !== bytes.length || (file.type === 'image/png' && !completePng(bytes)))
+    throw new Error('El contenido del archivo no coincide con una imagen permitida o está animado.')
   return dimensions
 }
 
@@ -57,6 +59,8 @@ function completePng(bytes: Uint8Array): boolean {
     const end = offset + 12 + length
     if (end > bytes.length) return false
     const type = view.getUint32(offset + 4)
+    // APNG is not accepted, even if a browser would expose only its first frame.
+    if ([0x6163544c, 0x6663544c, 0x66644154].includes(type)) return false
     if ((offset === 8 && type !== 0x49484452) || (offset !== 8 && type === 0x49484452)) return false
     let crc = 0xffffffff
     for (let i = offset + 4; i < end - 4; i++) {

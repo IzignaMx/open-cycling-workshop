@@ -38,8 +38,8 @@ for (const nativeVersion of [1, 10, 20, 30, 40]) {
         await db.delete()
       }
     }, nativeVersion)
-    expect(result.nativeVersion).toBe(60)
-    expect(result.stores).toBe(16)
+    expect(result.nativeVersion).toBe(70)
+    expect(result.stores).toBe(17)
     expect(result.preserved).toEqual(result.original)
     expect(result.journalCount).toBe(0)
     expect(result.partitions).toBe(0)
@@ -263,10 +263,10 @@ test('real IndexedDB records the old-bundle activation blocker without pretendin
       await candidate.delete()
     }
   })
-  expect(result).toEqual({ version: 60, legacyWrites: 1 })
+  expect(result).toEqual({ version: 70, legacyWrites: 1 })
 })
 
-test('real IndexedDB native50 to native60 preserves journal and unknown evidence exactly', async ({
+test('real IndexedDB native50 to native70 preserves journal and unknown evidence exactly', async ({
   page,
 }) => {
   await page.goto('/')
@@ -339,8 +339,314 @@ test('real IndexedDB native50 to native60 preserves journal and unknown evidence
     }
   })
   expect(result.beforeVersion).toBe(50)
-  expect(result.afterVersion).toBe(60)
+  expect(result.afterVersion).toBe(70)
   expect(result.retained).toEqual(result.original)
   expect(result.retained.journal).not.toHaveProperty('authoredDatasetIncarnation')
   expect(result.indexed).toBe(true)
+})
+
+test('real IndexedDB native60 to native70 retains every original store and closes the old connection', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const name = `branding-v6-upgrade-${crypto.randomUUID()}`
+    const candidate = window.kernelHarness.createKernelDatabase(name)
+    const schemas = candidate.tables
+      .filter((table) => table.name !== 'brandingSnapshots')
+      .map((table) => ({ name: table.name, schema: table.schema }))
+    const open = indexedDB.open(name, 60)
+    open.onupgradeneeded = () => {
+      for (const { name, schema } of schemas) {
+        const store = open.result.createObjectStore(name, {
+          keyPath: schema.primKey.keyPath!,
+          autoIncrement: schema.primKey.auto === true,
+        })
+        for (const index of schema.indexes)
+          store.createIndex(index.name, index.keyPath!, {
+            unique: index.unique === true,
+            multiEntry: index.multi === true,
+          })
+      }
+    }
+    const old = await new Promise<IDBDatabase>((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result)
+      open.onerror = () => reject(open.error)
+    })
+    const originals: Record<string, unknown>[] = []
+    const tx = old.transaction(
+      schemas.map((item) => item.name),
+      'readwrite',
+    )
+    for (const { name, schema } of schemas) {
+      const row: Record<string, unknown> = { unknown: { exact: ['keep', null, 7] } }
+      for (const key of Array.isArray(schema.primKey.keyPath)
+        ? schema.primKey.keyPath
+        : [schema.primKey.keyPath!])
+        row[key] = key === 'sequence' ? 7 : `original-${key}`
+      originals.push({ name, rows: [row] })
+      tx.objectStore(name).add(row)
+    }
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onabort = () => reject(tx.error)
+    })
+    let closed = false
+    old.onversionchange = () => {
+      closed = true
+      old.close()
+    }
+    try {
+      await candidate.open()
+      const retained = await Promise.all(
+        schemas.map(async ({ name }) => ({ name, rows: await candidate.table(name).toArray() })),
+      )
+      return {
+        closed,
+        nativeVersion: candidate.backendDB().version,
+        stores: candidate.tables.length,
+        originalStores: schemas.length,
+        originals,
+        retained,
+        snapshots: await candidate.brandingSnapshots.count(),
+      }
+    } finally {
+      old.close()
+      candidate.close()
+      await candidate.delete()
+    }
+  })
+  expect(result.closed).toBe(true)
+  expect(result.nativeVersion).toBe(70)
+  expect(result.originalStores).toBe(16)
+  expect(result.stores).toBe(17)
+  expect(result.retained).toEqual(result.originals)
+  expect(result.snapshots).toBe(0)
+})
+
+test('real native first admission copies personal v1 default palette and preserves missing/null/local provenance', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const results = []
+    const png =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQCbD7DwADAAGyeEyo+gAAAABJRU5ErkJggg=='
+    for (const value of [undefined, null, png]) {
+      const scope = { organizationId: 'org', userId: 'A', locationId: 'loc' }
+      const source = new window.kernelHarness.OcwpDatabase(`legacy-branding-${crypto.randomUUID()}`)
+      const target = window.kernelHarness.createKernelDatabase(
+        `admitted-branding-${crypto.randomUUID()}`,
+      )
+      const appearance = {
+        ...scope,
+        locationId: null,
+        key: '["appearance","org","A"]',
+        kind: 'appearance' as const,
+        value: {
+          schemaVersion: 1,
+          themeId: 'noche',
+          paletteId: 'bosque',
+          scheme: 'dark',
+          density: 'workshop',
+          logoDataUrl: null,
+        },
+        unknown: { retained: true },
+      }
+      await source.open()
+      await source.presentationPreferences.put(appearance)
+      if (value !== undefined)
+        await source.presentationPreferences.put({
+          ...scope,
+          key: '["logo","org","A","loc"]',
+          kind: 'logo',
+          value,
+        })
+      const original = await source.presentationPreferences.toArray()
+      await target.open()
+      const ticket = {
+        deviceGeneration: 1,
+        tabAttemptId: 'tab',
+        partitionId: 'p',
+        principalKey: 'k',
+        authorizationEpoch: 'epoch',
+      }
+      await target.deviceControl.put({
+        key: 'device',
+        generation: 1,
+        tabAttemptId: 'tab',
+        activePartitionId: 'p',
+        state: 'READY',
+        observedAt: Date.now(),
+        localSequence: 0,
+        dispatchAttemptId: null,
+        dispatchScanAfter: 0,
+      })
+      try {
+        await window.kernelHarness.copyOwnedLegacyPreferences({
+          factory: indexedDB,
+          name: source.name,
+          database: target,
+          scope,
+          ticket,
+          isCurrent: () => true,
+        })
+        const loaded = await new window.kernelHarness.PreferenceRepository(
+          target.presentationPreferences,
+        ).load(scope)
+        results.push({
+          original,
+          preserved: await source.presentationPreferences.toArray(),
+          copied: await target.presentationPreferences.toArray(),
+          version: source.backendDB().version,
+          preferences: loaded.preferences,
+          journal: await target.operationJournal.count(),
+        })
+      } finally {
+        source.close()
+        target.close()
+        await source.delete()
+        await target.delete()
+      }
+    }
+    return results
+  })
+  for (const [index, entry] of result.entries()) {
+    expect(entry.preserved).toEqual(entry.original)
+    expect(entry.copied).toEqual(entry.original)
+    expect(entry.version).toBe(40)
+    expect(entry.journal).toBe(0)
+    expect(entry.preferences.paletteSource).toBe('personal')
+    expect(entry.preferences.paletteId).toBe('bosque')
+    expect(entry.preferences.logoMode).toBe(['workshop', 'none', 'local'][index])
+    expect(entry.preferences.themeId).toBe('noche')
+  }
+})
+
+test('real native branding cache uses admitted offline reload and fences late digest after takeover', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const { AccessKernel, createKernelDatabase, BrandingSnapshotRepository, completedMetadata } =
+      window.kernelHarness
+    const db = createKernelDatabase(`native-branding-cache-${crypto.randomUUID()}`)
+    let now = Date.now()
+    const kernel = new AccessKernel(db, { now: () => now, newId: () => crypto.randomUUID() })
+    const context = {
+      protocol: 1 as const,
+      principal: { apiRealm: 'https://example.test/api/v1', organizationId: 'org', userId: 'A' },
+      selectedLocationId: 'loc',
+      accountLocationId: 'loc',
+      capabilities: ['branding.read'],
+      authorizationEpoch: 'A'.repeat(43),
+      policyRevision: 'ocwp-access-baseline-2',
+      datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
+      verifiedAt: new Date(now).toISOString(),
+      offlineUntil: new Date(now + 3600000).toISOString(),
+      snapshotProtocol: 'baseline-v1' as const,
+    }
+    await db.open()
+    const first = await kernel.acceptVerifiedContext(
+      await kernel.beginVerification('native-tab'),
+      context,
+    )
+    await db.cachePartitions.update(first.ticket.partitionId, {
+      baselineComplete: true,
+      status: 'active',
+      cursor: 'fixture',
+      baseline: completedMetadata(first.ticket, context, 'fixture'),
+    })
+    const ready = await kernel.acceptVerifiedContext(
+      await kernel.beginVerification('native-verified'),
+      context,
+    )
+    const encoded =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNQCbD7DwADAAGyeEyo+gAAAABJRU5ErkJggg=='
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
+    const digest = Array.from(
+      new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+      (byte) => byte.toString(16).padStart(2, '0'),
+    ).join('')
+    const brand = {
+      schema_version: 1 as const,
+      organization_id: 'org',
+      location_id: 'loc',
+      dataset_incarnation: context.datasetIncarnation,
+      version: 1,
+      display_name: 'Synthetic workshop',
+      palette_id: 'arcilla' as const,
+      logo_state: 'available' as const,
+      logo: {
+        sha256: digest,
+        byte_count: bytes.length,
+        width: 1,
+        height: 1,
+        mime_type: 'image/png' as const,
+        png_base64: encoded,
+      },
+      logo_diagnostic: null,
+      updated_at: context.verifiedAt,
+      updated_by: 'A',
+    }
+    const repo = new BrandingSnapshotRepository(db)
+    try {
+      const written = await repo.write(ready.ticket, context, brand, now)
+      const admission = await kernel.rememberSession(ready.ticket, 'native-branding-binding')
+      const reloaded = new AccessKernel(db, { now: () => now, newId: () => crypto.randomUUID() })
+      const offline = await reloaded.resumeOffline(admission, 'offline-reload')
+      const read = await repo.read(offline.ticket, context, now)
+      const offlineWrite = await repo.write(offline.ticket, context, { ...brand, version: 2 }, now)
+      const crossUser = await repo.read(
+        offline.ticket,
+        { ...context, principal: { ...context.principal, userId: 'B' } },
+        now,
+      )
+      const originalDigest = crypto.subtle.digest.bind(crypto.subtle)
+      let release!: () => void, entered!: () => void
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const started = new Promise<void>((resolve) => {
+        entered = resolve
+      })
+      crypto.subtle.digest = async (...args) => {
+        entered()
+        await gate
+        return originalDigest(...args)
+      }
+      let late
+      try {
+        const pending = repo.read(offline.ticket, context, now)
+        await started
+        await new AccessKernel(db).beginVerification('takeover')
+        release()
+        late = await pending
+      } finally {
+        crypto.subtle.digest = originalDigest
+      }
+      now += 3600000
+      const expired = await repo.read(offline.ticket, context, now)
+      return {
+        written,
+        read,
+        brand,
+        offlineWrite,
+        crossUser,
+        late,
+        expired,
+        journal: await db.operationJournal.count(),
+      }
+    } finally {
+      db.close()
+      await db.delete()
+    }
+  })
+  expect(result.written).toBe(true)
+  expect(result.read).toEqual(result.brand)
+  expect(result.offlineWrite).toBe(false)
+  expect(result.crossUser).toBeNull()
+  expect(result.late).toBeNull()
+  expect(result.expired).toBeNull()
+  expect(result.journal).toBe(0)
 })

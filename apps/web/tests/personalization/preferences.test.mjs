@@ -47,7 +47,7 @@ test('corrupt, future, mismatched and unsafe preferences fall back to Banco', ()
     [],
     'noche',
     {},
-    { ...DEFAULT_PREFERENCES, schemaVersion: 2 },
+    { ...DEFAULT_PREFERENCES, schemaVersion: 3 },
     { ...DEFAULT_PREFERENCES, themeId: '__proto__' },
     { ...DEFAULT_PREFERENCES, paletteId: 'unknown' },
     { ...DEFAULT_PREFERENCES, scheme: 'url(https://evil.test)' },
@@ -63,7 +63,7 @@ test('corrupt, future, mismatched and unsafe preferences fall back to Banco', ()
     danger: 'green',
     arbitraryCss: 'display:none',
   })
-  assert.equal(result.valid, true)
+  assert.equal(result.valid, false)
   assert.deepEqual(result.preferences, DEFAULT_PREFERENCES)
 })
 

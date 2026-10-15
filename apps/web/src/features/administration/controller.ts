@@ -134,7 +134,7 @@ export class AdministrationController {
     return hasCapability(source.user, grant, this.#snapshot.catalog ?? undefined)
   }
   private readAllowed(source: AccountCapture, grant: string) {
-    return source.user.capabilities.includes(grant) || source.user.capabilities.includes('*')
+    return hasCapability(source.user, grant)
   }
   async enter() {
     if (this.#command) return
@@ -382,10 +382,32 @@ export class AdministrationController {
       is_active: patch.is_active ?? row.is_active,
       is_owner: patch.is_owner ?? row.is_owner,
     }
-    return canAdminister(source.user, row, proposed, this.#snapshot.ownerHint, catalog)
+    return canAdminister(
+      source.user,
+      row,
+      proposed,
+      this.#snapshot.ownerHint,
+      catalog,
+      ['role', 'capabilities', 'location_id', 'is_owner'].some((key) => Object.hasOwn(patch, key)),
+    )
+  }
+  private explicitSelection<T extends { role?: string | null; capabilities?: string[] | null }>(
+    input: T,
+  ): T | null {
+    const value = structuredClone(input)
+    if (value.role == null) return value
+    if (value.capabilities != null) return null
+    const grants = this.#snapshot.catalog?.roles.find(
+      (role) => role.name === value.role,
+    )?.capabilities
+    if (!grants) return null
+    delete value.role
+    value.capabilities = [...grants]
+    return value
   }
   createUser(input: CreateUserRequest) {
-    const value = structuredClone(input)
+    const value = this.explicitSelection(input)
+    if (!value) return Promise.resolve(undefined)
     return this.command((source, http) => http.createUser(source, value), {
       allow: (source) => {
         const catalog = this.#snapshot.catalog
@@ -417,15 +439,16 @@ export class AdministrationController {
           proposed,
           this.#snapshot.ownerHint,
           catalog,
+          true,
         )
       },
     })
   }
   updateUser(row: UserResponse, patch: PatchUserRequest) {
     const target = structuredClone(row),
-      value = structuredClone(patch),
+      value = this.explicitSelection(patch),
       actor = this.#snapshot.account.user
-    if (!actor) return Promise.resolve(undefined)
+    if (!actor || !value) return Promise.resolve(undefined)
     return this.command((source, http) => http.updateUser(source, target.user_id, value), {
       self: isSelfSecurityChange(actor, target, value),
       allow: (source) =>

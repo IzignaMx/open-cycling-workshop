@@ -1,5 +1,6 @@
 import { cancelResponse, readBoundedJson } from '../../access-kernel/bounded-http.js'
 import { validText, validatePassword, normalizeUsername } from './model.js'
+import { catalogSemantics } from './model.js'
 import type {
   AdministrationCapture,
   ChangePasswordRequest,
@@ -204,6 +205,7 @@ export function createAdministrationTransport(options: { apiRealm: string; fetch
     method: 'GET' | 'POST' | 'PATCH',
     expected: number,
     body?: unknown,
+    catalogV2 = false,
   ): Promise<unknown> {
     const token = source.token,
       check = source.isCurrent,
@@ -214,7 +216,8 @@ export function createAdministrationTransport(options: { apiRealm: string; fetch
     const serialized = body === undefined ? undefined : JSON.stringify(body)
     if (serialized !== undefined && new TextEncoder().encode(serialized).length > 32768)
       fail('invalid_request')
-    const url = `${options.apiRealm}${path}`
+    if (catalogV2 && realm.pathname !== '/api/v1') fail('invalid_request')
+    const url = catalogV2 ? `${realm.origin}/api/v2/admin/roles` : `${options.apiRealm}${path}`
     if (new URL(url).href !== url) fail('invalid_request')
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -373,15 +376,23 @@ export function createAdministrationTransport(options: { apiRealm: string; fetch
   return Object.freeze({
     async roles(source: AdministrationCapture): Promise<RoleCatalogResponse> {
       const s = capture(source),
-        value = await request(s, '/admin/roles', 'GET', 200)
+        value = await request(s, '/admin/roles', 'GET', 200, undefined, true)
       if (
-        !shape(value, ['roles', 'capabilities']) ||
+        !shape(value, [
+          'catalog_version',
+          'roles',
+          'capabilities',
+          'legacy_wildcard_capabilities',
+        ]) ||
+        value.catalog_version !== 2 ||
+        !grants(value.legacy_wildcard_capabilities) ||
         !grants(value.capabilities) ||
         value.capabilities.includes('*') ||
         !Array.isArray(value.roles) ||
         value.roles.length > 100
       )
         fail()
+      if (!catalogSemantics(value as unknown as RoleCatalogResponse)) fail()
       const names = new Set<string>()
       for (const role of value.roles) {
         if (

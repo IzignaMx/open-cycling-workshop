@@ -1,3 +1,4 @@
+import { BrandingEditorController } from './features/branding/controller.js'
 import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import { hasUnsentForms } from './features/draft-state.js'
 import { AdministrationPanel } from './features/administration/AdministrationPanel.js'
@@ -15,6 +16,9 @@ import type { WorkshopController } from './runtime/controller.js'
 
 export function App({ runtime }: { runtime: WorkshopController }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot)
+  const brand = useSyncExternalStore(runtime.branding.subscribe, runtime.branding.getSnapshot)
+  const brandingEditor = useMemo(() => new BrandingEditorController(runtime), [runtime])
+  useEffect(() => () => brandingEditor.dispose(), [brandingEditor])
   const leaveWorkshop = (action: () => Promise<void>) => {
     if (
       hasUnsentForms(document) &&
@@ -40,7 +44,9 @@ export function App({ runtime }: { runtime: WorkshopController }) {
     void runtime.start()
     const online = () => void runtime.reconnect(),
       offline = () => void runtime.offline(),
-      check = () => void runtime.checkLease()
+      check = () => {
+        void runtime.checkLease().then(() => runtime.branding.refresh())
+      }
     window.addEventListener('online', online)
     window.addEventListener('offline', offline)
     window.addEventListener('focus', check)
@@ -93,7 +99,11 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </Button>
           </div>
           {legacy}
-          <AdministrationPanel controller={administration} selectedLocationId={null} />
+          <AdministrationPanel
+            branding={brandingEditor}
+            controller={administration}
+            selectedLocationId={null}
+          />
         </section>
       </main>
     )
@@ -132,7 +142,11 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </>
           )}
           {legacy}
-          <AdministrationPanel controller={administration} selectedLocationId={null} />
+          <AdministrationPanel
+            branding={brandingEditor}
+            controller={administration}
+            selectedLocationId={null}
+          />
         </section>
       </main>
     )
@@ -154,6 +168,14 @@ export function App({ runtime }: { runtime: WorkshopController }) {
       repository={runtime.preferences}
       userName={state.user.display_name}
       canCreateOrders={writeOrders}
+      sharedBranding={brand.profile}
+      brandingCached={brand.cached}
+      brandingMessage={brand.message}
+      onRefreshBranding={() => void runtime.branding.refresh(true)}
+      locationLabel={
+        state.locations.find((location) => location.location_id === context.selectedLocationId)
+          ?.name ?? 'OCWP'
+      }
     >
       <div data-runtime-state="READY" data-selected-workshop={context.selectedLocationId}>
         <SyncStatus state={state.sync} />
@@ -315,6 +337,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
           </Button>
         </section>
         <AdministrationPanel
+          branding={brandingEditor}
           controller={administration}
           selectedLocationId={context.selectedLocationId}
         />

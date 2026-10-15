@@ -17,7 +17,8 @@ RUN uv sync --locked --no-dev --no-editable --package open-cycling-workshop-plat
 FROM base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$PATH"
 RUN groupadd --gid 10001 ocwp \
-    && useradd --system --uid 10001 --gid 10001 --create-home --home-dir /home/ocwp ocwp
+    && useradd --system --uid 10001 --gid 10001 --create-home --home-dir /home/ocwp ocwp \
+    && install -d -m 0700 -o 10001 -g 10001 /var/lib/ocwp/branding-assets /restore-branding-assets
 COPY --from=build /app/.venv /app/.venv
 COPY pyproject.toml /app/pyproject.toml
 COPY services/platform/pyproject.toml services/platform/alembic.ini /app/services/platform/

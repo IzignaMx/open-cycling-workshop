@@ -384,3 +384,65 @@ def test_postgres_image_metadata_environment_is_allowed(monkeypatch: pytest.Monk
         monkeypatch.setenv(variable, "official-image-metadata")
     env = backup._libpq_env("postgresql://user@localhost/db")
     assert env["PGDATABASE"] == "db"
+
+
+def test_snapshot_observer_reads_exact_dump_transaction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = "00000003-00000001-1"
+    monkeypatch.setattr(backup, "_database_metadata", lambda connection: source_metadata())
+    observed: list[object] = []
+
+    def observe(current: object) -> None:
+        assert current is connection
+        assert not connection.begin.return_value.__exit__.called
+        observed.append(current)
+
+    runner = Runner()
+
+    def dump_after_observation(command: list[str], *, env: dict[str, str]) -> None:
+        if command[0] == "pg_dump":
+            assert observed == [connection]
+            assert not connection.begin.return_value.__exit__.called
+        runner(command, env=env)
+
+    path = backup.create_backup_bundle(
+        "postgresql://user@localhost/source",
+        tmp_path / "observed",
+        runner=dump_after_observation,
+        engine_factory=lambda *args, **kwargs: engine,
+        snapshot_observer=observe,
+    )
+    assert backup.verify_backup_bundle(path, runner=Runner())["manifest"]["scope"] == (
+        "postgresql-only"
+    )
+
+
+def test_failed_snapshot_observer_never_publishes_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = MagicMock()
+    connection = engine.connect.return_value.__enter__.return_value
+    connection.execution_options.return_value = connection
+    connection.execute.return_value.scalar_one.return_value = "00000003-00000001-1"
+    monkeypatch.setattr(backup, "_database_metadata", lambda connection: source_metadata())
+
+    def fail(connection: object) -> None:
+        raise ValueError("private profile contents")
+
+    runner = Runner()
+    directory = tmp_path / "failed-observation"
+    with pytest.raises(backup.BackupError, match="incomplete") as caught:
+        backup.create_backup_bundle(
+            "postgresql://user@localhost/source",
+            directory,
+            runner=runner,
+            engine_factory=lambda *args, **kwargs: engine,
+            snapshot_observer=fail,
+        )
+    assert "private" not in str(caught.value)
+    assert not (directory / backup.MANIFEST_NAME).exists()
+    assert not runner.calls

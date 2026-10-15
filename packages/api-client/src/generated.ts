@@ -75,6 +75,37 @@ export interface BicycleResponse {
   wheel_size: string | null
 }
 
+export interface BrandingLogoResponse {
+  byte_count: number
+  height: number
+  mime_type: "image/png"
+  png_base64: string | null
+  sha256: string
+  width: number
+}
+
+export interface BrandingProfileResponse {
+  dataset_incarnation: string
+  display_name: string
+  location_id: string
+  logo: BrandingLogoResponse | null
+  logo_diagnostic: "asset_unavailable" | null
+  logo_state: "none" | "available" | "unavailable"
+  organization_id: string
+  palette_id: "bosque" | "arcilla" | "tinta" | "cobalto" | "petroleo" | "indigo" | "malva" | "frambuesa" | "jade" | "lima" | "hielo" | "lavanda"
+  schema_version: 1
+  updated_at: string | null
+  updated_by: string | null
+  version: number
+}
+
+export interface BrandingPutRequest {
+  display_name: string
+  expected_version: number
+  logo_png_base64: string | null
+  palette_id: "bosque" | "arcilla" | "tinta" | "cobalto" | "petroleo" | "indigo" | "malva" | "frambuesa" | "jade" | "lima" | "hielo" | "lavanda"
+}
+
 export interface ChangeItemResponse {
   cursor: number
   entity_id: string
@@ -328,6 +359,13 @@ export interface ResetPasswordRequest {
 
 export interface RoleCatalogResponse {
   capabilities: Array<string>
+  roles: Array<RoleResponse>
+}
+
+export interface RoleCatalogV2Response {
+  capabilities: Array<string>
+  catalog_version: 2
+  legacy_wildcard_capabilities: Array<string>
   roles: Array<RoleResponse>
 }
 

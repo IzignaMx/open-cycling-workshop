@@ -32,6 +32,7 @@ declare module 'dexie' {
     hook(name: 'updating' | 'deleting', callback: () => never): void
     put(value: T): Promise<K>
     bulkPut(values: T[]): Promise<K>
+    delete(key: K): Promise<void>
     bulkDelete(keys: K[]): Promise<void>
     toArray(): Promise<T[]>
     where(index: string): WhereClause<T>

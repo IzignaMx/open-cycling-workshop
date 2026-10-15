@@ -1,0 +1,71 @@
+.branding-panel {
+  min-width: 0;
+  margin-block: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--ocwp-color-border, #65776e);
+  border-radius: var(--ocwp-radius-md, 12px);
+}
+.branding-panel p,
+.branding-panel strong,
+.branding-panel small {
+  overflow-wrap: anywhere;
+}
+.branding-target,
+.branding-form fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.branding-panel label {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.branding-panel input,
+.branding-panel select,
+.branding-panel button {
+  box-sizing: border-box;
+  min-height: 48px;
+  max-width: 100%;
+  min-width: 0;
+  font: inherit;
+}
+.branding-panel button[type] {
+  width: 100%;
+  margin-inline: 0;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.branding-panel .branding-form {
+  padding-inline: clamp(8px, 2%, 16px);
+}
+.branding-panel .branding-form fieldset {
+  padding-inline: 8px;
+}
+.branding-panel .primary-button {
+  min-height: 56px;
+}
+.branding-preview {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+  border: 1px solid #65776e;
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+.branding-swatch {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  vertical-align: middle;
+  border: 2px solid currentColor;
+  margin-inline: 0.5rem;
+}
+@media (forced-colors: active) {
+  .branding-panel,
+  .branding-preview,
+  .branding-swatch {
+    border-color: CanvasText;
+  }
+}

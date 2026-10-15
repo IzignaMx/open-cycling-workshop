@@ -4,6 +4,7 @@ from __future__ import annotations
 def register_models() -> None:
     """Import every ORM model so SQLAlchemy can resolve cross-module foreign keys."""
     from cycling_workshop.bicycles import models as bicycle_models  # noqa: F401
+    from cycling_workshop.branding import models as branding_models  # noqa: F401
     from cycling_workshop.customers import models as customer_models  # noqa: F401
     from cycling_workshop.events import models as event_models  # noqa: F401
     from cycling_workshop.identity import audit as identity_audit  # noqa: F401

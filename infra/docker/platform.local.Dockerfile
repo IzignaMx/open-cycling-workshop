@@ -10,7 +10,8 @@ RUN uv sync --locked --no-dev --no-editable --package open-cycling-workshop-plat
 FROM python:3.13.14-slim-trixie
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$PATH"
 RUN groupadd --gid 10001 ocwp \
-    && useradd --system --uid 10001 --gid 10001 --create-home --home-dir /home/ocwp ocwp
+    && useradd --system --uid 10001 --gid 10001 --create-home --home-dir /home/ocwp ocwp \
+    && install -d -m 0700 -o 10001 -g 10001 /var/lib/ocwp/branding-assets
 COPY --from=build /app/.venv /app/.venv
 COPY services/platform/alembic.ini /app/services/platform/alembic.ini
 COPY services/platform/migrations /app/services/platform/migrations

@@ -90,6 +90,7 @@ body {
   min-width: 0;
 }
 .workshop-identity strong {
+  overflow-wrap: anywhere;
   font-size: 1.25rem;
   letter-spacing: 0.04em;
 }
@@ -109,6 +110,10 @@ body {
   font-weight: 800;
   letter-spacing: -0.06em;
 }
+.logo-image {
+  /* Preserve the artwork-specific plate, not the surrounding UI, in forced colors. */
+  forced-color-adjust: none;
+}
 .workshop-logo {
   flex-shrink: 0;
   max-width: 100%;
@@ -116,7 +121,6 @@ body {
   height: 48px;
   object-fit: contain;
   padding: 4px;
-  background: #fff;
   border: 1px solid #65776e;
   border-radius: 4px;
 }
@@ -659,7 +663,6 @@ body {
 }
 .logo-preview img {
   object-fit: contain;
-  background: #fff;
   border: 1px solid #65776e;
   padding: 8px;
 }
@@ -994,6 +997,9 @@ body {
   }
 }
 @media (forced-colors: active) {
+  .logo-image[data-logo-backing] {
+    border-color: CanvasText;
+  }
   .workshop-shell,
   .workshop-panel,
   .order-card,
