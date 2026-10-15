@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Separate native ARM64 decoder qualification
+
+- Add a public-repository-only standard ARM64 runner probe with verified host,
+  container, installed worker and unchanged production decoder bounds.
+- Keep QEMU qualification separate and unchanged. Emit only bounded validated
+  JSON to the job log/summary, without image, cache or build-record uploads.
+  Actual native execution remains pending and does not qualify Raspberry Pi.
+
 ## Unreleased · Branding browser selectors and workshop-name reflow checks
 
 - Resolve wrapped palette/scheme selects by their exact accessible combobox

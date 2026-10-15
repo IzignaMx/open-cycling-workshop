@@ -241,3 +241,32 @@ These corrections do not alter product UI/CSS or substitute local test collectio
 for execution. Exact-source hosted browser rerun and original, expected-state
 pixel review remain required. The earlier failed report and both QEMU failures
 are retained as historical evidence.
+
+## Separate standard native ARM64 qualification
+
+A separate `ubuntu-24.04-arm` job uses the same API Dockerfile, checked-out source,
+installed decoder, synthetic fixture and production resource/assertion contracts.
+It verifies the host machine, Python ELF architecture, runner architecture and
+Docker daemon before building, then verifies the container and installed worker.
+Its bounded closed-schema report binds the tested commit, image ID, host facts,
+installed worker hash and process result. Container output is never forwarded
+unvalidated. Only safe JSON is emitted to the job log and summary; no image,
+external cache, build-record or new evidence artifact is uploaded.
+
+This is a separate native execution probe; the existing QEMU job, default probe
+behavior and its failed results are preserved. It does not establish Raspberry
+Pi timing, memory, storage or deployment suitability. Both probes retain the
+same production limits; neither result substitutes for the other.
+
+The literal standard runner has no custom/larger-runner fallback and is admitted
+only when repository privacy metadata is the actual boolean `false`. The guard
+also checks its serialized JSON type because GitHub's loose equality otherwise
+equates missing/null values with false. Private or missing metadata skips the
+native job. A queued or unavailable runner remains pending/blocked, with no native
+pass claim. The official
+[runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
+[billing reference](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+and [expression semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions)
+were checked for this bounded public-repository configuration. Actual exact-source
+hosted native execution is still required; local helper tests are not ARM runtime
+evidence.
