@@ -2,6 +2,47 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Main42 postmerge expiry blocker · 2026-10-15
+
+[PR42](https://github.com/IzignaMx/open-cycling-workshop/pull/42) merged normally as
+`5ab7dd7c21b9540db7cf9c4df63a3201239251fd`, tree
+`fadb25559dcacbd41bbac6ec31bf71fdebb7cc7c`. Its successful exact-tree premerge
+[CI38706189653](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38706189653)
+remains valid historical evidence. The separate
+[postmerge CI38710698436](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38710698436)
+is **failed** and is not qualified by its other passing controls.
+
+- [x] Postmerge direct80 and aggregate80 browser journeys passed on their first
+      attempts; source-bound PostgreSQL43 and both Caddy configurations passed.
+      Direct/aggregate Python each completed2,861 checks,14 explicit skips and
+      three warnings, including completed fixture teardown. Core877, kernel14,
+      sync20/cutover9/clock5, two distinct asset-aware recovery cases and repeated
+      seven-asset pinned builds passed. The verifier JSON records27/27 controls.
+- [x] Independent bounded visual review inspected42 views from30 current-run
+      original captures. Unsent form text survives navigation/disconnection before
+      reload; saved local customer and durable pending history survive reload,
+      where unsent form inputs are blank. No visible defect was found in the
+      inspected regions. This is not physical-device certification.
+- [x] Exact-main [runtime/native/three-build gates](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38710698259)
+      and [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38710698379)
+      passed independently reviewed artifacts. The
+      [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38710698405)
+      failed and remains non-qualifying, with cause unproven.
+- [ ] Mandatory expiry repetition produced9 passes/1 failure, all retry0.
+      Its CDP response-body failure occurred before that attempt selected a
+      product or advanced its clock. Steps42/43 and the step49 recheck failed;
+      skipped direct contract steps45–48 remain distinguishable from those same
+      controls passing inside the aggregate verifier. The generic error text
+      does not prove navigation or a product expiry defect.
+- [ ] Review and qualify the fresh separate
+      [test-owned observer correction](docs/10-spec-development/2026-10-15-inventory-expiry-observer.md)
+      with actual full-matrix and ten retry-free native expiry passes. Local VM
+      tests and test collection cannot close this gate. Do not rerun unchanged
+      failing source merely to obtain a green result.
+- [ ] Physical Windows/Android/Raspberry, real touch/browser zoom, screen-reader,
+      glare, operator install/grants/recovery and the remaining offline/write MVP
+      requirements remain open. No deployment or whole-release claim is made.
+
 ## Inherited main43 reconciliation · 2026-10-15
 
 [PR43](https://github.com/IzignaMx/open-cycling-workshop/pull/43) is merged as
