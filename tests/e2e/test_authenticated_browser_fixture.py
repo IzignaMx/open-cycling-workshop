@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from scripts.e2e import prepare_e2e_database as preparation
 from scripts.e2e.prepare_e2e_database import (
     E2E_ORGANIZATION_ID,
     E2E_PASSWORD,
@@ -25,6 +26,8 @@ def test_browser_fixture_has_genuine_enabled_multiuser_workshop_contexts(
     url = f"sqlite+pysqlite:///{tmp_path / 'browser.sqlite3'}"
     monkeypatch.setenv("OCWP_DATABASE_URL", url)
     monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    # SQLite is an explicit isolated functional surrogate, never a CLI target.
+    monkeypatch.setattr(preparation, "validate_e2e_database_url", lambda value: None)
     run_migrations(url)
     seed_browser_identity(url, authenticated=True)
     engine = create_engine(url)
@@ -72,6 +75,8 @@ def test_original_isolated_seed_remains_floor_zero_without_historical_rows(
     url = f"sqlite+pysqlite:///{tmp_path / 'legacy.sqlite3'}"
     monkeypatch.setenv("OCWP_DATABASE_URL", url)
     monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    # SQLite is an explicit isolated functional surrogate, never a CLI target.
+    monkeypatch.setattr(preparation, "validate_e2e_database_url", lambda value: None)
     run_migrations(url)
     seed_browser_identity(url)
     engine = create_engine(url)
@@ -95,6 +100,8 @@ def test_real_old_bundle_fixture_is_floor_zero_until_explicit_disposable_cutover
     url = f"sqlite+pysqlite:///{tmp_path / 'old-browser.sqlite3'}"
     monkeypatch.setenv("OCWP_DATABASE_URL", url)
     monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    # SQLite is an explicit isolated functional surrogate, never a CLI target.
+    monkeypatch.setattr(preparation, "validate_e2e_database_url", lambda value: None)
     run_migrations(url)
     seed_legacy_upgrade_identity(url)
     engine = create_engine(url)
