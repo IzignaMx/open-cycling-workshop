@@ -178,8 +178,8 @@ The next published head `3271b9a45d507adf1438f8c3704a1111eb72a42d` has tree
 `bd0fa97aacca042f9ebb473f6622de4782f9b146`. Its
 [CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38657365015)
 passed both actual PostgreSQL recovery scenarios and the isolated kernel browser
-step. Direct browser execution is still running at this checkpoint; no screenshot
-or full browser qualification is inferred. The
+step. Its direct browser result, described below, is partial evidence rather than
+complete qualification. The
 [runtime run](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38657365147)
 again passed named-volume save/read/restart/restored-byte checks, but its QEMU
 decoder attempt failed again.
@@ -208,3 +208,36 @@ records, including the cost of `typing`; sampled native wall times remain about
 latency improvement or QEMU success. The changed installed-image worker digest
 must pass a new exact-source hosted probe. Physical-device resource qualification
 and the broader installation gates remain open.
+
+## Exact browser failures and test-contract corrections
+
+The corrected hosted direct report finished with 55 of 63 tests passed, eight
+failed, zero flaky and zero skipped. Branding passed 13 of 20, administration
+15 of 16, and all other files passed. The retry-free repetition steps were skipped
+after failure; the separate aggregate remains independent evidence.
+
+All seven branding failures are demonstrated exact-label selector mismatches on
+three wrapped selects: shared palette, personal palette and surface scheme.
+The controls are present and enabled, with the intended accessible combobox names.
+Playwright's exact label-text lookup also includes their nested option text.
+The test-only correction uses exact combobox role and the same accessible names
+for nine actions/assertions. Values, all behavioral checks, 63 cases and timeouts
+are unchanged. The convergence case stopped before upload/save, and the four
+branding visual scenes stopped before shared-branding scene setup and capture,
+so no new branding image matrix is claimed from this run.
+
+The inherited administration case rejected a legitimate multiword workshop name
+wrapping at 640 viewport pixels with 200% CSS enlargement. The no-horizontal-
+overflow and eleven complete-word-width assertions had passed; its three earlier
+viewport captures exist, but no failing enlarged-state screenshot was available.
+The obsolete single-line `OCWP` check is replaced with exact full-name, intact
+single-fragment words and positive visible geometry inside the identity column
+and navigation header. Existing metric/navigation readability, overflow, focus,
+draft, enlargement and accessibility assertions remain. Pre-assertion pixels and
+geometry are explicitly diagnostic; the normal verified-state captures stay
+after assertions and alone count toward the qualification matrix.
+
+These corrections do not alter product UI/CSS or substitute local test collection
+for execution. Exact-source hosted browser rerun and original, expected-state
+pixel review remain required. The earlier failed report and both QEMU failures
+are retained as historical evidence.

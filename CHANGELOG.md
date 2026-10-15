@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Branding browser selectors and workshop-name reflow checks
+
+- Resolve wrapped palette/scheme selects by their exact accessible combobox
+  roles and names, preserving all values, behavior assertions and timeouts.
+- Qualify the complete workshop name and intact visible words instead of the
+  obsolete single-line `OCWP` assumption. Keep narrow/enlarged layout, focus,
+  draft, overflow and accessibility checks; label pre-assertion captures diagnostic.
+- Preserve the actual 55/63 browser result as partial evidence. New exact-source
+  browser and visual qualification remain required; product UI is unchanged.
+
 ## Unreleased · Standalone branding decoder startup
 
 - Keep API-only imports, immutable response DTO and decoder lock out of the
