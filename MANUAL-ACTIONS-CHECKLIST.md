@@ -2,6 +2,26 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote revision read contracts · 2026-10-15 bounded preparation
+
+- [x] Implement and locally verify pure closed metadata/detail DTO projections
+      from complete repository snapshots; immutable financial data remains
+      separate from current lineage context. Small-fixture suite: 581 passes,
+      255 deliberately deselected; 67 new projection cases included.
+- [x] Independent source review: no remaining blocker, seven additional small
+      cases and the strengthened two-scope continuation test passed.
+- [ ] Later exact-source hosted qualification; no PostgreSQL/HTTP/UI or capacity
+      claim follows from the pure-slice review.
+- [ ] Separate explicit quote-capability compatibility/adoption review, fresh
+      narrowed protocol-1 application admission, scoped resolution, transport
+      guards/private headers and OpenAPI/client evidence before exposing reads.
+- [ ] UI/API exposure, maximum-capacity qualification, complete Task 6 and all
+      activation/operator gates remain open. The failed separate 111-operation,
+      ~8.4 MB cumulative preflight and held guard review are not superseded by
+      small functional tests. No heavy fixture or PostgreSQL test ran here.
+
+See [read-contract scope and evidence](docs/10-spec-development/2026-10-15-quote-read-contracts.md).
+
 ## Quote/main45 reconciliation · 2026-10-15 current checkpoint
 
 Normal local merge `d45c22e1`, tree `d8f978f6`, joins reviewed quote parent
