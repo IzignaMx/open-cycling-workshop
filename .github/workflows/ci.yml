@@ -163,6 +163,23 @@ jobs:
         run: >-
           pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/sync-scope-integrity.spec.ts
           --grep 'lost|foreign|checkpoint|handoff' --repeat-each=3 --retries=0 --workers=1
+      - name: Repeat administration probe clock without retries
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/administration-clock-repeat
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/administration-clock-repeat
+        run: >-
+          pnpm --filter @ocwp/web exec playwright test e2e/administration.spec.ts
+          --grep 'automatic probe revalidation clears a newly entered administration secret'
+          --repeat-each=5 --retries=0 --workers=1
+      - name: Upload administration clock repetition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-administration-clock-repeat-${{ github.sha }}
+          path: |
+            apps/web/test-results/administration-clock-repeat/
+            apps/web/playwright-report/administration-clock-repeat/
+          if-no-files-found: warn
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
       - name: Verify OpenAPI contract

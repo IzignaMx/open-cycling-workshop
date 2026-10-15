@@ -19,6 +19,66 @@
   Exact integrated native/database/edge/browser/pixel qualification remains pending;
   offline inventory, writes, reconciliation and quote workflows remain open.
 
+## Unreleased · Finish branding admission after connected startup sync
+
+- Keep one source-bound branding refresh pending until a connected admission's
+  first settled sync finishes its operational reads. Clear it on cancellation,
+  offline transition or replacement; do not add branding polls to later syncs
+  or page navigation. Intermediate progress/transient retries retain the request.
+- Reproduce connected login, fresh login while an obsolete response is held, and
+  connected reload with preserved v1 personal preferences. Cover real delayed
+  logo hashing versus sync writes, finite requests and publication-time changes.
+- Preserve the aggregate's two first-attempt identity failures and retry passes,
+  separately from its final offline-reload failure. Cache security checks and
+  browser assertions/timeouts remain intact; exact hosted evidence is pending.
+
+## Unreleased · Readmit branding after offline startup completes
+
+- Request one current-source offline branding refresh after initial customer,
+  order and issue reads settle. Those kernel transactions can legitimately
+  invalidate an overlapping cache read by advancing trusted observation time.
+- Cover full stored-session restart through both offline and online-hint/network-
+  failure paths, real delayed logo/startup-page interleavings, pending-work
+  preservation and cancellation before startup completes. Keep the finite
+  coalescer, six rollback regressions, cache checks and browser assertions intact.
+- Retain the prior candidate's later failure after reload: its before-reload
+  verified-copy assertion now passed, but the restored identity was still OCWP.
+  Exact changed-head hosted browser qualification remains pending.
+
+## Unreleased · Recover explicitly requested offline branding refresh
+
+- Coalesce a forced branding refresh requested during an active flight into one
+  freshly captured/admitted trailing flight. Its finite budget prevents refresh
+  notifications from creating a loop; a null cache result alone never retries.
+- Reconcile branding after lease validation on a repeated offline notification.
+  Preserve conservative cache entry-time rollback, owner, snapshot and expiry
+  checks and all existing browser assertions.
+- Retain PR41's direct and aggregate offline-branding failures. Add deterministic
+  real-controller/kernel/cache coverage, including pending customer work during
+  logo validation and rollback/expiry/takeover/future-snapshot refusals. Fresh
+  exact-head native/browser and retry-free repetition evidence remains required.
+
+## Unreleased · Preserve branding cache clock-rollback evidence
+
+- Keep the operation-entry timestamp when checking verified context, device
+  control and cached-snapshot provenance. Asynchronous elapsed time cannot turn
+  an already rolled-back request into an admitted read or write; advancing
+  monotonic time still fences lease expiry through the final transaction.
+- Add six deterministic read/write rollback regressions, a valid-delay control
+  and two late-transaction expiry controls. Preserve PR41's original hosted
+  failure and skipped browser gates; this expands its original test-only scope
+  with a bounded production cache correction. Exact changed-head hosted evidence
+  remains pending.
+
+## Unreleased · Deterministic administration probe clock
+
+- Freeze the test wall date before pausing at the same target, then restore
+  advancing Date while paused. Avoid the observed host/browser clock race
+  without changing product behavior, timeouts or secret-cleanup assertions.
+- Add deterministic installed-Playwright RED/GREEN coverage and a separate
+  five-run retry-free browser gate. Preserve the actual postmerge result of
+  62 first-pass cases and one retry pass; corrected native evidence is pending.
+
 ## Unreleased · Readable transparent logos and native ARM execution criterion
 
 - Select a bounded, presentation-only light/dark image backing from already

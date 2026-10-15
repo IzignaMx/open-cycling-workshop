@@ -100,6 +100,80 @@ test('held, locked, expired, clock rollback and absent literal read cannot expos
     assert.equal(await repo.write(ticket, denied, profile(), NOW), false)
   }
 })
+
+for (const boundary of ['context', 'control', 'snapshot']) {
+  for (const operation of ['read', 'write']) {
+    test(`${operation} cannot outwait entry clock rollback behind ${boundary}`, async (t) => {
+      const { repo, db, ticket, ctx, control } = await fixture(t)
+      await repo.write(ticket, ctx, withLogo(), NOW)
+      if (boundary === 'control') await db.deviceControl.put({ ...control, observedAt: NOW + 1 })
+      if (boundary === 'snapshot') {
+        const row = await db.brandingSnapshots.get(ticket.partitionId)
+        await db.brandingSnapshots.put({ ...row, observedAt: NOW + 1 })
+      }
+      const before = await db.brandingSnapshots.toArray()
+      const journal = { mutationId: 'untouched', pending: true }
+      await db.operationJournal.add(journal)
+      let samples = 0
+      // The entry wall timestamp is already behind trusted evidence. Advancing
+      // two monotonic milliseconds before validation must not erase that fact.
+      t.mock.method(performance, 'now', () => (samples++ === 0 ? 0 : 2))
+      const enteredAt = boundary === 'context' ? NOW - 1 : NOW
+      if (operation === 'read') assert.equal(await repo.read(ticket, ctx, enteredAt), null)
+      else if (boundary === 'snapshot')
+        await assert.rejects(
+          repo.write(ticket, ctx, withLogo({ version: 2 }), enteredAt),
+          /provenance invalid/,
+        )
+      else assert.equal(await repo.write(ticket, ctx, withLogo({ version: 2 }), enteredAt), false)
+      assert.deepEqual(await db.brandingSnapshots.toArray(), before)
+      assert.deepEqual(await db.operationJournal.get('untouched'), journal)
+      // Refusal must not poison the cache: a fresh valid invocation can recover.
+      assert.deepEqual(await repo.read(ticket, ctx, NOW + 2), withLogo())
+      assert.equal(await repo.write(ticket, ctx, withLogo({ version: 2 }), NOW + 2), true)
+    })
+  }
+}
+
+test('valid entry remains readable and writable after monotonic delivery delay', async (t) => {
+  const { repo, db, ticket, ctx } = await fixture(t)
+  await repo.write(ticket, ctx, withLogo(), NOW)
+  let samples = 0
+  t.mock.method(performance, 'now', () => (samples++ === 0 ? 0 : 2))
+  assert.deepEqual(await repo.read(ticket, ctx, NOW), withLogo())
+  samples = 0
+  assert.equal(await repo.write(ticket, ctx, withLogo({ version: 2 }), NOW), true)
+  assert.equal((await db.brandingSnapshots.get(ticket.partitionId)).version, 2)
+})
+
+for (const operation of ['read', 'write']) {
+  test(`lease expiry during final ${operation} transaction still fences late cache work`, async (t) => {
+    const short = context({ offlineUntil: new Date(NOW + 1000).toISOString() })
+    const { repo, db, ticket, ctx } = await fixture(t, short)
+    await repo.write(ticket, ctx, withLogo(), NOW)
+    const before = await db.brandingSnapshots.toArray()
+    let elapsed = 0
+    t.mock.method(performance, 'now', () => elapsed)
+    if (operation === 'read') {
+      const get = db.brandingSnapshots.get.bind(db.brandingSnapshots)
+      let reads = 0
+      t.mock.method(db.brandingSnapshots, 'get', async (...args) => {
+        const row = await get(...args)
+        if (++reads === 2) elapsed = 1001
+        return row
+      })
+      assert.equal(await repo.read(ticket, ctx, NOW), null)
+      assert.equal(reads, 2)
+    } else {
+      db.brandingSnapshots.hook('updating', () => {
+        elapsed = 1001
+      })
+      assert.equal(await repo.write(ticket, ctx, withLogo({ version: 2 }), NOW), false)
+    }
+    assert.deepEqual(await db.brandingSnapshots.toArray(), before)
+  })
+}
+
 test('repeated snapshot scope and exact stored/current context are required', async (t) => {
   const { repo, db, ticket, ctx } = await fixture(t)
   await repo.write(ticket, ctx, profile(), NOW)

@@ -941,3 +941,49 @@ the advisory with an unset patched-version field. No finding was suppressed.
 No real accounts, passwords, first-owner command, installation update or deployment
 was performed. Existing physical-device, screen-reader and operator recovery gates
 remain open. See the [evidence record](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
+## 2026-10-15 · Administration probe-clock qualification
+
+- [ ] Obtain exact-candidate direct/aggregate browser results and the separate
+      five-run administration-clock repetition with zero retries. The main40
+      direct artifact records 62 first-pass cases and one retry pass; its
+      pre-secret clock exception is retained as evidence, not a clean first pass.
+- Installed-Playwright VM RED/GREEN proves the bounded fixture correction, not
+  real browser/API/lease-expiry behavior. See the
+  [clock evidence record](docs/10-spec-development/2026-10-15-administration-probe-clock.md).
+  Existing physical-device, screen-reader and installation gates remain open;
+  no new operator action is required to change the test fixture.
+- PR41's first hosted run passed all four clock regressions but failed the
+  existing branding cache rollback assertion before browser setup. The later
+  aggregate core pass does not supersede that failure; direct/repetition browser
+  phases were skipped, and aggregate browser launch lacked the skipped Chromium
+  installation. See the [bounded production cache correction](docs/10-spec-development/2026-10-15-branding-cache-clock-rollback.md).
+- [ ] Obtain fresh exact-head hosted core, native cache/offline/takeover journeys,
+      direct/aggregate browser and retry-free clock repetition after the cache
+      correction. Local Node 22.16 deterministic/fake-IDB evidence is not native
+      browser storage or real installation qualification.
+- The next published tree `a57c700a` passed 741 core cases but failed the offline
+  branding journey in direct and aggregate browser execution (62/63 each). Both
+  direct attempts failed; no flaky pass occurred and repetition phases were
+  skipped. These failures remain retained. The [offline refresh correction](docs/10-spec-development/2026-10-15-offline-branding-refresh.md)
+  adds finite coalescing of the existing forced request without relaxing cache
+  rollback checks. The exact changed-head gates above remain open.
+
+- The next PR41 candidate `93b9b30e09fa90c9dffc78105b8ef5fbc172852d`
+  also has a retained 62/63 direct-browser failure in CI38678325955. Both attempts
+  now pass the before-reload verified-copy assertion, then fail the saved-brand
+  identity after reload at branding.spec.ts494. The [startup completion correction](docs/10-spec-development/2026-10-15-offline-branding-refresh.md#offline-reload-startup-completion-follow-up)
+  adds a current-source request after initial operational reads; it does not
+  change cache admission or retry budgets. This new local composition evidence
+  does not qualify the browser journey. Exact changed-head direct/aggregate and
+  retry-free repetition gates remain open.
+
+- CI38678325955's aggregate subsequently finished: 26/27 controls, 2375 Python
+  passes / 14 skips and 752 frontend passes. Browser: **60 first-pass, two flaky
+  retry passes, one final failure**. Besides the retained offline reload failure,
+  connected relogin and connected v1-preference reload first rendered OCWP instead
+  of the current saved brand. Their retries passed; this does not erase either
+  first failure. The [connected startup correction](docs/10-spec-development/2026-10-15-connected-branding-refresh.md)
+  adds one current-admission completion request after the first settled sync.
+  New exact-head direct/aggregate and retry-free gates remain required before
+  integration; earlier local or hosted results do not qualify this combined tree.
