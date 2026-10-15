@@ -870,3 +870,15 @@ the advisory with an unset patched-version field. No finding was suppressed.
 No real accounts, passwords, first-owner command, installation update or deployment
 was performed. Existing physical-device, screen-reader and operator recovery gates
 remain open. See the [evidence record](docs/10-spec-development/2026-10-14-connected-administration-ui.md).
+
+## 2026-10-15 · Administration probe-clock qualification
+
+- [ ] Obtain exact-candidate direct/aggregate browser results and the separate
+      five-run administration-clock repetition with zero retries. The main40
+      direct artifact records 62 first-pass cases and one retry pass; its
+      pre-secret clock exception is retained as evidence, not a clean first pass.
+- Installed-Playwright VM RED/GREEN proves the bounded fixture correction, not
+  real browser/API/lease-expiry behavior. See the
+  [clock evidence record](docs/10-spec-development/2026-10-15-administration-probe-clock.md).
+  Existing physical-device, screen-reader and installation gates remain open;
+  no new operator action is required to change the test fixture.

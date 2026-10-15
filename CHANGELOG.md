@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Deterministic administration probe clock
+
+- Freeze the test wall date before pausing at the same target, then restore
+  advancing Date while paused. Avoid the observed host/browser clock race
+  without changing product behavior, timeouts or secret-cleanup assertions.
+- Add deterministic installed-Playwright RED/GREEN coverage and a separate
+  five-run retry-free browser gate. Preserve the actual postmerge result of
+  62 first-pass cases and one retry pass; corrected native evidence is pending.
+
 ## Unreleased · Readable transparent logos and native ARM execution criterion
 
 - Select a bounded, presentation-only light/dark image backing from already
