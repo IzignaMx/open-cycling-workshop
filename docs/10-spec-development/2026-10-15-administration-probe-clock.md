@@ -4,6 +4,10 @@ Date: 2026-10-15. Status: implemented_pending_evidence.
 Base: main `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`.
 Scope: test clock initialization and qualification only. No production source,
 timeout, probe deadline/backoff, credential assertion or runtime policy changes.
+This describes the initial clock-fixture change. PR41 subsequently exposed an
+independent production cache rollback defect; its bounded scope expansion and
+retained original failure are recorded in the
+[cache correction](2026-10-15-branding-cache-clock-rollback.md).
 
 ## Observed postmerge failure
 
@@ -102,3 +106,22 @@ An initial generic-Python preflight lacked pytest/runtime dependencies; the
 qualified existing dependency environment is used for final aggregate checks.
 Fresh exact-candidate hosted direct/aggregate and the new retry-free repetition
 remain required. Local native browser and PostgreSQL execution are not claimed.
+
+## First PR41 hosted attempt
+
+Head `537b2c689a40e2fe8de7138ad96b89e46f54847f`, tree
+`27be03b34aa32e2d5f043067273113643b7f46c5`, synthetic merge
+`64993f4d3abedfef0dce47aa67ff3370893bb623`:
+[CI 38673600999](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38673600999)
+failed its direct frontend core phase: **731 passed, one failed**, with all four
+new clock regressions passing on Node 22.16.0. The failure is the existing
+branding cache rollback assertion returning a profile for `NOW - 1`, not the
+Playwright clock harness. The later aggregate's **732 core passes** do not erase
+that first failure. Its **2375 Python passes / 14 skips** remain separate.
+Direct browser and the five-run clock gate were skipped. Aggregate browser
+launches were unavailable because the earlier failure skipped Chromium
+installation; this is not evidence of 63 application regressions.
+
+The original failure remains visible. A new exact changed-head hosted run,
+including direct/aggregate browser and five retry-free probe repetitions, is
+required after the separately documented cache correction.

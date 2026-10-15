@@ -882,3 +882,12 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   [clock evidence record](docs/10-spec-development/2026-10-15-administration-probe-clock.md).
   Existing physical-device, screen-reader and installation gates remain open;
   no new operator action is required to change the test fixture.
+- PR41's first hosted run passed all four clock regressions but failed the
+  existing branding cache rollback assertion before browser setup. The later
+  aggregate core pass does not supersede that failure; direct/repetition browser
+  phases were skipped, and aggregate browser launch lacked the skipped Chromium
+  installation. See the [bounded production cache correction](docs/10-spec-development/2026-10-15-branding-cache-clock-rollback.md).
+- [ ] Obtain fresh exact-head hosted core, native cache/offline/takeover journeys,
+      direct/aggregate browser and retry-free clock repetition after the cache
+      correction. Local Node 22.16 deterministic/fake-IDB evidence is not native
+      browser storage or real installation qualification.

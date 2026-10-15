@@ -149,6 +149,11 @@ incarnation/partition/lease and validates canonical data. Current device ownersh
 and READY/OFFLINE_READY admission are checked transactionally. Offline reload uses
 its new valid owner ticket under the same existing lease; stored provenance never
 grants admission. Monotonic elapsed time fences delayed digest/IDB work.
+The original operation-entry wall timestamp separately fences rollback behind
+the verified context, device control and snapshot observation. Waiting cannot
+erase an invalid entry time; expiry checks continue advancing through final
+transactional admission. Concurrent newer trusted evidence may conservatively
+refuse an older operation, without deleting the snapshot or operational work.
 
 The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
 request/save. Exact saved session, current ticket/source generation, lease and

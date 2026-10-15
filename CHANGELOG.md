@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Preserve branding cache clock-rollback evidence
+
+- Keep the operation-entry timestamp when checking verified context, device
+  control and cached-snapshot provenance. Asynchronous elapsed time cannot turn
+  an already rolled-back request into an admitted read or write; advancing
+  monotonic time still fences lease expiry through the final transaction.
+- Add six deterministic read/write rollback regressions, a valid-delay control
+  and two late-transaction expiry controls. Preserve PR41's original hosted
+  failure and skipped browser gates; this expands its original test-only scope
+  with a bounded production cache correction. Exact changed-head hosted evidence
+  remains pending.
+
 ## Unreleased · Deterministic administration probe clock
 
 - Freeze the test wall date before pausing at the same target, then restore
