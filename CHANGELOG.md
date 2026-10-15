@@ -16,6 +16,8 @@
   outbox facts. Retain caller rollback even with SQLite legacy savepoints.
 - Add PostgreSQL contention/restore fixtures to the existing recovery wrapper;
   local skips are explicit and do not claim those gates passed.
+- Close independent source findings and pass all available local checks while
+  retaining explicit PostgreSQL/restore and hosted qualification gates.
 - Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
   routes, all-ingress guards, mixed-writer rollout and operational execution gates.
 
