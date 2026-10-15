@@ -90,6 +90,7 @@ async function selectMain(page: Page) {
       .getByRole('list', { name: 'Movimientos de inventario', exact: true })
       .getByRole('listitem'),
   ).toHaveCount(50)
+  await expect(panel(page).getByRole('heading', { name: PRODUCT, exact: true })).toBeFocused()
 }
 function trackReads(page: Page) {
   const inventory: string[] = [],
@@ -140,24 +141,29 @@ for (const floor of ['floor-zero', 'floor-one'] as const) {
     await expect(ledger).toContainText(f.id(350))
     await expect(ledger).toContainText('CONSUME')
     await expect(ledger).not.toContainText(f.id(349))
-    await region.getByRole('button', { name: 'Movimientos anteriores', exact: true }).click()
+    await region.getByRole('button', { name: 'Movimientos anteriores', exact: true }).focus()
+    await page.keyboard.press('Enter')
     await expect(ledger.getByRole('listitem')).toHaveCount(4)
     await expect(ledger).toContainText(f.id(349))
     await expect(ledger).toContainText('-4')
     await expect(ledger).toContainText(f.id(348))
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
-    await expect(region.locator(':focus')).toHaveCount(1)
-    await region.getByRole('button', { name: 'Movimientos más recientes', exact: true }).click()
+    await expect(region.getByRole('heading', { name: 'Movimientos', exact: true })).toBeFocused()
+    await region.getByRole('button', { name: 'Movimientos más recientes', exact: true }).focus()
+    await page.keyboard.press('Space')
     await expect(ledger.getByRole('listitem')).toHaveCount(50)
+    await expect(region.getByRole('heading', { name: 'Movimientos', exact: true })).toBeFocused()
     await region.getByRole('button', { name: 'Actualizar cantidad', exact: true }).click()
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
     await expect(region).not.toContainText(PRIVATE_CANARY)
     await expect(region).not.toContainText('private-order-canary')
     await region.getByRole('button', { name: 'Más productos', exact: true }).click()
     await expect(region.getByRole('button', { name: /^Consultar P/ })).toHaveCount(2)
+    await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
     await expect(region).not.toContainText(PRODUCT)
     await region.getByRole('button', { name: 'Productos anteriores', exact: true }).click()
     await expect(region.getByRole('button', { name: /^Consultar P/ })).toHaveCount(50)
+    await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
     await region.getByRole('button', { name: 'Consultar P001 Saldo negativo', exact: true }).click()
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('-7')
     await region
@@ -586,6 +592,14 @@ for (const theme of THEMES) {
           expect(word.rects[0]!.right).toBeLessThanOrEqual(control.right + 0.5)
         }
       }
+      const refresh = panel(page).getByRole('button', { name: 'Actualizar cantidad', exact: true })
+      await refresh.focus()
+      await page.keyboard.press('Tab')
+      await expect(
+        panel(page).getByRole('button', { name: 'Movimientos más recientes', exact: true }),
+      ).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(refresh).toBeFocused()
       await capture(page, info, `inventory-${theme.id}-${scene.name}`)
     }
     await page.evaluate(() => {
