@@ -84,6 +84,36 @@ inherited results qualify its new source.
 
 ## Connected inventory read · 2026-10-15 candidate gates
 
+Latest observed checkpoint: [CI38698004328](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38698004328),
+head `b8d59c216f1d8654ab715bf9bbf7ab92299cbc18`, tree
+`5295fd701afc61dbbf19e11580b56ee190729d2e`, passed the isolated kernel step,
+43 actual PostgreSQL cases and both Caddy configurations. Independent artifact
+review confirms the bounded database/edge proof; runtime/security/native ARM64
+and three builds also passed for that tree. Its direct browser report contains
+**78 first-attempt passes, one final failure and one retry-pass flake**, zero skips.
+The preservation observer counted a legitimate POST delta read as a domain write;
+the background-expiry fixture requested a response body after catalog readiness
+and received a CDP body-unavailable error. No intervening navigation is recorded;
+the error's generic navigation hint does not establish its cause. Those attempts
+remain retained. A test-only correction now allows the exact delta-read POST and
+consumes the scoped context body at arrival, retaining all original assertions.
+Six focused and 877 frontend checks passed locally; 17 browser cases collected
+without local execution. The separate aggregate finished with 79 first-attempt
+browser passes, preservation failing both attempts and zero flakes/skips. Its
+qualification is 25 controls passed and two failed: browser and a PostgreSQL
+fixture teardown error after all 2,835 Python test bodies passed (14 skips).
+The owned 20,001-product delete exceeded its statement budget while checking
+foreign keys. A fixture-only bounded-batch correction preserves transaction
+atomicity, scope, constraints and budgets; actual PostgreSQL confirmation remains
+required. Independent pixels cover 41 native-resolution regions from 29 originals,
+including all four inventory themes, but no post-reload preservation capture was
+reached. The changed-head full hosted matrix and physical/operator gates remain
+open. Final local Python passed 2,595 with 262 explicit skips and three warnings;
+full Ruff/format, the 877 frontend checks and PWA build passed. Independent agent
+reviews found no source blocker in the two narrow corrections. These results do
+not execute the missing local PostgreSQL/browser gates. The earlier failures below
+are historical evidence.
+
 First PR42 [hosted CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38686652539)
 ran exact tree `b08a8c5b8267c0b906841d6c93635236eadeebe5`: 2,654 Python passes
 (14 skips) and a separate 43-case actual PostgreSQL proof with verified source/plan

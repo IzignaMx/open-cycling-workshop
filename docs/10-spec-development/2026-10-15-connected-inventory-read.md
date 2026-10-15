@@ -455,3 +455,139 @@ subsequent evidence-only documentation delta records these actual results. Focus
 ESLint/Prettier/strict E2E TypeScript reruns have explicit exit-zero records. Actual
 Gitleaks8.30.1 full-history scanning found zero leaks. Corrected exact-head hosted
 execution, visual review and physical/operator acceptance remain pending.
+
+## Response-bound browser observations · 2026-10-15
+
+[CI38698004328](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38698004328)
+tested remote head `b8d59c216f1d8654ab715bf9bbf7ab92299cbc18` through merge
+`4c268dd975990c7240be2d09bd351d50db4078f2`, exact tree
+`5295fd701afc61dbbf19e11580b56ee190729d2e`. Its isolated kernel step passed;
+the direct browser report executed all 80 cases: **78 first-attempt passes,
+one case failing both attempts and one retry-pass flake**, zero skipped cases.
+Artifact 11956355302 has 306,555,501 bytes, 750 safe unique members, verified CRC
+and SHA256 `ede5956f231d687992852ae01a562ecb5e45f171edcf89fd7f0fd83c7d5231d8`.
+The embedded report and individual errors were inspected, not inferred from a
+job badge. The preceding administration navigation and Banco keyboard fixes
+passed. The separate aggregate ultimately executed 80 cases: 79 first-attempt
+passes, preservation failing twice, zero flaky/skipped cases. Its qualification
+has 25 passing controls and two failures: browser and the teardown error below.
+
+The preservation case now proves the positive pending journal/delivery state
+before failing: the no-write observer incorrectly included POST
+`/api/v1/sync/deltas/page`. That existing route advances continuation metadata
+while reading domain projections; it does not deliver pending domain mutations.
+Only this exact normalized URL pathname with method POST is exempted by the
+test-only observer. All other non-GET/HEAD/OPTIONS API requests remain detected,
+including sync/mutations, login/logout, inventory writes, unknown routes, path
+lookalikes, trailing slash, encoded separator and query/path confusion. All
+unsent draft, zero-attempt delivery, journal/history equality, disconnect and
+reload assertions remain. Both failed attempts stopped before those later
+boundaries and their assertion-backed screenshot; they do not prove preservation.
+
+The background-expiry case failed while reading an auth/context response body:
+CDP reported that no body was available for the resource. Retry passed. Recorded
+steps place response arrival before catalog visibility and body retrieval after
+that visibility; no intervening navigation appears. Inventory automatic traces
+remain disabled for credential privacy, so there is no trace establishing the
+precise browser cause. The generic navigation hint is not proof of navigation.
+The narrow lifecycle correction begins JSON consumption immediately upon the
+matching successful GET response, concurrently with the complete inventory-open
+action. Matching requires the same origin, exact endpoint and one expected
+selected-location parameter. The observation returns only validated expiry and
+snapshot-protocol scalars, never a credential or full context. Missing bodies,
+malformed JSON, invalid metadata and action failures still reject without retry,
+fallback or invented expiry. Both expiry modes and floor-0/floor-1 assertions use
+this helper; their product, session, baseline-absence and request-count assertions
+are unchanged. No production source, browser budget or retry policy changes.
+
+The extracted old method/delayed-body logic produced deterministic RED: four
+failures and two passes. After correction all six observation tests passed,
+including body availability ending at later readiness, exact read classification,
+scope/status filtering and error propagation. Full frontend core passed 877 with
+zero skips; touched ESLint/Prettier and strict E2E Bundler-mode TypeScript passed.
+An initial NodeNext-only command rejected the existing axe import; that failed
+non-repository configuration is retained separately. All 17 inventory browser
+cases collect, but none execute locally. This is fixture-ordering evidence, not a
+reproduction of Chromium's internal body loss or corrected native browser GREEN.
+Independent agent review closed the exact five-file source scope without a blocker
+and checked the recorded results without rerunning them. The initially extracted
+RED helper was overwritten by GREEN; its RED log and actual old Git source are
+retained, with a later reconstruction explicitly labeled. A mistyped base SHA in
+the command record was corrected against Git with its prior value retained. The
+production PWA build also passed. A separate actual-pixel review inspected 41
+native-resolution regions from 29 originals, covering all four inventory themes
+across desktop/tablet/narrow/CSS200/forced-colors scenes, narrow catalogs and eight
+administration draft/header scenes. No clipping/overlap was found in those regions;
+896 control geometry measurements and nine administration label payloads passed.
+Those pixels do not prove the failed preservation case's later draft/reload stages.
+
+The preceding tree's independently checked inventory artifact 11955299328,
+SHA256 `84ca4c2dc91551b090469a17927b0a65bb044c924e0da60cd5465ff851b03481`,
+contains all 43 PostgreSQL cases and both Caddy configurations with exact source
+and plan hashes. Lock waits were 2.016–2.019s, slow statement 5.010s, total budget
+8.009s, cleanup under 20ms; competing reads/writes and subsequent writers passed.
+Measured 20,001-product/100,000-movement plans fit budgets, but the catalog spills
+3,408KiB and history scans/sorts up to 100,000 rows. This is bounded warm-buffer
+evidence, not a production-capacity or indexed-cursor-seek claim. Paired Caddy
+controls again show identical binaries, raw inherited capability/exit126/EPERM
+versus production no-capability/exit0 under the same restrictions, with cleanup.
+The historical exit255 cause remains unreconstructed. Runtime/security/native
+ARM64 and three builds passed independently for the preceding exact tree; QEMU
+remains a separate non-qualifying failed diagnostic. Changed-head hosted direct,
+expiry repetition, aggregate and pixel review remain required. Physical Windows,
+Android, Raspberry Pi, real touch/browser zoom and operator/a11y gates stay open.
+
+### Retained aggregate cleanup failure and bounded fixture correction
+
+Aggregate browser artifact 11955739018 is 306,190,744 bytes with 748 safe unique
+members, verified CRC and SHA256
+`811ac8ffbf202c66c389a9da8ddadcee8489c5e5b73d1f56c4bb2a384f744515`.
+Qualification artifact 11956673445 has SHA256
+`59ccea82195b203e1fd4d35b65dd1b2448b190e0c46c1b95f83d8414206cf2b0`
+and binds the same tested merge. It records **2,835 Python passes, 14 skips,
+three warnings and one teardown error** in the large-ledger plan test. The earlier
+direct Python run passed 2,835/14 with no error; separate PG43 success remains
+valid for that invocation and does not erase the aggregate failure. The terminal
+log confirms kernel14 passed. No extra browser failure or flake appears in the
+aggregate's 81 individual attempts.
+
+The failing SQL was a single organization-scoped DELETE of 20,001 products after
+100,000 movements had been deleted, with PostgreSQL reporting statement timeout
+inside the movement→product RESTRICT foreign-key check. Existing cleanup already
+used child-before-parent order and an engine-disposal finally. Its connection
+baseline is lock15s/statement20s; the separate read-budget case verifies restoration
+after transaction-local 2s/5s/8s settings. The observation establishes the FK-checking
+timeout, not an exact planner mechanism or leaked production setting.
+
+The test fixture now selects deterministic ordered primary-key batches of at most
+500 owned products and deletes each with both organization and ID predicates.
+An initial owned-row count bounds the number of iterations; each selection and
+delete must match the expected batch size, and the final count must be zero.
+No zero-progress loop, broad delete, inter-batch commit, timeout increase, FK
+disablement or index change is introduced. All child/parent cleanup remains in
+the original outer transaction, so any failure rolls back earlier batches too;
+engine disposal remains protected. These are unchanged per-statement fixture
+budgets, separate from the production read transaction's 2s/5s/8s limits.
+
+The old single-delete implementation produced six failures and one pass in the
+new structural regressions. Batching passed all seven: bounded ordered IDs,
+foreign-scope preservation, dependency order, second-batch rollback, zero progress,
+foreign/missing IDs, extra rows and empty scope. A separate source-binding RED
+requires the shared fixture hash in future actual PostgreSQL evidence; both the
+producer and validator now include it. Combined focused checks passed 11; affected
+inventory/migration/evidence checks passed 475 with 64 explicit PostgreSQL skips
+and one warning. SQLite exercises structure, foreign keys and rollback only.
+Real PostgreSQL full-module/order interactions and aggregate teardown timing remain
+required on the changed head; this correction is not yet a hosted GREEN result.
+
+Final local Python on the frozen source/test hashes passed **2,595 with 262
+explicit skips, three warnings and zero errors**. Full Ruff and 364-file format
+checks passed, as did repository/diff checks, frontend core877, touched frontend
+lint/format/strict types and the production PWA build. Source import was verified
+to this checkout and workspace package links still point to its own outputs.
+Installed Python3.13.5/Node24.19/pnpm11.25 dependencies were reused; no frozen/pinned
+install qualification is claimed. Two separate independent agent reviews closed
+the five browser-observation and five fixture/proof-source files without a blocker,
+inspecting recorded evidence rather than rerunning PostgreSQL or native browsers.
+The final documentation delta preserves those ten source hashes. No new local
+aggregate, actual PostgreSQL or native browser result is inferred from these checks.

@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased · Bound owned PostgreSQL fixture cleanup
+
+- Preserve the PR42 aggregate's new teardown error: the scoped 20,001-product
+  delete exceeded its statement budget during foreign-key checking, although
+  all 2,835 test bodies and the separate 43-case PostgreSQL proof passed.
+- Delete owned products in ordered batches of at most 500 IDs, bounded by the
+  initial row count, requiring exact progress and a final zero count. Keep all
+  child/parent cleanup in one rollback-capable transaction and retain foreign data.
+- Keep fixture timeouts, production read budgets, foreign keys and indexes intact;
+  bind the shared fixture hash into future PostgreSQL evidence. Actual full-module
+  and aggregate PostgreSQL validation remains required after this correction.
+
+## Unreleased · Observe inventory reads at the response boundary
+
+- Preserve the next PR42 direct result: 78 first-attempt passes, one case failing
+  both attempts and one retry-pass flake. The isolated kernel now starts; actual
+  PostgreSQL, both Caddy configurations and runtime/security/build gates passed.
+- Exempt only exact POST delta paging from the pending-domain-write observer;
+  retain mutation, login/logout, unknown endpoint and lookalike detection plus
+  every pending journal, unsent draft, disconnect and reload assertion.
+- Read the scoped successful account-context body when its response arrives,
+  concurrently with catalog readiness. Missing bodies still fail without retry
+  or fabricated expiry. The original CDP failure's precise cause is unproven.
+- Keep production sources, expiry/session checks, test budgets and privacy
+  unchanged. Corrected hosted direct/repetition/aggregate proof remains required.
+
 ## Unreleased · Bind inventory browser checks to real UI contracts
 
 - Preserve the actual PR42 aggregate result: 77 of 80 browser journeys passed;
