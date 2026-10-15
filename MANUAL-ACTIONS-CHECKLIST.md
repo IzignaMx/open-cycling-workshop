@@ -4,6 +4,14 @@
 
 ## Quote persistence · 2026-10-15 planned gates
 
+PR44's first hosted candidate failed direct Python tests and AMD64 runtime.
+The runtime passed fresh migration and seven checks, then timed out after the
+intentional API stop/start, before any backup. It retained no container logs;
+the underlying cause remains unknown. A bounded diagnostic-only runner change
+now awaits independent review and fresh hosted evidence. Do not retry the failed
+candidate or infer downstream restore passes. See the
+[retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
+
 The [accepted boundary](docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
 authorizes repository-first Task 6 only. The additive schema has local SQLite
 and independent source evidence; PostgreSQL runtime qualification remains open.

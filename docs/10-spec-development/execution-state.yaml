@@ -1407,3 +1407,21 @@ quote_persistence_boundary_2026_10_15:
   local_postgresql_execution: blocked_no_test_url_psql_postgres_or_docker
   real_qualification: existing_hosted_ci_postgresql_and_restore_after_candidate_publication
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
+quote_runtime_failure_diagnostics:
+  status: implemented_pending_evidence
+  candidate: d90636d1e222b045011e041e631f317c229828e1
+  candidate_tree: cf6d4350d066b84fb61b8ce40255d354dd125d3a
+  first_runtime_run: 38704714032
+  first_runtime_result: failed_after_intentional_api_stop_start_seven_checks_passed
+  restart_cause: unknown_no_container_diagnostics_retained
+  runtime_backup_restore: not_reached
+  first_ci_run: 38704713983
+  first_ci_direct_python: failed_terminal_traceback_pending
+  first_ci_restore: skipped_no_recovery_artifact
+  change: bounded_redacted_readonly_generated_project_diagnostics_before_cleanup
+  safeguards: first_failure_preserved_readiness_assertions_and_cleanup_unchanged
+  local_tdd: five_initial_red_plus_normal_exit_descendant_red_then_33_scoped_tests_passed
+  static: touched_ruff_format_and_mypy_runner_passed
+  independent_review: pending
+  hosted_diagnostic_and_runtime_qualification: pending
+  evidence: docs/10-spec-development/2026-10-15-quote-persistence.md

@@ -157,3 +157,55 @@ grant/adoption, synchronization, offline store, UI or operational enrollment is
 activated. The accepted ADR's future application, all-ingress guard, mixed-server
 writer and line-coverage gates remain open. The full durable Task 5, Task 8 and
 quote/inventory journey are not complete.
+
+## First hosted candidate and runtime diagnostics
+
+PR44 published head `d90636d1e222b045011e041e631f317c229828e1` has the
+reviewed final tree `cf6d4350d066b84fb61b8ce40255d354dd125d3a`.
+The hosted synthetic merge `4520ff9e6297548a593ffa6ce9ec43c2b6d99a42`
+has the same tree. These first-attempt failures remain evidence, not qualified
+results or permission to rerun until green:
+
+- [Runtime 38704714032](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38704714032)
+  failed with the unchanged 180-second readiness error after `compose stop api`,
+  the expected outage/502 assertions and `compose start api`. Fresh-volume
+  migration/readiness, restricted DB role, bootstrap/login/customer creation,
+  PWA delivery and two-browser offline/reconnect convergence had passed: seven
+  substantive checks in total. The first backup had not begun; restore and later
+  persistence checks were not reached.
+- Runtime artifact `11958790296`, SHA-256
+  `2673b7d1d24c7250e054724d5d1c15bd745f291dab4b7e2d178c2f62382cfb41`,
+  contains only the existing evidence JSON. It has no container state, logs,
+  traceback or readiness HTTP details. The restart's underlying cause is
+  **unknown**; initial migration failure and transience are not established.
+- Security run `38704714022`, all three ARM64 builds and the native ARM64 gate
+  passed. These are separate scopes, not AMD64 runtime or physical Raspberry
+  qualification. Independent evidence review SHA-256:
+  `507d3c1ea15cc023172de462a348b9995324b145fb0a6eebc6064e9513a3a5ce`.
+- CI run `38704713983` failed its direct Python stage. The recovery stage was
+  skipped, so mandatory recovery-artifact upload also failed. Its always-run
+  aggregate and terminal test traceback were still pending when this diagnostic
+  checkpoint was prepared; no PostgreSQL/concurrency/restore pass is inferred.
+
+The diagnostic-only follow-up touches the existing disposable runner, not the
+quote domain, migration or application behavior. On failure it preserves the
+first error and collects read-only state and logs for that already-generated
+Compose project **before** browser, probe and volume cleanup. It admits only
+fixed service/state/health/exit-code fields, never `inspect` configuration or
+environment/command fields. Five service log tails are capped at 40 lines;
+each probe has a five-second/16-KiB capture limit. Partial timeout/overflow
+output is discarded rather than truncating a secret across a boundary. Complete
+output is redacted with the generated-secret list and existing JWT detector;
+failed probes cannot replace the first error. Each direct child is reaped and
+its owned process group terminated on success, timeout or overflow. The readiness deadline, polling, substantive assertions and
+fixture cleanup are unchanged.
+
+TDD observed five failures for the absent diagnostic behavior before code. The
+focused runtime/branding/Compose suite then passed 33 tests; Ruff/format and
+mypy for the touched runner passed. This executor has no Docker, so actual
+failure-path capture, the underlying restart correction and all exact hosted
+runtime/restore gates remain pending. Independent diagnostic review is pending.
+Its first review reproduced a normally exiting CLI leaving a same-group child
+with detached stdio running. That failure was retained in an additional RED
+regression before changing cleanup to terminate the owned group on normal exits
+too; the direct child's successful return code remains intact.

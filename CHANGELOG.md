@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Retain disposable runtime failure diagnostics
+
+- Capture bounded, redacted container states and log tails before the generated
+  Compose fixture is cleaned up. Preserve the original failure and discard
+  partial diagnostic output on timeout or overflow.
+- Retain PR44's first stop/start readiness failure with unknown cause. Readiness
+  deadlines, substantive checks and cleanup remain unchanged; fresh hosted
+  runtime and PostgreSQL/restore qualification are still required.
+
 ## Unreleased · Quote persistence boundary
 
 - Accept the independently reviewed repository-first quote persistence boundary:

@@ -350,3 +350,165 @@ def test_smoke_redacts_unexported_browser_jwt_from_failure_output() -> None:
 
     token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"
     assert redact(f"failure with {token}", []) == "failure with [redacted]"
+
+
+def test_failure_diagnostic_capture_redacts_complete_output() -> None:
+    import os
+    import sys
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhIn0.signature"
+    result = diagnostic_capture(
+        [sys.executable, "-c", f"import sys; print('generated-password {token}', file=sys.stderr)"],
+        env=dict(os.environ),
+        secrets=["generated-password"],
+    )
+    assert result == {"status": "captured", "returncode": 0, "output": "[redacted] [redacted]\n"}
+
+
+def test_failure_diagnostic_overflow_discards_partial_secret_and_reaps_child() -> None:
+    import os
+    import sys
+    import time
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    started = time.monotonic()
+    result = diagnostic_capture(
+        [
+            sys.executable,
+            "-c",
+            "import sys,time; print('prefix-'+'secret'*1000, flush=True); time.sleep(30)",
+        ],
+        env=dict(os.environ),
+        secrets=["secret" * 1000],
+        max_bytes=100,
+    )
+    assert result == {"status": "output_limit"}
+    assert time.monotonic() - started < 3
+
+
+def test_failure_diagnostic_timeout_and_missing_command_never_echo_raw_output() -> None:
+    import os
+    import sys
+    import time
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    started = time.monotonic()
+    result = diagnostic_capture(
+        [
+            sys.executable,
+            "-c",
+            "import time; print('unlisted-sensitive-output',flush=True); time.sleep(30)",
+        ],
+        env=dict(os.environ),
+        secrets=[],
+        timeout=0.05,
+    )
+    assert result == {"status": "timeout"}
+    assert time.monotonic() - started < 3
+    assert diagnostic_capture(
+        ["/definitely-missing-diagnostic-command"], env=dict(os.environ), secrets=[]
+    ) == {"status": "unavailable"}
+
+
+def test_failure_diagnostics_use_project_bound_read_only_commands_and_allowlisted_states(
+    monkeypatch,
+) -> None:
+    import json
+
+    from scripts.ci import local_compose_smoke as module
+
+    command = ["docker", "compose", "-p", "ocwp-smoke-fixture", "-f", "/fixture/compose.yml"]
+    calls = []
+
+    def capture(parts, **kwargs):
+        calls.append((parts, kwargs))
+        if "ps" in parts:
+            output = json.dumps(
+                [
+                    {
+                        "Service": "api",
+                        "State": "running",
+                        "Health": "healthy",
+                        "ExitCode": 0,
+                        "Command": "never-emit-command",
+                        "Publishers": "never-emit-network-details",
+                    },
+                    {"Service": "operator-service", "State": "running", "ExitCode": 0},
+                    {"Service": "edge", "State": "unexpected-sensitive-state", "ExitCode": True},
+                ]
+            )
+        else:
+            output = "safe diagnostic log\n"
+        return {"status": "captured", "returncode": 0, "output": output}
+
+    monkeypatch.setattr(module, "diagnostic_capture", capture)
+    result = module.failure_diagnostics(command, env={"PATH": "/bin"}, secrets=["synthetic"])
+    assert result["containers"] == [
+        {"service": "api", "state": "running", "health": "healthy", "exit_code": 0},
+        {"service": "edge", "state": "unknown", "health": "unknown", "exit_code": None},
+    ]
+    assert set(result["logs"]) == {"api", "edge", "migrate", "postgres", "worker"}
+    serialized = json.dumps(result)
+    for forbidden in ("never-emit", "operator-service", "unexpected-sensitive-state"):
+        assert forbidden not in serialized
+    assert len(calls) == 6
+    assert calls[0][0] == [*command, "ps", "--all", "--format", "json"]
+    for parts, kwargs in calls:
+        assert parts[: len(command)] == command
+        assert kwargs == {"env": {"PATH": "/bin"}, "secrets": ["synthetic"]}
+        if "logs" in parts:
+            assert parts[len(command) : -1] == ["logs", "--no-color", "--tail", "40"]
+
+
+def test_failure_diagnostics_are_recorded_before_cleanup_without_changing_readiness() -> None:
+    smoke = source("scripts/ci/local_compose_smoke.py")
+    handler = smoke.split("except Exception as exc:", 1)[1]
+    assert handler.index('evidence["error"]') < handler.index("failure_diagnostics(")
+    assert handler.index("failure_diagnostics(") < handler.index("browser.close()")
+    assert handler.index("failure_diagnostics(") < handler.index("branding_probe.cleanup()")
+    assert handler.index("failure_diagnostics(") < handler.index('"--volumes"')
+    assert "time.monotonic() + 180" in smoke
+    assert "time.sleep(2)" in smoke
+
+
+def test_completed_diagnostic_terminates_same_group_descendant_with_detached_stdio() -> None:
+    import os
+    import signal
+    import sys
+    import time
+    from contextlib import suppress
+
+    import pytest
+
+    from scripts.ci.local_compose_smoke import diagnostic_capture
+
+    if sys.platform != "linux":
+        pytest.skip("Linux hosted process-group regression uses /proc state")
+    script = (
+        "import subprocess,sys; "
+        "child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'],"
+        "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); "
+        "print(child.pid,flush=True)"
+    )
+    result = diagnostic_capture([sys.executable, "-c", script], env=dict(os.environ), secrets=[])
+    assert result["status"] == "captured" and result["returncode"] == 0
+    pid = int(str(result["output"]).strip())
+    state_file = Path(f"/proc/{pid}/stat")
+    deadline = time.monotonic() + 1
+    try:
+        while state_file.exists() and time.monotonic() < deadline:
+            try:
+                state = state_file.read_text().split()[2]
+            except (FileNotFoundError, ProcessLookupError):
+                return  # init reaped the terminated orphan after exists().
+            if state == "Z":
+                return  # Orphan is terminated; only its adopting init can reap it.
+            time.sleep(0.01)
+        assert not state_file.exists(), "completed diagnostic left its descendant running"
+    finally:
+        with suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
