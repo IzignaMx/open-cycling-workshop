@@ -55,9 +55,10 @@ def test_synthetic_branding_seed_keeps_explicit_grants_and_floor_one_per_case(
     url = f"sqlite+pysqlite:///{tmp_path / 'branding-fixture.sqlite3'}"
     monkeypatch.setenv("OCWP_DATABASE_URL", url)
     monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
-    preparation.run_migrations(url)
     validated = []
     monkeypatch.setattr(preparation, "validate_e2e_database_url", validated.append)
+    preparation.run_migrations(url)
+    validated.clear()
     branding.seed_branding_identities(url)
     assert validated == [url]
     engine = create_engine(url)

@@ -9,6 +9,7 @@ from alembic.config import Config
 from cycling_workshop.db.url import normalize_database_url
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import Session, sessionmaker
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,15 +28,34 @@ E2E_PASSWORD = "ocwp-e2e-password"
 
 
 def validate_e2e_database_url(database_url: str) -> None:
-    parsed = make_url(normalize_database_url(database_url))
+    try:
+        parsed = make_url(normalize_database_url(database_url))
+    except (ArgumentError, TypeError, ValueError):
+        raise RuntimeError("E2E reset requires a dedicated local test database") from None
     database_name = parsed.database or ""
-    if parsed.host not in {"127.0.0.1", "localhost"} or not database_name.endswith(
-        ("_test", "_e2e")
+    if (
+        parsed.drivername != "postgresql+psycopg"
+        or parsed.host not in {"127.0.0.1", "localhost"}
+        or not database_name.endswith(("_test", "_e2e"))
+        or parsed.query
+        or any(
+            name in os.environ
+            for name in (
+                "PGHOST",
+                "PGHOSTADDR",
+                "PGPORT",
+                "PGDATABASE",
+                "PGSERVICE",
+                "PGSERVICEFILE",
+                "PGSYSCONFDIR",
+            )
+        )
     ):
         raise RuntimeError("E2E reset requires a dedicated local test database")
 
 
 def reset_schema(database_url: str) -> None:
+    validate_e2e_database_url(database_url)
     engine = create_engine(normalize_database_url(database_url))
     try:
         with engine.begin() as connection:
@@ -46,15 +66,28 @@ def reset_schema(database_url: str) -> None:
 
 
 def run_migrations(database_url: str) -> None:
+    validate_e2e_database_url(database_url)
+    normalized = normalize_database_url(database_url)
     config = Config(str(SERVICE / "alembic.ini"))
     config.set_main_option("script_location", str(SERVICE / "migrations"))
     config.set_main_option(
         "sqlalchemy.url", normalize_database_url(database_url).replace("%", "%%")
     )
-    command.upgrade(config, "head")
+    # Alembic env.py prefers the environment over sqlalchemy.url. Pin the
+    # already-validated target for this call, including when a *_FILE is set.
+    previous = os.environ.get("OCWP_DATABASE_URL")
+    os.environ["OCWP_DATABASE_URL"] = normalized
+    try:
+        command.upgrade(config, "head")
+    finally:
+        if previous is None:
+            os.environ.pop("OCWP_DATABASE_URL", None)
+        else:
+            os.environ["OCWP_DATABASE_URL"] = previous
 
 
 def seed_browser_identity(database_url: str, *, authenticated: bool = False) -> None:
+    validate_e2e_database_url(database_url)
     from cycling_workshop.identity.models import UserRecord
     from cycling_workshop.identity.repository import SqlAlchemyUserRepository, UserAccount
     from cycling_workshop.identity.roles import CAPABILITIES
@@ -149,6 +182,7 @@ def seed_browser_identity(database_url: str, *, authenticated: bool = False) -> 
 
 def seed_legacy_upgrade_identity(database_url: str) -> None:
     """Separate floor-zero synthetic tenant for the actual pinned old App/SW."""
+    validate_e2e_database_url(database_url)
     from cycling_workshop.identity.models import UserRecord
     from cycling_workshop.identity.roles import CAPABILITIES
     from cycling_workshop.identity.security import PasswordService
@@ -188,6 +222,7 @@ def seed_legacy_upgrade_identity(database_url: str) -> None:
 
 def seed_historical_workshop_records(database_url: str) -> None:
     """Real REST writes while this disposable organization remains at floor 0."""
+    validate_e2e_database_url(database_url)
     from cycling_workshop.app import create_app
     from cycling_workshop.settings import Settings
     from fastapi.testclient import TestClient
@@ -356,6 +391,12 @@ def main() -> int:
         from branding_fixtures import seed_branding_identities
 
     seed_branding_identities(database_url)
+    if __package__:
+        from .inventory_fixtures import seed_inventory_identities
+    else:
+        from inventory_fixtures import seed_inventory_identities
+
+    seed_inventory_identities(database_url)
     print(f"E2E database ready for organization {E2E_ORGANIZATION_ID}")
     return 0
 

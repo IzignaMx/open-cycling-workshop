@@ -530,7 +530,11 @@ async function expectReadableWorkshopSummary(page: Page, info: TestInfo, expecte
       (link) => {
         const range = document.createRange()
         range.selectNodeContents(link)
-        return { text: link.textContent, lines: range.getClientRects().length }
+        return {
+          text: link.textContent,
+          href: link.getAttribute('href'),
+          lines: range.getClientRects().length,
+        }
       },
     )
     return {
@@ -554,7 +558,24 @@ async function expectReadableWorkshopSummary(page: Page, info: TestInfo, expecte
     `diagnostic-workshop-summary-${layout.theme}-${layout.viewportWidth}-${layout.zoom}`,
     { body: JSON.stringify(layout, null, 2), contentType: 'application/json' },
   )
-  expect(layout.labels).toHaveLength(11) // four metrics, identity, settings, five links
+  const navigation = [
+    { text: 'Resumen', href: '#workshop-content' },
+    { text: 'Órdenes', href: '#workshop-orders' },
+    { text: 'Recepción', href: '#workshop-reception' },
+    { text: 'Incidencias', href: '#workshop-issues' },
+    { text: 'Inventario', href: '#workshop-inventory' },
+    { text: 'Administración', href: '#workshop-administration' },
+  ]
+  expect(layout.navigationLines.map(({ text, href }) => ({ text, href }))).toEqual(navigation)
+  expect(layout.labels.map(({ text }) => text)).toEqual([
+    expectedIdentity,
+    'Personalización',
+    ...navigation.map(({ text }) => text),
+    'Órdenes activas en esta página',
+    'Listas para entrega',
+    'Esperan refacción',
+    'Clientes locales en esta página',
+  ])
   for (const label of layout.labels) {
     expect(label.availableWidth, `readable complete words: ${label.text}`).toBeGreaterThanOrEqual(
       label.longestWordWidth,

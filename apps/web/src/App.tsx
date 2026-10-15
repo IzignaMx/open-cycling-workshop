@@ -1,3 +1,5 @@
+import { InventoryController } from './features/inventory/controller.js'
+import { InventoryPanel } from './features/inventory/InventoryPanel.js'
 import { BrandingEditorController } from './features/branding/controller.js'
 import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import { hasUnsentForms } from './features/draft-state.js'
@@ -17,6 +19,8 @@ import type { WorkshopController } from './runtime/controller.js'
 export function App({ runtime }: { runtime: WorkshopController }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot)
   const brand = useSyncExternalStore(runtime.branding.subscribe, runtime.branding.getSnapshot)
+  const inventory = useMemo(() => new InventoryController(runtime), [runtime])
+  useEffect(() => () => inventory.dispose(), [inventory])
   const brandingEditor = useMemo(() => new BrandingEditorController(runtime), [runtime])
   useEffect(() => () => brandingEditor.dispose(), [brandingEditor])
   const leaveWorkshop = (action: () => Promise<void>) => {
@@ -99,6 +103,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </Button>
           </div>
           {legacy}
+          <InventoryPanel controller={inventory} />
           <AdministrationPanel
             branding={brandingEditor}
             controller={administration}
@@ -142,6 +147,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </>
           )}
           {legacy}
+          <InventoryPanel controller={inventory} />
           <AdministrationPanel
             branding={brandingEditor}
             controller={administration}
@@ -336,6 +342,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             Cerrar esta sesión
           </Button>
         </section>
+        <InventoryPanel controller={inventory} />
         <AdministrationPanel
           branding={brandingEditor}
           controller={administration}

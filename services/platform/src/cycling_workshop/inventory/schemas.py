@@ -113,3 +113,41 @@ class StockResponse(BaseModel):
     organization_id: str
     location_id: str
     available_quantity: int
+
+
+class InventoryMovementReadResponse(BaseModel):
+    """Privacy allowlist for reads; the historical POST response is unchanged."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    movement_id: str
+    product_id: str
+    organization_id: str
+    location_id: str
+    kind: MovementKind
+    quantity: int
+    occurred_at: str
+
+    @field_validator("movement_id", "product_id", "organization_id", "location_id")
+    @classmethod
+    def valid_identifier(cls, value: str) -> str:
+        from cycling_workshop.inventory.cursor import valid_read_id
+
+        if not valid_read_id(value):
+            raise ValueError("invalid inventory identifier")
+        return value
+
+    @field_validator("occurred_at")
+    @classmethod
+    def valid_timestamp(cls, value: str) -> str:
+        from cycling_workshop.inventory.cursor import parse_timestamp
+
+        parse_timestamp(value)
+        return value
+
+
+class InventoryMovementPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[InventoryMovementReadResponse]
+    next_cursor: str | None

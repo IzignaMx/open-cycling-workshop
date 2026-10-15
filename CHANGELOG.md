@@ -1,5 +1,115 @@
 # Changelog
 
+## Unreleased · Require retry-free inventory expiry evidence
+
+- Run the two existing inventory expiry journeys five times each with one worker,
+  zero retries and unchanged 45-second test budgets. Retain a separate native
+  browser report and source-bound completion evidence.
+- Require all ten fresh passes; skipped, failed, flaky, incomplete or stale
+  repetition evidence fails its dedicated check and the aggregate workflow step.
+- Local collection proves the exact two titles and ten repeated instances;
+  18 gate regressions and 25 repository checks passed. Native repetition remains
+  pending and the earlier expiry flake remains retained.
+
+## Unreleased · Bound owned PostgreSQL fixture cleanup
+
+- Preserve the PR42 aggregate's new teardown error: the scoped 20,001-product
+  delete exceeded its statement budget during foreign-key checking, although
+  all 2,835 test bodies and the separate 43-case PostgreSQL proof passed.
+- Delete owned products in ordered batches of at most 500 IDs, bounded by the
+  initial row count, requiring exact progress and a final zero count. Keep all
+  child/parent cleanup in one rollback-capable transaction and retain foreign data.
+- Keep fixture timeouts, production read budgets, foreign keys and indexes intact;
+  bind the shared fixture hash into future PostgreSQL evidence. Actual full-module
+  and aggregate PostgreSQL validation remains required after this correction.
+
+## Unreleased · Observe inventory reads at the response boundary
+
+- Preserve the next PR42 direct result: 78 first-attempt passes, one case failing
+  both attempts and one retry-pass flake. The isolated kernel now starts; actual
+  PostgreSQL, both Caddy configurations and runtime/security/build gates passed.
+- Exempt only exact POST delta paging from the pending-domain-write observer;
+  retain mutation, login/logout, unknown endpoint and lookalike detection plus
+  every pending journal, unsent draft, disconnect and reload assertion.
+- Read the scoped successful account-context body when its response arrives,
+  concurrently with catalog readiness. Missing bodies still fail without retry
+  or fabricated expiry. The original CDP failure's precise cause is unproven.
+- Keep production sources, expiry/session checks, test budgets and privacy
+  unchanged. Corrected hosted direct/repetition/aggregate proof remains required.
+
+## Unreleased · Bind inventory browser checks to real UI contracts
+
+- Preserve the actual PR42 aggregate result: 77 of 80 browser journeys passed;
+  three failed on both attempts, with no flaky passes or skipped aggregate cases.
+- Verify all six navigation labels and destinations, including Inventario, while
+  retaining complete-word, identity, focus, draft, reflow and accessibility checks.
+- Prove local-only customer work remains pending with zero attempts, unchanged
+  journal/delivery/history and no observed API write requests through inventory
+  navigation, disconnection and reload. Do not invent a customer or delivery event.
+- Exercise focused radio selection with Space and Escape in every theme; require
+  the panel to close and focus to return to its trigger, including default Banco.
+- Reconcile actual main43 without changing its quote decision/history sources.
+  Hosted corrected kernel/direct/repetition/aggregate and pixel gates remain open.
+
+## Unreleased · Restore the owned kernel-browser fixture
+
+- Keep shared PostgreSQL reset/migration/seed guards closed; seed the isolated
+  kernel server's fixed floor-0/floor-1 identities only in its own temporary
+  SQLite session. No caller-supplied SQLite URL or guard opt-out is introduced.
+- Dispose the owned engine on schema, seed, app-start and serve exceptions.
+  Cover both identities, ignored ambient database URLs and direct helper misuse.
+- Record actual paired Caddy success and all 43 PostgreSQL cases for the preceding
+  PR42 head. Preserve the new kernel startup failure and all earlier evidence;
+  the corrected full hosted browser matrix is still required.
+- Graceful SIGINT cleanup passed. Preserve the failed SIGTERM smoke and inherited
+  SIGTERM/SIGKILL cleanup limits; no signal policy or browser assertions change.
+
+## Unreleased · Match the edge probe to the production image
+
+- Preserve the second PR42 readiness failure: connection refused, container exit
+  255, no OOM and clean teardown. The original startup cause is still unproven.
+- Build the existing production web Dockerfile for the positive probe. Compare
+  immutable raw/production image IDs, equal Caddy binary hashes, file-capability
+  semantics and sandboxed version launch before any synthetic private requests.
+- Require raw-image EPERM/nonzero and production-image version/zero as paired
+  controls. Reject contradictory metadata; keep the same nonroot/read-only/
+  cap-drop/no-new-privileges restrictions and both 30-second readiness proofs.
+- Bound build/control output and cleanup the unique disposable image tag without
+  pruning shared cache. Actual hosted causal and two-config proof remains pending.
+
+## Unreleased · Preserve bounded edge-probe failure diagnostics
+
+- Retain PR42's first actual Caddy readiness failure with its cause unproven;
+  the 43-case PostgreSQL proof passed independently. Browser launch failures
+  cascaded from the skipped Chromium installation and are not product failures.
+- Bound runner subprocess output to 64 KiB and preserve safe phase, health and
+  container-state diagnostics. Startup-only log hints publish fixed categories,
+  never raw requests, headers, bodies, environment or exception text.
+- Preserve original failures separately from container/upstream/directory cleanup
+  failures; attempt remaining resource releases. Keep the 30-second readiness
+  limit, actual configurations, TLS and every forwarding/privacy assertion.
+- This is diagnostic tooling, not a speculative Caddy fix or completed runtime
+  qualification. The changed head still requires actual hosted edge/browser proof.
+
+## Unreleased · Bounded connected inventory visibility
+
+- Add read-only catalog, ledger-derived available quantity and bounded live
+  movement history in all four themes. Preserve operational form drafts and
+  journals; clear volatile inventory on scope/session/owner/expiry/disconnection.
+- Add one seven-field movement GET with canonical microsecond/Unicode cursors.
+  Preserve old GET contracts, SQL0011/local7/baseline-2, existing grants and commands.
+  Revalidate current authority inside bounded read transactions and return no-store.
+- Reject unsafe raw numeric wire values rather than showing rounded balances.
+  Keep stock/history freshness independent and omit actor/order/reference/note data.
+- Cover account-only context access without sync admission, durable owner checks,
+  session A→B→A, delayed timers and explicit directory recovery. Add actual-Uvicorn
+  privacy proof and fail-closed PostgreSQL/Caddy evidence runners.
+- Harden disposable fixture targets and completion evidence; keep credentialed
+  test HTTP out of nested browser-report steps with an actual report-only regression.
+- Author 17 synthetic browser journeys and four-theme geometry/capture checks.
+  Exact integrated native/database/edge/browser/pixel qualification remains pending;
+  offline inventory, writes, reconciliation and quote workflows remain open.
+
 ## Unreleased · Pure quote decision evidence and partial pricing
 
 - Validate complete immutable quote lineages and stable charge identities without

@@ -39,16 +39,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 def _safe_postgres_url(raw_url: str) -> str:
+    from scripts.e2e.prepare_e2e_database import validate_e2e_database_url
+
+    try:
+        validate_e2e_database_url(raw_url)
+    except RuntimeError:
+        raise ValueError(
+            "inventory integration requires a dedicated local PostgreSQL test URL"
+        ) from None
     url = normalize_database_url(raw_url)
-    parsed = make_url(url)
-    if (
-        parsed.drivername != "postgresql+psycopg"
-        or parsed.host not in {"localhost", "127.0.0.1"}
-        or not (parsed.database or "").endswith(("_test", "_e2e"))
-        # libpq query parameters such as host/service can override the URL host.
-        or parsed.query
-    ):
-        raise ValueError("inventory integration requires a dedicated local PostgreSQL test URL")
     return url
 
 
@@ -240,6 +239,63 @@ class InventoryPostgres:
         pytest.fail("No PostgreSQL writer blocked by the expected transaction")
 
 
+def _delete_fixture_products(session: Session, organization_id: str) -> None:
+    # Large plan fixtures own 20,001 parents. Bound each RESTRICT-FK delete
+    # statement without changing connection budgets, indexes or constraints.
+    # The caller owns one transaction for all child/parent cleanup and rollback.
+    count = (
+        select(func.count())
+        .select_from(ProductRecord)
+        .where(ProductRecord.organization_id == organization_id)
+    )
+    expected = session.scalar(count)
+    if not isinstance(expected, int) or expected < 0:
+        raise RuntimeError("Inventory fixture cleanup incomplete")
+    batch_size = 500
+    deleted = 0
+    for _ in range((expected + batch_size - 1) // batch_size):
+        size = min(batch_size, expected - deleted)
+        ids = list(
+            session.scalars(
+                select(ProductRecord.id)
+                .where(ProductRecord.organization_id == organization_id)
+                .order_by(ProductRecord.id)
+                .limit(size)
+            )
+        )
+        if len(ids) != size:
+            raise RuntimeError("Inventory fixture cleanup incomplete")
+        result = session.execute(
+            delete(ProductRecord).where(
+                ProductRecord.organization_id == organization_id, ProductRecord.id.in_(ids)
+            )
+        )
+        if result.rowcount != size:
+            raise RuntimeError("Inventory fixture cleanup incomplete")
+        deleted += size
+    if deleted != expected or session.scalar(count) != 0:
+        raise RuntimeError("Inventory fixture cleanup incomplete")
+
+
+def _cleanup_inventory_fixture(session: Session, organization_id: str) -> None:
+    # This random organization belongs exclusively to this fixture.
+    # Delete dependent rows first, respecting PostgreSQL RESTRICT FKs.
+    for record in (
+        InventoryMovementRecord,
+        ProductRecord,
+        ServiceOrderEventRecord,
+        ServiceOrderRecord,
+        CustomerRecord,
+        UserRecord,
+        LocationRecord,
+    ):
+        if record is ProductRecord:
+            _delete_fixture_products(session, organization_id)
+        else:
+            session.execute(delete(record).where(record.organization_id == organization_id))
+    session.execute(delete(OrganizationRecord).where(OrganizationRecord.id == organization_id))
+
+
 @pytest.fixture
 def inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgres]:
     organization_id, location_id, user_id, customer_id, order_id = (new_id() for _ in range(5))
@@ -339,21 +395,7 @@ def inventory_postgres(inventory_postgres_url: str) -> Iterator[InventoryPostgre
     finally:
         try:
             with factory.begin() as session:
-                # This random organization belongs exclusively to this fixture.
-                # Delete dependent rows first, respecting PostgreSQL RESTRICT FKs.
-                for record in (
-                    InventoryMovementRecord,
-                    ProductRecord,
-                    ServiceOrderEventRecord,
-                    ServiceOrderRecord,
-                    CustomerRecord,
-                    UserRecord,
-                    LocationRecord,
-                ):
-                    session.execute(delete(record).where(record.organization_id == organization_id))
-                session.execute(
-                    delete(OrganizationRecord).where(OrganizationRecord.id == organization_id)
-                )
+                _cleanup_inventory_fixture(session, organization_id)
         finally:
             engine.dispose()
 
@@ -667,3 +709,14 @@ def test_fixture_preserves_percent_encoded_url_before_any_connection(
         inventory_postgres_url.__wrapped__()
     assert captured == [synthetic_url]
     assert make_url(captured[0]).password == "p@ss%word"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["PGHOST", "PGHOSTADDR", "PGPORT", "PGDATABASE", "PGSERVICE", "PGSERVICEFILE", "PGSYSCONFDIR"],
+)
+def test_direct_pg_fixture_refuses_ambient_target_override(monkeypatch, name: str) -> None:
+    monkeypatch.setenv(name, "private-target-canary")
+    with pytest.raises(ValueError, match="dedicated local PostgreSQL test URL") as error:
+        _safe_postgres_url("postgresql://synthetic@127.0.0.1/fixture_test")
+    assert "private-target-canary" not in str(error.value)

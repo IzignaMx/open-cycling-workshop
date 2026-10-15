@@ -2,6 +2,205 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Inherited main43 reconciliation · 2026-10-15
+
+[PR43](https://github.com/IzignaMx/open-cycling-workshop/pull/43) is merged as
+`d9381808c61b4682844666eb62967ccbf9afc5b9`, tree
+`ac1e5985e7bb89a274755e9ab0bcb2d1ec35778a`. Inventory merge `bcde3c9e`
+retains that real commit as its second parent. Every incoming quote source/test,
+plan, ADR and evidence blob matches main43; only additive changelog/state conflicts
+needed reconciliation, retaining both histories.
+
+- [x] Exact-main [runtime/native/three-build gates](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424876)
+      and [security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424847)
+      passed with independently verified artifacts. Native ARM64 took 0.264746s.
+- [ ] Main43 CI review is still pending at this checkpoint; inherited results do
+      not qualify the combined inventory candidate. The [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38695424792)
+      failed and remains non-qualifying. Physical/operator acceptance stays open.
+
+## Inherited main41 reconciliation · 2026-10-15
+
+[PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) is merged as
+`88ee267f2d9fa1e63836ca5c9a47e49f21882fd6`, tree
+`aed0ecde7216f815fd5ac1127370bde08c6598d0`. The inventory branch reconciles this
+actual merge, retaining the original cache rollback fences, finite offline
+coalescer and offline/connected admission-completion regressions. Its two merge
+conflicts were additive changelog/state sections; both histories were retained.
+
+- [x] Exact-tree [premerge CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739711)
+      passed 63 direct and 63 aggregate browser cases with zero flaky/skipped cases,
+      27 aggregate controls, 2,375 Python checks (14 explicit skips), 773 frontend
+      checks and retry-free 20 sync/order, 9 cutover and 5 clock repetitions.
+- [x] [Runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739626)
+      passed 11 checks, named-volume restart/restore and two PostgreSQL18
+      asset-aware recovery scenarios. Native ARM64 execution passed in 0.265133s;
+      all three builds passed. [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739673)
+      passed with zero findings.
+- [ ] Main41 postmerge gates are still pending at this checkpoint. Exact-tree
+      premerge evidence is not relabelled as a completed postmerge run.
+- [ ] [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739693)
+      failed at 2.011531s; original cause remains unproven and this remains
+      explicitly non-qualifying. Physical/operator gates remain open.
+
+These inherited results do not qualify the new inventory candidate. Earlier
+main40/PR41 failures below remain historical evidence; they are not erased by the
+later clean exact-tree premerge result.
+
+## Inherited main40 evidence and current inventory boundary · 2026-10-15
+
+Main40 is `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`, tree
+`d715e514f437e88fa4a5199c7f1a5eaa6e13c5ea`. The unchecked branding candidate
+section below is historical, not a statement that its automated gates never ran.
+For that exact inherited tree:
+
+- [x] [Postmerge CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900575)
+      completed 27 aggregate controls, 2,374 Python checks (14 explicit skips), 728
+      frontend checks and 63 aggregate browser cases. The separate direct run had
+      **62 first-pass cases and one administration clock retry**, zero unexpected
+      failures/skips. That result is successful with a retained flake, **not clean**.
+- [x] [Disposable runtime and recovery](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900550)
+      passed 11 checks, named-volume restart/restored-byte proof and both actual
+      PostgreSQL 18 asset-aware recovery scenarios. Three ARM64 builds and actual
+      native installed-decoder execution passed under unchanged production limits.
+- [x] [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900506)
+      passed with zero findings. The exact-tree premerge
+      [qualification](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38667921269)
+      also passed 63 direct and 63 aggregate browser cases; bounded visual review
+      examined 185 original captures (74 full-page plus 111 elements).
+- [ ] [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900548)
+      failed at 2.011187 seconds; original cause remains unproven. It is explicitly
+      non-qualifying and does not override the passed native execution criterion.
+- [ ] [PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) corrects the
+      administration test clock and a separately reproduced branding-cache rollback
+      boundary. Its first hosted core run failed; final corrected exact-source
+      integration/evidence were pending at that historical checkpoint; see the
+      later main41 reconciliation summary above.
+- [ ] Real operator installation/grant adoption/recovery and physical Windows,
+      Android, Raspberry, browser zoom/touch, screen-reader and glare gates remain
+      open. Automated recovery does not claim client pending-mutation restoration.
+
+The connected inventory candidate below is a separate change; none of those
+inherited results qualify its new source.
+
+## Connected inventory read · 2026-10-15 candidate gates
+
+Latest observed checkpoint: [CI38698004328](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38698004328),
+head `b8d59c216f1d8654ab715bf9bbf7ab92299cbc18`, tree
+`5295fd701afc61dbbf19e11580b56ee190729d2e`, passed the isolated kernel step,
+43 actual PostgreSQL cases and both Caddy configurations. Independent artifact
+review confirms the bounded database/edge proof; runtime/security/native ARM64
+and three builds also passed for that tree. Its direct browser report contains
+**78 first-attempt passes, one final failure and one retry-pass flake**, zero skips.
+The preservation observer counted a legitimate POST delta read as a domain write;
+the background-expiry fixture requested a response body after catalog readiness
+and received a CDP body-unavailable error. No intervening navigation is recorded;
+the error's generic navigation hint does not establish its cause. Those attempts
+remain retained. A test-only correction now allows the exact delta-read POST and
+consumes the scoped context body at arrival, retaining all original assertions.
+Six focused and 877 frontend checks passed locally; 17 browser cases collected
+without local execution. The separate aggregate finished with 79 first-attempt
+browser passes, preservation failing both attempts and zero flakes/skips. Its
+qualification is 25 controls passed and two failed: browser and a PostgreSQL
+fixture teardown error after all 2,835 Python test bodies passed (14 skips).
+The owned 20,001-product delete exceeded its statement budget while checking
+foreign keys. A fixture-only bounded-batch correction preserves transaction
+atomicity, scope, constraints and budgets; actual PostgreSQL confirmation remains
+required. Independent pixels cover 41 native-resolution regions from 29 originals,
+including all four inventory themes, but no post-reload preservation capture was
+reached. The changed-head full hosted matrix and physical/operator gates remain
+open. Final local Python passed 2,595 with 262 explicit skips and three warnings;
+full Ruff/format, the 877 frontend checks and PWA build passed. Independent agent
+reviews found no source blocker in the two narrow corrections. These results do
+not execute the missing local PostgreSQL/browser gates. The earlier failures below
+are historical evidence.
+
+A separate source-bound expiry gate now requires the two existing journeys five
+times each, one worker and zero retries under unchanged timeouts. Its own retained
+artifact must contain ten fresh passes; failure, skip or incomplete evidence
+blocks both the dedicated check and aggregate workflow step. Local collection
+confirmed two titles/ten instances and 18 validator plus 25 repository tests passed;
+no repetition executed locally. The previous full-Python result predates this
+CI-only delta. Changed-head native repetition remains an open gate.
+
+First PR42 [hosted CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38686652539)
+ran exact tree `b08a8c5b8267c0b906841d6c93635236eadeebe5`: 2,654 Python passes
+(14 skips) and a separate 43-case actual PostgreSQL proof with verified source/plan
+hashes. Its Caddy probe failed the first configuration's readiness assertion;
+zero configurations completed and the startup cause remains unproven. A narrow
+safe-diagnostic runner follow-up preserves all production checks and limits.
+The always-run aggregate was 25 controls passed, one failed browser control and
+one blocked benchmark; missing Chromium after skipped installation caused 159
+BeforeHooks failures across 80 unexecuted journeys. No browser behavior or pixels
+were qualified. Keep the exact changed-head gates below open.
+
+Second [CI38689123352](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38689123352)
+retained the readiness failure with safe evidence: connection refused, exit 255,
+no OOM, no startup hint and successful teardown (artifact 11951727637). A runner-only
+candidate now builds the existing production web image and requires paired raw/
+production binary-hash, file-capability and version-launch controls under identical
+nonroot restrictions before the two unchanged config probes. The upstream-image
+file capability is a concrete hypothesis; actual paired causal proof is still
+pending. Local 46 focused and 493 operations passes (three explicit recovery skips)
+do not satisfy the actual Caddy, native browser, pixel or physical/operator gates.
+
+The later [CI38691900346](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38691900346)
+head `b3f5ac5ddbabe4fd361d1e743a3da4de749611d8` completed both Caddy configs
+and all 43 PostgreSQL cases (verified artifact 11952507761). Equal Caddy binary
+bytes launch with raw capability/exit126/EPERM versus production no-capability/
+exit0 under the same restrictions. This establishes the tested incompatibility,
+not the exact historical exit255 cause. Kernel-browser startup then failed;
+local reproduction isolates the owned SQLite fixture calling the guarded
+PostgreSQL seed helper. Its narrow correction preserves the guard and browser
+assertions. The terminal log confirms that exact guard failure. The always-run
+aggregate subsequently executed all 80 journeys: **77 passed and three failed on
+both attempts**, zero flaky/skipped cases (artifact 11953836445). This differs
+from the earlier missing-Chromium cascades: these were real browser executions.
+The stale navigation count, nonexistent customer/delivery event assumption and
+already-selected Banco radio focus assumption are corrected with stronger exact
+navigation, pending/no-write, and focused Escape/closure assertions. All draft,
+journal, geometry and accessibility checks remain. Corrected hosted kernel/direct/
+repeat/aggregate and pixel gates stay open; local 871 core passes and 33 collected
+affected browser cases are not a corrected browser execution result.
+The reconciled local checkpoint subsequently passed 21 aggregate controls with
+zero failures and five explicit environment blockers: 2,587 Python passes/262
+skips, 871 frontend passes, static/contracts and current/pinned-old PWA builds.
+Absent PostgreSQL/Docker/psql and unavailable browser prerequisites keep the
+corrected exact-head hosted and physical/operator gates open.
+
+The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
+and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
+cover catalog, ledger-derived available quantity and one live movement page only.
+SQL0011/local7/baseline-2, grants, commands and operational journals are unchanged.
+
+- [x] Independent interface review before frontend work; independent backend and
+      client source reviews, including reproduced and fixed stale-owner,
+      account-generation, delayed-timer and metadata-directory recovery cases.
+- [x] Local focused functional/strict-wire/privacy tests and actual Uvicorn canary
+      output. These are not PostgreSQL lock/deadline or actual Caddy evidence.
+- [x] Independent qualification-source review corrections: fail-closed runner
+      completion, effective disposable-target guards, actual report-only HTML ZIP
+      privacy regression, settled 503 capture and pre-existing local-only journal
+      preservation assertions. Actual browser journeys remain unexecuted locally.
+- [ ] Exact integrated final Python/frontend/static/contracts/PWA/security/runtime,
+      recovery, native ARM64 and three-build qualification on the reconciled exact inventory source.
+- [ ] Actual PostgreSQL 18: 43 non-skipped race/budget/cleanup cases and measured
+      20,001-product/100,000-movement plans within 2s lock/5s statement/8s total limits.
+      `scripts/ci/inventory_read_proof.py` rejects incomplete/stale/source-mismatched
+      evidence. Current local result is blocked, not passed.
+- [ ] Actual Caddy 2.11.7 local and LAN configs: successful query forwarding followed
+      by upstream-unavailable runtime/error query-redaction proof with verified
+      isolated CA, safe artifact and confirmed container cleanup.
+- [ ] 17 authored native browser journeys with real synthetic API/PostgreSQL data:
+      floor0/1 account-only users, partial permissions, paging/signs/private fields,
+      scope/product/logout races, committed revocation, idle/background expiry,
+      disconnected journal preservation and production service-worker exclusion.
+- [ ] Four-theme desktop/tablet/320px/CSS200/forced-colors original screenshots and
+      actual pixel review, including complete control words and focus. Collection
+      and CSS enlargement are not browser execution or physical qualification.
+- [ ] Offline inventory, writes/commands UI, inventory reconciliation and quote
+      workflows remain separate future work. No inventory replica/cache/queue or
+      production-ready/full-MVP claim is introduced.
+
 ## Shared workshop branding · 2026-10-14 candidate gates
 
 The new increment starts from merged main39 `eef9559d8c3e528e79c99898360892188b23b55e`.
