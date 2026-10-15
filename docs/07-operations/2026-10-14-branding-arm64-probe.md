@@ -1,13 +1,44 @@
 # Synthetic branding decoder smoke in the ARM64 image
 
-Status: initial and diagnostic hosted image builds succeeded, but both qualifying
-QEMU decoder attempts **failed** on their exact candidates below. A narrow worker
-startup/import correction has native x86_64 source/test evidence and awaits new
-exact-tree hosted execution. A separate standard hosted native ARM64 job is now
-implemented with local control-flow tests; actual native ARM64 execution is still
-pending publication and runner availability. This executor has no Docker. Physical
-Raspberry, laptop/Docker Desktop and hostile worst-case qualification remain separate. Named-volume/recovery evidence belongs to its
-own runtime artifact and does not change this ARM failure.
+Status: the approved replacement architecture criterion is implemented locally,
+pending independent final-source review and fresh exact-candidate hosted evidence.
+ARM architecture qualification requires all three ARM64 image builds and actual
+standard hosted native ARM64 installed-decoder execution. QEMU is a separate,
+explicitly **NON-QUALIFYING** diagnostic for every outcome. This deliberate
+criterion change does not explain or erase any previous QEMU failure. The original
+cause remains **unproven**, including after observing later phases in a separate
+instrumented child. This executor has no Docker or ARM execution evidence.
+Physical Raspberry, laptop/Docker Desktop, hostile worst-case and real installation
+qualification remain separate. Named-volume/recovery evidence belongs to its own
+runtime artifact.
+
+## Required architecture criterion
+
+`Local runtime` retains exactly the `platform.local`, `web` and `operations`
+ARM64 build matrix with `fail-fast: false`. It removes only the emulated decoder
+invocation and its diagnostic artifact from that matrix. The existing native job
+uses the literal public-only standard `ubuntu-24.04-arm` runner and unconditional
+source-bound report validation. Both producers check out the event's exact
+`github.sha`. The native report specifically binds its checked-out commit,
+installed worker digest and its own inspected image ID, without a historical
+image/source allowlist. The matrix and diagnostic images need not equal the native
+image; cross-builds do not supply installed-decoder execution proof.
+
+The `arm64-qualification` job has `needs: [arm64-build, arm64-native-decoder]` and
+`if: always()`. It accepts only both exact `success` results, including all three
+fixed matrix builds. Missing, failed, cancelled or skipped native/build results
+cannot qualify. The native job's exact boolean-public guard remains unchanged;
+private, missing/null and nonboolean metadata skip native and therefore fail the
+aggregate. Queueing or unavailable standard capacity cannot be replaced by QEMU,
+cross-builds, an older report, a custom runner or a paid fallback.
+
+Only that successful aggregate may say that three ARM64 builds and native
+installed-decoder smoke passed. It always leaves physical Raspberry qualification
+OPEN. Existing amd64 runtime/restore, security, browser, physical-device and
+deployment gates remain independent. No required-check or branch-protection
+setting is changed. If an existing required diagnostic check blocks merging,
+disclose that conflict and obtain authorization before changing settings. Never
+claim every CI check passed while the separate diagnostic workflow is red.
 
 ## Execution and artifact boundary
 
@@ -16,9 +47,17 @@ The existing Local runtime workflow retains the three `linux/arm64` image builds
 ephemeral exact-SHA tag into that runner's Docker store, with `push: false`; no
 registry publication, paid runner, account or deployment is introduced.
 
-The workflow inspects the loaded image ID and OS/architecture, then runs
+The separate `ARM64 QEMU diagnostic (NON-QUALIFYING)` workflow uses the same
+PR, main-push and manual trigger types, `contents: read`, exact event checkout and
+exact boolean-public guard on an ordinary public x86 runner. It builds/loads one
+additional ephemeral API image with read-only access to the existing build cache,
+no cache export, disabled build-record upload and no registry/image publication.
+The existing architecture matrix cache exports remain unchanged. No path filters
+or silent success fallback are added; a skipped diagnostic was not executed.
+
+The diagnostic workflow inspects the loaded image ID and OS/architecture, then runs
 `scripts/ci/branding_image_probe.py` through stdin, using `python -I -` in that
-image. It does not mount the checkout over the installed application. It keeps
+immutable image ID. It does not mount the checkout over the installed application. It keeps
 the image's default UID/GID 10001, read-only root, dropped capabilities,
 no-new-privileges, init and the production-size 64 MiB noexec/nosuid `/tmp` tmpfs.
 Network access is disabled and no application secrets/environment are supplied.
@@ -36,15 +75,41 @@ then verifies the exact four expected RGBA pixels with a fixed-output-size
 standard-library check capped at 19 inflated bytes. It does not compare a
 compression-library-specific fixed PNG digest or import Pillow into the parent.
 
-Only the bounded probe report `artifacts/branding-arm64-emulated.json` is uploaded
-by the evidence-upload step, under artifact name
-`branding-arm64-emulated-${{ github.sha }}`. The closed report is under 4 KiB and
-includes the exact checked-out commit, actual loaded image ID/platform, installed
-worker source digest, Python/Pillow versions, process checks and canonical output
-metadata. No PNG/base64, environment, credentials, decoder diagnostics or raw
-exception text is printed or uploaded. Safe failure reports are uploaded too;
-a container/build startup failure with no report remains a failed gate rather
-than fabricated evidence.
+The moved evidence-upload step uploads only
+`artifacts/branding-arm64-emulated.json` and the small closed
+`artifacts/branding-arm64-emulated-exit.json` sidecar, named
+`branding-arm64-emulated-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}`.
+The existing repository artifact-retention policy is unchanged. No native artifact
+is introduced. The report is under 4 KiB and the sidecar under 1 KiB. They bind the
+checked commit, actual loaded image ID, worker digest when observed, workflow run
+and attempt, without publishing PNG/base64, environment, credentials, decoder
+stderr, raw stdout or exception text.
+
+The host reads at most 4,096 bytes and reuses the existing bounded closed-schema
+validator. It rejects duplicate/unknown fields, malformed/deep JSON, wrong types,
+nonfinite numbers, source/image/commit mismatches and inconsistent status/exits.
+Known diagnostic phase names, count/size bounds and safe observations are retained;
+this is a safety filter, never a failure classifier. A valid failed report remains
+failed with its values unchanged, including timeout/signal, CPU, later phases and
+non-timeout product failures. Missing facts are not invented.
+
+The always-run collection step records the actual outer process exit, validates
+and writes safe evidence, then returns the actual nonzero exit. Valid success
+requires complete passing evidence and exit zero. Missing/invalid/inconsistent
+output becomes a fixed unavailable report and collection category; even original
+exit zero then fails. Build/setup/inspection failures remain explicit unavailable
+diagnostics. The always-run upload fails on missing files. Summary, artifact or
+targeted-cleanup failure remains a tooling/workflow failure, never a diagnostic
+pass. The sidecar distinguishes decoder outcome, evidence collection and
+NON-QUALIFYING policy status; original cause remains unproven. Its
+`evidence_collection: validated_locally` value certifies safe local capture only,
+not artifact upload or summary delivery. Those delivery steps' actual conclusions
+and the diagnostic workflow outcome must be checked separately.
+
+The container has a 30-second outer timeout with five-second KILL escalation.
+Cleanup removes only this run/attempt's named diagnostic container and private
+raw report, with a 10-second cleanup timeout plus five-second KILL escalation.
+The outer bounds do not enlarge either decoder child's production limits.
 
 ## Limits and interpretation
 
@@ -59,11 +124,12 @@ The real production timeout/kill/reap and memory-limit tests remain separate.
 Every emulated-job report labels execution `qemu-emulated-linux-arm64` and records
 `physical_device_qualified: false`. Its single elapsed interval is an emulated
 smoke diagnostic, not a Raspberry timing, RSS or worst-case capacity benchmark.
-QEMU may need address-space overhead incompatible with the unchanged 128 MiB
-limit. A refusal or timeout fails this gate; there is no relaxed-limit retry,
-native-host fallback or success reinterpretation. If this occurs, preserve the
-safe failure and leave ARM runtime qualification open for a separately authorized
-native supported runner/device test.
+QEMU may have different runtime costs, but the observed failure's original cause
+remains unproven. A refusal or timeout fails the diagnostic step/job/workflow;
+there is no relaxed-limit retry or success reinterpretation. Preserve the safe
+failure and investigate concrete product findings. Architecture qualification
+independently requires all three builds and native success under the criterion
+above. This is not a finding that emulation alone caused a failure.
 
 ## Local evidence
 
@@ -250,11 +316,13 @@ expansion, external account, registry publication or paid-runner opt-in. Queuein
 or unavailable capacity remains a pending gate rather than a reason to switch
 targets. Hosted execution and its actual scheduling are not proven locally.
 
-This is a separate qualification path. The existing QEMU matrix, defaults,
-image-build cache settings, diagnostic second child and failure artifacts remain
-unchanged. A native pass cannot change either historical QEMU failure or close
-the current emulated gate. No physical Raspberry, device performance or supported
-installation claim follows from a hosted native pass.
+This is the mandatory execution path for the architecture criterion above.
+QEMU now runs in its own NON-QUALIFYING diagnostic workflow; its original attempt,
+limits, separate diagnostic child and failed evidence remain unchanged. A native
+pass cannot change any historical or current QEMU failure. No physical Raspberry,
+device performance or supported installation claim follows from a hosted native
+pass. The earlier sections recording historical qualification attempts preserve
+their outcomes under the criterion in effect at that time.
 
 Before building or launching a container, the shell independently checks the
 host `uname -m` equals `aarch64`, the host Python ELF machine equals 183,
@@ -299,6 +367,11 @@ duplicate keys, unknown fields, unexpected types, nonfinite/out-of-range numbers
 wrong source/image/host facts, mismatched status and process exit, or incomplete
 passing evidence. A pass requires all schema fields, the matching source digest,
 exact pixel/canonical-output evidence and one successfully exited, reaped child.
+Passing native timing evidence must be finite/nonnegative, with positive total
+elapsed time at most 2.10 seconds, spawn time no greater than elapsed, total child
+CPU at most 2.05 seconds and no greater than elapsed plus 0.05 seconds. These are
+small evidence-collection/accounting consistency envelopes only. Both production
+parent-wall and child-CPU limits remain **2.0 seconds**, with no retry or warm-up.
 Missing or invalid process-exit evidence cannot be normalized into a valid
 failed report. Any rejected/missing report becomes only a fixed safe failure
 object; neither raw output nor exception text is used as a fallback. Only the
@@ -325,3 +398,37 @@ Tests use this worktree's isolated Python 3.13.5 virtual environment with Pillow
 ARM64 evidence still requires publication, standard-runner scheduling and a new
 exact-tree hosted run. Preserve that run's URL/job, checked commit, image ID and
 worker SHA256 with its outcome before changing the qualification status.
+
+## Replacement-criterion local verification
+
+Test-first cases observed incoherent native timings and missing architecture
+aggregation/QEMU separation fail before implementation. The strengthened native
+validator rejects one-hour elapsed/CPU, spawn exceeding wall time, negative,
+nonfinite and boolean timings, and all envelope violations. Exact-boundary cases
+retain the unchanged two-second production limit declarations. The historical
+0.314891-second native report still validates; it is historical evidence only,
+not qualification of this new source candidate. Its corresponding 2.011278-second
+QEMU failure remains a failure. The separate child's `pillow_import_start` marker
+at 1.578520 seconds cannot locate or explain that original attempt.
+
+Hermetic tests execute extracted aggregate and diagnostic shell logic with
+synthetic commands, including every non-success dependency result, mandatory
+producer steps, current-event checkout binding, public guard, native schema and
+source/image identity refusals. Diagnostic tests cover complete success, ordinary
+product failures, timeout/signal, later marker phases, raw/empty/oversized/
+malformed/duplicate output, status mismatch, setup/inspection failure, safe
+publication failure, summary failure and targeted cleanup failure. Valid failed
+reports retain their values and actual nonzero exits. These are local source and
+control-flow results, not Docker, QEMU, hosted scheduling or native ARM execution.
+
+Reproduce the expanded focused suite with:
+
+```sh
+.venv/bin/python -m pytest -q tests/operations/test_branding_image_probe.py tests/operations/test_arm64_qualification_workflows.py
+```
+
+Final adoption still requires independent source/DAG review and a fresh hosted
+run of the exact candidate. Record three ARM build results, native installed-source
+proof and aggregate separately from the diagnostic job and its exact artifact.
+Actual evidence delivery and required-check status must be inspected, without
+reusing an older successful run or changing merge protection.

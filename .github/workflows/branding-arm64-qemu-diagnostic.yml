@@ -1,0 +1,99 @@
+name: ARM64 QEMU diagnostic (NON-QUALIFYING)
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qemu-diagnostic:
+    if: github.event.repository.private == false && toJSON(github.event.repository.private) == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      DOCKER_BUILD_SUMMARY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Load one ephemeral diagnostic API image using read-only existing cache
+        id: api-build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/platform.local.Dockerfile
+          platforms: linux/arm64
+          push: false
+          load: true
+          tags: ocwp-branding-qemu:${{ github.sha }}
+          cache-from: type=gha,scope=local-runtime-platform.local-arm64
+      - name: Run QEMU diagnostic and preserve safe evidence with the actual nonzero exit
+        if: always()
+        timeout-minutes: 2
+        shell: bash
+        env:
+          BUILD_RESULT: ${{ steps.api-build.outcome }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          worker_sha="$(git show "$commit:services/platform/src/cycling_workshop/branding/images.py" | sha256sum | cut -d ' ' -f 1)"
+          report="$(mktemp "$RUNNER_TEMP/branding-qemu.XXXXXX")"
+          container="ocwp-branding-qemu-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          started=false
+          cleanup() {
+            status=$?
+            if [[ "$started" == true ]]; then
+              if ! timeout --signal=TERM --kill-after=5s 10s docker rm --force "$container" >/dev/null 2>&1; then
+                printf '%s\n' 'QEMU targeted container cleanup FAILED.' >&2
+                if [[ "$status" == 0 ]]; then status=1; fi
+              fi
+            fi
+            rm -f "$report"
+            exit "$status"
+          }
+          trap cleanup EXIT
+          image="ocwp-branding-qemu:$commit"
+          image_id=''
+          image_platform=''
+          category=setup_failed
+          status_args=()
+          if [[ "$BUILD_RESULT" == success ]]; then
+            category=image_identity_failed
+            if image_id="$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null)" && \
+               image_platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image" 2>/dev/null)"; then
+              category=observed
+              status=0
+              started=true
+              timeout --signal=TERM --kill-after=5s 30s docker run --name "$container" \
+                --pull never --platform linux/arm64 \
+                --network none --read-only --cap-drop ALL \
+                --security-opt no-new-privileges:true \
+                --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+                --init --entrypoint python -i "$image_id" -I - \
+                --commit "$commit" --image-id "$image_id" --image-platform "$image_platform" \
+                < scripts/ci/branding_image_probe.py > "$report" 2>/dev/null || status=$?
+              status_args=(--probe-exit-code "$status")
+            fi
+          fi
+          python3 -I scripts/ci/branding_image_probe.py \
+            --commit "$commit" --image-id "$image_id" --image-platform "$image_platform" \
+            --worker-sha256 "$worker_sha" --validate-emulated-report "$report" \
+            --collection-category "$category" "${status_args[@]}" \
+            --workflow-run-id "$GITHUB_RUN_ID" --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --evidence-directory artifacts | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Upload bounded NON-QUALIFYING QEMU evidence and actual exit provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branding-arm64-emulated-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/branding-arm64-emulated.json
+            artifacts/branding-arm64-emulated-exit.json
+          if-no-files-found: error

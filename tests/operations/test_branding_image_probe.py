@@ -178,12 +178,8 @@ def test_identity_failure_never_echoes_unvalidated_arguments(
 
 
 def test_workflow_loads_only_ephemeral_api_image_and_runs_hardened_arm_probe() -> None:
-    workflow = (ROOT / ".github/workflows/local-runtime.yml").read_text()
-    arm = workflow.split("  arm64-build:\n", 1)[1]
+    workflow = (ROOT / ".github/workflows/branding-arm64-qemu-diagnostic.yml").read_text()
     for expected in (
-        "matrix.image != 'platform.local'",
-        "matrix.image == 'platform.local'",
-        "outputs: type=cacheonly",
         "load: true",
         "push: false",
         "docker image inspect",
@@ -199,13 +195,15 @@ def test_workflow_loads_only_ephemeral_api_image_and_runs_hardened_arm_probe() -
         "scripts/ci/branding_image_probe.py",
         "git rev-parse HEAD",
         "branding-arm64-emulated-${{ github.sha }}",
-        "if: always() && matrix.image == 'platform.local'",
+        "if: always()",
+        "--validate-emulated-report",
+        "--probe-exit-code",
     ):
-        assert expected in arm
-    assert "--user" not in arm  # Prove the image's configured non-root identity.
-    assert "--volume" not in arm
-    assert "--mount" not in arm
-    assert "continue-on-error" not in arm
+        assert expected in workflow
+    assert "--user" not in workflow  # Prove the image's configured non-root identity.
+    assert "--volume" not in workflow
+    assert "--mount" not in workflow
+    assert "continue-on-error" not in workflow
 
 
 def mock_installed_runtime(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -47,6 +47,7 @@ FAILURES = frozenset(
         "decoder_unavailable_on_native_arm64",
         "native_host_identity",
         "native_report_invalid",
+        "emulated_report_invalid",
         "decoder_rejected_fixture",
         "canonical_output",
         "unexpected_probe_failure",
@@ -597,28 +598,30 @@ def run_probe(
     return result
 
 
-def validate_native_report(
+def _validate_report(
     raw: bytes,
     exit_code: int,
     commit: str,
     image_id: str,
     worker_sha256: str,
-    host: tuple[str, ...],
+    host: tuple[str, ...] | None,
+    execution: str,
 ) -> str:
     """Host-side closed-schema filter; never forward arbitrary container stdout."""
-    require(0 < len(raw) < 4096, "native_report_invalid")
+    invalid = "native_report_invalid" if execution == NATIVE else "emulated_report_invalid"
+    require(0 < len(raw) < 4096, invalid)
 
     def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
         result: dict[str, object] = {}
         for key, value in pairs:
-            require(key not in result, "native_report_invalid")
+            require(key not in result, invalid)
             result[key] = value
         return result
 
     try:
         report = json.loads(raw, object_pairs_hook=unique_object)
     except (ValueError, UnicodeError, RecursionError):
-        raise ProbeFailure("native_report_invalid") from None
+        raise ProbeFailure(invalid) from None
 
     def number(value: object) -> bool:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -639,13 +642,12 @@ def validate_native_report(
             )
         return type(value) is type(expected) and value == expected
 
-    base = empty_report(NATIVE) | {
+    base = empty_report(execution) | {
         "commit": commit,
         "image_id": image_id,
         "image_platform": "linux/arm64",
     }
     schema: dict[str, Any] = base | {
-        "host": native_host_identity(host),
         "runtime": {
             "machine": "aarch64",
             "executable_elf_machine": 183,
@@ -669,7 +671,7 @@ def validate_native_report(
             "core_bytes": 0,
             "open_files": 32,
         },
-        "native_elapsed_seconds": number,
+        "native_elapsed_seconds" if execution == NATIVE else "emulated_elapsed_seconds": number,
         "qualifying_attempt": {
             "outcome": lambda value: (
                 value in ("parent_wall_timeout", "launch_failed", "child_exit", "not_observed")
@@ -703,9 +705,78 @@ def validate_native_report(
         },
         "status": lambda value: value in ("passed", "failed"),
         "failure": lambda value: (
-            isinstance(value, str) and value in FAILURES - {"decoder_unavailable_under_emulation"}
+            isinstance(value, str)
+            and value
+            in FAILURES
+            - (
+                {"decoder_unavailable_under_emulation", "emulated_report_invalid"}
+                if execution == NATIVE
+                else {
+                    "decoder_unavailable_on_native_arm64",
+                    "native_host_identity",
+                    "native_report_invalid",
+                }
+            )
         ),
     }
+    if execution == NATIVE:
+        schema["host"] = native_host_identity(host)
+    else:
+
+        def diagnostic(value: object) -> bool:
+            marker = {
+                "phase": lambda item: isinstance(item, str) and item in PHASES,
+                "wall_seconds": number,
+                "user_cpu_seconds": number,
+                "system_cpu_seconds": number,
+            }
+            fields = {
+                "diagnostic_only": True,
+                "qualifying_outcome_unchanged": True,
+                "interpretation": "instrumented_second_child_not_original_attempt",
+                "wall_limit_seconds": 2.0,
+                "worker_limits_unchanged": True,
+                "outcome": lambda item: (
+                    item
+                    in (
+                        "completed",
+                        "child_nonzero_exit",
+                        "parent_wall_timeout",
+                        "diagnostic_unavailable",
+                    )
+                ),
+                "elapsed_seconds": number,
+                "child_user_cpu_seconds": number,
+                "child_system_cpu_seconds": number,
+                "exit_code": schema["qualifying_attempt"]["exit_code"],
+                "child_reaped": lambda item: type(item) is bool,
+                "marker_stream": lambda item: (
+                    item in ("empty", "bounds_exceeded", "unrecognized_discarded", "valid")
+                ),
+                "last_observed_phase": lambda item: (
+                    isinstance(item, str) and item in PHASES | {"not_observed"}
+                ),
+                "phase_markers": lambda items: (
+                    isinstance(items, list)
+                    and len(items) <= 11
+                    and all(matches(item, marker) for item in items)
+                ),
+            }
+            if not (
+                isinstance(value, dict)
+                and {"diagnostic_only", "outcome"} <= value.keys() <= fields.keys()
+                and all(matches(item, fields[key]) for key, item in value.items())
+            ):
+                return False
+            if "phase_markers" in value:
+                markers = value["phase_markers"]
+                phases = [item["phase"] for item in markers]
+                return len(set(phases)) == len(phases) and value.get("last_observed_phase") == (
+                    phases[-1] if phases else "not_observed"
+                )
+            return "last_observed_phase" not in value
+
+        schema["diagnostic"] = diagnostic
     require(
         re.fullmatch(r"[a-f0-9]{40}", commit) is not None
         and re.fullmatch(r"sha256:[a-f0-9]{64}", image_id) is not None
@@ -715,18 +786,18 @@ def validate_native_report(
         and isinstance(report, dict)
         and base.keys() <= report.keys() <= schema.keys()
         and all(matches(value, schema[key]) for key, value in report.items()),
-        "native_report_invalid",
+        invalid,
     )
     passed = report.get("status") == "passed"
     require(
-        (passed and exit_code == 0 and report.keys() == schema.keys() - {"failure"})
+        (passed and exit_code == 0 and report.keys() == schema.keys() - {"failure", "diagnostic"})
         or (
             not passed
             and exit_code != 0
             and report.get("status") == "failed"
             and "failure" in report
         ),
-        "native_report_invalid",
+        invalid,
     )
     if passed:
         require(
@@ -734,11 +805,114 @@ def validate_native_report(
             and report["qualifying_attempt"]["children"] == 1
             and report["qualifying_attempt"]["exit_code"] == 0
             and report["qualifying_attempt"]["child_reaped"] is True,
-            "native_report_invalid",
+            invalid,
         )
+        if execution == NATIVE:
+            # Accounting envelopes only: production wall/CPU deadlines remain 2.0 seconds.
+            elapsed = report["native_elapsed_seconds"]
+            attempt = report["qualifying_attempt"]
+            cpu = attempt["child_user_cpu_seconds"] + attempt["child_system_cpu_seconds"]
+            require(
+                0 < elapsed <= 2.10
+                and attempt["spawn_seconds"] <= elapsed
+                and cpu <= 2.05
+                and cpu <= elapsed + 0.05,
+                invalid,
+            )
     encoded = json.dumps(report, sort_keys=True, allow_nan=False)
-    require(len(encoded) < 4096, "native_report_invalid")
+    require(len(encoded) < 4096, invalid)
     return encoded
+
+
+def validate_native_report(
+    raw: bytes,
+    exit_code: int,
+    commit: str,
+    image_id: str,
+    worker_sha256: str,
+    host: tuple[str, ...],
+) -> str:
+    return _validate_report(raw, exit_code, commit, image_id, worker_sha256, host, NATIVE)
+
+
+def validate_emulated_report(
+    raw: bytes,
+    exit_code: int,
+    commit: str,
+    image_id: str,
+    worker_sha256: str,
+) -> str:
+    """Safe QEMU evidence only; this never changes the decoder's outcome or exit."""
+    return _validate_report(raw, exit_code, commit, image_id, worker_sha256, None, EMULATED)
+
+
+def collect_emulated_evidence(args: argparse.Namespace) -> int:
+    """Publish bounded diagnostics, then propagate the actual outer process exit."""
+    status = args.probe_exit_code
+    valid_exit = type(status) is int and 0 <= status <= 255
+    collection = args.collection_category
+    decoder = "unavailable"
+    encoded = ""
+    if collection == "observed":
+        try:
+            require(valid_exit and args.image_platform == "linux/arm64", "emulated_report_invalid")
+            with Path(args.validate_emulated_report).open("rb") as source:
+                encoded = validate_emulated_report(
+                    source.read(4096), status, args.commit, args.image_id, args.worker_sha256
+                )
+            decoder = json.loads(encoded)["status"]
+            collection = "validated_locally"
+        except (OSError, ProbeFailure):
+            collection = "invalid_report"
+    commit = args.commit if re.fullmatch(r"[a-f0-9]{40}", args.commit) else None
+    image_id = args.image_id if re.fullmatch(r"sha256:[a-f0-9]{64}", args.image_id) else None
+    run_id = args.workflow_run_id if re.fullmatch(r"[0-9]{1,20}", args.workflow_run_id) else None
+    attempt = (
+        args.workflow_run_attempt
+        if re.fullmatch(r"[0-9]{1,20}", args.workflow_run_attempt)
+        else None
+    )
+    if run_id is None or attempt is None or commit is None:
+        collection, decoder, encoded = "invalid_provenance", "unavailable", ""
+    if not encoded:
+        unavailable = empty_report() | {
+            "status": "unavailable",
+            "failure": "emulated_report_invalid",
+            "commit": commit,
+            "image_id": image_id,
+        }
+        encoded = json.dumps(unavailable, sort_keys=True)
+    sidecar = {
+        "schema_version": 1,
+        "execution": EMULATED,
+        "qualification": "NON-QUALIFYING",
+        "commit": commit,
+        "image_id": image_id,
+        "workflow_run_id": run_id,
+        "workflow_run_attempt": attempt,
+        "probe_exit_code": status if valid_exit else None,
+        "decoder_outcome": decoder,
+        "evidence_collection": collection,
+        "original_cause": "unproven",
+        "physical_device_qualified": False,
+    }
+    try:
+        directory = Path(args.evidence_directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "branding-arm64-emulated.json").write_text(encoded)
+        (directory / "branding-arm64-emulated-exit.json").write_text(
+            json.dumps(sidecar, sort_keys=True, allow_nan=False) + "\n"
+        )
+    except OSError:
+        print("QEMU evidence publication FAILED; NON-QUALIFYING; original cause unproven.")
+        return status if valid_exit and status else 1
+    print(encoded)
+    print(
+        f"QEMU decoder {decoder.upper()}; actual process exit {sidecar['probe_exit_code']}; "
+        f"evidence collection {collection}; NON-QUALIFYING; original cause unproven; "
+        "physical Raspberry qualification remains OPEN."
+    )
+    return status if valid_exit and status else 0 if collection == "validated_locally" else 1
 
 
 def main() -> int:
@@ -752,10 +926,21 @@ def main() -> int:
     parser.add_argument("--runner-arch")
     parser.add_argument("--docker-arch")
     parser.add_argument("--validate-native-report")
+    parser.add_argument("--validate-emulated-report")
+    parser.add_argument("--evidence-directory", default="artifacts")
+    parser.add_argument("--workflow-run-id", default="")
+    parser.add_argument("--workflow-run-attempt", default="")
+    parser.add_argument(
+        "--collection-category",
+        default="observed",
+        choices=("observed", "setup_failed", "image_identity_failed"),
+    )
     parser.add_argument("--probe-exit-code", type=int)
     parser.add_argument("--worker-sha256")
     try:
         args = parser.parse_args()
+        if args.validate_emulated_report is not None:
+            return collect_emulated_evidence(args)
         host = (args.host_machine, args.host_elf_machine, args.runner_arch, args.docker_arch)
         if args.validate_native_report is not None:
             status = args.probe_exit_code
