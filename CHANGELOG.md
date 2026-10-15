@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Prepare bounded quote revision read contracts
+
+- Add closed, exact-integer revision metadata/detail projections from fully
+  reconstructed quote snapshots, with separate current lineage context.
+- Bound metadata pages to 25, responses to 1 MiB and allowlisted errors to 8 KiB;
+  keep proofs/evidence private and bind opaque positions to scope/head/sequence.
+- Verify small source-backed corruption, admission and projection cases only.
+  Application authority/catalog integration, HTTP/UI exposure and maximum
+  capacity qualification remain pending; no activation or Task 6 completion.
+
 ## Unreleased · Reconcile quote persistence with the reviewed expiry observer
 
 - Normally merge actual main `19882936`, preserving the fixture-only observer
