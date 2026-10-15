@@ -47,8 +47,27 @@ Empty, old, unknown and multiple stamps still fail. No operator action ran.
 - Frozen migration/ORM parity, scoped Ruff, mypy for four touched source files and
   whitespace checks passed. Generated PostgreSQL DDL is not live execution.
 
-Repository/codecs and real PostgreSQL/restore fixtures are in progress, not
-qualified by this schema checkpoint. Existing 243 quote tests, including the
+### Bounded codecs and semantic commands
+
+Private storage codecs and immutable create/revise/decision commands now retain
+one canonical semantic proof per operation. Exact integers reject booleans,
+floats and coercions; bounded values remain integer minor units. UUIDv7, UTC,
+Unicode, line/edge, record and complete-history limits are enforced without
+changing the unbounded pure arithmetic contract. Set-valued selections normalize;
+presentation order and literal evidence remain significant. Admission tokens,
+incarnation and execution time do not become semantic retry fields.
+
+- Initial missing-module REDs preceded implementation; 68 focused cases now pass.
+- Independent review exposed cyclic/deep malformed input reaching an unbounded
+  serializer. Preserved create/revise and forged-dataclass recursion REDs now
+  return controlled `ValueError`; NUL/invalid-UTF8 JSON keys are rejected too.
+- Independent closure: 311 committed tests passed (68 new plus the unchanged 243
+  domain cases), and 347 additional adversarial boundary cases passed. Focused
+  Ruff/format/mypy passed. These are separate counts, not one combined suite.
+- JSON duplicate-key/number-lexeme/streaming admission belongs to the future HTTP
+  adapter; these codecs accept already-typed private objects, not raw requests.
+
+Repository completion and real PostgreSQL/restore qualification remain pending. Existing 243 quote tests, including the
 unchanged original 106, remain exact-source regression requirements.
 
 Reinspected base SQL head is `0011`; the candidate adds quote revision `0012`.

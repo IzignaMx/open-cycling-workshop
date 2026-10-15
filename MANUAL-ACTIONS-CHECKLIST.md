@@ -9,6 +9,7 @@ authorizes repository-first Task 6 only. The additive schema has local SQLite
 and independent source evidence; PostgreSQL runtime qualification remains open.
 
 - [x] Additive SQL0012 schema, registration and immutable/tenant constraints on SQLite.
+- [x] Bounded private storage codecs/semantic commands and independent boundary review.
 - [ ] Exact-source SQL0011→0012 PostgreSQL migration, race and restore evidence.
 - [ ] Independent source review and complete available local/hosted qualification.
 - [ ] Separate application/grant/capability compatibility and all-ingress fences

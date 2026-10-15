@@ -8,6 +8,9 @@
   head references and replacement/retention guards. Preserve existing history,
   grants and local schema 7; extend the recovery tool's known-schema allowlist
   without changing its old/unknown/multiple-stamp refusals.
+- Add bounded immutable storage codecs and finite create/revise/decision proofs,
+  with exact safe integers, canonical IDs/time, detached inputs and controlled
+  cyclic/deep-input refusals. Preserve existing pure arithmetic and decisions.
 - Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
   routes, all-ingress guards, mixed-writer rollout and operational execution gates.
 
