@@ -235,6 +235,21 @@ export interface HealthUnavailableResponse {
   status?: string
 }
 
+export interface InventoryMovementPageResponse {
+  items: Array<InventoryMovementReadResponse>
+  next_cursor: string | null
+}
+
+export interface InventoryMovementReadResponse {
+  kind: MovementKind
+  location_id: string
+  movement_id: string
+  occurred_at: string
+  organization_id: string
+  product_id: string
+  quantity: number
+}
+
 export interface LocationPage {
   items: Array<LocationResponse>
   next_cursor: string | null

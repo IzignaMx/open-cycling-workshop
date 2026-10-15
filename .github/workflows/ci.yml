@@ -87,6 +87,20 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
       - name: Run Python tests
         run: uv run pytest -q
+      - name: Prove inventory PostgreSQL budgets, fresh authority and measured plans
+        run: uv run python scripts/ci/inventory_read_proof.py
+      - name: Prove inventory query privacy in both actual Caddy configurations
+        run: uv run python scripts/ci/inventory_edge_probe.py
+      - name: Upload bounded inventory database and edge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-read-${{ github.sha }}
+          path: |
+            artifacts/inventory-read/pg-direct/backend-postgres-evidence.json
+            artifacts/inventory-read/pg-direct/backend-postgres-explain.json
+            artifacts/inventory-read/edge-runtime-evidence.json
+          if-no-files-found: error
       - name: Prove asset-aware branding recovery with matching PostgreSQL 18 clients
         run: bash scripts/ci/run_branding_recovery.sh
       - name: Upload safe branding recovery proof only
@@ -104,6 +118,8 @@ jobs:
         run: pnpm --filter @ocwp/api-client test:core
       - name: Run frontend real typecheck
         run: pnpm --filter @ocwp/web typecheck
+      - name: Typecheck inventory browser qualification
+        run: pnpm --filter @ocwp/web exec tsc -p tsconfig.e2e-inventory.json
       - name: Typecheck branding browser qualification
         run: pnpm --filter @ocwp/web exec tsc -p tsconfig.e2e-branding.json
       - name: Build PWA
@@ -164,6 +180,30 @@ jobs:
             apps/web/test-results/administration-clock-repeat/
             apps/web/playwright-report/administration-clock-repeat/
           if-no-files-found: warn
+      - name: Repeat inventory expiry without retries
+        id: inventory_expiry_repeat
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/inventory-expiry-repeat
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/inventory-expiry-repeat
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/inventory-expiry-repeat-proof/results.json
+        run: |
+          uv run python scripts/ci/inventory_expiry_repeat.py start
+          pnpm --filter @ocwp/web exec playwright test e2e/inventory.spec.ts \
+            --grep 'inventory-only display clears on .* expiry' \
+            --repeat-each=5 --retries=0 --workers=1 --reporter=line,html,json
+      - name: Require complete inventory expiry repetition
+        if: always()
+        run: uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
+      - name: Upload inventory expiry repetition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-inventory-expiry-repeat-${{ github.sha }}
+          path: |
+            apps/web/test-results/inventory-expiry-repeat/
+            apps/web/test-results/inventory-expiry-repeat-proof/
+            apps/web/playwright-report/inventory-expiry-repeat/
+          if-no-files-found: error
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
       - name: Verify OpenAPI contract
@@ -174,7 +214,9 @@ jobs:
         run: pnpm --filter @ocwp/api-client typecheck
       - name: Run V0.1 qualification verifier
         if: always()
-        run: uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+        run: |
+          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+          uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
       - name: Upload V0.1 qualification artifact
         if: always()
         uses: actions/upload-artifact@v4

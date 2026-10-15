@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import Annotated
+from urllib.parse import unquote_to_bytes
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,9 +13,13 @@ from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal
+from cycling_workshop.inventory.cursor import decode_cursor, invalid_cursor, valid_read_id
 from cycling_workshop.inventory.domain import Product
+from cycling_workshop.inventory.read_guard import InventoryRead, inventory_read_dependency
+from cycling_workshop.inventory.read_repository import read_movement_page
 from cycling_workshop.inventory.repository import SqlAlchemyInventoryRepository
 from cycling_workshop.inventory.schemas import (
+    InventoryMovementPageResponse,
     MovementCreateRequest,
     MovementResponse,
     ProductCreateRequest,
@@ -69,16 +74,15 @@ def create_product(
 
 @router.get("/products", response_model=list[ProductResponse])
 def list_products(
-    principal: Annotated[Principal, Depends(require_capability("inventory.read"))],
-    session: Annotated[Session, Depends(get_session)],
+    read: Annotated[InventoryRead, Depends(inventory_read_dependency, scope="function")],
     location_id: Annotated[str, Query(min_length=1, max_length=36, pattern=r"^[^\x00]+$")],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0, le=2147483647)] = 0,
 ) -> list[ProductResponse]:
-    authorize_location(principal, "inventory.read", location_id)
-    _require_location(session, principal, location_id)
-    products = SqlAlchemyInventoryRepository(session).list_products(
-        organization_id=principal.organization_id,
+    authorize_location(read.principal, "inventory.read", location_id)
+    _require_location(read.session, read.principal, location_id)
+    products = SqlAlchemyInventoryRepository(read.session).list_products(
+        organization_id=read.principal.organization_id,
         location_id=location_id,
         limit=limit,
         offset=offset,
@@ -88,12 +92,11 @@ def list_products(
 
 @router.get("/products/{product_id}/stock", response_model=StockResponse)
 def get_stock(
+    read: Annotated[InventoryRead, Depends(inventory_read_dependency, scope="function")],
     product_id: Annotated[str, Path(min_length=1, max_length=36, pattern=r"^[^\x00]+$")],
-    principal: Annotated[Principal, Depends(require_capability("inventory.read"))],
-    session: Annotated[Session, Depends(get_session)],
 ) -> StockResponse:
-    repository = SqlAlchemyInventoryRepository(session)
-    product = scoped_product(repository, principal, product_id, capability="inventory.read")
+    repository = SqlAlchemyInventoryRepository(read.session)
+    product = scoped_product(repository, read.principal, product_id, capability="inventory.read")
     return StockResponse(
         product_id=product.product_id,
         organization_id=product.organization_id,
@@ -103,6 +106,55 @@ def get_stock(
             organization_id=product.organization_id,
             location_id=product.location_id,
         ),
+    )
+
+
+@router.get("/products/{product_id}/movements", response_model=InventoryMovementPageResponse)
+def get_movements(
+    request: Request,
+    read: Annotated[InventoryRead, Depends(inventory_read_dependency, scope="function")],
+    product_id: Annotated[str, Path(min_length=1, max_length=36, pattern=r"^[^\x00]+$")],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    before: Annotated[str | None, Query()] = None,
+) -> InventoryMovementPageResponse:
+    # Only this additive route rejects unknown/duplicate query keys. Bound the
+    # raw query before iterating and never reflect names or supplied values.
+    if before is not None and len(before) > 2048:
+        raise invalid_cursor()
+    if len(request.scope.get("query_string", b"")) > 4096 or not valid_read_id(product_id):
+        raise ApiError(422, "invalid_inventory_query", "invalid inventory query")
+    try:
+        # ASGI servers replace malformed UTF-8 in path. Inspect original bytes
+        # so a lone-surrogate encoding cannot become an alias for U+FFFD.
+        unquote_to_bytes(request.scope.get("raw_path", b"")).decode("utf-8")
+    except UnicodeError:
+        raise ApiError(422, "invalid_inventory_query", "invalid inventory query") from None
+    keys = [key for key, _value in request.query_params.multi_items()]
+    if len(keys) != len(set(keys)) or not set(keys) <= {"limit", "before"}:
+        raise ApiError(422, "invalid_inventory_query", "invalid inventory query")
+    product = scoped_product(
+        SqlAlchemyInventoryRepository(read.session),
+        read.principal,
+        product_id,
+        capability="inventory.read",
+    )
+    cursor = (
+        None
+        if before is None
+        else decode_cursor(
+            before,
+            organization_id=product.organization_id,
+            location_id=product.location_id,
+            product_id=product.product_id,
+        )
+    )
+    return read_movement_page(
+        read.session,
+        organization_id=product.organization_id,
+        location_id=product.location_id,
+        product_id=product.product_id,
+        limit=limit,
+        before=cursor,
     )
 
 

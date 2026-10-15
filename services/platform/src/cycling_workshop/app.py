@@ -21,6 +21,7 @@ from cycling_workshop.identity.admin_router import router as administration_rout
 from cycling_workshop.identity.context import router as context_router
 from cycling_workshop.identity.router import router as identity_router
 from cycling_workshop.identity.security import SessionTokenService
+from cycling_workshop.inventory.http import inventory_path
 from cycling_workshop.inventory.router import router as inventory_router
 from cycling_workshop.service_orders.router import router as service_orders_router
 from cycling_workshop.settings import Settings
@@ -82,6 +83,7 @@ def create_app(
         is_context = path == "/api/v1/auth/context" or baseline_path(request.url.path)
         is_private = (
             is_context
+            or inventory_path(request.url.path)
             or path
             in {
                 "/api/v1/auth/login",
@@ -103,14 +105,24 @@ def create_app(
         )
         try:
             response = await call_next(request)
-        except Exception:
+        except Exception as exc:
             if not is_private:
                 raise
             # Keep unexpected failures generic, without leaking driver/session
             # details or allowing caches to retain a private response.
-            logging.getLogger(__name__).error(
-                "authenticated context request failed" if is_context else "identity request failed"
-            )
+            if inventory_path(request.url.path):
+                logging.getLogger(__name__).error(
+                    "inventory request failed: method=%s path=%s exception=%s",
+                    request.method,
+                    request.url.path,
+                    type(exc).__name__,
+                )
+            else:
+                logging.getLogger(__name__).error(
+                    "authenticated context request failed"
+                    if is_context
+                    else "identity request failed"
+                )
             response = JSONResponse(status_code=500, content={"detail": "internal server error"})
         if is_private:
             response.headers["Cache-Control"] = "no-store"

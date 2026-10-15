@@ -1020,8 +1020,10 @@ def test_failed_consume_companion_append_rolls_back_both_rows_and_can_retry(
 
     with monkeypatch.context() as patch:
         patch.setattr(SqlAlchemyInventoryRepository, "record", fail_physical_issue)
-        with pytest.raises(RuntimeError, match="simulated physical issue write failure"):
-            client.post(MOVEMENTS, json=payload)
+        failed = client.post(MOVEMENTS, json=payload)
+        assert failed.status_code == 500
+        assert failed.json() == {"detail": "internal server error"}
+        assert failed.headers["Cache-Control"] == "no-store"
 
     assert _snapshot(inventory_api) == before
     assert _stock(client) == 6

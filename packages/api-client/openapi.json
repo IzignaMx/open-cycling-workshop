@@ -1466,6 +1466,79 @@
         "title": "HealthUnavailableResponse",
         "type": "object"
       },
+      "InventoryMovementPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryMovementReadResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "InventoryMovementPageResponse",
+        "type": "object"
+      },
+      "InventoryMovementReadResponse": {
+        "additionalProperties": false,
+        "description": "Privacy allowlist for reads; the historical POST response is unchanged.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MovementKind"
+          },
+          "location_id": {
+            "title": "Location Id",
+            "type": "string"
+          },
+          "movement_id": {
+            "title": "Movement Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "movement_id",
+          "product_id",
+          "organization_id",
+          "location_id",
+          "kind",
+          "quantity",
+          "occurred_at"
+        ],
+        "title": "InventoryMovementReadResponse",
+        "type": "object"
+      },
       "LocationPage": {
         "properties": {
           "items": {
@@ -4329,6 +4402,95 @@
           }
         },
         "summary": "Create Product",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/products/{product_id}/movements": {
+      "get": {
+        "operationId": "get_movements_api_v1_inventory_products__product_id__movements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryMovementPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Movements",
         "tags": [
           "inventory"
         ]

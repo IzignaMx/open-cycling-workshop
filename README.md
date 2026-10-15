@@ -4,6 +4,20 @@ Open source, local-first, offline-first operating platform for bicycle workshops
 
 > Status: **V0.1 automated foundations have hosted evidence; physical Tier 1 qualification and manual reviews remain open. V0.2 Workshop Core increment 1 is complete; increment 2 adds inventory products/ledger and the scoped inventory API.** This repository is not a production release. See [changelog](CHANGELOG.md) and [execution status](docs/10-spec-development/execution-state.yaml) for implemented scope and verification limits.
 
+## Connected inventory visibility (candidate)
+
+The new read-only Inventory panel pages products, shows ledger-derived **available
+quantity** (including negative values), and pages a minimal movement history. It
+requires a freshly verified connected account with `inventory.read` and an
+authorized workshop. Organization-wide selection uses the existing directory only
+with `locations.read`. It does not open an offline baseline for inventory-only users.
+
+Inventory is not cached or available offline. Stock and movement pages are separate
+live reads with separate receipt times; one page is not a stock calculation or a
+snapshot. Existing local operational drafts and journals remain available offline.
+There is no product editor, movement command, inventory queue or quote UI in this
+slice. See the [read contract and current qualification limits](docs/10-spec-development/2026-10-15-connected-inventory-read.md).
+
 ## V0.2 Increment 2 progress
 
 Task 4 adds the [pure quote domain](docs/10-spec-development/2026-10-13-quote-domain.md):

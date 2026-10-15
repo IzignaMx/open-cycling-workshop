@@ -844,9 +844,15 @@ test('organization-wide account keeps null account scope and its concrete select
         next_cursor: null,
       })
     const body = await (await original(url, init)).json()
-    if (Object.hasOwn(body, 'user_id')) body.location_id = null
+    if (Object.hasOwn(body, 'user_id')) {
+      body.location_id = null
+      body.capabilities.push('locations.read')
+    }
     const context = body.context ?? body
-    if (Object.hasOwn(context, 'account_location_id')) context.account_location_id = null
+    if (Object.hasOwn(context, 'account_location_id')) {
+      context.account_location_id = null
+      context.capabilities.push('locations.read')
+    }
     return response(url, body)
   }
   const first = setup(t, { server })
@@ -1482,9 +1488,15 @@ test('organization-wide account retains concrete workshop through automatic reva
         next_cursor: null,
       })
     const body = await (await original(url, init)).json()
-    if (Object.hasOwn(body, 'user_id')) body.location_id = null
+    if (Object.hasOwn(body, 'user_id')) {
+      body.location_id = null
+      body.capabilities.push('locations.read')
+    }
     const context = body.context ?? body
-    if (Object.hasOwn(context, 'account_location_id')) context.account_location_id = null
+    if (Object.hasOwn(context, 'account_location_id')) {
+      context.account_location_id = null
+      context.capabilities.push('locations.read')
+    }
     return response(url, body)
   }
   const first = setup(t, { server })
