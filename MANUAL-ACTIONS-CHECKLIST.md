@@ -79,6 +79,16 @@ one blocked benchmark; missing Chromium after skipped installation caused 159
 BeforeHooks failures across 80 unexecuted journeys. No browser behavior or pixels
 were qualified. Keep the exact changed-head gates below open.
 
+Second [CI38689123352](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38689123352)
+retained the readiness failure with safe evidence: connection refused, exit 255,
+no OOM, no startup hint and successful teardown (artifact 11951727637). A runner-only
+candidate now builds the existing production web image and requires paired raw/
+production binary-hash, file-capability and version-launch controls under identical
+nonroot restrictions before the two unchanged config probes. The upstream-image
+file capability is a concrete hypothesis; actual paired causal proof is still
+pending. Local 46 focused and 493 operations passes (three explicit recovery skips)
+do not satisfy the actual Caddy, native browser, pixel or physical/operator gates.
+
 The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
 cover catalog, ledger-derived available quantity and one live movement page only.

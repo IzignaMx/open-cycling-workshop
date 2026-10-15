@@ -239,3 +239,64 @@ configuration/phase probes, six failure-order combinations and real subprocess
 boundary/reaping checks. A real BaseServer thread-start failure was observed RED
 (deadlock), then GREEN after guarding shutdown/join until the server thread starts.
 No actual local Docker/Caddy execution or changed-head hosted success is claimed.
+
+## Production-image launch correction candidate · 2026-10-15
+
+The second [CI38689123352](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38689123352)
+tested source `74efdb7154a774a4f288c56d3429a0a444da6bfa` through merge
+`743d5d345d2b5f4b55a48b6e6cf9bab11a149bf5`, exact tree
+`9d9fbd83b9f6a81ae79ba80b7a3c3e1706da3188`. Artifact 11951727637 (ZIP
+SHA256 `8fc64516e4f688c41e0b6df30cc0e36c2d98ed6438e400f7eaca881a27e79220`)
+accompanied 2,673 Python passes (14 skips, three warnings), a separate 43-case
+PostgreSQL pass and 871 aggregate core passes. The browser cascade remained 80
+unexecuted journeys/159 missing-Chromium setup attempts; direct/kernel/repeat
+journeys were skipped. Edge evidence retains zero completed configurations: first-config readiness exhausted with
+connection refused, container exit 255, no OOM, no matched startup hint, and
+successful upstream/container/temporary-directory cleanup. No raw log survived.
+The original startup cause remains unproven; neither failed run is replaced by a
+unit-test success or by the separate passing production-runtime job.
+
+Static comparison found the probe used the unmodified upstream image, whereas
+`infra/docker/web.Dockerfile` already removes the binary's inherited file
+capability for nonroot/cap-drop/no-new-privileges operation on high ports. The
+[official Caddy 2.11 image recipe](https://github.com/caddyserver/caddy-docker/blob/master/2.11/alpine/Dockerfile)
+sets that capability. This is a concrete launch-mismatch hypothesis, not yet an
+observed causal result. No production image recipe, config or security restriction
+changes in this correction candidate.
+
+The runner builds the existing production Dockerfile with its existing
+allowlisted build context, a unique disposable tag, quiet output and a 600-second
+build budget. It resolves both images to validated immutable IDs and launches the
+same explicit binary-metadata/version shell command under identical flags, host
+UID/GID, mounts and environment. The host UID override solely owns disposable
+bind-directory/isolated-CA files; a root host UID is rejected. Both launch controls
+retain read-only root, dropped capabilities and no-new-privileges. The raw image
+must show the expected file capability, nonzero exit and an operation-not-permitted
+hint with no version; production must show no file capability, zero exit and
+v2.11.7 with no denial. Binary SHA256 values must match. Unexpected or contradictory
+metadata fails closed, retaining only safe stage and validated observations.
+
+Only then do both unchanged actual-config forwarding, upstream-down error-log,
+no-store and verified-isolated-TLS probes run on the production image ID. Their
+original 30-second readiness budgets start per probe, after build/controls.
+Subprocess output remains capped at 64 KiB; control start/wait/log commands are
+bounded to 30/10/5 seconds. All containers and the unique image tag are removed
+with finite budgets, with original failures and each cleanup failure kept separate.
+No raw query, headers, bodies, credentials, arbitrary errors or startup text are
+published; no host capability/trust-store changes or shared cache pruning occur.
+
+Observed local RED was 12 missing-behavior failures; the safe-observation test
+added one RED. Independent review reproduced two contradictory version/EPERM
+acceptances, both observed RED and corrected. An additional review diagnostic correction rejects unknown capabilities before
+reporting their absence, with an observed failing-first regression. Final focused
+checks passed 46
+without skips; full operations passed 493 with three explicit PostgreSQL recovery
+skips and one warning. These are harness/control-flow results. Docker is absent
+locally: the paired causal result, two actual Caddy configurations and exact-head
+native browser/pixel gates remain pending. Physical/operator gates remain open.
+
+Independent exact-source review re-ran all 46 focused cases plus 34 adversarial
+control permutations and eight original/directory/image failure combinations,
+with no remaining source blocker. Full local Ruff check/format (355 files),
+repository contract, touched Prettier and diff checks passed. These agent-authored
+changes and independent agent reviews are not human GitHub approval.

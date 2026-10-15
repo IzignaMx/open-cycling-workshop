@@ -42,8 +42,10 @@ not installed by the production application.
 
 ## Actual runtime proof
 
-Run `python scripts/ci/inventory_edge_probe.py` on a Docker-capable host. It uses
-the pinned production Caddy image and both actual configurations, an isolated
+Run `python scripts/ci/inventory_edge_probe.py` on a Docker-capable, nonroot Linux
+host. It builds the existing `infra/docker/web.Dockerfile` using its allowlisted
+context and a unique disposable image tag (600-second quiet build budget), then
+uses the immutable production image ID and both actual configurations, an isolated
 localhost internal CA verified through an explicit trust context, and synthetic
 upstream requests. Successful normal forwarding precedes actual upstream failure.
 Only `http.log.error` ERROR records qualify; access-only logs cannot substitute.
@@ -65,3 +67,16 @@ kills and reaps the command. Raw log/exception/request/environment text is not
 published. Diagnostic hints do not establish a root cause by themselves, and a
 failure or incomplete cleanup still exits nonzero. The readiness limit stays
 30 seconds; no diagnostic retry relaxes forwarding, TLS or privacy requirements.
+
+Before private requests, paired raw-upstream/production controls run the identical
+explicit binary SHA256/getcap/version command and sandbox flags. Equal binary
+hashes, expected raw file capability plus nonzero EPERM/no version, and absent
+production capability plus zero/v2.11.7/no EPERM are required; contradictory or
+unknown metadata fails closed. Both image IDs and only validated metadata are
+recorded. The host UID/GID override exists solely for disposable bind-directory
+ownership; read-only root, cap-drop ALL and no-new-privileges stay unchanged.
+Build/controls occur before each original 30-second configuration readiness gate.
+The unique tag is removed after use without pruning shared Docker cache; cleanup
+failure remains separate and prevents success. The first two hosted readiness
+failures are retained. Their launch-mismatch cause remains a hypothesis until an
+actual paired hosted result establishes it; mocked tests cannot establish it.

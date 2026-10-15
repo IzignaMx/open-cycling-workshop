@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Match the edge probe to the production image
+
+- Preserve the second PR42 readiness failure: connection refused, container exit
+  255, no OOM and clean teardown. The original startup cause is still unproven.
+- Build the existing production web Dockerfile for the positive probe. Compare
+  immutable raw/production image IDs, equal Caddy binary hashes, file-capability
+  semantics and sandboxed version launch before any synthetic private requests.
+- Require raw-image EPERM/nonzero and production-image version/zero as paired
+  controls. Reject contradictory metadata; keep the same nonroot/read-only/
+  cap-drop/no-new-privileges restrictions and both 30-second readiness proofs.
+- Bound build/control output and cleanup the unique disposable image tag without
+  pruning shared cache. Actual hosted causal and two-config proof remains pending.
+
 ## Unreleased · Preserve bounded edge-probe failure diagnostics
 
 - Retain PR42's first actual Caddy readiness failure with its cause unproven;
