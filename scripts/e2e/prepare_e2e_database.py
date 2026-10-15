@@ -356,6 +356,12 @@ def main() -> int:
         from branding_fixtures import seed_branding_identities
 
     seed_branding_identities(database_url)
+    if __package__:
+        from .inventory_fixtures import seed_inventory_identities
+    else:
+        from inventory_fixtures import seed_inventory_identities
+
+    seed_inventory_identities(database_url)
     print(f"E2E database ready for organization {E2E_ORGANIZATION_ID}")
     return 0
 
