@@ -916,3 +916,17 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   adds one current-admission completion request after the first settled sync.
   New exact-head direct/aggregate and retry-free gates remain required before
   integration; earlier local or hosted results do not qualify this combined tree.
+
+## 2026-10-15 · Pure quote decision-domain boundary
+
+- [ ] Obtain exact integrated-head hosted CI/Security/DCO for this bounded
+      domain increment. Local arithmetic/evidence tests do not qualify durable
+      timelines, PostgreSQL concurrency, native offline drafts or a live approval.
+- [ ] Review persistence/API authority, atomic quote/order association and stock
+      command preconditions separately before exposing customer decisions.
+      Existing order transitions are not newly quote-gated by this increment.
+- No new operator action is required for the pure in-memory module. No migration,
+  grants, sync entity or UI is added. Superseded-revision evidence edits remain
+  unsupported; immutable historical receipts and exact replay are retained.
+  Physical-device, recovery and accessibility gates remain open. See the
+  [scope and evidence](docs/10-spec-development/2026-10-15-quote-decision-domain.md).
