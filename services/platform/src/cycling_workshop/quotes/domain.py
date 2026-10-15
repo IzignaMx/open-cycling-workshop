@@ -122,6 +122,25 @@ class QuoteTotals:
     line_amounts: tuple[tuple[str, int], ...]
 
 
+def _allocate_discount(gross: dict[str, int], line: DiscountLine) -> dict[str, int]:
+    """Preserve the original quote's exact gross-weight allocation and ID ties."""
+    base = sum(gross[line_id] for line_id in line.scope_line_ids)
+    if line.amount_minor > base:
+        raise ValueError("discount exceeds its scoped charges")
+    allocated = {
+        line_id: line.amount_minor * gross[line_id] // base for line_id in line.scope_line_ids
+    }
+    remaining = line.amount_minor - sum(allocated.values())
+    discount_amount = line.amount_minor
+    ranked = sorted(
+        line.scope_line_ids,
+        key=lambda line_id: (-(discount_amount * gross[line_id] % base), line_id),
+    )
+    for line_id in ranked[:remaining]:
+        allocated[line_id] += 1
+    return allocated
+
+
 def _calculate(lines: tuple[QuoteLine, ...]) -> QuoteTotals:
     gross: dict[str, int] = {}
     for line in lines:
@@ -140,22 +159,8 @@ def _calculate(lines: tuple[QuoteLine, ...]) -> QuoteTotals:
             continue
         if any(line_id not in gross for line_id in line.scope_line_ids):
             raise ValueError("discount scope must reference a labor or part charge line")
-        base = sum(gross[line_id] for line_id in line.scope_line_ids)
-        if line.amount_minor > base:
-            raise ValueError("discount exceeds its scoped charges")
-        # Each discount uses the original rounded charges, never the iteration-dependent net.
-        # Largest-remainder allocation conserves every minor unit. Ties use stable line IDs.
-        allocated = {
-            line_id: line.amount_minor * gross[line_id] // base for line_id in line.scope_line_ids
-        }
-        remaining = line.amount_minor - sum(allocated.values())
-        discount_amount = line.amount_minor
-        ranked = sorted(
-            line.scope_line_ids,
-            key=lambda line_id: (-(discount_amount * gross[line_id] % base), line_id),
-        )
-        for line_id in ranked[:remaining]:
-            allocated[line_id] += 1
+        # Allocate against complete original gross weights, never the selected subset.
+        allocated = _allocate_discount(gross, line)
         for line_id, amount in allocated.items():
             net[line_id] -= amount
         discount_total += line.amount_minor

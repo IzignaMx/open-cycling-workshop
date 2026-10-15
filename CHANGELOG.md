@@ -59,6 +59,21 @@
   Exact integrated native/database/edge/browser/pixel qualification remains pending;
   offline inventory, writes, reconciliation and quote workflows remain open.
 
+## Unreleased · Pure quote decision evidence and partial pricing
+
+- Validate complete immutable quote lineages and stable charge identities without
+  changing existing quote revision IDs or integer-minor-unit arithmetic.
+- Record approval, rejection and whole-line partial approval with exact revision,
+  immutable evidence, append-only current-revision replacements/withdrawals and
+  proof-bound replay. Historical receipts remain available after supersession;
+  new corrections to superseded evidence are deferred.
+- Preserve original full-quote discount shares for selected charges and recompute
+  tax on their selected net base. Guard initial order-transition plans against
+  stale revisions, replaced evidence and replay without executing the transition.
+- Keep this Task 5 sub-slice in memory. Durable timeline delivery, access grants,
+  persistence/API/sync/UI and reservation execution remain future increments;
+  existing order and inventory behavior is unchanged.
+
 ## Unreleased · Finish branding admission after connected startup sync
 
 - Keep one source-bound branding refresh pending until a connected admission's
