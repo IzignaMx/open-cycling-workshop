@@ -6,21 +6,37 @@ reserving the single decoder slot; no image or diagnostic crosses into logs.
 
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
 import io
-import os
 import struct
-import subprocess
 import sys
-import tempfile
-import threading
-import time
 import warnings
 import zlib
-from dataclasses import dataclass
-from pathlib import Path
+from typing import NamedTuple
+
+# The fresh standalone decoder must not initialize API-only imports or state.
+# Normal module imports retain the public DTO and one process-local API lock.
+if __name__ != "__main__":
+    import base64
+    import binascii
+    import hashlib
+    import os
+    import subprocess
+    import tempfile
+    import threading
+    import time
+    from dataclasses import dataclass
+    from pathlib import Path
+
+    _DECODER_SLOT = threading.Lock()
+
+    @dataclass(frozen=True)
+    class CanonicalLogo:
+        data: bytes
+        sha256: str
+        byte_count: int
+        width: int
+        height: int
+
 
 MAX_PNG_BYTES = 262_144
 MAX_SIDE = 512
@@ -30,7 +46,6 @@ DECODER_SECONDS = 2.0
 DECODER_MEMORY_BYTES = 128 * 1024 * 1024
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _ALLOWED = frozenset((b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND", b"sRGB", b"gAMA", b"cHRM"))
-_DECODER_SLOT = threading.Lock()
 
 
 class InvalidLogo(ValueError):
@@ -46,17 +61,7 @@ class DecoderUnavailable(Exception):
     """The bounded decoder could not run or exceeded its resource deadline."""
 
 
-@dataclass(frozen=True)
-class CanonicalLogo:
-    data: bytes
-    sha256: str
-    byte_count: int
-    width: int
-    height: int
-
-
-@dataclass(frozen=True)
-class _Png:
+class _Png(NamedTuple):
     width: int
     height: int
     depth: int

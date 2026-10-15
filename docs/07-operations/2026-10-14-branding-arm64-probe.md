@@ -1,9 +1,9 @@
 # Synthetic branding decoder smoke in the ARM64 image
 
-Status: the initial hosted image build succeeded, but the QEMU decoder probe
-**failed** on the exact candidate below. Diagnostic-only source additions have
-helper/mock evidence; they have not run in Docker/QEMU in this executor, which
-has no Docker. Physical Raspberry, laptop/Docker Desktop and hostile worst-case
+Status: initial and diagnostic hosted image builds succeeded, but both qualifying
+QEMU decoder attempts **failed** on their exact candidates below. A narrow worker
+startup/import correction now has native source/test evidence and awaits new
+exact-tree hosted execution. This executor has no Docker. Physical Raspberry, laptop/Docker Desktop and hostile worst-case
 qualification remain separate. Named-volume/recovery evidence belongs to its
 own runtime artifact and does not change this ARM failure.
 
@@ -104,7 +104,7 @@ has uploaded ZIP SHA256
 `05f95beb0621706879400de48e959d4544bf4e598d94fa563b15812030cc2268`.
 Its installed worker SHA256 is
 `b5ca430ef94a6273e11314d2cccd7277c620a8bc62c4295e3411ea8378e7465c`, matching the
-reviewed production source.
+initial reviewed production source.
 
 The report proves ARM64 image/process identity, UID/GID 10001, hardened runtime,
 Pillow 12.3.0 and source-declared limits. Its outcome was
@@ -158,3 +158,79 @@ checkout worker with the project virtual environment: all 11 markers through
 it is not the installed `/app` image, QEMU, ARM64 or physical-device evidence.
 The full failed-report regression includes all 11 markers and verifies the
 original failure, commit and image ID remain intact under the 4 KiB ceiling.
+
+## Corrected diagnostic result and bounded worker startup correction
+
+The diagnostic run checked merge `b537a33bd3fc963ec0c559d771ef878b48ead422`, tree
+`bd0fa97aacca042f9ebb473f6622de4782f9b146`, with the same image/worker digest as
+the first run. Its qualifying attempt observed a parent wall timeout after
+2.010173 seconds, spawn time 0.006577 seconds, child user CPU 1.968709 seconds
+and system CPU 0.027995 seconds, with the child killed/reaped at exit -9. The
+supporting instrumented child observed `python_ready` at 0.450244 seconds but
+never observed `worker_entry`; it too timed out and was reaped. This demonstrates
+a CPU-active deadline failure. The second child's phase still does not locate
+the original attempt or distinguish every possible emulator/resource effect.
+
+Read-only source/import investigation found that standalone execution loaded
+API-side imports, created an unused API lock and built the public DTO before
+entering the worker and applying its existing resource limits. The bounded
+correction keeps the same file path and isolated-Python command, but initializes
+API-only imports, `CanonicalLogo` and `_DECODER_SLOT` only for a normal module
+import (`__name__ != '__main__'`). Normal API imports retain the same frozen
+public dataclass and one shared process-local lock. The private `_Png` parsed
+record becomes an immutable typed `NamedTuple`, retaining the field order,
+constructor and attribute-read behavior used by its current callers; it avoids
+the dataclasses/inspect dependency chain in the standalone child. Pillow already
+needs typing, so this cost is included rather than omitted from the comparison.
+
+AST comparison against the pre-change source proves `_inspect`,
+`inspect_canonical_png`, `_validate_scanlines`, `canonicalize_logo` and
+`_worker_main` are unchanged. Framing/CRC/chunk/dimension rules, native full
+decode/re-encode, output validation, subprocess/environment/descriptor contract,
+nonblocking concurrency, cleanup and all limits are therefore preserved. The
+parent deadline still starts before Popen. No parser is copied, no interpreter
+`-S` shortcut is used, and no warming, retry, process pool or increased budget is
+introduced.
+
+Native Linux x86_64 source-only observations, with the fixed synthetic 2×2 input:
+
+- Exact unchanged worker invocation before the change: exit 0, 0.064247 seconds
+  wall, 0.063410 seconds child CPU; after: exit 0, 0.064263 seconds wall, 0.050746
+  seconds child CPU. These are individual observations, not a benchmark or a
+  measured wall-latency improvement.
+- Separate `-X importtime` invocations against the same source file report
+  112 → 48 import records before the worker's resource import, and 155 → 122
+  records for the complete decode/encode graph. These include interpreter/site
+  startup and import attempts; they are not counts of third-party dependencies.
+- Summed pre-resource import self-time was 28.442 → 10.288 ms in those profiled
+  observations. The new early typing import is included, at 1.816 ms cumulative;
+  it adds no module to the complete graph because Pillow imports typing anyway.
+  Some deferred modules, including tempfile/subprocess, are imported later by
+  Pillow. They are not claimed to have disappeared from the whole decoder.
+- Eight synthetic inputs preserve identical canonical SHA256, byte count and
+  dimensions before/after: color-metadata RGBA, RGB, grayscale, grayscale-alpha,
+  palette/transparency, 16-bit grayscale, one-pixel Adam7 and 512×512 RGBA. No
+  image bytes are stored in this evidence record.
+
+RED/GREEN regressions prove a fresh isolated child reaches worker entry without
+API-only globals/import roots, while normal imports preserve the frozen public
+DTO/API and the shared lock. They also verify `_Png` field order/types/read values
+and refusal of attribute assignment/addition. The existing actual-decode,
+malformed-input, metadata/pixel, expansion, timeout kill/reap, 128 MiB allocation
+refusal and concurrency tests continue to run; no elapsed threshold is added as
+an optimization correctness gate.
+
+This correction reduces the observed import graph. It does not prove where the
+original emulated child stopped, predict a green QEMU run, establish native ARM
+performance or close physical Raspberry qualification. Both prior failed
+artifacts remain failures; only new exact-tree evidence can establish the next
+qualifying outcome.
+
+The startup correction passed 84 decoder/probe cases. The broader selected
+branding/storage/recovery/source suite passed 246 cases with 28 explicit
+PostgreSQL-environment skips and three dependency warnings; those skips are not
+PostgreSQL evidence. Full platform strict mypy passed 99 source files; touched
+Ruff/format, documentation formatting, repository contract and diff checks passed.
+Independent review reran all 84 decoder/probe cases and verified unchanged ASTs
+for the five functions and all six admission/resource constants. Local source
+checks do not replace the still-required exact-tree QEMU run.

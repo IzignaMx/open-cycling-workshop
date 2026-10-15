@@ -285,3 +285,119 @@ def test_decoder_launch_failure_and_unexpected_output_are_safe(
         canonicalize_logo(encoded(png()))
     monkeypatch.setattr(images.subprocess, "Popen", real_popen)
     assert canonicalize_logo(encoded(png())).width == 2
+
+
+def test_standalone_worker_entry_excludes_api_only_imports_and_state() -> None:
+    import json
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    import cycling_workshop.branding.images as images
+
+    # Stop at the real worker entry in a fresh isolated interpreter, before any
+    # Pillow work. runpy/trace overhead is not a production timing measurement.
+    script = """import json, runpy, sys
+worker = sys.argv[1]
+api_names = (
+    'base64', 'binascii', 'hashlib', 'os', 'subprocess', 'tempfile',
+    'threading', 'time', 'dataclass', 'Path', 'CanonicalLogo', '_DECODER_SLOT'
+)
+api_modules = ('base64', 'hashlib', 'subprocess', 'dataclasses', 'inspect', 'ast', 'dis', 'pathlib')
+def trace(frame, event, arg):
+    if (event == 'call' and frame.f_code.co_filename == worker
+            and frame.f_code.co_name == '_worker_main'):
+        print(json.dumps({
+            'api_globals': [name for name in api_names if name in frame.f_globals],
+            'api_modules': [name for name in api_modules if name in sys.modules],
+            'has_parser': callable(frame.f_globals['_inspect']),
+            'has_scanline_check': callable(frame.f_globals['_validate_scanlines']),
+            'isolated': sys.flags.isolated,
+        }))
+        raise SystemExit(0)
+    return None
+sys.settrace(trace)
+runpy.run_path(worker, run_name='__main__')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", script, str(Path(images.__file__).absolute())],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        close_fds=True,
+        env={"PATH": os.defpath},
+        timeout=2,
+        check=True,
+        text=True,
+    )
+    assert result.stderr == ""
+    assert json.loads(result.stdout) == {
+        "api_globals": [],
+        "api_modules": [],
+        "has_parser": True,
+        "has_scanline_check": True,
+        "isolated": 1,
+    }
+
+
+def test_private_png_record_retains_typed_field_order_and_immutability() -> None:
+    from typing import get_type_hints
+
+    import cycling_workshop.branding.images as images
+
+    expected_types = {
+        "width": int,
+        "height": int,
+        "depth": int,
+        "color": int,
+        "interlace": int,
+        "compressed": bytes,
+        "chunks": frozenset[bytes],
+    }
+    parsed = images._inspect(png())
+    assert isinstance(parsed, tuple)
+    assert parsed._fields == tuple(expected_types)
+    assert get_type_hints(images._Png) == expected_types
+    assert (parsed.width, parsed.height, parsed.depth, parsed.color, parsed.interlace) == (
+        2,
+        2,
+        8,
+        6,
+        0,
+    )
+    assert zlib.decompress(parsed.compressed) == (b"\0" + b"\x10\x40\x80\xff" * 2) * 2
+    assert parsed.chunks == frozenset((b"IHDR", b"IDAT", b"IEND"))
+    for name in ("width", "new_attribute"):
+        with pytest.raises(AttributeError):
+            setattr(parsed, name, 99)
+
+
+def test_normal_api_import_keeps_frozen_logo_dataclass_and_one_shared_lock() -> None:
+    import dataclasses
+    import importlib
+
+    import cycling_workshop.branding.images as images
+
+    logo = images.CanonicalLogo(b"synthetic", "synthetic-digest", 9, 2, 2)
+    assert dataclasses.is_dataclass(logo)
+    assert [field.name for field in dataclasses.fields(logo)] == [
+        "data",
+        "sha256",
+        "byte_count",
+        "width",
+        "height",
+    ]
+    attribute = "width"
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        setattr(logo, attribute, 99)
+    lock = images._DECODER_SLOT
+    assert lock.acquire(blocking=False)
+    try:
+        again = importlib.import_module("cycling_workshop.branding.images")
+        assert again._DECODER_SLOT is lock
+        assert not again._DECODER_SLOT.acquire(blocking=False)
+        assert again.canonicalize_logo is canonicalize_logo
+        assert again.CanonicalLogo is images.CanonicalLogo
+        assert again.InvalidLogo is InvalidLogo
+    finally:
+        lock.release()
