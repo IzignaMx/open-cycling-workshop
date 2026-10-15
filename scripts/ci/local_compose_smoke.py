@@ -338,7 +338,9 @@ def qualify_api_restarts(
             "phase": "stopping",
         }
         cycles.append(record)
-        started = time.monotonic()
+        started = None
+        with suppress(Exception):
+            started = time.monotonic()
         try:
             compose("stop", "api")
             record["phase"] = "checking_outage"
@@ -360,9 +362,10 @@ def qualify_api_restarts(
         finally:
             # Optional timing must never replace the original qualification error.
             with suppress(Exception):
-                elapsed = time.monotonic() - started
-                if math.isfinite(elapsed) and elapsed >= 0:
-                    record["elapsed_seconds"] = round(elapsed, 3)
+                if started is not None:
+                    elapsed = time.monotonic() - started
+                    if math.isfinite(elapsed) and elapsed >= 0:
+                        record["elapsed_seconds"] = round(elapsed, 3)
 
 
 def main() -> int:

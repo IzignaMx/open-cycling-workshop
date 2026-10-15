@@ -298,11 +298,15 @@ resilience evidence, not a guarantee against rare failures or retroactive cause.
 
 TDD retained 23 initial failures before the helper existed, then four timing
 failure/invalid-duration regressions before hardening that diagnostic bookkeeping.
+Independent review additionally reproduced an unavailable initial timing read
+preventing the first mandatory stop and leaving inaccurate running evidence.
+Two more RED regressions preceded making that initial measurement optional too;
+qualification now continues without duration fields when timing is unavailable.
 The original branding source-order assertion failed after callback integration
 and was updated to assert that exact integration, without dropping its ordering
 contract. An initial follow-up command referenced a nonexistent test path and
 ran no tests; the corrected scope was rerun fully. Final local quote/runtime/
-branding-volume/Compose/repository selection: **576 passed, 188 explicit
+branding-volume/Compose/repository selection: **578 passed, 188 explicit
 PostgreSQL skips and one dependency warning**. Configured Ruff/format (245 files),
 mypy (106 production sources plus the runner) and repository contracts passed.
 Independent source review and new exact-head hosted three-cycle/full-CI evidence

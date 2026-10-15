@@ -647,3 +647,26 @@ def test_restart_timing_cannot_replace_failure_or_emit_invalid_duration(monkeypa
         module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
     assert raised.value is original
     assert cycles == [{"cycle": 1, "status": "failed", "phase": "waiting_ready"}]
+
+
+@pytest.mark.parametrize("failure", (None, (2, "waiting_ready")))
+def test_unavailable_initial_restart_clock_does_not_skip_qualification(monkeypatch, failure):
+    module, compose, branding, cycles, calls, original = restart_fixture(
+        monkeypatch, failure=failure
+    )
+
+    def unavailable():
+        raise RuntimeError("synthetic initial timing failure")
+
+    monkeypatch.setattr(module.time, "monotonic", unavailable)
+    if failure is None:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+        assert calls == [(cycle, phase) for cycle in (1, 2, 3) for phase in RESTART_PHASES]
+        assert all(record["status"] == "passed" for record in cycles)
+    else:
+        with pytest.raises(RuntimeError) as raised:
+            module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+        assert raised.value is original
+        assert calls[-1] == failure
+        assert cycles[0]["status"] == "passed" and cycles[1]["status"] == "failed"
+    assert all("elapsed_seconds" not in record for record in cycles)
