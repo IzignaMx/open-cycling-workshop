@@ -447,6 +447,7 @@ for (const outcome of [200, 401, 403, 'error']) {
 async function operational(t) {
   const account = { ...user, capabilities: ['inventory.read', 'sync.pull'] }
   const baselineId = '0199ba00-0000-7000-8000-000000000002'
+  let deltaPage = 0
   const state = setup(t, {
     account,
     handle: async (url, init, env) => {
@@ -486,22 +487,24 @@ async function operational(t) {
           predecessor: body.continuation,
           continuation: 'delta',
         })
-      if (path.endsWith('/deltas/page'))
+      if (path.endsWith('/deltas/page')) {
+        const continuation = `checkpoint-${++deltaPage}`
         return response(url, {
           protocol: 1,
           baseline_id: body.continuation === 'delta' ? baselineId : null,
           authorization_epoch: context.authorization_epoch,
-          page_id: 'delta-page',
+          page_id: `delta-page-${deltaPage}`,
           predecessor: body.continuation,
           records: [],
           phase: 'complete',
-          continuation: 'checkpoint',
+          continuation,
           completion: {
             baseline_id: body.continuation === 'delta' ? baselineId : null,
             authorization_epoch: context.authorization_epoch,
-            checkpoint: 'checkpoint',
+            checkpoint: continuation,
           },
         })
+      }
       if (path.endsWith('/validate-activation'))
         return response(url, {
           protocol: 1,
