@@ -33,6 +33,8 @@ def test_runtime_log_filter_is_identical_and_narrow(filename: str) -> None:
         paths.append(NAMESPACE[:index] + f"%{ord(char):02x}" + NAMESPACE[index + 1 :] + "/products")
         paths.append(NAMESPACE[:index] + f"%{ord(char):02X}" + NAMESPACE[index + 1 :] + "/products")
     paths.append(NAMESPACE + "%2fproducts")
+    paths += ["http://localhost:8080" + path for path in paths[:3]]
+    paths += ["https://localhost:8443" + path for path in paths[:3]]
     for path in paths:
         assert re.sub(pattern, r"\1", path + "?before=" + CANARY) == path
     for path in [NAMESPACE + "-other", NAMESPACE + "ish/products", "/other", "/API/v1/inventory"]:

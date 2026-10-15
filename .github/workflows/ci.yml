@@ -87,6 +87,20 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
       - name: Run Python tests
         run: uv run pytest -q
+      - name: Prove inventory PostgreSQL budgets, fresh authority and measured plans
+        run: uv run python scripts/ci/inventory_read_proof.py
+      - name: Prove inventory query privacy in both actual Caddy configurations
+        run: uv run python scripts/ci/inventory_edge_probe.py
+      - name: Upload bounded inventory database and edge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-read-${{ github.sha }}
+          path: |
+            artifacts/inventory-read/pg-direct/backend-postgres-evidence.json
+            artifacts/inventory-read/pg-direct/backend-postgres-explain.json
+            artifacts/inventory-read/edge-runtime-evidence.json
+          if-no-files-found: error
       - name: Prove asset-aware branding recovery with matching PostgreSQL 18 clients
         run: bash scripts/ci/run_branding_recovery.sh
       - name: Upload safe branding recovery proof only
@@ -104,6 +118,8 @@ jobs:
         run: pnpm --filter @ocwp/api-client test:core
       - name: Run frontend real typecheck
         run: pnpm --filter @ocwp/web typecheck
+      - name: Typecheck inventory browser qualification
+        run: pnpm --filter @ocwp/web exec tsc -p tsconfig.e2e-inventory.json
       - name: Typecheck branding browser qualification
         run: pnpm --filter @ocwp/web exec tsc -p tsconfig.e2e-branding.json
       - name: Build PWA

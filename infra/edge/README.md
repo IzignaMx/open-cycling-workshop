@@ -8,7 +8,7 @@ not rewrite forwarded requests or enable HTTP access logging.
 
 The anchored expression matches `/api/v1/inventory` and descendants, including
 single-percent-encoded spellings that the backend decodes to that namespace.
-It excludes similarly prefixed paths such as `/api/v1/inventory-other`. Keep the
+Origin-form and HTTP absolute-form targets are covered. It excludes similarly prefixed paths such as `/api/v1/inventory-other`. Keep the
 two configurations identical. Their contract test covers each prefix character
 encoded with both hexadecimal cases and the encoded child-path separator.
 
@@ -39,3 +39,19 @@ python -m pytest services/platform/tests/inventory/test_inventory_http_privacy.p
 
 The probe application's synthetic routes exist only in the test module and are
 not installed by the production application.
+
+## Actual runtime proof
+
+Run `python scripts/ci/inventory_edge_probe.py` on a Docker-capable host. It uses
+the pinned production Caddy image and both actual configurations, an isolated
+localhost internal CA verified through an explicit trust context, and synthetic
+upstream requests. Successful normal forwarding precedes actual upstream failure.
+Only `http.log.error` ERROR records qualify; access-only logs cannot substitute.
+The runner refuses failed cleanup and initializes a fresh incomplete artifact
+before Docker discovery/pull, so a blocked rerun cannot retain old success.
+Only `artifacts/inventory-read/edge-runtime-evidence.json` is publishable. Temporary
+raw logs and CA material are never uploaded or installed as system trust.
+
+Current local source tests and mocked adversarial checks pass. Actual execution
+is blocked here because Docker is unavailable; CI must execute both modes before
+this increment is qualified.
