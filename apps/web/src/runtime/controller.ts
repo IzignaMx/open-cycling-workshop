@@ -6,7 +6,7 @@ import {
 import { createBrandingTransport } from '../features/branding/transport.js'
 import { liveQuery } from 'dexie'
 import { AccessKernel } from '../access-kernel/kernel.js'
-import { principalKey } from '../access-kernel/context.js'
+import { contextKey, principalKey } from '../access-kernel/context.js'
 import { createKernelDatabase, type KernelDatabase } from '../access-kernel/database.js'
 import { createServerContextAdapter } from '../access-kernel/server-context.js'
 import { createBaselineTransport } from '../access-kernel/baseline-transport.js'
@@ -25,6 +25,7 @@ import { PreferenceRepository } from '../personalization/repository.js'
 import { copyOwnedLegacyPreferences, inspectLegacyWork } from './legacy-preservation.js'
 import { createRuntimeTransport, RuntimeHttpError, type WorkshopLocation } from './transport.js'
 import { ReachabilityProbe, type ReachabilityResult } from './reachability-probe.js'
+import { createConnectedReadAccess, type ConnectedReadAccess } from './connected-read.js'
 import {
   sameAccountAuthority,
   type AccountAccessSnapshot,
@@ -118,6 +119,7 @@ export class WorkshopController {
   readonly kernel: AccessKernel
   readonly sessionStore: SessionStore
   readonly branding: BrandingDisplayController
+  readonly connectedReads: ConnectedReadAccess
   readonly repositories: WorkshopRepositories
   #snapshot = empty()
   #listeners = new Set<() => void>()
@@ -136,6 +138,9 @@ export class WorkshopController {
   #suspendedAccount: AccountCapture | null = null
   #accountFlight: AbortController | null = null
   #locationPage = 0
+  #sessionGeneration = 0
+  #locationsSessionGeneration = -1
+  #locationsNetworkSequence = -1
   #disposed = false
   #sequence = 0
   #active: BaselineSession | null = null
@@ -170,7 +175,23 @@ export class WorkshopController {
       now: this.#now,
       newId: () => crypto.randomUUID(),
     })
-    this.sessionStore = new SessionStore(options.storage)
+    // Observe session writes at the sole runtime owner, including same-token A→B→A.
+    // Stored format and contents are unchanged; no connected-read metadata is persisted.
+    this.sessionStore = new SessionStore({
+      getItem: (key) => options.storage.getItem(key),
+      setItem: (key, value) => {
+        if (options.storage.getItem(key) !== value) {
+          this.#sessionGeneration++
+          this.connectedReads?.clear()
+        }
+        options.storage.setItem(key, value)
+      },
+      removeItem: (key) => {
+        this.#sessionGeneration++
+        this.connectedReads?.clear()
+        options.storage.removeItem(key)
+      },
+    })
     this.repositories = new WorkshopRepositories(this.kernel, this.#now)
     this.#http = createRuntimeTransport(options)
     this.#context = createServerContextAdapter({ ...options, now: this.#now })
@@ -191,6 +212,64 @@ export class WorkshopController {
     this.#push = createPushCoordinator({
       kernel: this.kernel,
       transport: createPushTransport({ ...options, now: this.#now }),
+    })
+    this.connectedReads = createConnectedReadAccess({
+      fetch: options.fetch,
+      now: this.#now,
+      source: (selected) => {
+        const account = this.captureAccount(),
+          operational = this.#active
+        if (['verifying', 'baseline'].includes(this.#snapshot.phase))
+          throw new Error('Verifica el taller antes de continuar.')
+        const location =
+          selected ?? account.user.location_id ?? operational?.context.selectedLocationId
+        if (
+          !location ||
+          (account.user.location_id !== null && account.user.location_id !== location)
+        )
+          throw new Error('Selecciona un taller autorizado.')
+        if (
+          operational &&
+          (this.#snapshot.phase !== 'ready' || location !== operational.context.selectedLocationId)
+        )
+          throw new Error('El taller operativo cambió.')
+        if (
+          account.user.location_id === null &&
+          !operational &&
+          (!account.user.capabilities.includes('locations.read') ||
+            this.#locationsSessionGeneration !== this.#sessionGeneration ||
+            this.#locationsNetworkSequence !== this.#networkSequence ||
+            !this.#snapshot.locations.some(
+              (row) =>
+                row.location_id === location &&
+                row.organization_id === account.user.organization_id,
+            ))
+        )
+          throw new Error('Selecciona un taller del directorio autorizado.')
+        const expected = operational ? contextKey(operational.context) : null
+        return Object.freeze({
+          account,
+          locationId: location,
+          operationalContext: operational ? structuredClone(operational.context) : null,
+          inspect: async () => {
+            if (!account.isCurrent()) throw new Error('La cuenta cambió.')
+            if (!operational) return
+            try {
+              const state = await this.kernel.inspectSession(operational.ticket, account.isCurrent)
+              if (!account.isCurrent() || contextKey(state.context) !== expected)
+                throw new Error('El contexto operativo cambió.')
+            } catch {
+              if (account.isCurrent()) this.held('verification_required')
+              throw new Error('Verifica el taller antes de continuar.')
+            }
+          },
+        })
+      },
+      refused: (account, status) => {
+        if (!account.isCurrent()) return
+        if (status === 401) this.invalidateAccount(account, 'invalid_session')
+        else this.held('verification_required')
+      },
     })
     this.branding = new BrandingDisplayController({
       capture: () => this.captureBranding(),
@@ -287,6 +366,7 @@ export class WorkshopController {
       generation: this.#account.generation + 1,
       message,
     })
+    this.connectedReads.clear()
     for (const listener of this.#accountListeners) listener()
     if (reason === 'invalid_session') void this.logout()
   }
@@ -323,6 +403,7 @@ export class WorkshopController {
   }
   private makeAccountCapture(saved: SessionSnapshot, suspended: boolean): AccountCapture {
     const sequence = this.#sequence,
+      sessionGeneration = this.#sessionGeneration,
       network = this.#networkSequence,
       generation = this.#account.generation,
       abort = this.#accountAbort,
@@ -337,6 +418,7 @@ export class WorkshopController {
         !this.#disposed &&
         !abort.signal.aborted &&
         generation === this.#account.generation &&
+        sessionGeneration === this.#sessionGeneration &&
         network === this.#networkSequence &&
         this.exactSession(sequence, saved) &&
         (suspended
@@ -1078,8 +1160,12 @@ export class WorkshopController {
     )
   }
   async checkLease(): Promise<void> {
+    const connectedCheck = this.connectedReads.check()
     const source = this.#active
-    if (!source) return
+    if (!source) {
+      await connectedCheck
+      return
+    }
     const now = this.#now()
     if (
       !Number.isFinite(now) ||
@@ -1090,6 +1176,8 @@ export class WorkshopController {
       return
     }
     this.#observedAt = now
+    await connectedCheck
+    if (this.#active !== source) return
     try {
       await this.kernel.inspectSession(source.ticket, () => source.isCurrent(source.identity))
     } catch {
@@ -1098,13 +1186,21 @@ export class WorkshopController {
   }
   async loadLocations(afterId?: string): Promise<void> {
     const sequence = this.#sequence,
+      sessionGeneration = this.#sessionGeneration,
       pageSequence = ++this.#locationPage,
       networkSequence = this.#networkSequence,
       saved = this.sessionStore.getSnapshot(),
       user = this.#snapshot.user
-    if (this.#snapshot.phase !== 'selector' || !saved || !user) return
+    if (
+      this.#snapshot.phase !== 'selector' ||
+      !saved ||
+      !user ||
+      !user.capabilities.includes('locations.read')
+    )
+      return
     const current = () =>
       this.#snapshot.phase === 'selector' &&
+      sessionGeneration === this.#sessionGeneration &&
       pageSequence === this.#locationPage &&
       networkSequence === this.#networkSequence &&
       this.exactSession(sequence, saved)
@@ -1114,12 +1210,15 @@ export class WorkshopController {
         user.organization_id,
         afterId,
       )
-      if (current())
+      if (current()) {
+        this.#locationsSessionGeneration = this.#sessionGeneration
+        this.#locationsNetworkSequence = this.#networkSequence
         this.publish({
           locations: page.items,
           nextLocation: page.nextCursor,
           message: 'Selecciona un taller para abrir su información.',
         })
+      }
     } catch (error) {
       if (current())
         this.publish({
