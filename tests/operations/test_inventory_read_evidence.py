@@ -11,6 +11,21 @@ import pytest
 from scripts.ci.inventory_read_proof import check_evidence
 
 
+def test_pg_proof_binds_the_shared_cleanup_fixture(tmp_path, monkeypatch):
+    from scripts.ci.inventory_read_proof import SOURCES
+    from services.platform.tests.inventory.test_inventory_read_postgres import postgres_evidence_run
+
+    assert "services/platform/tests/inventory/test_inventory_postgres.py" in SOURCES
+    monkeypatch.setenv("OCWP_INVENTORY_READ_EVIDENCE_DIR", str(tmp_path))
+    run = postgres_evidence_run.__wrapped__()
+    try:
+        next(run)
+        proof = json.loads((tmp_path / "backend-postgres-evidence.json").read_text())
+        assert set(proof["source_sha256"]) == SOURCES
+    finally:
+        run.close()
+
+
 def test_pg_evidence_requires_fresh_complete_exact_source_and_plan(tmp_path) -> None:
     root = tmp_path / "source"
     root.mkdir()

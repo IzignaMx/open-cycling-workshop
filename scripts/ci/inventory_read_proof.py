@@ -25,6 +25,7 @@ SOURCES = {
     "services/platform/src/cycling_workshop/inventory/cursor.py",
     "services/platform/src/cycling_workshop/inventory/router.py",
     "services/platform/tests/inventory/test_inventory_read_postgres.py",
+    "services/platform/tests/inventory/test_inventory_postgres.py",
 }
 
 
