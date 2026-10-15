@@ -123,6 +123,11 @@ navigation, pending/no-write, and focused Escape/closure assertions. All draft,
 journal, geometry and accessibility checks remain. Corrected hosted kernel/direct/
 repeat/aggregate and pixel gates stay open; local 871 core passes and 33 collected
 affected browser cases are not a corrected browser execution result.
+The reconciled local checkpoint subsequently passed 21 aggregate controls with
+zero failures and five explicit environment blockers: 2,587 Python passes/262
+skips, 871 frontend passes, static/contracts and current/pinned-old PWA builds.
+Absent PostgreSQL/Docker/psql and unavailable browser prerequisites keep the
+corrected exact-head hosted and physical/operator gates open.
 
 The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)

@@ -432,3 +432,26 @@ test, plan, ADR and evidence blob exactly matches main43. No new quote work is
 part of this correction. Exact combined hosted kernel/direct/repetitions/aggregate,
 PostgreSQL/Caddy, runtime/security/native/build and pixel proof remain required.
 Physical-device/operator gates and the inherited signal-cleanup limits remain open.
+
+### Combined local checkpoint after reconciliation
+
+One final aggregate ran on clean `3901c3f593616b214c40478d27e440427f4e4a3a`,
+tree `e2098a0db53132cb563166404e3644f47ec28417`: **21 controls passed,
+zero failed, five blocked**. Python passed 2,587 with 262 explicit skips and three
+warnings; frontend core passed 871 with zero skips. Repository, SQLite HTTP smoke,
+OpenAPI/generated client, API/offline types, Ruff/format, 106-file mypy, frontend
+lint/format, current PWA and reproducible pinned legacy PWA builds passed.
+PostgreSQL URL, Docker and psql were unavailable; managed Chromium navigation and
+the missing destructive-E2E database URL blocked the other two gates. No PostgreSQL,
+Docker or browser execution is inferred from this local result. The interpreter
+import was verified to this checkout. Installed Node24.19/pnpm11.25 dependencies
+were reused; this is not qualification of the pinned Node22.16/pnpm11.17 install.
+
+Independent final source/merge review found no blocker at that checkpoint and
+verified the two unchanged browser-test hashes, actual main43 second parent, ten
+incoming source/document blobs and all four evidence-document updates. It inspected
+recorded results without rerunning tests; the aggregate finished afterward. A
+subsequent evidence-only documentation delta records these actual results. Focused
+ESLint/Prettier/strict E2E TypeScript reruns have explicit exit-zero records. Actual
+Gitleaks8.30.1 full-history scanning found zero leaks. Corrected exact-head hosted
+execution, visual review and physical/operator acceptance remain pending.
