@@ -12,6 +12,7 @@ import { PALETTES, THEMES, presentationTokens } from './catalog.js'
 import { resolvePresentation } from './resolution.js'
 import type { BrandingProfile } from '../features/branding/contracts.js'
 import { prepareLocalLogo } from './logo.js'
+import { LogoImage } from './LogoImage.js'
 import {
   DEFAULT_PREFERENCES,
   type PreferenceScope,
@@ -165,7 +166,7 @@ export function WorkshopShell({
           aria-label={`${resolved.displayName}, taller activo`}
         >
           {loaded && rendered.logoDataUrl && brokenLogo !== rendered.logoDataUrl ? (
-            <img
+            <LogoImage
               className="workshop-logo"
               src={rendered.logoDataUrl}
               alt=""
@@ -389,7 +390,12 @@ export function WorkshopShell({
             </small>
             {logoPreview ? (
               <div className="logo-preview">
-                <img src={logoPreview} width="160" height="64" alt="Vista previa del logo local" />
+                <LogoImage
+                  src={logoPreview}
+                  width="160"
+                  height="64"
+                  alt="Vista previa del logo local"
+                />
                 <button
                   type="button"
                   className="primary-button"

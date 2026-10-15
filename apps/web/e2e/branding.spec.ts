@@ -1,5 +1,12 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from '@playwright/test'
 import type { BrandingProfile, BrandingPutRequest } from '../src/features/branding/contracts.js'
 import type { BrandingSnapshot } from '../src/branding/cache.js'
 import { PALETTES } from '../src/personalization/catalog.js'
@@ -241,6 +248,98 @@ async function syntheticLogo(page: Page, tone: 'dark' | 'light' | 'bright' = 'br
     return canvas.toDataURL('image/png').slice('data:image/png;base64,'.length)
   }, tone)
 }
+type LogoTone = 'dark' | 'light' | 'bright'
+async function expectLogoCanvas(image: Locator, tone: LogoTone, source?: string) {
+  const backing = tone === 'light' ? 'dark' : 'light'
+  await expect(image).toHaveAttribute('data-logo-backing', backing)
+  await expect(image).toHaveCSS(
+    'background-color',
+    backing === 'dark' ? 'rgb(32, 32, 32)' : 'rgb(255, 255, 255)',
+  )
+  await expect(image).toHaveCSS('forced-color-adjust', 'none')
+  await expect(image).toHaveCSS('filter', 'none')
+  if (source) await expect(image).toHaveAttribute('src', source)
+  const contrast = await image.evaluate((element, tone) => {
+    const ink = tone === 'light' ? [244, 250, 245] : tone === 'dark' ? [24, 60, 50] : [210, 69, 53]
+    const plate = getComputedStyle(element).backgroundColor.match(/\d+/g)!.slice(0, 3).map(Number)
+    const luminance = (rgb: number[]) =>
+      rgb
+        .map((byte) => byte / 255)
+        .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i]!, 0)
+    const a = luminance(ink),
+      b = luminance(plate)
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+  }, tone)
+  expect(
+    contrast,
+    'known synthetic opaque ink versus the browser-used plate',
+  ).toBeGreaterThanOrEqual(4.5)
+}
+
+async function expectSaveWords(page: Page, info: TestInfo, label: string) {
+  const save = page.getByRole('button', { name: 'Guardar marca compartida', exact: true })
+  const geometry = await save.evaluate((element) => {
+    const rect = element.getBoundingClientRect(),
+      style = getComputedStyle(element)
+    const zoom = Number(getComputedStyle(document.documentElement).zoom)
+    const words = []
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/\S+/g)) {
+        const range = document.createRange()
+        range.setStart(node, word.index)
+        range.setEnd(node, word.index + word[0].length)
+        words.push({
+          text: word[0],
+          fragments: Array.from(range.getClientRects(), (r) => ({ left: r.left, right: r.right })),
+        })
+      }
+    }
+    const form = element.closest('form')!.getBoundingClientRect()
+    return {
+      text: element.textContent,
+      words,
+      visibility: style.visibility,
+      opacity: Number(style.opacity),
+      left: rect.left,
+      right: rect.right,
+      formLeft: form.left,
+      formRight: form.right,
+      contentLeft:
+        rect.left + zoom * (parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth)),
+      contentRight:
+        rect.right - zoom * (parseFloat(style.paddingRight) + parseFloat(style.borderRightWidth)),
+      width: rect.width / zoom,
+      height: rect.height / zoom,
+      viewport: window.innerWidth,
+    }
+  })
+  await info.attach(`save-word-geometry-${label}`, {
+    body: JSON.stringify(geometry),
+    contentType: 'application/json',
+  })
+  expect(geometry.text).toBe('Guardar marca compartida')
+  expect(geometry.words.map((word) => word.text)).toEqual(['Guardar', 'marca', 'compartida'])
+  expect(geometry.visibility).toBe('visible')
+  expect(geometry.opacity).toBe(1)
+  expect(geometry.width).toBeGreaterThanOrEqual(56)
+  expect(geometry.height).toBeGreaterThanOrEqual(56)
+  expect(geometry.left).toBeGreaterThanOrEqual(Math.max(0, geometry.formLeft))
+  expect(geometry.right).toBeLessThanOrEqual(Math.min(geometry.viewport, geometry.formRight))
+  for (const word of geometry.words) {
+    expect(word.fragments, `intact save word: ${word.text}`).toHaveLength(1)
+    expect(word.fragments[0]!.left).toBeGreaterThanOrEqual(geometry.contentLeft - 0.5)
+    expect(word.fragments[0]!.right).toBeLessThanOrEqual(geometry.contentRight + 0.5)
+  }
+}
+
+async function captureLogo(image: Locator, info: TestInfo, name: string) {
+  const path = info.outputPath(`${name}.png`)
+  await image.screenshot({ path })
+  await info.attach(name, { path, contentType: 'image/png' })
+}
+
 async function capture(page: Page, info: TestInfo, name: string) {
   expect(
     await page
@@ -338,57 +437,87 @@ test('per-location brands converge to a second user without changing operational
 })
 
 test('verified brand survives offline reload while shared edits never enter the journal', async ({
-  page,
+  browser,
   request,
 }, info) => {
   const f = fixture('offline', info)
-  await login(page, f)
   const owner = await token(request, f)
-  const saved = await put(
-    request,
-    owner,
-    f.locationA,
-    input('Marca disponible sin conexión', 'jade', 0, await syntheticLogo(page)),
-  )
-  await refresh(page)
-  await expectBrand(page, saved)
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready
-  })
-  await loadEditor(page, f.locationA)
-  await page
-    .getByLabel('Nombre visible del taller', { exact: true })
-    .fill('Borrador compartido sin enviar')
-  let writes = 0
-  page.on('request', (r) => {
-    if (r.url().endsWith('/branding') && r.method() === 'PUT') writes++
-  })
-  await page.context().setOffline(true)
-  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
-  await expect(
-    page.getByRole('button', { name: 'Guardar marca compartida', exact: true }),
-  ).toHaveCount(0)
-  const operation = await createCustomer(page, 'Cliente pendiente preservado durante marca offline')
-  const before = await kernelSnapshot(page)
-  await openSettings(page)
-  await expect(
-    page.getByText('Copia verificada disponible sin conexión.', { exact: false }),
-  ).toBeVisible()
-  await page
-    .getByRole('combobox', { name: 'Esquema de superficies', exact: true })
-    .selectOption('dark')
-  await expect(page.locator('.workshop-shell')).toHaveAttribute('data-scheme', 'dark')
-  await page.getByRole('button', { name: 'Cerrar personalización', exact: true }).click()
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await waitForReady(page)
-  await expectBrand(page, saved)
-  await expect(page.locator('.workshop-shell')).toHaveAttribute('data-scheme', 'dark')
-  const after = await kernelSnapshot(page)
-  expect(after.journal).toEqual(before.journal)
-  expect(after.journal).toContainEqual(operation)
-  expect(after.delivery).toEqual(before.delivery)
-  expect(writes).toBe(0)
-  expect((await read(request, owner, f.locationA)).version).toBe(1)
+  let version = 0
+  for (const tone of ['dark', 'light', 'bright'] as const) {
+    // Independent disposable contexts keep each pending journal intact and
+    // offline. No reconnect/ACK from a previous artwork can race these checks.
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    try {
+      await login(page, f)
+      let writes = 0
+      page.on('request', (r) => {
+        if (r.url().endsWith('/branding') && r.method() === 'PUT') writes++
+      })
+      const saved = await put(
+        request,
+        owner,
+        f.locationA,
+        input('Marca disponible sin conexión', 'jade', version, await syntheticLogo(page, tone)),
+      )
+      version = saved.version
+      await refresh(page)
+      await expectBrand(page, saved)
+      await page.evaluate(async () => {
+        await navigator.serviceWorker.ready
+      })
+      await loadEditor(page, f.locationA)
+      await page
+        .getByLabel('Nombre visible del taller', { exact: true })
+        .fill('Borrador compartido sin enviar')
+      await page.context().setOffline(true)
+      await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
+      await expect(
+        page.getByRole('button', { name: 'Guardar marca compartida', exact: true }),
+      ).toHaveCount(0)
+      const operation = await createCustomer(
+        page,
+        `Cliente pendiente preservado durante marca offline ${tone}`,
+      )
+      const before = await kernelSnapshot(page)
+      for (const scheme of ['light', 'dark'] as const) {
+        await openSettings(page)
+        await expect(
+          page.getByText('Copia verificada disponible sin conexión.', { exact: false }),
+        ).toBeVisible()
+        await page
+          .getByRole('combobox', { name: 'Esquema de superficies', exact: true })
+          .selectOption(scheme)
+        await page.getByRole('button', { name: 'Cerrar personalización', exact: true }).click()
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await waitForReady(page)
+        await expectBrand(page, saved)
+        await expect(page.locator('.workshop-shell')).toHaveAttribute('data-scheme', scheme)
+        for (const forcedColors of ['none', 'active'] as const) {
+          await page.emulateMedia({ forcedColors })
+          await expectLogoCanvas(
+            page.locator('.workshop-logo'),
+            tone,
+            `data:image/png;base64,${saved.logo!.png_base64}`,
+          )
+          await captureLogo(
+            page.locator('.workshop-logo'),
+            info,
+            `logo-offline-${tone}-${scheme}-${forcedColors}`,
+          )
+        }
+        await page.emulateMedia({ forcedColors: 'none' })
+        const after = await kernelSnapshot(page)
+        expect(after.journal).toEqual(before.journal)
+        expect(after.journal).toContainEqual(operation)
+        expect(after.delivery).toEqual(before.delivery)
+        expect(writes).toBe(0)
+        expect((await read(request, owner, f.locationA)).version).toBe(version)
+      }
+    } finally {
+      await context.close()
+    }
+  }
 })
 
 const GRANTS = [
@@ -734,6 +863,38 @@ test('persisted v1 personal palette and local logo survive reads until explicit 
   await page.reload()
   await waitForReady(page)
   await expect(page.locator('.workshop-logo')).toHaveCount(0)
+  await openSettings(page)
+  for (const tone of ['dark', 'light', 'bright'] as const) {
+    const encoded = await syntheticLogo(page, tone)
+    await page.getByLabel('Archivo de logo local', { exact: true }).evaluate((element, encoded) => {
+      const file = new File(
+        [Uint8Array.from(atob(encoded), (byte) => byte.charCodeAt(0))],
+        'synthetic-personal.png',
+        { type: 'image/png' },
+      )
+      const transfer = new DataTransfer()
+      transfer.items.add(file)
+      ;(element as HTMLInputElement).files = transfer.files
+      element.dispatchEvent(new Event('change', { bubbles: true }))
+    }, encoded)
+    const preview = page.getByRole('img', { name: 'Vista previa del logo local', exact: true })
+    await expect(preview).toBeVisible()
+    const preparedSource = (await preview.getAttribute('src'))!
+    for (const scheme of ['light', 'dark'] as const) {
+      await page
+        .getByRole('combobox', { name: 'Esquema de superficies', exact: true })
+        .selectOption(scheme)
+      for (const forcedColors of ['none', 'active'] as const) {
+        await page.emulateMedia({ forcedColors })
+        await expectLogoCanvas(preview, tone, preparedSource)
+      }
+    }
+    await captureLogo(preview, info, `logo-personal-preview-${tone}-forced-colors`)
+    await page.emulateMedia({ forcedColors: 'none' })
+    await page.getByRole('button', { name: 'Descartar vista previa', exact: true }).click()
+    await expect(preview).toHaveCount(0)
+    await expect(page.locator('.workshop-logo')).toHaveCount(0)
+  }
   expect(uploads).toBe(0)
   expect((await read(request, owner, f.locationA)).version).toBe(1)
   expect((await kernelSnapshot(page)).journal).toEqual([])
@@ -852,6 +1013,15 @@ for (const theme of THEMES) {
         }
         const save = page.getByRole('button', { name: 'Guardar marca compartida', exact: true })
         expect((await save.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+        await expectSaveWords(page, info, `${theme.id}-${scheme}-${width}`)
+        await expectLogoCanvas(
+          page.locator('.workshop-logo'),
+          scheme === 'light' ? 'dark' : 'light',
+        )
+        await expectLogoCanvas(
+          page.locator('.branding-preview'),
+          scheme === 'light' ? 'dark' : 'light',
+        )
         const accessibility = await new AxeBuilder({ page }).analyze()
         expect(
           accessibility.violations.filter((violation) =>
@@ -875,10 +1045,53 @@ for (const theme of THEMES) {
           noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
         })),
       ).toEqual({ effectiveCssWidth: 320, noOverflow: true })
+      await expectSaveWords(page, info, `${theme.id}-${scheme}-css200`)
       await capture(page, info, `branding-${theme.id}-${scheme}-css-enlargement-200-percent`)
       await page.evaluate(() => {
         document.documentElement.style.zoom = '1'
       })
+      await page.setViewportSize({ width: 320, height: 1000 })
+      // Both artwork polarities plus the existing red asset use the same plate
+      // in either surface scheme. The base full-page matrix above is retained.
+      for (const tone of ['dark', 'light', 'bright'] as const) {
+        const artwork = await put(
+          request,
+          owner,
+          f.locationA,
+          input(saved.display_name, theme.palette, version, await syntheticLogo(page, tone)),
+        )
+        version = artwork.version
+        await refresh(page)
+        await expectBrand(page, artwork)
+        await loadEditor(page, f.locationA)
+        for (const forcedColors of ['none', 'active'] as const) {
+          await page.emulateMedia({ forcedColors })
+          for (const [selector, location] of [
+            ['.workshop-logo', 'shell'],
+            ['.branding-preview', 'preview'],
+          ] as const) {
+            const image = page.locator(selector)
+            await expectLogoCanvas(image, tone, `data:image/png;base64,${artwork.logo!.png_base64}`)
+            await captureLogo(
+              image,
+              info,
+              `logo-${theme.id}-${scheme}-${tone}-${forcedColors}-${location}`,
+            )
+          }
+        }
+        await page.emulateMedia({ forcedColors: 'none' })
+      }
+      // Keep the original forced-color full-page light-art scene unchanged.
+      const restored = await put(
+        request,
+        owner,
+        f.locationA,
+        input(saved.display_name, theme.palette, version, saved.logo!.png_base64),
+      )
+      version = restored.version
+      await refresh(page)
+      await expectBrand(page, restored)
+      await loadEditor(page, f.locationA)
     }
     await page.setViewportSize({ width: 320, height: 1000 })
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
@@ -896,6 +1109,9 @@ for (const theme of THEMES) {
     await expect(
       page.getByRole('combobox', { name: 'Paleta compartida', exact: true }),
     ).not.toHaveCSS('outline-style', 'none')
+    await expectLogoCanvas(page.locator('.workshop-logo'), 'light')
+    await expectLogoCanvas(page.locator('.branding-preview'), 'light')
+    await expectSaveWords(page, info, `${theme.id}-forced-colors`)
     await capture(page, info, `branding-${theme.id}-forced-colors-keyboard-320`)
     expect(await node!.evaluate((element) => element.isConnected)).toBe(true)
     await expect(operational).toHaveValue(draft)
@@ -906,7 +1122,7 @@ for (const theme of THEMES) {
         palette: theme.palette,
         schemes: ['light', 'dark'],
         widths: [1440, 834, 320],
-        logo: 'synthetic transparent bicycle',
+        logo: 'synthetic transparent dark, light and red bicycles, both schemes and forced colors',
         cssEnlargement: 2,
         forcedColors: true,
         physicalDeviceQualification: false,

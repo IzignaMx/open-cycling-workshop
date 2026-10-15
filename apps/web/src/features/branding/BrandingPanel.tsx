@@ -1,6 +1,7 @@
 import { useRef, useState, useSyncExternalStore, type ChangeEvent, type FormEvent } from 'react'
 import { PALETTES } from '../../personalization/catalog.js'
 import { prepareLocalLogo } from '../../personalization/logo.js'
+import { LogoImage } from '../../personalization/LogoImage.js'
 import { isNormalizedBrandingName, type BrandingProfile } from './contracts.js'
 import type { BrandingEditorController, BrandingEditorSnapshot } from './controller.js'
 import './branding.css'
@@ -381,7 +382,7 @@ function BrandingForm({
           personales automáticamente.
         </small>
         {logo && brokenPreview !== logo && (
-          <img
+          <LogoImage
             className="branding-preview"
             src={`data:image/png;base64,${logo}`}
             alt="Vista previa del logo compartido"

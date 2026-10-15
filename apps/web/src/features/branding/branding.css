@@ -30,9 +30,18 @@
   min-width: 0;
   font: inherit;
 }
-.branding-panel button {
+.branding-panel button[type] {
+  width: 100%;
+  margin-inline: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.branding-panel .branding-form {
+  padding-inline: clamp(8px, 2%, 16px);
+}
+.branding-panel .branding-form fieldset {
+  padding-inline: 8px;
 }
 .branding-panel .primary-button {
   min-height: 56px;
@@ -41,7 +50,6 @@
   display: block;
   max-width: 100%;
   object-fit: contain;
-  background: #fff;
   border: 1px solid #65776e;
   border-radius: 6px;
   padding: 0.5rem;
