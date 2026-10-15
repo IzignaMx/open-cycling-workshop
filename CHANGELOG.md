@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · Quote persistence boundary
+
+- Accept the independently reviewed repository-first quote persistence boundary:
+  one lineage per order, immutable history/receipts and exact bounded money.
+- Keep implementation evidence pending and preserve the separate grants, routes,
+  all-ingress guards, mixed-writer rollout and operational execution gates.
+
 ## Unreleased · Pure quote decision evidence and partial pricing
 
 - Validate complete immutable quote lineages and stable charge identities without

@@ -2,6 +2,22 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote persistence · 2026-10-15 planned gates
+
+The [accepted boundary](docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
+authorizes repository-first Task 6 implementation only. No persistence or runtime
+qualification is claimed by accepting the design.
+
+- [ ] Exact-source SQL0011→0012 PostgreSQL migration, race and restore evidence.
+- [ ] Independent source review and complete available local/hosted qualification.
+- [ ] Separate application/grant/capability compatibility and all-ingress fences
+      before any quote mutation route is exposed.
+- [ ] Separate operator authority, backup/restore and replacement of every old
+      server/maintenance writer before first real enrollment. Protocol 1 alone
+      cannot fence an old server binary.
+- [ ] Later line-coverage, work/reservation, post-transition consent and offline
+      integration; initial consent is not an operational quote/inventory journey.
+
 ## Shared workshop branding · 2026-10-14 candidate gates
 
 The new increment starts from merged main39 `eef9559d8c3e528e79c99898360892188b23b55e`.
