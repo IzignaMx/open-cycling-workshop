@@ -182,10 +182,27 @@ results or permission to rerun until green:
   passed. These are separate scopes, not AMD64 runtime or physical Raspberry
   qualification. Independent evidence review SHA-256:
   `507d3c1ea15cc023172de462a348b9995324b145fb0a6eebc6064e9513a3a5ce`.
-- CI run `38704713983` failed its direct Python stage. The recovery stage was
-  skipped, so mandatory recovery-artifact upload also failed. Its always-run
-  aggregate and terminal test traceback were still pending when this diagnostic
-  checkpoint was prepared; no PostgreSQL/concurrency/restore pass is inferred.
+- [CI run 38704713983](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38704713983)
+  finished failed. Direct and aggregate Python each retained **two failures,
+  2,944 passes, 23 skips and three warnings**. Both failures are PostgreSQL
+  negative tests for 501-character description/reason fields: the database
+  correctly refuses `VARCHAR(500)` with `DataError` wrapping
+  `StringDataRightTruncation`, while the tests expected `IntegrityError`.
+  This is distinct from the unknown runtime restart failure.
+- Recovery execution was skipped after direct Python failed, and mandatory
+  proof upload therefore failed. Actual quote dump/restore was also explicitly
+  skipped within both Python suites because matching major-18 clients were
+  unavailable on that PATH. The recovery wrapper that provides those clients
+  never ran. No restore pass is inferred.
+- Aggregate artifact `11959145055`, SHA-256
+  `77e2628f566a8598caddcf08232917f99a780734d378ca8fd599cf043a34f72b`,
+  records **24 passing controls, two failures and one blocker**. Browser and
+  IndexedDB execution lacked Chromium after its direct installation step was
+  skipped. Browser artifact `11958975259`, SHA-256
+  `acab74db0e1ace569e31aa166a57a1e01b80a5faf04dc5bf6567bbe012801fa1`,
+  retains 106 first/retry trace records explicitly reporting the missing
+  `chromium_headless_shell-1234` executable. Automatic workflow/browser retries
+  are retained as failures, not used to claim qualified browser journeys.
 
 The diagnostic-only follow-up touches the existing disposable runner, not the
 quote domain, migration or application behavior. On failure it preserves the
@@ -204,8 +221,32 @@ TDD observed five failures for the absent diagnostic behavior before code. The
 focused runtime/branding/Compose suite then passed 33 tests; Ruff/format and
 mypy for the touched runner passed. This executor has no Docker, so actual
 failure-path capture, the underlying restart correction and all exact hosted
-runtime/restore gates remain pending. Independent diagnostic review is pending.
+runtime/restore gates remain pending. Independent diagnostic review passed 45
+tests plus ten repeated descendant regressions, Ruff/format and mypy; it found
+no remaining diagnostic blocker. This is separate from the pending combined
+fixture review and hosted runtime evidence.
 Its first review reproduced a normally exiting CLI leaving a same-group child
 with detached stdio running. That failure was retained in an additional RED
 regression before changing cleanup to terminate the owned group on normal exits
 too; the direct child's successful return code remains intact.
+
+## Narrow PostgreSQL refusal-test correction
+
+The terminal hosted failures above are the real RED evidence; no local PostgreSQL
+execution is claimed. The test-only correction accepts `DataError` only for the
+exact PostgreSQL 501-character description/reason inputs, then requires the
+original exception's exact `StringDataRightTruncation` type and SQLSTATE `22001`.
+All other PostgreSQL constraint cases still require `IntegrityError`. Every
+SQLite case additionally requires the native SQLite integrity-error type.
+Each rejected transaction must leave exact rows in **all six quote tables**
+unchanged. A missing refusal, wrong PostgreSQL error class/state, lost row or
+partial write therefore still fails. Production migration, model and repository
+sources and their 500-character limits are unchanged.
+
+The two affected parameterized groups pass locally: **24 SQLite passes and 24
+explicit PostgreSQL skips**. These checks do not qualify PostgreSQL behavior.
+The combined quote/runtime/branding/Compose/repository suite passes **535 tests
+with 188 explicit skips and one dependency warning**; the skip reasons remain
+retained rather than counted as database qualification.
+The combined diagnostic/fixture checkpoint still needs independent final-source
+review and fresh exact-tree hosted evidence; original failures remain retained.

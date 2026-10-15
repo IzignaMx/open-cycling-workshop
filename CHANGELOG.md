@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Match exact PostgreSQL varchar refusal in negative tests
+
+- Preserve the two first-hosted quote schema failures and recognize PostgreSQL's
+  exact `StringDataRightTruncation`/`22001` only for the 501-character description
+  and reason cases. SQLite still requires its integrity error; other constraint
+  cases retain their original exception expectations.
+- Assert all six quote tables remain unchanged after each rejected transaction.
+  No production schema, bounds or repository behavior changes.
+
 ## Unreleased · Retain disposable runtime failure diagnostics
 
 - Capture bounded, redacted container states and log tails before the generated

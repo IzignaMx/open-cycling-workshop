@@ -1416,12 +1416,27 @@ quote_runtime_failure_diagnostics:
   restart_cause: unknown_no_container_diagnostics_retained
   runtime_backup_restore: not_reached
   first_ci_run: 38704713983
-  first_ci_direct_python: failed_terminal_traceback_pending
+  first_ci_direct_python: two_varchar_exception_assertion_failures_2944_passed_23_skipped
+  first_ci_aggregate: 24_passed_two_failed_one_blocked
+  first_ci_aggregate_python: same_two_failures_2944_passed_23_skipped
+  first_ci_browser: missing_chromium_after_skipped_installation_106_failed_launch_trace_records
   first_ci_restore: skipped_no_recovery_artifact
   change: bounded_redacted_readonly_generated_project_diagnostics_before_cleanup
   safeguards: first_failure_preserved_readiness_assertions_and_cleanup_unchanged
   local_tdd: five_initial_red_plus_normal_exit_descendant_red_then_33_scoped_tests_passed
   static: touched_ruff_format_and_mypy_runner_passed
-  independent_review: pending
+  independent_review: no_remaining_blocker_45_passed_plus10_descendant_repetitions
   hosted_diagnostic_and_runtime_qualification: pending
+  evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
+quote_postgresql_varchar_fixture_correction:
+  status: implemented_pending_evidence
+  real_red: ci38704713983_direct_and_aggregate_rejected_501_char_values_with_data_error
+  expected_postgresql: exact_string_data_right_truncation_sqlstate22001_only_for_two_overlong_cases
+  expected_sqlite: native_integrity_error
+  retained_rows: all_six_quote_tables_equal_before_and_after_every_rejected_case
+  local_affected_groups: 24_sqlite_passed_24_postgresql_skipped
+  combined_local: 535_passed_188_explicit_skips_one_warning
+  production_schema_models_repository: unchanged
+  combined_independent_review: pending
+  hosted_postgresql_and_restore: pending
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md

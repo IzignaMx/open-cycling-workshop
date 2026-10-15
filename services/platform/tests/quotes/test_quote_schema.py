@@ -8,11 +8,13 @@ an unpredictable disposable schema. No actual installation is changed.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from sqlite3 import IntegrityError as SQLiteIntegrityError
 
 import pytest
 from alembic import command
 from cycling_workshop.db.base import Base
 from cycling_workshop.db.registry import register_models
+from psycopg.errors import StringDataRightTruncation
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
@@ -20,6 +22,7 @@ from sqlalchemy import (
     MetaData,
     UniqueConstraint,
     inspect,
+    select,
     text,
 )
 from sqlalchemy.exc import DataError, IntegrityError
@@ -89,6 +92,20 @@ MAX_SAFE = 9_007_199_254_740_991
 
 def insert(connection, table: str, **values):
     connection.execute(Base.metadata.tables[table].insert().values(**values))
+
+
+def retained_quote_rows(engine):
+    with engine.connect() as connection:
+        return {
+            name: list(
+                connection.execute(
+                    select(Base.metadata.tables[name]).order_by(
+                        *Base.metadata.tables[name].primary_key.columns
+                    )
+                ).mappings()
+            )
+            for name in sorted(TABLES)
+        }
 
 
 def lineage_values(suffix="a", **changes):
@@ -464,8 +481,19 @@ def test_retention_blocks_parent_deletion(quote_database, statement):
 )
 def test_line_discriminator_numeric_description_and_tenant_constraints(quote_database, changes):
     _, engine = quote_database
-    with pytest.raises(IntegrityError), engine.begin() as connection:
+    before = retained_quote_rows(engine)
+    postgres_varchar_overflow = engine.dialect.name == "postgresql" and changes == {
+        "description": "x" * 501
+    }
+    expected = DataError if postgres_varchar_overflow else IntegrityError
+    with pytest.raises(expected) as rejection, engine.begin() as connection:
         insert(connection, "quote_lines", **line_values(**changes))
+    if postgres_varchar_overflow:
+        assert type(rejection.value.orig) is StringDataRightTruncation
+        assert rejection.value.orig.sqlstate == "22001"
+    elif engine.dialect.name == "sqlite":
+        assert type(rejection.value.orig) is SQLiteIntegrityError
+    assert retained_quote_rows(engine) == before
 
 
 def test_bigint_money_accepts_safe_max_and_zero_without_float_storage(quote_database):
@@ -537,10 +565,21 @@ def test_targets_cannot_reference_missing_or_other_revision_lines(quote_database
 )
 def test_decision_scope_and_correction_reference(quote_database, changes):
     _, engine = quote_database
+    before = retained_quote_rows(engine)
     values = decision_values(decision_id="correction", sequence=2, supersedes_entry_id="decision-a")
     values.update(changes)
-    with pytest.raises(IntegrityError), engine.begin() as connection:
+    postgres_varchar_overflow = engine.dialect.name == "postgresql" and changes == {
+        "reason": "x" * 501
+    }
+    expected = DataError if postgres_varchar_overflow else IntegrityError
+    with pytest.raises(expected) as rejection, engine.begin() as connection:
         insert(connection, "quote_decisions", **values)
+    if postgres_varchar_overflow:
+        assert type(rejection.value.orig) is StringDataRightTruncation
+        assert rejection.value.orig.sqlstate == "22001"
+    elif engine.dialect.name == "sqlite":
+        assert type(rejection.value.orig) is SQLiteIntegrityError
+    assert retained_quote_rows(engine) == before
 
 
 def test_decision_correction_branches_are_refused(quote_database):

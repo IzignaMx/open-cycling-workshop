@@ -5,10 +5,13 @@
 ## Quote persistence · 2026-10-15 planned gates
 
 PR44's first hosted candidate failed direct Python tests and AMD64 runtime.
+Direct and aggregate Python each retained two varchar-refusal assertion failures,
+2,944 passes and 23 skips. The two tests now require the exact backend-specific
+refusal and unchanged retained rows; PostgreSQL requalification is pending.
 The runtime passed fresh migration and seven checks, then timed out after the
 intentional API stop/start, before any backup. It retained no container logs;
 the underlying cause remains unknown. A bounded diagnostic-only runner change
-now awaits independent review and fresh hosted evidence. Do not retry the failed
+now awaits combined independent review and fresh hosted evidence. Do not retry the failed
 candidate or infer downstream restore passes. See the
 [retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
 
