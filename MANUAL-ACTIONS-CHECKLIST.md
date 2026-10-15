@@ -11,8 +11,13 @@ refusal and unchanged retained rows; PostgreSQL requalification is pending.
 The runtime passed fresh migration and seven checks, then timed out after the
 intentional API stop/start, before any backup. It retained no container logs;
 the underlying cause remains unknown. A bounded diagnostic-only runner change
-has combined independent source review and still awaits fresh hosted evidence. Do not retry the failed
-candidate or infer downstream restore passes. See the
+has combined independent source review. Follow-up head `26b589be` passed all
+eleven runtime checks and Security on their first attempts, including its single
+API restart and generic PostgreSQL restore; this does not explain the original
+failure or exercise the new failure diagnostics. A separately reviewed
+qualification proposal now requires three consecutive fail-fast restart cycles
+with unchanged readiness deadlines. Exact changed-head hosted evidence remains
+pending. Do not retry the failed candidate or infer quote-specific restore passes. See the
 [retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
 
 The [accepted boundary](docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
@@ -23,6 +28,8 @@ and independent source evidence; PostgreSQL runtime qualification remains open.
 - [x] Bounded private storage codecs/semantic commands and independent boundary review.
 - [ ] Exact-source hosted aggregate/security/DCO and SQL0011→0012 PostgreSQL
       migration, race, restore and maximum-fixture runtime evidence.
+- [ ] Exact-head three-cycle API restart qualification and all remaining runtime
+      checks. Retain the unknown original failure cause even if these pass.
 - [x] Implement atomic repository/reconstruction and retain discovered failure regressions.
 - [x] Final independent source review and available local qualification: 21 pass,
       zero fail, five environment blockers; hosted/runtime gates remain open.

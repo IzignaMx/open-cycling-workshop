@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -512,3 +514,136 @@ def test_completed_diagnostic_terminates_same_group_descendant_with_detached_std
     finally:
         with suppress(ProcessLookupError):
             os.kill(pid, signal.SIGKILL)
+
+
+RESTART_PHASES = (
+    "stopping",
+    "checking_outage",
+    "checking_static",
+    "starting",
+    "waiting_ready",
+    "checking_branding",
+)
+
+
+def restart_fixture(monkeypatch, *, failure=None, responses=None):
+    from scripts.ci import local_compose_smoke as module
+
+    calls = []
+    cycles = []
+    original = RuntimeError("synthetic first failure")
+
+    def step(phase):
+        cycle = len(cycles)
+        assert cycles[-1]["phase"] == phase
+        assert cycles[-1]["status"] == "running"
+        calls.append((cycle, phase))
+        if failure == (cycle, phase):
+            raise original
+
+    def compose(*parts):
+        assert parts in (("stop", "api"), ("start", "api"))
+        step("stopping" if parts[0] == "stop" else "starting")
+
+    def request(base, path):
+        assert base == "http://synthetic.test"
+        assert path in ("/api/v1/auth/me", "/")
+        phase = "checking_outage" if path.endswith("/me") else "checking_static"
+        step(phase)
+        if responses and phase in responses:
+            return responses[phase]
+        return (502, {}, b"upstream unavailable") if path.endswith("/me") else (200, {}, b"pwa")
+
+    def ready(base):
+        assert base == "http://synthetic.test"
+        step("waiting_ready")
+
+    def branding():
+        step("checking_branding")
+
+    monkeypatch.setattr(module, "request", request)
+    monkeypatch.setattr(module, "wait_ready", ready)
+    return module, compose, branding, cycles, calls, original
+
+
+def test_api_restart_qualification_requires_three_complete_ordered_cycles(monkeypatch):
+    import math
+
+    module, compose, branding, cycles, calls, _ = restart_fixture(monkeypatch)
+    module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert calls == [(cycle, phase) for cycle in (1, 2, 3) for phase in RESTART_PHASES]
+    assert len(cycles) == 3
+    for number, record in enumerate(cycles, 1):
+        assert record.keys() == {"cycle", "status", "phase", "elapsed_seconds"}
+        assert record["cycle"] == number
+        assert record["status"] == "passed" and record["phase"] == "complete"
+        assert math.isfinite(record["elapsed_seconds"]) and record["elapsed_seconds"] >= 0
+
+
+@pytest.mark.parametrize("cycle", (1, 2, 3))
+@pytest.mark.parametrize("phase", RESTART_PHASES)
+def test_api_restart_failure_preserves_evidence_and_never_retries(monkeypatch, cycle, phase):
+    module, compose, branding, cycles, calls, original = restart_fixture(
+        monkeypatch, failure=(cycle, phase)
+    )
+    with pytest.raises(RuntimeError) as raised:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert raised.value is original
+    expected = [(number, item) for number in (1, 2, 3) for item in RESTART_PHASES]
+    assert calls == expected[: expected.index((cycle, phase)) + 1]
+    assert len(cycles) == cycle
+    assert all(record["status"] == "passed" for record in cycles[:-1])
+    assert cycles[-1]["cycle"] == cycle
+    assert cycles[-1]["status"] == "failed" and cycles[-1]["phase"] == phase
+    assert cycles[-1]["elapsed_seconds"] >= 0
+
+
+@pytest.mark.parametrize(
+    ("phase", "response"),
+    (
+        ("checking_outage", (200, {}, b"unexpected success")),
+        ("checking_outage", (502, {}, b'<div id="root">')),
+        ("checking_static", (503, {}, b"unavailable")),
+    ),
+)
+def test_api_restart_keeps_outage_and_static_assertions(monkeypatch, phase, response):
+    module, compose, branding, cycles, calls, _ = restart_fixture(
+        monkeypatch, responses={phase: response}
+    )
+    with pytest.raises(AssertionError):
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert calls[-1] == (1, phase)
+    assert len(cycles) == 1 and cycles[0]["status"] == "failed"
+
+
+def test_restart_evidence_is_attached_before_calls_and_check_after_all_cycles():
+    main = source("scripts/ci/local_compose_smoke.py").split("def main()", 1)[1]
+    assert main.index('evidence["api_restart_cycles"] = restart_cycles') < main.index(
+        "qualify_api_restarts("
+    )
+    assert main.index("qualify_api_restarts(") < main.index(
+        'checks.append("backend_outage_returns_502_without_spa_fallback")'
+    )
+
+
+@pytest.mark.parametrize("clock_result", ("raises", float("nan"), float("inf"), -1))
+def test_restart_timing_cannot_replace_failure_or_emit_invalid_duration(monkeypatch, clock_result):
+    module, compose, branding, cycles, _, original = restart_fixture(
+        monkeypatch, failure=(1, "waiting_ready")
+    )
+    calls = 0
+
+    def clock():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return 0
+        if clock_result == "raises":
+            raise RuntimeError("synthetic timing failure")
+        return clock_result
+
+    monkeypatch.setattr(module.time, "monotonic", clock)
+    with pytest.raises(RuntimeError) as raised:
+        module.qualify_api_restarts(compose, "http://synthetic.test", branding, cycles)
+    assert raised.value is original
+    assert cycles == [{"cycle": 1, "status": "failed", "phase": "waiting_ready"}]

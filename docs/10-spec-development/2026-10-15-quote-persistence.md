@@ -258,3 +258,52 @@ together as aggregate coverage. Fresh exact-tree hosted evidence is still
 required; original failures remain retained.
 Combined review report SHA-256:
 `eb21e3a6186f02f0f6a0ddcf834afab9adbac69ca2726213182d50955f486719`.
+
+## Bounded repeated restart qualification
+
+Follow-up head `26b589be9600163e0ee2ee978ef66ee99dfc4e05`, tree
+`8feed94bdb31cd204e0b503222989babb60961d2`, passed runtime `38708608800`,
+Security `38708608818`, all three ARM64 builds and native ARM64 qualification on
+their first attempts. The checked-out merge `e4677109` has the same tree.
+Independent hosted review SHA-256:
+`8d222f3742b0fc017391e2f9072b94a024e95ae61f41e4b732f982444d57800e`.
+Runtime artifact `11959013393` SHA-256:
+`ae3c5f142d25a233f91a1f13b0e3e0fe85fb9f33bbe84339aa59b63b55273963`.
+It records all eleven checks, one intentional API restart, generic PostgreSQL
+backup/restore, authenticated recovery, down/up persistence and exact branding
+bytes/metadata. Quote-populated restore and full CI are separate gates.
+
+That successful restart does not establish a root-cause fix or explain the
+original failure. Failure diagnostics were not exercised by the successful run.
+The coordinator therefore accepted a bounded three-cycle qualification proposal
+after independent review, SHA-256
+`51f9b098d6fe5df7bacf4d2c368e73c64a87cd2ae465b0b02c2204181521ab68`.
+
+The existing runner now requires exactly three consecutive cycles on its same
+generated project: stop API, expect 502 without SPA fallback, retain static 200,
+start API, wait for readiness, verify authenticated branding persistence. The
+first error stops all later cycles and backup, preserves the original exception,
+and reaches the existing bounded diagnostics before cleanup. Outer evidence owns
+the at-most-three records before execution; each records fixed phase/status and
+its cycle number. Optional elapsed seconds must be finite/nonnegative; failed
+timing collection cannot replace the qualification error. Successful cycles
+remain one substantive check, retaining the eleven-check total.
+
+Readiness remains 180 seconds with two-second polls and five-second HTTP request
+timeouts. Existing Compose command/workflow deadlines are separate and unchanged.
+Production startup, migrations, health ordering and routing are unchanged. The
+existing branding verifier compares against its initial baseline, not against
+the immediately previous cycle's start time. Three passes provide bounded
+resilience evidence, not a guarantee against rare failures or retroactive cause.
+
+TDD retained 23 initial failures before the helper existed, then four timing
+failure/invalid-duration regressions before hardening that diagnostic bookkeeping.
+The original branding source-order assertion failed after callback integration
+and was updated to assert that exact integration, without dropping its ordering
+contract. An initial follow-up command referenced a nonexistent test path and
+ran no tests; the corrected scope was rerun fully. Final local quote/runtime/
+branding-volume/Compose/repository selection: **576 passed, 188 explicit
+PostgreSQL skips and one dependency warning**. Configured Ruff/format (245 files),
+mypy (106 production sources plus the runner) and repository contracts passed.
+Independent source review and new exact-head hosted three-cycle/full-CI evidence
+remain pending; no Docker or PostgreSQL execution is claimed locally.

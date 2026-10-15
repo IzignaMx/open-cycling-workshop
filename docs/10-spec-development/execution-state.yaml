@@ -1442,3 +1442,23 @@ quote_postgresql_varchar_fixture_correction:
   combined_review_sha256: eb21e3a6186f02f0f6a0ddcf834afab9adbac69ca2726213182d50955f486719
   hosted_postgresql_and_restore: pending
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
+
+quote_runtime_three_restart_qualification:
+  status: implemented_pending_independent_source_and_hosted_evidence
+  prior_followup_head: 26b589be9600163e0ee2ee978ef66ee99dfc4e05
+  prior_followup_tree: 8feed94bdb31cd204e0b503222989babb60961d2
+  prior_runtime: 38708608800_attempt1_eleven_checks_single_restart_and_generic_restore_passed
+  prior_security_and_arm64: 38708608818_security_and_all_runtime_arm64_jobs_passed_attempt1
+  prior_runtime_artifact: 11959013393
+  prior_hosted_review_sha256: 8d222f3742b0fc017391e2f9072b94a024e95ae61f41e4b732f982444d57800e
+  original_failure_cause: unknown_not_closed_by_later_success
+  proposal_review_sha256: 51f9b098d6fe5df7bacf4d2c368e73c64a87cd2ae465b0b02c2204181521ab68
+  behavior: exactly3_same_project_cycles_fail_first_no_retry_retained_phase_evidence
+  invariants: unchanged180_second_readiness_two_second_poll_five_second_request_and11_checks
+  timing: optional_finite_nonnegative_never_replaces_original_failure
+  tdd: 23_absent_helper_red_plus4_timing_red_then_green
+  local_selected: 576_passed_188_explicit_postgresql_skips_one_warning
+  static: full_ruff_format245_mypy106_plus_runner_repository_passed
+  independent_source_review: pending
+  exact_head_hosted_three_cycles_and_full_ci: pending
+  evidence: docs/10-spec-development/2026-10-15-quote-persistence.md

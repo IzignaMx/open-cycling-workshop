@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Require three consecutive API restart qualification cycles
+
+- Strengthen the existing disposable runtime check with three mandatory
+  stop/outage/static/start/readiness/branding cycles on the same project.
+- Fail immediately on the first error, retaining completed and active cycle
+  evidence before existing diagnostics and cleanup. Keep readiness deadlines,
+  production startup and the eleven-check total unchanged.
+- Preserve the original unexplained restart failure; later one-cycle success
+  does not establish its cause. Exact-head three-cycle hosted evidence is pending.
+
 ## Unreleased · Match exact PostgreSQL varchar refusal in negative tests
 
 - Preserve the two first-hosted quote schema failures and recognize PostgreSQL's

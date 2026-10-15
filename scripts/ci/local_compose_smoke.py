@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import selectors
@@ -15,6 +16,7 @@ import sys
 import tempfile
 import time
 import uuid
+from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -322,6 +324,47 @@ def wait_ready(base: str) -> None:
     raise RuntimeError("edge/API did not become ready within 180 seconds")
 
 
+def qualify_api_restarts(
+    compose: Callable[..., object],
+    base: str,
+    verify_branding: Callable[[], None],
+    cycles: list[dict[str, object]],
+) -> None:
+    """Three mandatory same-project cycles; the first failure is never retried."""
+    for number in range(1, 4):
+        record: dict[str, object] = {
+            "cycle": number,
+            "status": "running",
+            "phase": "stopping",
+        }
+        cycles.append(record)
+        started = time.monotonic()
+        try:
+            compose("stop", "api")
+            record["phase"] = "checking_outage"
+            code, _, body = request(base, "/api/v1/auth/me")
+            assert code == 502 and b'<div id="root">' not in body
+            record["phase"] = "checking_static"
+            assert request(base, "/")[0] == 200
+            record["phase"] = "starting"
+            compose("start", "api")
+            record["phase"] = "waiting_ready"
+            wait_ready(base)
+            record["phase"] = "checking_branding"
+            verify_branding()
+            record["phase"] = "complete"
+            record["status"] = "passed"
+        except Exception:
+            record["status"] = "failed"
+            raise
+        finally:
+            # Optional timing must never replace the original qualification error.
+            with suppress(Exception):
+                elapsed = time.monotonic() - started
+                if math.isfinite(elapsed) and elapsed >= 0:
+                    record["elapsed_seconds"] = round(elapsed, 3)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--evidence", type=Path, default=Path("artifacts/local-runtime.json"))
@@ -595,14 +638,10 @@ def main() -> int:
             else:
                 evidence["browser"] = "not run (pass --browser to require it)"
                 evidence["authenticated_recovery"] = "not run (requires --browser)"
-            compose("stop", "api")
-            code, _, body = request(base, "/api/v1/auth/me")
-            assert code == 502 and b'<div id="root">' not in body
-            assert request(base, "/")[0] == 200
-            compose("start", "api")
-            wait_ready(base)
+            restart_cycles: list[dict[str, object]] = []
+            evidence["api_restart_cycles"] = restart_cycles
+            qualify_api_restarts(compose, base, branding_probe.verify_restart, restart_cycles)
             checks.append("backend_outage_returns_502_without_spa_fallback")
-            branding_probe.verify_restart()
             # The backup/restore drill uses only a fresh, dedicated DB in this
             # generated Compose project; it cannot target an existing installation.
             compose("run", "--rm", "-T", "operations", "backup", "/backups/generation-1")

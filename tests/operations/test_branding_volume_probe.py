@@ -502,7 +502,7 @@ def test_local_smoke_hooks_keep_browser_handshake_and_original_checks() -> None:
         "branding_probe.prepare_restore_secret",
         "branding_probe.seed(",
         'browser.expect("ready_for_backup")',
-        "branding_probe.verify_restart()",
+        "qualify_api_restarts(compose, base, branding_probe.verify_restart, restart_cycles)",
         "branding_probe.backup()",
         'browser.expect("pending_preserved")',
         'compose("stop", "edge", "api", "worker")',
