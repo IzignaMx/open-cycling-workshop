@@ -39,16 +39,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 def _safe_postgres_url(raw_url: str) -> str:
+    from scripts.e2e.prepare_e2e_database import validate_e2e_database_url
+
+    try:
+        validate_e2e_database_url(raw_url)
+    except RuntimeError:
+        raise ValueError(
+            "inventory integration requires a dedicated local PostgreSQL test URL"
+        ) from None
     url = normalize_database_url(raw_url)
-    parsed = make_url(url)
-    if (
-        parsed.drivername != "postgresql+psycopg"
-        or parsed.host not in {"localhost", "127.0.0.1"}
-        or not (parsed.database or "").endswith(("_test", "_e2e"))
-        # libpq query parameters such as host/service can override the URL host.
-        or parsed.query
-    ):
-        raise ValueError("inventory integration requires a dedicated local PostgreSQL test URL")
     return url
 
 
@@ -667,3 +666,14 @@ def test_fixture_preserves_percent_encoded_url_before_any_connection(
         inventory_postgres_url.__wrapped__()
     assert captured == [synthetic_url]
     assert make_url(captured[0]).password == "p@ss%word"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["PGHOST", "PGHOSTADDR", "PGPORT", "PGDATABASE", "PGSERVICE", "PGSERVICEFILE", "PGSYSCONFDIR"],
+)
+def test_direct_pg_fixture_refuses_ambient_target_override(monkeypatch, name: str) -> None:
+    monkeypatch.setenv(name, "private-target-canary")
+    with pytest.raises(ValueError, match="dedicated local PostgreSQL test URL") as error:
+        _safe_postgres_url("postgresql://synthetic@127.0.0.1/fixture_test")
+    assert "private-target-canary" not in str(error.value)
