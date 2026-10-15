@@ -86,7 +86,6 @@ def test_blocked_rerun_replaces_old_complete_artifact(tmp_path, monkeypatch) -> 
 
 
 def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch) -> None:
-    import subprocess
     from unittest.mock import MagicMock
 
     from scripts.ci import inventory_edge_probe as probe
@@ -116,7 +115,7 @@ def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch)
     def docker(*args, **kwargs):
         if args[0] == "rm":
             reached.append(True)
-            raise subprocess.CalledProcessError(1, ["docker", "rm"])
+            raise probe.CommandFailure("exit", 1)
         if args[0] == "exec":
             return "v2.11.7 synthetic"
         if args[0] == "logs":
@@ -127,8 +126,15 @@ def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch)
     monkeypatch.setattr(probe.threading, "Thread", MagicMock())
     monkeypatch.setattr(probe, "docker", docker)
     monkeypatch.setattr(probe, "request", MagicMock(side_effect=responses))
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(probe.EdgeProbeFailure) as caught:
         probe.probe("Caddyfile", tmp_path)
+    assert caught.value.evidence["phase"] == "cleanup"
+    assert caught.value.evidence["cleanup"]["container"] is False
+    assert caught.value.evidence["cleanup"]["container_error"] == {
+        "error": "command",
+        "reason": "exit",
+        "exit_code": 1,
+    }
     assert reached == [True]
 
 
