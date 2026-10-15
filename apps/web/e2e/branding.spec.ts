@@ -281,7 +281,9 @@ test('per-location brands converge to a second user without changing operational
     const logo = await syntheticLogo(page)
     await loadEditor(page, f.locationA)
     await page.getByLabel('Nombre visible del taller', { exact: true }).fill('Marca A compartida')
-    await page.getByLabel('Paleta compartida', { exact: true }).selectOption('arcilla')
+    await page
+      .getByRole('combobox', { name: 'Paleta compartida', exact: true })
+      .selectOption('arcilla')
     // Native File/DataTransfer inputs contain only our generated synthetic PNG.
     await page
       .getByLabel('Archivo para logo compartido', { exact: true })
@@ -372,7 +374,9 @@ test('verified brand survives offline reload while shared edits never enter the 
   await expect(
     page.getByText('Copia verificada disponible sin conexión.', { exact: false }),
   ).toBeVisible()
-  await page.getByLabel('Esquema de superficies', { exact: true }).selectOption('dark')
+  await page
+    .getByRole('combobox', { name: 'Esquema de superficies', exact: true })
+    .selectOption('dark')
   await expect(page.locator('.workshop-shell')).toHaveAttribute('data-scheme', 'dark')
   await page.getByRole('button', { name: 'Cerrar personalización', exact: true }).click()
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -705,7 +709,9 @@ test('persisted v1 personal palette and local logo survive reads until explicit 
   expect(original).toEqual(expect.arrayContaining([appearance, logo]))
   await openSettings(page)
   await expect(page.getByText('Colores: Selección personal.', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Paleta personal', { exact: true })).toHaveValue('bosque')
+  await expect(page.getByRole('combobox', { name: 'Paleta personal', exact: true })).toHaveValue(
+    'bosque',
+  )
   await page.getByRole('button', { name: 'Usar colores del taller', exact: true }).click()
   await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
   await expect(
@@ -766,7 +772,9 @@ for (const theme of THEMES) {
     let version = 0
     for (const scheme of ['light', 'dark'] as const) {
       await openSettings(page)
-      await page.getByLabel('Esquema de superficies', { exact: true }).selectOption(scheme)
+      await page
+        .getByRole('combobox', { name: 'Esquema de superficies', exact: true })
+        .selectOption(scheme)
       await page.getByRole('button', { name: 'Cerrar personalización', exact: true }).click()
       const saved = await put(
         request,
@@ -814,7 +822,9 @@ for (const theme of THEMES) {
         await page.unrouteAll({ behavior: 'wait' })
       }
       await loadEditor(page, f.locationA)
-      await expect(page.getByLabel('Paleta compartida', { exact: true })).toHaveValue(theme.palette)
+      await expect(
+        page.getByRole('combobox', { name: 'Paleta compartida', exact: true }),
+      ).toHaveValue(theme.palette)
       await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', theme.id)
       await expect(page.locator('.workshop-shell')).toHaveAttribute('data-scheme', scheme)
       const palette = PALETTES.find((item) => item.id === theme.palette)!
@@ -834,7 +844,7 @@ for (const theme of THEMES) {
         ).toBe(true)
         for (const control of [
           page.getByLabel('Nombre visible del taller', { exact: true }),
-          page.getByLabel('Paleta compartida', { exact: true }),
+          page.getByRole('combobox', { name: 'Paleta compartida', exact: true }),
         ]) {
           const box = await control.boundingBox()
           expect(box!.height).toBeGreaterThanOrEqual(48)
@@ -875,16 +885,17 @@ for (const theme of THEMES) {
     const name = page.getByLabel('Nombre visible del taller', { exact: true })
     await name.focus()
     await page.keyboard.press('Tab')
-    await expect(page.getByLabel('Paleta compartida', { exact: true })).toBeFocused()
+    await expect(
+      page.getByRole('combobox', { name: 'Paleta compartida', exact: true }),
+    ).toBeFocused()
     expect(
       await page
-        .getByLabel('Paleta compartida', { exact: true })
+        .getByRole('combobox', { name: 'Paleta compartida', exact: true })
         .evaluate((element) => element.matches(':focus-visible')),
     ).toBe(true)
-    await expect(page.getByLabel('Paleta compartida', { exact: true })).not.toHaveCSS(
-      'outline-style',
-      'none',
-    )
+    await expect(
+      page.getByRole('combobox', { name: 'Paleta compartida', exact: true }),
+    ).not.toHaveCSS('outline-style', 'none')
     await capture(page, info, `branding-${theme.id}-forced-colors-keyboard-320`)
     expect(await node!.evaluate((element) => element.isConnected)).toBe(true)
     await expect(operational).toHaveValue(draft)
