@@ -74,7 +74,7 @@ reconciliation, quotes and deployment remain outside this read slice.
 For a dedicated fail-closed hosted run, use
 `python scripts/ci/inventory_read_proof.py`. It invalidates previous evidence before
 preflight, runs the 43 cases on the guarded local test database, then requires a
-fresh complete artifact, the exact case set, current source hashes and matching
-scrubbed-plan digest. Its bounded files are isolated under
+fresh `cases_complete` artifact, the exact case set, current source hashes and
+matching scrubbed-plan digest before marking `complete`. Its bounded files are isolated under
 `artifacts/inventory-read/pg-direct/`; absent PostgreSQL or skipped cases cannot
 satisfy this gate.

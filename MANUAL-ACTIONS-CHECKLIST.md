@@ -49,6 +49,10 @@ SQL0011/local7/baseline-2, grants, commands and operational journals are unchang
       account-generation, delayed-timer and metadata-directory recovery cases.
 - [x] Local focused functional/strict-wire/privacy tests and actual Uvicorn canary
       output. These are not PostgreSQL lock/deadline or actual Caddy evidence.
+- [x] Independent qualification-source review corrections: fail-closed runner
+      completion, effective disposable-target guards, actual report-only HTML ZIP
+      privacy regression, settled 503 capture and pre-existing local-only journal
+      preservation assertions. Actual browser journeys remain unexecuted locally.
 - [ ] Exact integrated final Python/frontend/static/contracts/PWA/security/runtime,
       recovery, native ARM64 and three-build qualification after main reconciliation.
 - [ ] Actual PostgreSQL 18: 43 non-skipped race/budget/cleanup cases and measured

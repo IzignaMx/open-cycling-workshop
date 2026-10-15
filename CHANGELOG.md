@@ -13,6 +13,8 @@
 - Cover account-only context access without sync admission, durable owner checks,
   session A→B→A, delayed timers and explicit directory recovery. Add actual-Uvicorn
   privacy proof and fail-closed PostgreSQL/Caddy evidence runners.
+- Harden disposable fixture targets and completion evidence; keep credentialed
+  test HTTP out of nested browser-report steps with an actual report-only regression.
 - Author 17 synthetic browser journeys and four-theme geometry/capture checks.
   Exact integrated native/database/edge/browser/pixel qualification remains pending;
   offline inventory, writes, reconciliation and quote workflows remain open.

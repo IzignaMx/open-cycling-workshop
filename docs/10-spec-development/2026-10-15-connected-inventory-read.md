@@ -128,6 +128,36 @@ control-word geometry, signs/freshness/paging and substantive error/offline stat
 They require real execution followed by original-pixel review; no images were
 fabricated or counted as executed. CSS enlargement is not physical browser zoom.
 
+A second independent qualification-source review reproduced six evidence/safety
+issues and drove finite corrections. PostgreSQL case collection now emits only
+`cases_complete`; the runner alone promotes `complete` after successful pytest
+exit (including teardown) and fresh source/plan checks. Failed verification becomes
+`failed`. Caddy invalidates prior success before source hashing or Docker preflight.
+The disposable database guard rejects all connection query parameters, unapproved
+drivers and ambient libpq destination settings. Every reset/migration/seed entry
+point validates before connecting; Alembic pins and restores the validated URL.
+Direct inventory PostgreSQL pytest fixtures reuse the same guard. No unsafe target
+was contacted: observed negative tests inspect rejection before connection.
+
+The review also reproduced bearer leakage in nested Playwright HTML steps despite
+catching the top-level API error. Inventory fixture controls/passthrough now use a
+small native HTTP boundary with exact loopback origin/path/method restrictions,
+no redirects, header allowlists, 10-second/1MiB bounds and generic errors. An actual
+report-only Playwright regression (no browser/account/app server) inspects stdout,
+JSON and every HTML ZIP member for an environment-only noncredential canary.
+The original failure was reproduced independently; the corrected report passes.
+The 503 screenshot requires its exact settled alert, enabled refresh and retained
+history. The preservation journey starts with a real pending local-only operation
+before navigation; only that synthetic account lacks `sync.push`, so exact journal,
+delivery and event comparisons do not race legitimate delivery. This is not a
+lost-acknowledgement delivery-race claim. Exact product/section focus and keyboard
+activation assertions replace broad descendant-focus checks.
+
+Local correction checks: 47 Python fixture/evidence/report checks, 14 direct-PG
+fixture guard checks (19 other cases deselected), and 3 native HTTP helper checks
+pass without skips. Strict E2E typing/lint/format and 17-case collection pass.
+These counts do not qualify actual PostgreSQL, Caddy, native browser or pixels.
+
 The inherited main40 tree has 27 aggregate controls but retains one direct clock
 retry; its 63 aggregate browser passes are not a clean-direct claim. See the dated
 manual checklist for exact hosted references and the independent PR41 rollback

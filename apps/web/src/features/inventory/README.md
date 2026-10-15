@@ -28,3 +28,10 @@ Tests: `tests/inventory`, `tests/runtime/connected-read.test.mjs`, and
 `e2e/inventory.spec.ts`. The repository ADR freezes the interface; native browser,
 PostgreSQL, Caddy and actual pixel qualification remain separate gates. Full offline
 inventory, mutation/reconciliation and quotes are not implemented here.
+
+Browser evidence keeps credentialed fixture traffic out of Playwright APIRequestContext
+and route.fetch error steps. A bounded native test-only helper is checked against an
+actual HTML report ZIP, without launching a browser. The preservation fixture uses
+an explicitly local-only operational writer so pending work exists before inventory
+entry and stays unchanged through disconnect/reload. These are authored journey
+assertions; report privacy execution alone does not qualify the browser journey.
