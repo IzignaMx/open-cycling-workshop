@@ -64,3 +64,39 @@ def test_failed_pytest_teardown_cannot_leave_complete_or_cases_complete(
     with pytest.raises(subprocess.CalledProcessError):
         runner.main()
     assert json.loads(path.read_text())["status"] == "failed"
+
+
+def test_direct_cli_resolves_repository_guard_without_repo_pythonpath(tmp_path) -> None:
+    import os
+    import shutil
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from scripts.ci import inventory_read_proof as runner
+
+    # Isolate the CLI artifact and make sys.path match hosted `python script.py`,
+    # without this test runner's repository-root pythonpath.
+    for name in ("scripts/ci/inventory_read_proof.py", "scripts/e2e/prepare_e2e_database.py"):
+        destination = tmp_path / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(runner.ROOT / name, destination)
+    environment = {**os.environ, "OCWP_TEST_DATABASE_URL": "not-a-database-url"}
+    environment["PYTHONPATH"] = str(runner.ROOT / "services/platform/src")
+    result = subprocess.run(
+        [sys.executable, str(tmp_path / "scripts/ci/inventory_read_proof.py")],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert b"E2E reset requires a dedicated local test database" in result.stderr
+    assert b"ModuleNotFoundError" not in result.stderr
+    proof = json.loads(
+        Path(
+            tmp_path / "artifacts/inventory-read/pg-direct/backend-postgres-evidence.json"
+        ).read_text()
+    )
+    assert proof["status"] == "incomplete" and proof["cases"] == {}

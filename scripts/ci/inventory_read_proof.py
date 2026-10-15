@@ -15,6 +15,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# Direct CLI execution puts scripts/ci, not the checkout root, on sys.path.
+# Match the module invocation without depending on a developer PYTHONPATH.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(ROOT))
 SOURCES = {
     "services/platform/src/cycling_workshop/inventory/read_guard.py",
     "services/platform/src/cycling_workshop/inventory/read_repository.py",
