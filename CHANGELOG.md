@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased · Bounded connected inventory visibility
+
+- Add read-only catalog, ledger-derived available quantity and bounded live
+  movement history in all four themes. Preserve operational form drafts and
+  journals; clear volatile inventory on scope/session/owner/expiry/disconnection.
+- Add one seven-field movement GET with canonical microsecond/Unicode cursors.
+  Preserve old GET contracts, SQL0011/local7/baseline-2, existing grants and commands.
+  Revalidate current authority inside bounded read transactions and return no-store.
+- Reject unsafe raw numeric wire values rather than showing rounded balances.
+  Keep stock/history freshness independent and omit actor/order/reference/note data.
+- Cover account-only context access without sync admission, durable owner checks,
+  session A→B→A, delayed timers and explicit directory recovery. Add actual-Uvicorn
+  privacy proof and fail-closed PostgreSQL/Caddy evidence runners.
+- Author 17 synthetic browser journeys and four-theme geometry/capture checks.
+  Exact integrated native/database/edge/browser/pixel qualification remains pending;
+  offline inventory, writes, reconciliation and quote workflows remain open.
+
 ## Unreleased · Readable transparent logos and native ARM execution criterion
 
 - Select a bounded, presentation-only light/dark image backing from already

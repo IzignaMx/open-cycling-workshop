@@ -2,6 +2,73 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Inherited main40 evidence and current inventory boundary · 2026-10-15
+
+Main40 is `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`, tree
+`d715e514f437e88fa4a5199c7f1a5eaa6e13c5ea`. The unchecked branding candidate
+section below is historical, not a statement that its automated gates never ran.
+For that exact inherited tree:
+
+- [x] [Postmerge CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900575)
+      completed 27 aggregate controls, 2,374 Python checks (14 explicit skips), 728
+      frontend checks and 63 aggregate browser cases. The separate direct run had
+      **62 first-pass cases and one administration clock retry**, zero unexpected
+      failures/skips. That result is successful with a retained flake, **not clean**.
+- [x] [Disposable runtime and recovery](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900550)
+      passed 11 checks, named-volume restart/restored-byte proof and both actual
+      PostgreSQL 18 asset-aware recovery scenarios. Three ARM64 builds and actual
+      native installed-decoder execution passed under unchanged production limits.
+- [x] [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900506)
+      passed with zero findings. The exact-tree premerge
+      [qualification](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38667921269)
+      also passed 63 direct and 63 aggregate browser cases; bounded visual review
+      examined 185 original captures (74 full-page plus 111 elements).
+- [ ] [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38670900548)
+      failed at 2.011187 seconds; original cause remains unproven. It is explicitly
+      non-qualifying and does not override the passed native execution criterion.
+- [ ] [PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) corrects the
+      administration test clock and a separately reproduced branding-cache rollback
+      boundary. Its first hosted core run failed; final corrected exact-source
+      integration and evidence are pending at this documentation checkpoint.
+- [ ] Real operator installation/grant adoption/recovery and physical Windows,
+      Android, Raspberry, browser zoom/touch, screen-reader and glare gates remain
+      open. Automated recovery does not claim client pending-mutation restoration.
+
+The connected inventory candidate below is a separate change; none of those
+inherited results qualify its new source.
+
+## Connected inventory read · 2026-10-15 candidate gates
+
+The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
+and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
+cover catalog, ledger-derived available quantity and one live movement page only.
+SQL0011/local7/baseline-2, grants, commands and operational journals are unchanged.
+
+- [x] Independent interface review before frontend work; independent backend and
+      client source reviews, including reproduced and fixed stale-owner,
+      account-generation, delayed-timer and metadata-directory recovery cases.
+- [x] Local focused functional/strict-wire/privacy tests and actual Uvicorn canary
+      output. These are not PostgreSQL lock/deadline or actual Caddy evidence.
+- [ ] Exact integrated final Python/frontend/static/contracts/PWA/security/runtime,
+      recovery, native ARM64 and three-build qualification after main reconciliation.
+- [ ] Actual PostgreSQL 18: 43 non-skipped race/budget/cleanup cases and measured
+      20,001-product/100,000-movement plans within 2s lock/5s statement/8s total limits.
+      `scripts/ci/inventory_read_proof.py` rejects incomplete/stale/source-mismatched
+      evidence. Current local result is blocked, not passed.
+- [ ] Actual Caddy 2.11.7 local and LAN configs: successful query forwarding followed
+      by upstream-unavailable runtime/error query-redaction proof with verified
+      isolated CA, safe artifact and confirmed container cleanup.
+- [ ] 17 authored native browser journeys with real synthetic API/PostgreSQL data:
+      floor0/1 account-only users, partial permissions, paging/signs/private fields,
+      scope/product/logout races, committed revocation, idle/background expiry,
+      disconnected journal preservation and production service-worker exclusion.
+- [ ] Four-theme desktop/tablet/320px/CSS200/forced-colors original screenshots and
+      actual pixel review, including complete control words and focus. Collection
+      and CSS enlargement are not browser execution or physical qualification.
+- [ ] Offline inventory, writes/commands UI, inventory reconciliation and quote
+      workflows remain separate future work. No inventory replica/cache/queue or
+      production-ready/full-MVP claim is introduced.
+
 ## Shared workshop branding · 2026-10-14 candidate gates
 
 The new increment starts from merged main39 `eef9559d8c3e528e79c99898360892188b23b55e`.

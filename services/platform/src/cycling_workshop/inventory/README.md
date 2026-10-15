@@ -68,3 +68,11 @@ unacceptable plan.
 The [accepted ADR](../../../../../docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 defines the exact wire and authority contract. Offline inventory, write UI,
 reconciliation, quotes and deployment remain outside this read slice.
+
+For a dedicated fail-closed hosted run, use
+`python scripts/ci/inventory_read_proof.py`. It invalidates previous evidence before
+preflight, runs the 43 cases on the guarded local test database, then requires a
+fresh complete artifact, the exact case set, current source hashes and matching
+scrubbed-plan digest. Its bounded files are isolated under
+`artifacts/inventory-read/pg-direct/`; absent PostgreSQL or skipped cases cannot
+satisfy this gate.

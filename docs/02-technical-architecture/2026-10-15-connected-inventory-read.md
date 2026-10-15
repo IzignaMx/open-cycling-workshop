@@ -1,6 +1,6 @@
 # ADR · Bounded connected inventory visibility
 
-Status: accepted after independent interface review, 2026-10-15; implementation and exact-source qualification pending.
+Status: accepted after independent interface review, 2026-10-15; implementation complete; exact-source integrated qualification pending.
 Date: 2026-10-15. Base: main `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`.
 
 ## Decision, precedence and boundary

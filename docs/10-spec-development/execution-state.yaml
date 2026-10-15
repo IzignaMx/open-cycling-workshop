@@ -1220,3 +1220,36 @@ shared_workshop_branding_2026_10_14:
   physical_windows_android_screen_reader: unchanged_open
   adr: docs/02-technical-architecture/2026-10-14-shared-workshop-branding.md
   evidence: docs/10-spec-development/2026-10-14-shared-workshop-branding.md
+
+connected_inventory_read_2026_10_15:
+  status: implemented_pending_exact_integrated_evidence
+  base_main40: 22b32a9e29f5b9dca9d52c2e8d36ac1228047c54
+  inherited_main40_ci: 38670900575_27_controls_2374_python_14_skips_728_core_63_aggregate_browser
+  inherited_direct_browser: 62_first_pass_plus_1_administration_clock_retry_not_clean
+  inherited_runtime: 38670900550_11_checks_named_volume_and_two_pg18_recoveries_passed
+  inherited_security: 38670900506_zero_findings
+  inherited_architecture: three_builds_plus_actual_native_arm64_passed_qemu_diagnostic_failed_nonqualifying
+  pending_reconciliation: PR41_clock_and_branding_cache_rollback_correction
+  branch: feat/connected-inventory-read
+  scope: connected_catalog_derived_available_quantity_bounded_minimal_movement_history
+  sql: '0011'
+  authenticated_local_schema: 7
+  policy_revision: ocwp-access-baseline-2_unchanged
+  grants_protocol_commands: unchanged_literal_read_only_no_adoption
+  persistence: volatile_single_catalog_and_history_page_no_inventory_store_queue_or_snapshot
+  authority: runtime_owned_metadata_only_account_capture_and_actual_operational_owner_checks
+  server_limits: pg18_lock2s_statement5s_transaction8s_client10s
+  privacy: seven_columns_no_actor_order_reference_note_no_store_actual_uvicorn_query_canaries
+  precision: raw_numeric_lexeme_rejection_microsecond_utc_unicode_codepoint_cursor_boundary
+  independent_contract_review: accepted_before_frontend_delegation
+  independent_source_reviews: backend_and_client_findings_fixed_with_observed_red_green
+  local_focused_client: 105_passed_zero_skips_plus_80_runtime_regressions_and_7_independent_adversarial_probes
+  local_focused_backend: 335_independent_passed_actual_pg43_explicit_skips
+  actual_pg: blocked_local_no_database_actual_races_budgets_cleanup_and_20k_100k_plans_required
+  actual_caddy: blocked_local_no_docker_both_supported_configs_required
+  browser: 17_authored_collected_strict_typechecked_not_locally_executed
+  visual: four_themes_desktop_tablet320_css200_forced_colors_capture_geometry_authored_pixels_pending
+  complete_integrated_qualification: pending_reconciled_exact_source
+  deferred: offline_inventory_write_ui_uncertain_reconciliation_quotes_full_mvp_and_physical_operator_gates
+  adr: docs/02-technical-architecture/2026-10-15-connected-inventory-read.md
+  evidence: docs/10-spec-development/2026-10-15-connected-inventory-read.md

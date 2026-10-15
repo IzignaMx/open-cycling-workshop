@@ -1,6 +1,6 @@
 # Connected inventory visibility: bounded implementation plan
 
-Status: in progress; implementation ADR independently accepted before source work, 2026-10-15. Base: actual main `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`, tree `d715e514f437e88fa4a5199c7f1a5eaa6e13c5ea` (merged PR40). Implementation must start in a fresh worktree from newly verified main. This record preserves the original acceptance matrix. The linked implementation ADR incorporates the mandatory independent-review corrections and takes precedence for exact contracts.
+Status: implemented; independent source findings corrected; exact integrated hosted qualification pending, 2026-10-15. Base: actual main `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`, tree `d715e514f437e88fa4a5199c7f1a5eaa6e13c5ea` (merged PR40). Implementation must start in a fresh worktree from newly verified main. This record preserves the original acceptance matrix. The linked implementation ADR incorporates the mandatory independent-review corrections and takes precedence for exact contracts.
 
 Implementation ADR: [bounded connected inventory read](../02-technical-architecture/2026-10-15-connected-inventory-read.md).
 
@@ -89,3 +89,48 @@ Extend private no-store classification to the exact inventory namespace, includi
 5. Update CHANGELOG, module README, ADR, user-facing connected-only limitation and execution-state/manual with additive current increment entries. Preserve historical evidence/status, pending offline inventory/quote requirements and original journals. Record exact commit/tree, reviewed source hashes, environment paths, executed vs skipped/collected counts and unique screenshot hashes. No production-ready claim.
 
 Stop at this read slice. A later write UI needs durable uncertain-command reconciliation; future quote acceptance needs reviewed identity/authorization/price/stock effects and offline protocol. Neither is implicitly authorized by this plan.
+
+## 7. Implementation and evidence checkpoint
+
+The interface review preceded frontend delegation. Modular DCO commits preserve
+SQL0011/local7/baseline-2, old GET operations and response schemas, literal grants,
+write commands, operational forms/journal, themes and shared branding. Local
+functional tests use this checkout's source with a reused interpreter/dependency
+store; no fresh frozen dependency installation is claimed.
+
+Independent review found four frontend boundaries and all were reproduced before
+correction: asynchronous durable-owner takeover, account revalidation A→B→A,
+expired 10-second requests while timer callbacks are delayed, and metadata-directory
+recovery after 403. Corrections check the actual owner around every request,
+retain session generations, recheck raw wall/monotonic deadlines, and permit a
+freshly verified bounded directory without a baseline. Final focused 105 checks,
+80 runtime regressions and 7 independent adverse probes pass with zero skips.
+A test fixture reused an incremental cursor during scheduled sync; it now advances
+page/continuation/checkpoint IDs. No production observer defect was established.
+
+Independent backend review passed 335 functional checks. It confirmed organization→
+fresh actor lock order, narrow projection, matching binary predicate/order,
+expiry/materialization boundary, no commit/admission and budget cleanup by source.
+Actual 43-case PostgreSQL proof is locally blocked; SQLite does not qualify races,
+2s/5s/8s database limits or measured 20,001/100,000-row query plans.
+
+Actual Uvicorn privacy checks pass. Edge source/mocked proof reviews found and
+corrected stale-success artifacts, unchecked cleanup and acceptance of access-only
+logs. Both Caddy configs preserve only inventory query privacy, including encoded
+paths and absolute-form targets. Actual Docker/Caddy execution is locally blocked.
+CI runs `inventory_read_proof.py` and `inventory_edge_probe.py` fail closed, uploading
+only safe measured JSON; incomplete/skipped/source-mismatched evidence cannot qualify.
+
+Seventeen actual-browser scenarios are authored and collected, with strict typing,
+finite isolated retry fixtures and no automatic credential-bearing traces/video.
+Four-theme original captures include desktop/tablet/320px/CSS200/forced colors,
+control-word geometry, signs/freshness/paging and substantive error/offline states.
+They require real execution followed by original-pixel review; no images were
+fabricated or counted as executed. CSS enlargement is not physical browser zoom.
+
+The inherited main40 tree has 27 aggregate controls but retains one direct clock
+retry; its 63 aggregate browser passes are not a clean-direct claim. See the dated
+manual checklist for exact hosted references and the independent PR41 rollback
+correction awaiting reconciliation. No inherited result qualifies this new source.
+Exact final head/tree, full integrated results and remaining hosted gates belong in
+the coordinator handoff manifest after source reconciliation and freeze.
