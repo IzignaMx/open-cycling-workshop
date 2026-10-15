@@ -67,7 +67,46 @@ incarnation and execution time do not become semantic retry fields.
 - JSON duplicate-key/number-lexeme/streaming admission belongs to the future HTTP
   adapter; these codecs accept already-typed private objects, not raw requests.
 
-Repository completion and real PostgreSQL/restore qualification remain pending. Existing 243 quote tests, including the
+### Atomic repository and complete reconstruction
+
+Repository operations require the existing transaction-owned writer admission,
+then lock order and lineage. They preserve caller-owned commit, compare current
+order/head/version/decision-sequence for new work, and return original immutable
+receipts plus current projections for exact retries. Receipt lookup is scoped to
+organization/location/order before loading proof. A generic identity/scope
+conflict handles foreign uniqueness collisions without disclosing their proof.
+
+Reconstruction joins all six tables, derives supersession from successor rows,
+replays the contiguous finite operation history, and checks persisted arithmetic,
+evidence, actors/times, cursors and outbox content. The only delivery fields it
+ignores are attempts/published time. Quote outbox events contain scoped IDs,
+kind, minimal totals/selection and distinct decision/domain versus delivery IDs;
+private customer evidence, note, source and reason are excluded.
+
+- Initial missing-repository RED preceded implementation. A real SQLite legacy
+  savepoint regression showed premature commit; explicit outer BEGIN now keeps
+  caller rollback authoritative. Four boolean receipt-number REDs are retained.
+- Independent review found final read-expiry, omitted outbox contract facts and
+  cross-scope receipt lookup gaps. Five committed regression cases failed before
+  the corrections and now pass. Current repository/reconstruction tests: 82
+  passed, 82 explicit PostgreSQL skips; final exact-source review remains pending.
+- The first broad Python run was **not a qualification pass**: 1 failed, 2,551
+  passed, 407 skipped. Its failed documentation contract still assumed quote
+  migration was always future. State now identifies implemented `0012`; the
+  quoted-string/octal regression instead verifies that actual frozen migration.
+  This run also predates the latest review fixes. A final rerun is required.
+- Twenty-one real PostgreSQL race/admission/rollback cases and one dump/restore
+  case are implemented, all skipped locally. The existing PG18 recovery wrapper
+  additionally runs that file with its guarded disposable fixture and matching
+  clients; existing branding artifact checks are unchanged.
+
+No new order state, event, change-feed row or stock movement is written. Reserved
+non-null order-effect tuples fail closed in this repository version; their
+consumer and the narrow `append_change` return-value change belong to separately
+reviewed stage 3. Domain mode `initial`, including later-revision decisions, is
+stored as evidence and never implicitly executes the initial-transition planner.
+
+Full exact-source local/hosted qualification and final source review remain open. Existing 243 quote tests, including the
 unchanged original 106, remain exact-source regression requirements.
 
 Reinspected base SQL head is `0011`; the candidate adds quote revision `0012`.

@@ -11,6 +11,11 @@
 - Add bounded immutable storage codecs and finite create/revise/decision proofs,
   with exact safe integers, canonical IDs/time, detached inputs and controlled
   cyclic/deep-input refusals. Preserve existing pure arithmetic and decisions.
+- Add transaction-owned quote append/replay and complete-history reconstruction,
+  scoped receipt lookup, fresh read-expiry checks and privacy-minimized quote
+  outbox facts. Retain caller rollback even with SQLite legacy savepoints.
+- Add PostgreSQL contention/restore fixtures to the existing recovery wrapper;
+  local skips are explicit and do not claim those gates passed.
 - Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
   routes, all-ingress guards, mixed-writer rollout and operational execution gates.
 

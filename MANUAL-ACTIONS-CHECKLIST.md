@@ -11,7 +11,8 @@ and independent source evidence; PostgreSQL runtime qualification remains open.
 - [x] Additive SQL0012 schema, registration and immutable/tenant constraints on SQLite.
 - [x] Bounded private storage codecs/semantic commands and independent boundary review.
 - [ ] Exact-source SQL0011→0012 PostgreSQL migration, race and restore evidence.
-- [ ] Independent source review and complete available local/hosted qualification.
+- [x] Implement atomic repository/reconstruction and retain discovered failure regressions.
+- [ ] Final independent source review and complete available local/hosted qualification.
 - [ ] Separate application/grant/capability compatibility and all-ingress fences
       before any quote mutation route is exposed.
 - [ ] Separate operator authority, backup/restore and replacement of every old
