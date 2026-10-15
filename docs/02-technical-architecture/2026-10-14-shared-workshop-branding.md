@@ -169,3 +169,29 @@ realistic capacity/RTO and actual installation recovery remain separate gates.
 The [increment evidence record](../10-spec-development/2026-10-14-shared-workshop-branding.md)
 separates executed local checks, inherited main39 evidence and authored hosted
 qualification.
+
+## 2026-10-15 presentation and ARM evidence decisions
+
+A transparent image may contain light, dark or colored artwork independently of
+its viewer's surface scheme. The three logo render sites therefore share a small
+presentation-only image component. It chooses a white or dark canvas from bounded
+alpha-composited samples of the already decoded current PNG, with white fallback
+for opaque/empty/unreadable input. This is a heuristic for readable presentation,
+not a per-stroke or universal contrast guarantee for mixed artwork. The original
+image bytes, canonical descriptor, cache and personal inheritance are unchanged;
+there is no new fetch, encoding, persisted preference or authority. Textual workshop
+identity and accessible image descriptions remain independent. Only the image's
+canvas opts out of forced-color substitution, not the surrounding controls.
+
+Architecture execution qualification now deliberately requires all three ARM64
+image builds plus the installed decoder on a standard native ARM64 runner with
+its unchanged production limits. An always-evaluated aggregate rejects missing,
+skipped, failed or cancelled native/build dependencies. A separate QEMU workflow
+is explicitly non-qualifying and preserves genuine nonzero exits, failed reports
+and diagnostic history. Its original failure cause is not proven by a native
+pass or by a separate instrumented child. No failure-signature exception,
+permanent image allowlist, branch-protection change or physical Raspberry claim
+is introduced. Native evidence timing consistency adds only bounded accounting
+checks; it does not extend the two-second wall/CPU limits. These changes require
+new exact-source hosted execution and pixel review, as described in the increment
+evidence record.

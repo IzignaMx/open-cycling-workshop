@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased · Readable transparent logos and native ARM execution criterion
+
+- Select a bounded, presentation-only light/dark image backing from already
+  decoded alpha-composited pixels, preserving original logo bytes and personal
+  inheritance. Reclaim nested branding-form width for complete button words at
+  320 CSS pixels and 200% CSS enlargement; keep existing control targets.
+- Require all three ARM64 builds and actual native installed-decoder execution.
+  Keep QEMU in a separate non-qualifying diagnostic workflow with its real failed
+  status and unproven cause visible. Harden native evidence timing consistency
+  without extending the production two-second wall/CPU limits.
+- Preserve the previous exact source's 63/63 direct and aggregate browser result
+  and native ARM pass. Actual review of 74 original captures found pale-logo and
+  enlarged-word defects, so corrected-source execution and pixel review remain
+  required. Physical Raspberry and other manual qualification remain open.
+
 ## Unreleased · Separate native ARM64 decoder qualification
 
 - Add a public-repository-only standard ARM64 runner probe with verified host,

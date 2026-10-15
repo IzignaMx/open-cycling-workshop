@@ -270,3 +270,95 @@ and [expression semantics](https://docs.github.com/en/actions/reference/workflow
 were checked for this bounded public-repository configuration. Actual exact-source
 hosted native execution is still required; local helper tests are not ARM runtime
 evidence.
+
+## Native execution and complete browser run before pixel corrections
+
+Published head `de5fa029656e3473b3cf895714e0ece5949f8694` was tested as merge
+`aa07048079ff1c5bde5bad62855f792ddeda47de`, tree
+`e32343c0150c2ca9be128167ba2d652e1d5779d9`. Its exact-source evidence is:
+
+- [CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38664702315):
+  27/27 aggregate controls, 2,228 Python passes / fourteen explicit skips,
+  715 frontend core tests, fourteen isolated kernel cases, 63 direct and 63
+  aggregate browser cases, and 20 + nine retry-free repetitions. Direct cases
+  all passed on their first attempt. Aggregate artifact SHA256:
+  `80bd86461e25b5c5183cf67a9efde181a2a7c76b15991a0ebf12820c0d95516f`.
+- Both real PostgreSQL18 recovery scenarios passed; the floor1 scenario rotated
+  two incarnations without activation, while the mixed-floor scenario rotated
+  three and explicitly activated two. All three profiles and asset bytes matched,
+  and stale sessions/checkpoints were refused. A pytest current-directory alias
+  is a duplicate proof, not a third scenario. This proof does not cover browser
+  queues. Recovery artifact SHA256:
+  `332a20f72d0c202a904ff1926109a829e774507314b9562dca9cbb632e204288`.
+- [Disposable runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38664702357)
+  passed actual named-volume API save/read, source restart, database-plus-assets
+  restore, restored restart, exact bytes/metadata and stale-token refusal.
+  Runtime artifact SHA256:
+  `ab1f848c40cb1d9ff860158f3a513ff1bbc26ba08ca2247d5b6c0cd64c373c0e`.
+- [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38664702285)
+  passed: 258 content commits, 12,337,528 bytes, 41 active packages and zero findings.
+  Artifact SHA256:
+  `cb9baa06cca8e39f680d696e84a0dee98d1f9a92938d2dfc8377b63c8f51afe0`.
+- [Actual standard native ARM64 execution](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38664702357/job/116193824722)
+  passed with host/guest ARM64 identity, unchanged production limits, installed
+  worker SHA256 `449578bff3e198382b3f9b9a575547f3c04350e70e1365cd9dfa51d9314dcec5`,
+  exact synthetic pixels and one successfully exited/reaped child. Elapsed time
+  was 0.314891 seconds, child CPU 0.259400 + 0.015023 seconds. This single smoke
+  observation is not a benchmark or physical Raspberry qualification.
+- The same-source QEMU decoder still failed after 2.011278 seconds, killed/reaped
+  at the unchanged parent wall bound. Its separate instrumented child reached
+  `pillow_import_start` at 1.578520 seconds. Neither that marker nor the native
+  result proves the original failure's cause. QEMU artifact SHA256:
+  `bc86f768ec33f4e9d6c0dddf483f9c2b2a3b686cdf0a40715f0ab5dab5f343eb`.
+
+The direct browser artifact SHA256 is
+`b84903de79d4f3f2d69e81ba6e9bbdb33d9e24d4bdf51e91290c97827fa6c4a0`.
+Independent pixel review bound 74 original post-assertion images to six passing
+cases: 36 branding scenes and 38 administration scenes. Four pre-assertion
+administration diagnostics and report copies were excluded. Inspection-only
+crops helped read tall full-page originals; they were never counted as new scenes
+or substituted for original evidence. Review report SHA256:
+`5b39685ab908158aeb3d91aed717df57fe861be9dc05d600b8588f8e1fb4aab6`.
+The complete original path/hash/state inventory has SHA256
+`1875b591c7aa3f741cfc2a0d43f76772605847b9fdb1f0fdfb62161749d99a25`.
+
+Despite automated green, twenty originals show pale transparent artwork nearly
+invisible on the fixed white shell/preview backing. Eight CSS200 branding scenes
+split the save word `compartida` midword. Their union is 24 affected originals;
+no third clear blocker was observed in the 38 administration scenes. Therefore
+this is not a visually qualified candidate. CSS enlargement is the tested
+640-pixel viewport with CSS zoom2, not physical browser/device zoom. Target-size
+and axe assertions do not establish physical touch or screen-reader behavior.
+
+## Bounded presentation correction and revised ARM criterion
+
+The renderer selects a fixed white or dark backing using bounded, alpha-composited
+contrast scores from the already decoded current PNG. It performs no new request,
+encoding, image mutation, persistence or authority change. Source identity and
+connected/current image checks fence the synchronous work; opaque, empty or
+unreadable images retain white. Mixed/translucent artwork remains a heuristic,
+not a universal per-stroke contrast guarantee. Independent textual identity and
+accessible descriptions remain. Only the image canvas opts out of forced-color
+substitution. A fixed gray alternative was rejected because it reduced the
+already exercised red artwork's contrast. Scoped nested form padding and button
+margins reclaim width without abbreviating text, hiding overflow, shrinking
+control targets or remounting operational forms.
+
+The deliberately revised architecture criterion requires all three ARM64 builds
+and actual native ARM64 installed-decoder execution. The aggregate rejects
+missing, skipped, failed or cancelled native/build evidence. Native timing
+consistency checks are accounting checks only; production wall/CPU limits remain
+two seconds. QEMU moves to a separate, explicitly non-qualifying diagnostic
+workflow which retains actual nonzero exits, failed reports and unproven causal
+status. A red QEMU workflow must not be reported as all CI passing. No historical
+image/signature exception, permanent allowlist or branch-protection change is
+introduced. The diagnostic build reads the existing cache without additional
+image/cache/build-record exports; only bounded safe diagnostic evidence is kept.
+
+These are new source changes after the exact hosted results above. Their local
+regressions, independent source review and new exact-source hosted execution must
+be recorded separately. The strengthened image, offline, word-geometry and
+original-state capture assertions still require actual new pixels. Physical
+Raspberry, Windows/Android, screen readers, glare and realistic-capacity recovery
+remain separate open gates; no installation, real grant adoption or deployment
+was performed.

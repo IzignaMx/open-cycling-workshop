@@ -10,7 +10,11 @@ authenticated restore, security and three ARM64 builds passed. See the separate
 [inherited evidence](docs/10-spec-development/2026-10-14-shared-workshop-branding.md#inherited-baseline).
 Earlier qualification below does not qualify these new changes. Shared name,
 curated palette, canonical logo, explicit inheritance and admitted offline cache
-are implemented; exact integrated evidence remains pending.
+are implemented; exact integrated evidence remains pending. The published
+`de5fa029` source passed 63 direct and 63 aggregate browser cases and actual native
+ARM64 smoke, but pixel review of 74 original scenes found transparent-logo and
+CSS-enlargement word defects. Those results remain tied to that earlier tree;
+the corrected renderer and revised ARM criterion require a fresh exact run.
 
 - [ ] Exact-head PostgreSQL0010→0011/migration/lock/revocation tests.
 - [ ] Native authenticated schema6→7 preservation, first-admission preferences,
@@ -21,9 +25,13 @@ are implemented; exact integrated evidence remains pending.
       decoded-logo byte comparison, corrupt-latest refusal/earlier recovery and
       stale-token/checkpoint rejection, including mixed-floor operator safeguards.
 - [ ] Docker private-volume API save/read, restart ownership/persistence and fresh
-      restored byte proof, exact dependency audit and ARM64 builds/QEMU decoder
-      smoke. Neither cross-building nor emulation qualifies native Raspberry
-      timing/memory or physical-device behavior.
+      restored byte proof and exact dependency audit.
+- [ ] All three ARM64 cross-builds plus actual standard native ARM64 installed-
+      decoder execution under unchanged production limits. Missing/skipped native
+      execution cannot qualify. Separate QEMU diagnostics retain their true result
+      and unproven failure cause; they do not qualify architecture execution.
+      Hosted native smoke does not qualify physical Raspberry timing/memory,
+      hostile worst-case inputs or installation behavior.
 - [ ] Real deployment/content/grant adoption only after separate operator authority;
       no real account, credential, image or installation was changed by implementation.
 - [ ] Physical Windows/Android, screen-reader/glare and realistic-capacity recovery
