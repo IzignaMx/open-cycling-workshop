@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from test_first_owner_cli import installation as installation
 
 
-def setup_owner(engine):
+def setup_owner(engine, additional_capabilities=()):
     with Session(engine) as session:
         owner = UserRecord(
             id="owner",
@@ -23,7 +23,10 @@ def setup_owner(engine):
             username="owner",
             display_name="Synthetic owner",
             password_hash="untouched",
-            capabilities=list(reversed(sorted(LEGACY_WILDCARD_CAPABILITIES))),
+            capabilities=[
+                *additional_capabilities,
+                *reversed(sorted(LEGACY_WILDCARD_CAPABILITIES)),
+            ],
             is_active=True,
             is_owner=True,
             version=7,
@@ -48,15 +51,44 @@ def adoption_args(**changes):
     ]
 
 
-def test_adoption_adds_only_two_literals_preserves_other_bytes_and_revokes(installation, capsys):
+@pytest.mark.parametrize(
+    ("additional_capabilities", "appended_capabilities"),
+    [
+        ((), ("branding.read", "branding.write")),
+        (("quotes.read", "quotes.read"), ("branding.read", "branding.write")),
+        (("quotes.write",), ("branding.read", "branding.write")),
+        (("quotes.authorize", "quotes.authorize"), ("branding.read", "branding.write")),
+        (("quotes.write", "quotes.read", "quotes.write"), ("branding.read", "branding.write")),
+        (
+            ("quotes.authorize", "quotes.write", "quotes.read", "quotes.write"),
+            ("branding.read", "branding.write"),
+        ),
+        (("quotes.read", "branding.write", "quotes.read"), ("branding.read",)),
+        (("branding.read", "quotes.authorize", "quotes.authorize"), ("branding.write",)),
+    ],
+    ids=[
+        "no-quotes",
+        "read-only-duplicates",
+        "write-only",
+        "authorize-only-duplicates",
+        "partial-quotes-ordered-duplicates",
+        "all-quotes-ordered-duplicates",
+        "existing-branding-write",
+        "existing-branding-read",
+    ],
+)
+def test_adoption_adds_only_branding_literals_preserves_other_bytes_and_revokes(
+    installation, capsys, additional_capabilities, appended_capabilities
+):
     engine, *_ = installation
-    before = setup_owner(engine)
+    before = setup_owner(engine, additional_capabilities)
+    expected_capabilities = [*before, *appended_capabilities]
     assert main(adoption_args()) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["changed"] and report["user_id"] == "owner" and report["version"] == 8
     with Session(engine) as session:
         owner = session.get(UserRecord, "owner")
-        assert owner.capabilities == [*before, "branding.read", "branding.write"]
+        assert owner.capabilities == expected_capabilities
         assert owner.version == 8 and owner.session_version == 10
         assert owner.password_hash == "untouched" and owner.location_id is None and owner.is_owner
         audit = session.scalars(select(IdentityAuditRecord)).one()
@@ -66,9 +98,28 @@ def test_adoption_adds_only_two_literals_preserves_other_bytes_and_revokes(insta
             and audit.target_id == "owner"
         )
         assert audit.request_id.startswith("cli-") and "untouched" not in json.dumps(audit.after)
+        assert audit.before == {
+            "location_id": None,
+            "capabilities": sorted(before),
+            "is_active": True,
+            "is_owner": True,
+            "version": 7,
+            "session_version": 9,
+        }
+        assert audit.after == {
+            "location_id": None,
+            "capabilities": sorted(expected_capabilities),
+            "is_active": True,
+            "is_owner": True,
+            "version": 8,
+            "session_version": 10,
+        }
     assert main(adoption_args(**{"expected-version": "8"})) == 0
     assert json.loads(capsys.readouterr().out)["changed"] is False
     with Session(engine) as session:
+        owner = session.get(UserRecord, "owner")
+        assert owner.capabilities == expected_capabilities
+        assert owner.version == 8 and owner.session_version == 10
         assert len(list(session.scalars(select(IdentityAuditRecord)))) == 1
 
 
@@ -149,7 +200,14 @@ def test_adoption_invalidates_old_session_and_only_new_admission_gets_branding(
         )
         response = client.get(path, headers={"Authorization": f"Bearer {new}"})
         assert response.status_code == 200
-        assert {"branding.read", "branding.write"} <= set(response.json()["capabilities"])
+        assert set(response.json()["capabilities"]) == {
+            *before,
+            "branding.read",
+            "branding.write",
+        }
+        assert not {"quotes.read", "quotes.write", "quotes.authorize"} & set(
+            response.json()["capabilities"]
+        )
 
 
 def test_adoption_requires_explicit_database_configuration(monkeypatch, capsys):

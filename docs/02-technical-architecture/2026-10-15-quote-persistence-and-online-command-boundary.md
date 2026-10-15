@@ -227,6 +227,15 @@ changes prior grant resolution/epoch meaning, stop for a negotiated protocol ADR
 instead of using this compatibility exception. Old clients keep their existing
 workflows and fail closed on editing unknown new grants. [S5]
 
+The non-expansion guarantee covers snapshots produced by supported earlier APIs
+and bootstrap paths, which reject unknown quote literals. An operator could
+manually preseed one of the previously unknown `quotes.read`, `quotes.write` or
+`quotes.authorize` literals in both an account and its signed token; that
+unsupported state becomes recognized when the exact literal enters the catalog.
+The literal `quotes.*` remains unrecognized. This exception is not silent grant adoption, does not authorize a real
+account change, and does not alter the existing intersection or epoch algorithm.
+See the [bounded compatibility evidence](../10-spec-development/2026-10-15-quote-catalog-compatibility.md).
+
 Bootstrap of an established tenant needs a **separate explicit local quote-only
 adoption command**, following the reviewed branding pattern: active established
 organization-wide owner, expected account version, append only missing quote

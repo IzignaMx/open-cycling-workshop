@@ -54,10 +54,14 @@ def test_v2_catalog_is_explicit_and_v1_catalog_and_aliases_are_frozen(db: Fixtur
     body = current.json()
     assert set(body) == {"catalog_version", "roles", "capabilities", "legacy_wildcard_capabilities"}
     assert body["catalog_version"] == 2
-    assert set(body["capabilities"]) == ALL | BRANDING
+    assert set(body["capabilities"]) == ALL | BRANDING | {
+        "quotes.read",
+        "quotes.write",
+        "quotes.authorize",
+    }
     assert set(body["legacy_wildcard_capabilities"]) == ALL
     roles = {r["name"]: set(r["capabilities"]) for r in body["roles"]}
-    assert roles["Owner"] == ALL | BRANDING
+    assert roles["Owner"] == ALL | BRANDING | {"quotes.read", "quotes.write", "quotes.authorize"}
     assert roles["Administrator"] == (ALL | BRANDING) - {"locations.create"}
     assert roles["Manager"] & BRANDING == {"branding.read"}
     assert roles["TechnicalAdmin"] == set()

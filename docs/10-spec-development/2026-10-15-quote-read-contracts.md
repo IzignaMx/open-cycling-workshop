@@ -16,8 +16,9 @@ FR-SVC-005/007/008/009/016, BR-004/005/006/007, SEC-002/003 and NFR-009.
   incoming principal, require both `quotes.read` and `orders.read`, refresh
   authority after waits and recheck expiry after projection. New source-path
   tests select protocol 1; they do not add grant checks to the repository.
-  This slice provides no application service: the current catalog deliberately
-  does not recognize quote grants.
+  This original slice provided no application service or quote grants. The
+  subsequent catalog prerequisite recognizes three explicit quote literals;
+  the combined tree still provides no quote application service or routes.
 - Revision metadata pages are ascending version order, default/max 25. Full
   history validation precedes pagination. No list of complete revisions is exposed.
   Continuations are opaque deterministic SHA-256 position fingerprints bound to
