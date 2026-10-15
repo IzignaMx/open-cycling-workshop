@@ -1007,6 +1007,9 @@ export class WorkshopController {
     this.armLease(source)
     if (!connected) this.probeOffline(source)
     await this.refresh()
+    // Initial operational reads advance the kernel's trusted observation time.
+    // Recover an overlapping cache read once, after those reads have settled.
+    if (!connected && this.#active === source && current()) void this.branding.refresh(true)
     void inspectLegacyWork(this.options.factory ?? indexedDB)
       .then((present) => {
         if (current()) this.publish({ legacyPresent: present })

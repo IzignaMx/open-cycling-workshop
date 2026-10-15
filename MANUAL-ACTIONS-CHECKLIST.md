@@ -897,3 +897,12 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   skipped. These failures remain retained. The [offline refresh correction](docs/10-spec-development/2026-10-15-offline-branding-refresh.md)
   adds finite coalescing of the existing forced request without relaxing cache
   rollback checks. The exact changed-head gates above remain open.
+
+- The next PR41 candidate `93b9b30e09fa90c9dffc78105b8ef5fbc172852d`
+  also has a retained 62/63 direct-browser failure in CI38678325955. Both attempts
+  now pass the before-reload verified-copy assertion, then fail the saved-brand
+  identity after reload at branding.spec.ts494. The [startup completion correction](docs/10-spec-development/2026-10-15-offline-branding-refresh.md#offline-reload-startup-completion-follow-up)
+  adds a current-source request after initial operational reads; it does not
+  change cache admission or retry budgets. This new local composition evidence
+  does not qualify the browser journey. Exact changed-head direct/aggregate and
+  retry-free repetition gates remain open.

@@ -96,3 +96,80 @@ network responses, not native browser execution. Fresh exact changed-head
 direct/aggregate browser and the original retry-free administration repetitions
 remain required. Physical devices, screen readers, operator installation and
 deployment are not qualified by this change.
+
+## Offline reload startup completion follow-up
+
+The first published refresh correction, head
+`93b9b30e09fa90c9dffc78105b8ef5fbc172852d`, tree
+`cb938f964b990d878403ce0ab9a1491f8f7cc270`, made progress but did not complete
+qualification. In [CI38678325955](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38678325955),
+the direct browser result was again **62 passed, one failed, zero flaky**.
+Both attempts passed the previous verified-offline-copy assertion at line487,
+then reached ready state after the first reload and failed `expectBrand` at
+`branding.spec.ts:494`: the accessible identity was `OCWP, taller activo`
+instead of the saved workshop brand. This later failure is distinct from the
+retained before-reload failure above.
+
+[Direct artifact11947607520](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38678325955/artifacts/11947607520)
+ZIP SHA-256:
+`91eb05eff5ff579b67652b871b06b5465e2e7247a1d332976c90e73aca7cd270`.
+The aggregate result was still pending at this local correction checkpoint;
+repeat phases had not executed. Neither the earlier source fixes nor local
+composition tests are claimed as a completed browser journey.
+
+### Reload cause and bounded correction
+
+Both `start()` routes (navigator-offline and online-hint followed by a genuine
+network failure) reach `resumeStoredOffline()` and `ready(..., false)`.
+`ready()` publishes ready state, starting the branding cache read, before its
+initial customer/order/issue reads. These real kernel transactions update
+`deviceControl.observedAt`. The conservative cache correctly rejects an older
+operation-entry timestamp. Unlike the explicit offline transition, startup had
+no completion refresh request, and same-binding publications did not restart it.
+The former fixed-clock reload fixture masked this interleaving.
+
+After the existing initial operational `refresh()` completes, offline startup
+now requests one forced branding refresh only if the same source remains active
+and current. This uses the existing one-initial/at-most-one-trailing budget and
+fresh admission/time capture. The coalescer and cache implementation are
+unchanged. No null-result retries, extra timers or connected-startup requests
+are introduced. Later independent writers can still fence a read; the change
+closes the known startup completion gap, not every possible future interleaving.
+
+### Reload evidence
+
+Exact Node22.16.0, installed dependencies, real production controller/kernel/cache
+with fake IndexedDB and controlled transport:
+
+- **RED: three failures, nine negative controls passed** on the prior product.
+  Both complete stored-session restart routes fail with advancing clocks; a
+  third controlled failure holds the actual logo digest while the initial
+  customer page executes its real kernel transaction at a later timestamp.
+- **GREEN: twelve focused cases passed** after the three-line production change.
+  They include the two restart routes and delayed-logo success; rollback,
+  expiry, takeover, logout and a future snapshot remain closed. Four additional
+  cases interrupt startup before its initial page returns and prove no stale
+  completion request after logout, takeover, expiry or session replacement.
+- Tests perform connected admission, confirmed logo caching, offline transition,
+  pending customer creation, disposal, new controller/database-handle startup
+  and actual remembered-admission owner replacement. Snapshot bytes, pending
+  journal and delivery records remain identical. Offline-only startup makes no
+  network call; the online-hint fallback makes only its failing `/auth/me` probe.
+- Independent diagnosis reproduced the exact null-cache mechanism and confirmed
+  that one explicit request after startup restores branding without durable
+  changes. The browser artifact does not identify its exact interleaved writer;
+  the controlled production-composition tests prove the source mechanism.
+- Full frontend core: **764 passed, zero failures or skips**. Repository
+  contracts: **22 passed**. Touched ESLint/Prettier, web/offline typechecks and
+  production PWA build passed; the existing large-chunk warning remains.
+- Independent isolated review passed **130 committed-scope cases and nine
+  additional reviewer probes**, overlapping the full suite rather than adding
+  browser journeys. The probes include three consecutive stored-session
+  startups with real logo, light/dark preference saves, advancing clocks and
+  new owner generations through both startup routes, plus the retained queue,
+  binding, latest-profile and adverse-time controls. Durable branding, journal
+  and delivery rows remain unchanged.
+
+Fresh exact changed-head hosted direct/aggregate browser and retry-free repeated
+journeys remain required. No native browser, physical device or deployment pass
+is inferred from this local evidence.

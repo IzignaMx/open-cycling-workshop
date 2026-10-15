@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Readmit branding after offline startup completes
+
+- Request one current-source offline branding refresh after initial customer,
+  order and issue reads settle. Those kernel transactions can legitimately
+  invalidate an overlapping cache read by advancing trusted observation time.
+- Cover full stored-session restart through both offline and online-hint/network-
+  failure paths, real delayed logo/startup-page interleavings, pending-work
+  preservation and cancellation before startup completes. Keep the finite
+  coalescer, six rollback regressions, cache checks and browser assertions intact.
+- Retain the prior candidate's later failure after reload: its before-reload
+  verified-copy assertion now passed, but the restored identity was still OCWP.
+  Exact changed-head hosted browser qualification remains pending.
+
 ## Unreleased · Recover explicitly requested offline branding refresh
 
 - Coalesce a forced branding refresh requested during an active flight into one

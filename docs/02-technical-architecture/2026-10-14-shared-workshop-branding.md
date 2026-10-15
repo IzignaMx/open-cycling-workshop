@@ -158,6 +158,11 @@ An explicit refresh requested during a branding flight is coalesced into one
 freshly captured and validated trailing flight. The trailing flight cannot queue
 another, and a null cache result does not itself retry. This preserves rollback
 refusal while honoring the offline transition's already-requested recovery.
+Offline readmission also requests a refresh after its initial operational page
+and issue reads finish: their kernel transactions may advance trusted observation
+time after the first cache read began. The completion request requires the same
+still-current active source and uses the existing finite coalescer. It is not a
+retry triggered by cache refusal and does not run for connected startup.
 
 The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
 request/save. Exact saved session, current ticket/source generation, lease and

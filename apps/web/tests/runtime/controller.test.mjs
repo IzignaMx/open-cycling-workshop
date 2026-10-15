@@ -1935,3 +1935,209 @@ for (const edge of ['rollback', 'expiry', 'takeover', 'future snapshot']) {
     assert.equal(await f.database.operationJournal.count(), 0)
   })
 }
+
+async function storedBrandingReload(t, online = false) {
+  const { withLogo } = await import('../branding/fixture.mjs')
+  const first = setup(t, {
+    server: brandedApi(['branding.read'], (url) =>
+      response(url, withLogo({ display_name: 'Shared workshop' })),
+    ),
+  })
+  await first.runtime.start()
+  await login(first.runtime)
+  await until(
+    () =>
+      first.runtime.branding.getSnapshot().profile && !first.runtime.branding.getSnapshot().loading,
+    'connected brand missing',
+  )
+  first.env.online = false
+  await first.runtime.offline()
+  await until(
+    () =>
+      first.runtime.branding.getSnapshot().cached && !first.runtime.branding.getSnapshot().loading,
+    'offline brand missing',
+  )
+  await first.runtime.createCustomer({ displayName: 'Pending across offline restart' })
+  const durable = {
+    snapshots: await first.database.brandingSnapshots.toArray(),
+    journal: await first.database.operationJournal.toArray(),
+    delivery: await first.database.operationDelivery.toArray(),
+  }
+  first.runtime.dispose()
+  const calls = []
+  const second = setup(t, {
+    name: first.name,
+    storage: first.storage,
+    online,
+    server: {
+      calls,
+      fetch: async (url) => {
+        calls.push(new URL(url).pathname)
+        throw new TypeError('Synthetic offline transport')
+      },
+    },
+  })
+  return { ...second, durable }
+}
+async function assertReloadWorkPreserved(f) {
+  assert.deepEqual(await f.database.brandingSnapshots.toArray(), f.durable.snapshots)
+  assert.deepEqual(await f.database.operationJournal.toArray(), f.durable.journal)
+  assert.deepEqual(await f.database.operationDelivery.toArray(), f.durable.delivery)
+}
+for (const onlineHint of [false, true]) {
+  test(`full offline reload preserves branding after advancing startup reads, online hint ${onlineHint}`, async (t) => {
+    const f = await storedBrandingReload(t, onlineHint)
+    let wall = NOW
+    Object.defineProperty(f.env, 'now', { get: () => ++wall })
+    t.mock.method(performance, 'now', () => wall - NOW)
+    await f.runtime.start()
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'reload cache read unfinished')
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    assert.equal(f.runtime.getSnapshot().sync, 'offline')
+    assert.ok(
+      f.runtime
+        .getSnapshot()
+        .customers.some((row) => row.display_name === 'Pending across offline restart'),
+    )
+    const control = await f.database.deviceControl.get('device')
+    assert.notEqual(control.tabAttemptId, f.durable.snapshots[0].owner.tabAttemptId)
+    assert.deepEqual(f.server.calls, onlineHint ? ['/api/v1/auth/me'] : [])
+    await assertReloadWorkPreserved(f)
+    assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+    assert.equal(f.runtime.branding.getSnapshot().cached, true)
+  })
+}
+
+for (const edge of ['advance', 'rollback', 'expiry', 'takeover', 'logout', 'future snapshot']) {
+  test(`offline reload with delayed logo and actual startup page stays safe after ${edge}`, async (t) => {
+    const f = await storedBrandingReload(t)
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    const page = f.runtime.repositories.page.bind(f.runtime.repositories)
+    let release,
+      entered,
+      calls = 0,
+      elapsed = 0
+    const gate = new Promise((resolve) => {
+      release = resolve
+    })
+    const started = new Promise((resolve) => {
+      entered = resolve
+    })
+    t.after(() => release())
+    t.mock.method(performance, 'now', () => elapsed)
+    t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (++calls === 1) {
+        entered()
+        await gate
+      }
+      return digest(...args)
+    })
+    // Delay only the initial customer page, then execute its real kernel work
+    // while the first branding cache read is outside IDB validating its logo.
+    t.mock.method(f.runtime.repositories, 'page', async (...args) => {
+      if (args[1] === 'customer') {
+        await started
+        elapsed = 100
+        f.env.now = NOW + elapsed
+      }
+      return page(...args)
+    })
+    await f.runtime.start()
+    assert.equal(calls, 1)
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    assert.equal(f.runtime.branding.getSnapshot().profile, null)
+    const control = await f.database.deviceControl.get('device')
+    assert.equal(control.observedAt, NOW + 100)
+    if (edge === 'rollback') f.env.now = NOW - 1
+    if (edge === 'expiry') f.env.now = NOW + 3600000
+    if (edge === 'takeover') {
+      await f.database.deviceControl.put({
+        ...control,
+        generation: control.generation + 1,
+        tabAttemptId: 'replacement-startup-owner',
+      })
+      await until(() => f.runtime.getSnapshot().phase === 'held', 'startup takeover not held')
+    }
+    if (edge === 'logout') await f.runtime.logout()
+    if (edge === 'future snapshot') {
+      const row = f.durable.snapshots[0]
+      await f.database.brandingSnapshots.put({ ...row, observedAt: NOW + 1000 })
+      f.durable.snapshots = await f.database.brandingSnapshots.toArray()
+    }
+    if (edge === 'rollback' || edge === 'expiry') await f.runtime.checkLease()
+    elapsed = 2000
+    release()
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'startup cache read unfinished')
+    assert.deepEqual(f.server.calls, [])
+    await assertReloadWorkPreserved(f)
+    if (edge === 'advance') {
+      assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+      assert.equal(f.runtime.branding.getSnapshot().cached, true)
+      assert.equal(calls, 2)
+    } else {
+      assert.equal(f.runtime.branding.getSnapshot().profile, null)
+      assert.equal(calls, 1)
+      assert.equal(
+        f.runtime.getSnapshot().phase,
+        edge === 'logout' ? 'locked' : edge === 'future snapshot' ? 'ready' : 'held',
+      )
+    }
+  })
+}
+
+for (const edge of ['logout', 'takeover', 'expiry', 'session replacement']) {
+  test(`offline startup completion cannot request branding after ${edge}`, async (t) => {
+    const f = await storedBrandingReload(t)
+    const page = f.runtime.repositories.page.bind(f.runtime.repositories)
+    const refresh = f.runtime.branding.refresh.bind(f.runtime.branding)
+    let release,
+      entered,
+      forced = 0
+    const gate = new Promise((resolve) => {
+      release = resolve
+    })
+    const started = new Promise((resolve) => {
+      entered = resolve
+    })
+    t.after(() => release())
+    t.mock.method(f.runtime.branding, 'refresh', (...args) => {
+      if (args[0]) forced++
+      return refresh(...args)
+    })
+    t.mock.method(f.runtime.repositories, 'page', async (...args) => {
+      const result = await page(...args)
+      if (args[1] === 'customer') {
+        entered()
+        await gate
+      }
+      return result
+    })
+    const starting = f.runtime.start()
+    await started
+    assert.equal(forced, 1)
+    if (edge === 'logout') await f.runtime.logout()
+    if (edge === 'expiry') {
+      f.env.now = NOW + 3600000
+      await f.runtime.checkLease()
+    }
+    if (edge === 'takeover') {
+      const control = await f.database.deviceControl.get('device')
+      await f.database.deviceControl.put({
+        ...control,
+        generation: control.generation + 1,
+        tabAttemptId: 'replacement-before-startup-completes',
+      })
+      await until(() => f.runtime.getSnapshot().phase === 'held', 'startup takeover not held')
+    }
+    if (edge === 'session replacement') {
+      f.runtime.sessionStore.setToken('replacement-synthetic-session')
+      await f.runtime.checkLease()
+    }
+    release()
+    await starting
+    assert.equal(forced, 1)
+    assert.equal(f.runtime.branding.getSnapshot().profile, null)
+    assert.equal(f.runtime.getSnapshot().phase, edge === 'logout' ? 'locked' : 'held')
+    await assertReloadWorkPreserved(f)
+  })
+}

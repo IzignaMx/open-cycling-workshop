@@ -1287,3 +1287,23 @@ offline_branding_refresh_2026_10_15:
   original_browser_assertions_timeouts_and_six_cache_rollback_regressions: unchanged
   exact_changed_head_native_browser_and_repetitions: pending
   evidence: docs/10-spec-development/2026-10-15-offline-branding-refresh.md
+  first_published_head: 93b9b30e09fa90c9dffc78105b8ef5fbc172852d
+  first_published_ci: 38678325955_direct62_of63_failed_after_first_reload
+  first_published_before_reload: verified_offline_copy_assertion_passed_both_attempts
+  first_published_after_reload: saved_brand_identity_expected_OCWP_received_both_attempts
+  first_published_direct_artifact: 11947607520
+  first_published_aggregate: pending_at_local_reload_correction_checkpoint
+
+  reload_followup:
+    status: implemented_pending_evidence
+    base_local: 11e370226f95c0ea25620176fe86e7a08c361c7d
+    cause: ready_publication_starts_cache_before_initial_kernel_reads_advance_control_no_completion_refresh
+    correction: one_explicit_offline_refresh_after_initial_reads_only_same_current_active_source
+    causal_red_node22_16: three_full_reload_composition_failures_nine_negative_controls_passed
+    focused_green_node22_16: twelve_full_reload_and_interrupted_startup_cases_passed
+    local_core_node22_16: 764_passed_zero_failed_or_skipped
+    local_repository_static_types_and_pwa: 22_contracts_passed_touched_static_web_offline_types_build_passed
+    independent_review: 130_committed_scope_plus9_review_probes_passed_including_three_successive_starts_both_routes
+    original_cache_checks_finite_coalescer_and_browser_assertions: unchanged
+    durable_preservation: logo_snapshot_pending_customer_journal_delivery_unchanged_through_new_owner_readmission
+    exact_changed_head_native_browser_and_repetitions: pending
