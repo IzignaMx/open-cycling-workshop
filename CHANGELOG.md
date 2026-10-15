@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Bound inactive quote request inputs
+
+- Add closed create/revise and initial customer-decision input contracts with
+  bounded actual-byte UTF-8/JSON decoding and fixed non-echoing errors.
+- Reuse typed line validation; retain server-owned route outcomes and recording
+  identity. No HTTP routes, services, grants, schema or offline behavior change.
+- Keep streaming HTTP integration, financial/application admission and activation
+  gates explicitly deferred; local decoder tests do not qualify those boundaries.
+
 ## Unreleased · Reconcile quote persistence with the reviewed expiry observer
 
 - Normally merge actual main `19882936`, preserving the fixture-only observer

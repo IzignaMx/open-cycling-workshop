@@ -1254,3 +1254,13 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   unsupported; immutable historical receipts and exact replay are retained.
   Physical-device, recovery and accessibility gates remain open. See the
   [scope and evidence](docs/10-spec-development/2026-10-15-quote-decision-domain.md).
+
+## 2026-10-15 · Inactive quote request input contracts
+
+- No new operator action is needed for the pure decoders. Before activation,
+  separately prove the actual HTTP streaming/encoding/no-store/correlation
+  boundary, locked scoped admission and every legacy-write fence. Do not treat
+  decoded input as authorized or financially admitted.
+- Existing maximum-history capacity, hosted, recovery and physical-device gates
+  remain open. No capacity trial, limit change or deployment was performed. See
+  the [scope and evidence](docs/10-spec-development/2026-10-15-quote-request-contracts.md).
