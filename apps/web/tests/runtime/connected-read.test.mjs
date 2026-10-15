@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { WorkshopController } from '../../.tmp-runtime/src/runtime/controller.js'
+import { InventoryController } from '../../.tmp-inventory/src/features/inventory/controller.js'
+import { InventoryHttpError } from '../../.tmp-inventory/src/features/inventory/contracts.js'
 import { createKernelDatabase } from '../../.tmp-runtime/src/access-kernel/database.js'
 
 const realm = 'https://connected-read.test/api/v1'
@@ -511,6 +513,10 @@ async function operational(t) {
       throw new Error('Unexpected operational fixture endpoint')
     },
   })
+  // Start the real observer from an empty session. Starting from the seeded
+  // account here would begin a first baseline immediately before login's second.
+  state.runtime.sessionStore.clear()
+  await state.runtime.start()
   await state.runtime.login({
     organization_id: 'org',
     username: 'reader',
@@ -688,4 +694,101 @@ test('sync.pull alone cannot dispatch a location-directory request', async (t) =
     false,
   )
   assert.deepEqual(runtime.getSnapshot().locations, [])
+})
+
+// Committed durable ownership must be checked even before its observer notification.
+for (const outcome of ['success', 401, 403, 500]) {
+  test(`inventory checks durable operational ownership before publishing ${outcome}`, async (t) => {
+    const { runtime } = await operational(t)
+    await runtime.connectedReads.verify()
+    let finish, dispatched
+    const entered = new Promise((resolve) => {
+      dispatched = resolve
+    })
+    const inventory = new InventoryController(
+      runtime,
+      {
+        catalog: () => {
+          dispatched()
+          return new Promise((resolve, reject) => {
+            finish = () =>
+              outcome === 'success'
+                ? resolve([{ product_id: 'protected', name: 'protected product' }])
+                : reject(
+                    new InventoryHttpError(
+                      outcome === 401
+                        ? 'invalid_session'
+                        : outcome === 403
+                          ? 'capability_denied'
+                          : 'unavailable',
+                      outcome,
+                    ),
+                  )
+          })
+        },
+      },
+      () => NOW,
+    )
+    t.after(() => inventory.dispose())
+    const pending = inventory.loadCatalog()
+    await entered
+    const owner = runtime.sessionStore.getSnapshot().admission.owner
+    await runtime.database.deviceControl.update('device', {
+      generation: owner.deviceGeneration + 1,
+    })
+    finish()
+    await pending
+    assert.equal(inventory.getSnapshot().catalog.value, null)
+    assert.notEqual(
+      runtime.sessionStore.getSnapshot(),
+      null,
+      'obsolete refusal must not log out account',
+    )
+    assert.equal(runtime.connectedReads.getSnapshot().context, null)
+  })
+}
+test('inventory checks committed operational owner before any request dispatch', async (t) => {
+  const { runtime } = await operational(t)
+  await runtime.connectedReads.verify()
+  let calls = 0
+  const inventory = new InventoryController(
+    runtime,
+    {
+      catalog: async () => {
+        calls++
+        return []
+      },
+    },
+    () => NOW,
+  )
+  t.after(() => inventory.dispose())
+  const owner = runtime.sessionStore.getSnapshot().admission.owner
+  await runtime.database.deviceControl.update('device', { generation: owner.deviceGeneration + 1 })
+  await inventory.loadCatalog()
+  assert.equal(calls, 0)
+  assert.equal(inventory.getSnapshot().catalog.value, null)
+})
+
+test('organization-wide connected reader refreshes authorized directory after explicit 403 reverification', async (t) => {
+  const account = { ...user, location_id: null, capabilities: ['inventory.read', 'locations.read'] }
+  const { runtime, calls } = setup(t, { account })
+  await runtime.start()
+  await runtime.loadLocations()
+  await runtime.connectedReads.verify('loc')
+  assert.equal(runtime.connectedReads.getSnapshot().phase, 'ready')
+  runtime.connectedReads.refuse(runtime.connectedReads.capture(), 403)
+  assert.equal(runtime.getSnapshot().phase, 'held')
+  const before = calls.length
+  await runtime.loadLocations()
+  assert.equal(calls.length, before, 'held unverified account cannot fetch a directory')
+  await runtime.verifyAccount()
+  await runtime.loadLocations()
+  assert.equal(runtime.getSnapshot().locations.length, 2)
+  await runtime.connectedReads.verify('loc')
+  assert.equal(runtime.connectedReads.getSnapshot().phase, 'ready')
+  assert.equal(
+    calls.some(({ url }) => /baselines|deltas/.test(url)),
+    false,
+  )
+  assert.equal(runtime.sessionStore.getSnapshot().admission, null)
 })

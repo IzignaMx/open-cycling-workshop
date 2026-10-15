@@ -204,3 +204,43 @@ test('context expiry shortens the finite deadline without relying on cooperative
     globalThis.setTimeout = original
   }
 })
+
+for (const phase of ['fetch', 'body']) {
+  for (const outcome of [200, 401, 403]) {
+    if (phase === 'body' && outcome !== 200) continue
+    test(`suspended deadline timer cannot accept overdue ${phase} outcome ${outcome}`, async (t) => {
+      const start = Date.now()
+      t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: start })
+      let finish
+      const pending = factory((url) =>
+        phase === 'fetch'
+          ? new Promise((resolve) => {
+              finish = () => resolve(response(url, JSON.stringify(stock), { status: outcome }))
+            })
+          : Promise.resolve(
+              response(
+                url,
+                new ReadableStream({
+                  start(controller) {
+                    finish = () => {
+                      controller.enqueue(new TextEncoder().encode(JSON.stringify(stock)))
+                      controller.close()
+                    }
+                  },
+                }),
+              ),
+            ),
+      ).stock(
+        { ...source, context: { ...context, offlineUntil: new Date(start + 60000).toISOString() } },
+        'part',
+      )
+      await Promise.resolve()
+      t.mock.timers.setTime(start + 10001)
+      finish()
+      await assert.rejects(
+        pending,
+        (error) => error.code === 'stale_request' && error.status === null,
+      )
+    })
+  }
+}

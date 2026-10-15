@@ -198,3 +198,29 @@ test('compatibility revoke uses suspended lifecycle and clears only matching401 
   assert.equal(runtime.sessionStore.getSnapshot(), null)
   assert.equal(runtime.getSnapshot().phase, 'locked')
 })
+
+for (const status of [200, 401, 403]) {
+  test(`account verification cannot publish late ${status} after session metadata A-B-A`, async (t) => {
+    let finish
+    const { runtime } = setup(
+      t,
+      (url) =>
+        new Promise((resolve) => {
+          finish = () => resolve(response(url, user, status))
+        }),
+    )
+    const pending = runtime.verifyAccount()
+    const before = structuredClone(runtime.sessionStore.getSnapshot())
+    runtime.sessionStore.setUser({ ...user, display_name: 'replacement' })
+    runtime.sessionStore.setUser(user)
+    finish()
+    await pending
+    assert.deepEqual(runtime.sessionStore.getSnapshot(), before)
+    assert.notEqual(runtime.getAccountSnapshot().phase, 'connected')
+    assert.notEqual(
+      runtime.getAccountSnapshot().phase,
+      'verifying',
+      'explicit retry must stay reachable',
+    )
+  })
+}

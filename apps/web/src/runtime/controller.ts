@@ -457,13 +457,15 @@ export class WorkshopController {
     this.publishAccount('verifying', null)
     const sequence = this.#sequence,
       network = this.#networkSequence,
-      generation = this.#account.generation
+      generation = this.#account.generation,
+      sessionGeneration = this.#sessionGeneration
     const flight = new AbortController()
     this.#accountFlight = flight
     const current = () =>
       !this.#disposed &&
       !flight.signal.aborted &&
       generation === this.#account.generation &&
+      sessionGeneration === this.#sessionGeneration &&
       network === this.#networkSequence &&
       this.exactSession(sequence, saved) &&
       this.#active === operational &&
@@ -508,13 +510,15 @@ export class WorkshopController {
           'Los permisos cambiaron. Verifica el taller antes de abrirlo.',
         )
         const nextNetwork = this.#networkSequence,
-          nextAdmission = this.#account.generation
+          nextAdmission = this.#account.generation,
+          nextSession = this.#sessionGeneration
         if (source) await this.kernel.lockContext(source.ticket)
         if (
           !this.exactSession(next, saved) ||
           this.#disposed ||
           nextNetwork !== this.#networkSequence ||
-          nextAdmission !== this.#account.generation
+          nextAdmission !== this.#account.generation ||
+          nextSession !== this.#sessionGeneration
         )
           return
         // A changed authority cannot carry an older durable offline admission.
@@ -1190,16 +1194,29 @@ export class WorkshopController {
       pageSequence = ++this.#locationPage,
       networkSequence = this.#networkSequence,
       saved = this.sessionStore.getSnapshot(),
-      user = this.#snapshot.user
+      phase = this.#snapshot.phase,
+      metadataRecovery = phase === 'held' && !this.#active && this.#account.phase === 'connected',
+      user = metadataRecovery ? this.#account.user : this.#snapshot.user
     if (
-      this.#snapshot.phase !== 'selector' ||
+      (phase !== 'selector' && !metadataRecovery) ||
       !saved ||
       !user ||
       !user.capabilities.includes('locations.read')
     )
       return
+    // A refused metadata-only reader can explicitly reverify and refresh its
+    // directory without opening an operational kernel or starting a baseline.
+    let account: AccountCapture | null = null
+    if (metadataRecovery) {
+      try {
+        account = this.captureAccount()
+      } catch {
+        return
+      }
+    }
     const current = () =>
-      this.#snapshot.phase === 'selector' &&
+      this.#snapshot.phase === phase &&
+      (!account || account.isCurrent()) &&
       sessionGeneration === this.#sessionGeneration &&
       pageSequence === this.#locationPage &&
       networkSequence === this.#networkSequence &&

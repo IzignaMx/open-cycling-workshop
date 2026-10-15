@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { InventoryController } from '../../.tmp-inventory/src/features/inventory/controller.js'
 import { InventoryHttpError } from '../../.tmp-inventory/src/features/inventory/contracts.js'
+const turn = () => new Promise((resolve) => setImmediate(resolve))
 const product = (id = 'a') => ({ product_id: id, name: id, sku: id, unit: 'pieza' })
 const deferred = () => {
   let resolve, reject
@@ -128,6 +129,7 @@ test('product A-B-A fences both stale success and refusal even if abort ignored'
     })
     await env.controller.enter()
     const first = env.controller.selectProduct('a')
+    await turn() // Ensure the noncooperative first request was actually dispatched.
     await env.controller.selectProduct('b')
     await env.controller.selectProduct('a')
     if (refuse) pending.reject(new InventoryHttpError('invalid_session', 401))
@@ -144,6 +146,7 @@ test('scope/account A-B-A, expiry, offline and disposal clear protected results 
       const pending = deferred()
       const env = setup({ catalog: () => pending.promise })
       const loading = env.controller.loadCatalog()
+      await turn()
       if (ending === 'dispose') env.controller.dispose()
       else if (ending === 'scope') {
         env.change('ready', {
@@ -270,6 +273,7 @@ test('stock and history complete independently while later same-kind errors are 
   })
   await env.controller.enter()
   const selecting = env.controller.selectProduct('a')
+  await turn()
   await env.controller.refreshStock()
   assert.equal(env.controller.getSnapshot().stock.value.available_quantity, 8)
   assert.equal(env.controller.getSnapshot().history.phase, 'loading')

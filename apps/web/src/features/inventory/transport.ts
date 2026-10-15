@@ -32,13 +32,30 @@ export function createInventoryTransport(options: { apiRealm: string; fetch: typ
       signal = source.signal,
       check = source.isCurrent
     let finished = false
-    const current = () => !finished && !signal.aborted && check()
-    if (!current()) failInventory('stale_request')
     const now = Date.now(),
+      monotonicStart = performance.now(),
       expiry = Date.parse(source.context.offlineUntil)
     if (!Number.isFinite(now) || !Number.isFinite(expiry) || expiry <= now)
       failInventory('stale_request')
-    const deadline = Math.min(10000, expiry - now)
+    const deadline = Math.min(10000, expiry - now),
+      until = now + deadline
+    let observedAt = now
+    const current = () => {
+      const at = Date.now(),
+        elapsed = performance.now() - monotonicStart
+      if (
+        !Number.isFinite(at) ||
+        !Number.isFinite(elapsed) ||
+        at < observedAt ||
+        at >= until ||
+        elapsed < 0 ||
+        elapsed >= deadline
+      )
+        return false
+      observedAt = at
+      return !finished && !signal.aborted && check()
+    }
+    if (!current()) failInventory('stale_request')
     if (
       !token ||
       token.length > 16384 ||

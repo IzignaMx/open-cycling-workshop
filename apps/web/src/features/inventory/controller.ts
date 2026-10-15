@@ -202,12 +202,22 @@ export class InventoryController {
         createInventoryTransport({ apiRealm: account.apiRealm, fetch: globalThis.fetch }),
     }
   }
-  private failed(
+  private async current(source: NonNullable<ReturnType<InventoryController['begin']>>) {
+    // Live-query notifications can lag a committed durable owner takeover.
+    // Inspect the actual owner before dispatch and after every network await.
+    try {
+      await this.runtime.connectedReads.check()
+      return source.request.isCurrent()
+    } catch {
+      return false
+    }
+  }
+  private async failed(
     kind: ReadKind,
     source: NonNullable<ReturnType<InventoryController['begin']>>,
     error: unknown,
   ) {
-    if (!source.request.isCurrent()) return
+    if (!(await this.current(source))) return
     if (error instanceof InventoryHttpError && (error.status === 401 || error.status === 403)) {
       this.runtime.connectedReads.refuse(source.account, error.status)
       return
@@ -240,10 +250,11 @@ export class InventoryController {
     const source = this.begin('catalog')
     if (!source) return
     try {
+      if (!(await this.current(source))) return
       const rows = await source.http.catalog(source.request, offset)
-      if (source.request.isCurrent()) this.publish({ catalog: this.received(rows) })
+      if (await this.current(source)) this.publish({ catalog: this.received(rows) })
     } catch (error) {
-      this.failed('catalog', source, error)
+      await this.failed('catalog', source, error)
     }
   }
   async selectProduct(productId: string) {
@@ -262,10 +273,11 @@ export class InventoryController {
     const source = this.begin('stock')
     if (!source) return
     try {
+      if (!(await this.current(source))) return
       const value = await source.http.stock(source.request, product.product_id)
-      if (source.request.isCurrent()) this.publish({ stock: this.received(value) })
+      if (await this.current(source)) this.publish({ stock: this.received(value) })
     } catch (error) {
-      this.failed('stock', source, error)
+      await this.failed('stock', source, error)
     }
   }
   private async history(before?: string) {
@@ -275,10 +287,11 @@ export class InventoryController {
     if (!source) return
     this.publish({ historyBefore: before ?? null })
     try {
+      if (!(await this.current(source))) return
       const value = await source.http.movements(source.request, product.product_id, before)
-      if (source.request.isCurrent()) this.publish({ history: this.received(value) })
+      if (await this.current(source)) this.publish({ history: this.received(value) })
     } catch (error) {
-      this.failed('history', source, error)
+      await this.failed('history', source, error)
     }
   }
   newest = () => this.history()
