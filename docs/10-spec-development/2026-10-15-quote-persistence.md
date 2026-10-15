@@ -309,5 +309,13 @@ ran no tests; the corrected scope was rerun fully. Final local quote/runtime/
 branding-volume/Compose/repository selection: **578 passed, 188 explicit
 PostgreSQL skips and one dependency warning**. Configured Ruff/format (245 files),
 mypy (106 production sources plus the runner) and repository contracts passed.
-Independent source review and new exact-head hosted three-cycle/full-CI evidence
-remain pending; no Docker or PostgreSQL execution is claimed locally.
+Independent source review closed with no remaining blocker at
+`424f6c7181c76cbc442e110c4b17957afb845a9a`, tree
+`80f5d361cb5fed753513fe2328f7dbf30c0dfb79`: **581 passed / 188 skipped** in its
+broader scope (the local selection plus three branding-asset tests), with 14
+separate adversarial probes. These are not additive aggregate counts. The
+reviewer verified the request, readiness and diagnostic helpers are unchanged.
+Review report SHA-256:
+`760728e27a3d5f7ca78ee62fe33fcbed08c85b8311071b926d08f0ca15e1e43e`.
+New exact-head hosted three-cycle/full-CI evidence remains pending; no Docker or
+PostgreSQL execution is claimed locally.

@@ -15,8 +15,9 @@ has combined independent source review. Follow-up head `26b589be` passed all
 eleven runtime checks and Security on their first attempts, including its single
 API restart and generic PostgreSQL restore; this does not explain the original
 failure or exercise the new failure diagnostics. A separately reviewed
-qualification proposal now requires three consecutive fail-fast restart cycles
-with unchanged readiness deadlines. Exact changed-head hosted evidence remains
+qualification proposal and its implementation now require three consecutive
+fail-fast restart cycles with unchanged readiness deadlines; independent source
+review is closed. Exact changed-head hosted evidence remains
 pending. Do not retry the failed candidate or infer quote-specific restore passes. See the
 [retained failure record](docs/10-spec-development/2026-10-15-quote-persistence.md#first-hosted-candidate-and-runtime-diagnostics).
 

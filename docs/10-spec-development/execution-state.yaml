@@ -1444,7 +1444,7 @@ quote_postgresql_varchar_fixture_correction:
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
 
 quote_runtime_three_restart_qualification:
-  status: implemented_pending_independent_source_and_hosted_evidence
+  status: independently_reviewed_pending_hosted_evidence
   prior_followup_head: 26b589be9600163e0ee2ee978ef66ee99dfc4e05
   prior_followup_tree: 8feed94bdb31cd204e0b503222989babb60961d2
   prior_runtime: 38708608800_attempt1_eleven_checks_single_restart_and_generic_restore_passed
@@ -1460,6 +1460,8 @@ quote_runtime_three_restart_qualification:
   review_fix: unavailable_initial_timing_cannot_skip_mandatory_phases_or_misstate_evidence
   local_selected: 578_passed_188_explicit_postgresql_skips_one_warning
   static: full_ruff_format245_mypy106_plus_runner_repository_passed
-  independent_source_review: pending
+  independent_source_review: no_remaining_blocker_581_passed_188_skipped_plus14_separate_probes
+  reviewed_behavior_source: 424f6c7181c76cbc442e110c4b17957afb845a9a
+  source_review_sha256: 760728e27a3d5f7ca78ee62fe33fcbed08c85b8311071b926d08f0ca15e1e43e
   exact_head_hosted_three_cycles_and_full_ci: pending
   evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
