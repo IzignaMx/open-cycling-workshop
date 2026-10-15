@@ -531,3 +531,20 @@ def test_utc_normalization_and_all_documented_evidence_channels():
         result = record(evidence=evidence)
         assert result.entry.command.evidence == evidence
         assert result.entry.recording.recorded_by_actor_id == "staff"
+
+
+@pytest.mark.parametrize("field, value", [("mode", "initial"), ("outcome", "APPROVE")])
+def test_commands_reject_mutable_string_lookalikes(field, value):
+    from collections import UserString
+
+    with pytest.raises(ValueError):
+        command(ledger(), **{field: UserString(value)})
+
+
+@pytest.mark.parametrize("field, value", [("party_kind", "customer"), ("channel", "phone")])
+def test_evidence_rejects_mutable_string_lookalikes(field, value):
+    from collections import UserString
+
+    evidence = DecisionEvidence("customer", "customer", "phone", NOW)
+    with pytest.raises(ValueError):
+        replace(evidence, **{field: UserString(value)})

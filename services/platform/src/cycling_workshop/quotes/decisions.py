@@ -190,10 +190,20 @@ class DecisionEvidence:
     note: str | None = None
 
     def __post_init__(self) -> None:
-        if self.party_kind not in ("customer", "representative"):
+        if type(self.party_kind) is not str or self.party_kind not in (
+            "customer",
+            "representative",
+        ):
             raise ValueError("unknown decision party kind")
         _identifier(self.party_id, "party_id")
-        if self.channel not in ("in_person", "phone", "email", "messaging", "written", "portal"):
+        if type(self.channel) is not str or self.channel not in (
+            "in_person",
+            "phone",
+            "email",
+            "messaging",
+            "written",
+            "portal",
+        ):
             raise ValueError("unknown evidence channel")
         object.__setattr__(self, "decided_at", _timestamp(self.decided_at))
         if self.source_reference is not None:
@@ -248,9 +258,19 @@ class DecisionCommand:
         _integer(self.quote_version, "quote_version", minimum=1)
         _integer(self.expected_head_version, "expected_head_version", minimum=1)
         _integer(self.expected_decision_sequence, "expected_decision_sequence")
-        if self.mode not in ("initial", "customer_change", "record_correction", "withdraw_record"):
+        if type(self.mode) is not str or self.mode not in (
+            "initial",
+            "customer_change",
+            "record_correction",
+            "withdraw_record",
+        ):
             raise ValueError("unknown decision mode")
-        if self.outcome not in ("APPROVE", "REJECT", "PARTIAL", "WITHDRAW"):
+        if type(self.outcome) is not str or self.outcome not in (
+            "APPROVE",
+            "REJECT",
+            "PARTIAL",
+            "WITHDRAW",
+        ):
             raise ValueError("unknown decision outcome")
         if self.evidence is not None and type(self.evidence) is not DecisionEvidence:
             raise ValueError("evidence must be a typed customer evidence value")
