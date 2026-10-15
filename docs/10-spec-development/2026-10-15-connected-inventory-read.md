@@ -300,3 +300,69 @@ control permutations and eight original/directory/image failure combinations,
 with no remaining source blocker. Full local Ruff check/format (355 files),
 repository contract, touched Prettier and diff checks passed. These agent-authored
 changes and independent agent reviews are not human GitHub approval.
+
+## Actual paired edge proof and kernel-fixture correction · 2026-10-15
+
+[CI38691900346](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38691900346)
+source `b3f5ac5ddbabe4fd361d1e743a3da4de749611d8`, test merge
+`0d576c50f5073bdd93346598455f756a8ab057f3`, exact tree
+`5ac86e7543f5a724358cffaf51b12c79ae52afcb`, completed both actual Caddy
+configurations and the 43-case PostgreSQL proof. Independently reviewed artifact
+11952507761 has ZIP SHA256
+`595588c13333098706bd904c7539b4734e280e8393fbdf0d6eb28e3c2adc9f36`;
+all eleven edge/database source hashes were bound to the tested merge.
+
+Both launch controls used binary SHA256
+`678ade3bfc088749c81a681adc603333ee0bb023b6a6cfe3c0f58bef8ff854e9`.
+Under identical nonroot restrictions, raw upstream retained
+`cap_net_bind_service=ep` and failed with exit 126/operation-not-permitted;
+the production image had no file capability and returned v2.11.7/exit zero.
+Both actual configs preserved forwarding and unrelated queries, excluded all
+private query canaries and retained six required runtime errors. LAN used a
+verified isolated CA. Container, image and temporary-directory cleanup completed.
+This proves the tested launch incompatibility and correction; it does not
+reconstruct the exact historical exit-255 cause from the discarded original logs.
+
+The PostgreSQL artifact contains all 43 expected cases. Observed actor/org lock,
+statement and total budgets were 2.018450/2.016191/5.010165/8.008108 seconds, with
+17.907–19.613ms cleanup, unchanged inventory and successful successor writes and
+revocation. Catalog/stock/newest/middle plans were 57.453/28.085/53.031/35.512ms on
+20,001 products and 100,000 movements. The prior sort/scan, synthetic-load and
+non-production-performance limitations still apply.
+
+After successful Chromium installation, the isolated kernel browser step failed
+before the direct 80-journey run. Local execution reproduced immediate baseline
+server failure: it creates an owned temporary SQLite database but called the
+shared URL-taking seed helper, whose new PostgreSQL-only guard correctly rejects
+SQLite. The local CLI RED is retained. Hosted terminal traceback binding remains
+pending at this source checkpoint; the aggregate is not claimed successful.
+
+The correction leaves every shared PostgreSQL guard and browser assertion intact.
+The kernel server seeds its two fixed identities directly through a Session bound
+to its internally created temporary engine, with no external URL parameter or
+SQLite exception to the shared guard. IDs, names, wildcard capabilities, session
+version and protocol floors remain equivalent. An engine finally clause covers
+schema/seed/app-construction/serve failures. Tests prove both logins, untouched
+ambient existing SQLite files and rejection of direct shared-helper SQLite misuse.
+Observed regression RED was four failures/one pass; focused GREEN is 35 passes.
+The isolated kernel bundle builds and all 14 browser cases collect; neither result
+claims native browser execution.
+
+A real CLI process reached HTTP readiness and exited zero on graceful SIGINT,
+removing its owned temporary directory. A separate first smoke incorrectly expected
+exit zero on SIGTERM; that failed assertion is retained, with missing original
+numeric status explicitly recorded rather than reconstructed. A new bounded
+non-qualifying diagnostic observed SIGTERM exit -15 and a directory remaining
+until the outer smoke owner removed it. Uvicorn restores/re-raises that signal;
+this inherited SIGTERM/SIGKILL limitation is not changed by the fixture fix.
+Exception cleanup and graceful SIGINT cleanup are distinct, bounded claims.
+
+Corrected-head hosted kernel/direct/repetition/aggregate browser and pixel proof
+remain required. No real installation, account, persistent database or operator/
+physical-device gate is claimed by this temporary-fixture correction.
+
+Final affected fixture/operations checks passed 538 with three explicit PostgreSQL
+recovery skips and one warning. Full Ruff check/format (356 files), repository
+contract, touched Prettier and diff checks passed. Independent source review found
+no blocker and inspected the recorded RED/GREEN and signal evidence; it did not
+rerun those tests. This is agent-authored code and agent review, not human approval.

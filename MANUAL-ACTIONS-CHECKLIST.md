@@ -89,6 +89,17 @@ file capability is a concrete hypothesis; actual paired causal proof is still
 pending. Local 46 focused and 493 operations passes (three explicit recovery skips)
 do not satisfy the actual Caddy, native browser, pixel or physical/operator gates.
 
+The later [CI38691900346](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38691900346)
+head `b3f5ac5ddbabe4fd361d1e743a3da4de749611d8` completed both Caddy configs
+and all 43 PostgreSQL cases (verified artifact 11952507761). Equal Caddy binary
+bytes launch with raw capability/exit126/EPERM versus production no-capability/
+exit0 under the same restrictions. This establishes the tested incompatibility,
+not the exact historical exit255 cause. Kernel-browser startup then failed;
+local reproduction isolates the owned SQLite fixture calling the guarded
+PostgreSQL seed helper. Its narrow correction preserves the guard and browser
+assertions. Corrected hosted kernel/direct/repeat/aggregate and pixel gates stay
+open; no native-browser or whole-candidate success is inferred.
+
 The [bounded read ADR](docs/02-technical-architecture/2026-10-15-connected-inventory-read.md)
 and [evidence matrix](docs/10-spec-development/2026-10-15-connected-inventory-read.md)
 cover catalog, ledger-derived available quantity and one live movement page only.

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Restore the owned kernel-browser fixture
+
+- Keep shared PostgreSQL reset/migration/seed guards closed; seed the isolated
+  kernel server's fixed floor-0/floor-1 identities only in its own temporary
+  SQLite session. No caller-supplied SQLite URL or guard opt-out is introduced.
+- Dispose the owned engine on schema, seed, app-start and serve exceptions.
+  Cover both identities, ignored ambient database URLs and direct helper misuse.
+- Record actual paired Caddy success and all 43 PostgreSQL cases for the preceding
+  PR42 head. Preserve the new kernel startup failure and all earlier evidence;
+  the corrected full hosted browser matrix is still required.
+- Graceful SIGINT cleanup passed. Preserve the failed SIGTERM smoke and inherited
+  SIGTERM/SIGKILL cleanup limits; no signal policy or browser assertions change.
+
 ## Unreleased · Match the edge probe to the production image
 
 - Preserve the second PR42 readiness failure: connection refused, container exit
