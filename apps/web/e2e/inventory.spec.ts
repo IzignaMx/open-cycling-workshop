@@ -1,4 +1,5 @@
 import { fixtureHttp, fixtureJson } from './helpers/inventory-http.mjs'
+import { isUnexpectedApiWrite, observeInventoryContext } from './helpers/inventory-observation.mjs'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
@@ -129,13 +130,8 @@ for (const floor of ['floor-zero', 'floor-one'] as const) {
     const f = fixture(floor, info),
       requests = trackReads(page)
     await login(page, f)
-    const contextResponse = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/api/v1/auth/context',
-    )
-    await openInventory(page)
-    expect((await (await contextResponse).json()).snapshot_protocol).toBe(
-      floor === 'floor-zero' ? null : 'baseline-v1',
-    )
+    const observed = await observeInventoryContext(page, f.locationA, () => openInventory(page))
+    expect(observed.snapshotProtocol).toBe(floor === 'floor-zero' ? null : 'baseline-v1')
     await selectMain(page)
     const region = panel(page),
       ledger = region.getByRole('list', { name: 'Movimientos de inventario', exact: true })
@@ -236,11 +232,11 @@ test('inventory navigation retains unsent forms and pre-existing local-only pend
   const outboundWrites: { method: string; path: string }[] = []
   context.on('request', (request) => {
     const path = new URL(request.url()).pathname
-    if (path.startsWith('/api/v1/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method()))
+    if (isUnexpectedApiWrite(request.method(), request.url()))
       outboundWrites.push({ method: request.method(), path })
   })
   // This synthetic identity has real operational grants except sync.push.
-  // Pending work therefore cannot race delivery while connected GETs run.
+  // Pending work therefore cannot race delivery while connected reads run.
   const operation = await createCustomer(page, 'Inventario conserva el trabajo pendiente')
   const before = await kernelSnapshot(page)
   expect(before.context.capabilities).not.toContain('sync.push')
@@ -298,11 +294,9 @@ for (const mode of ['idle', 'background'] as const) {
       requests = trackReads(page)
     await page.clock.install()
     await login(page, f)
-    const contextResponse = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/api/v1/auth/context',
+    const { expiresAt } = await observeInventoryContext(page, f.locationA, () =>
+      openInventory(page),
     )
-    await openInventory(page)
-    const expiresAt = Date.parse((await (await contextResponse).json()).offline_until)
     await selectMain(page)
     const count = requests.inventory.length
     if (mode === 'idle') {

@@ -67,6 +67,7 @@ try {
     'tests/runtime/account-access.test.mjs',
     'tests/runtime/connected-read.test.mjs',
     'tests/inventory/fixture-http.test.mjs',
+    'tests/inventory/browser-observation.test.mjs',
     'tests/inventory/contracts.test.mjs',
     'tests/inventory/transport.test.mjs',
     'tests/inventory/controller.test.mjs',
