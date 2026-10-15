@@ -591,3 +591,36 @@ the five browser-observation and five fixture/proof-source files without a block
 inspecting recorded evidence rather than rerunning PostgreSQL or native browsers.
 The final documentation delta preserves those ten source hashes. No new local
 aggregate, actual PostgreSQL or native browser result is inferred from these checks.
+
+### Separate retry-free expiry qualification gate
+
+A fourth, CI-only correction adds a bounded native repetition of the two existing
+idle/background inventory expiry journeys: five instances of each, one worker,
+zero retries and the existing 45-second per-test timeout. Existing expiry/session
+assertions and privacy settings remain intact. Its own HTML/JSON/test-output
+artifact includes a start marker and completion evidence bound to the tested Git
+commit and workflow, browser test, helper, configuration and gate-script hashes.
+The marker/JSON live outside Playwright-owned output directories so reporter
+cleanup cannot erase them. JSON input is bounded to 1MiB.
+
+Completion requires the exact two titles, five passes each, one result per
+instance, retry zero, no errors/flakes/skips and a report start after the marker.
+Failed, cancelled, skipped, changed-source or stale runs leave incomplete evidence
+and a nonzero exit. An always-run check enforces this separately; the aggregate
+workflow step checks it again after the existing verifier, so a successful
+aggregate report alone cannot qualify a failed or skipped repetition. The
+existing qualification JSON is not relabelled to claim it contains this separate
+gate. No permissions, dispatch trigger or production setting is added.
+
+Local RED retained a missing gate import and a stale-completion invalidation
+regression. GREEN passed 18 gate tests plus 25 repository checks. Actual native
+collection found exactly two matching titles and ten instances under repeat5.
+The installed reporter emits ten unmerged specs rather than the initially
+assumed two grouped specs; its original collection JSON is retained, and the
+validator accepts either layout only with exactly five results per title. That
+unexecuted collection report is rejected as qualification. These are collection
+and validator results, not ten browser passes or a reproduction of the original
+CDP failure. The earlier full-Python 2,595-pass result predates these additional
+gate tests; no redundant local aggregate was run for this CI/documentation delta.
+Hosted corrected direct, retry-free repetition, aggregate and pixel proof remain
+pending.

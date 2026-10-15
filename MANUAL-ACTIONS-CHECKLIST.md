@@ -114,6 +114,14 @@ reviews found no source blocker in the two narrow corrections. These results do
 not execute the missing local PostgreSQL/browser gates. The earlier failures below
 are historical evidence.
 
+A separate source-bound expiry gate now requires the two existing journeys five
+times each, one worker and zero retries under unchanged timeouts. Its own retained
+artifact must contain ten fresh passes; failure, skip or incomplete evidence
+blocks both the dedicated check and aggregate workflow step. Local collection
+confirmed two titles/ten instances and 18 validator plus 25 repository tests passed;
+no repetition executed locally. The previous full-Python result predates this
+CI-only delta. Changed-head native repetition remains an open gate.
+
 First PR42 [hosted CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38686652539)
 ran exact tree `b08a8c5b8267c0b906841d6c93635236eadeebe5`: 2,654 Python passes
 (14 skips) and a separate 43-case actual PostgreSQL proof with verified source/plan

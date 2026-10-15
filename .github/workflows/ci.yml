@@ -180,6 +180,30 @@ jobs:
             apps/web/test-results/administration-clock-repeat/
             apps/web/playwright-report/administration-clock-repeat/
           if-no-files-found: warn
+      - name: Repeat inventory expiry without retries
+        id: inventory_expiry_repeat
+        env:
+          OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/inventory-expiry-repeat
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/inventory-expiry-repeat
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/inventory-expiry-repeat-proof/results.json
+        run: |
+          uv run python scripts/ci/inventory_expiry_repeat.py start
+          pnpm --filter @ocwp/web exec playwright test e2e/inventory.spec.ts \
+            --grep 'inventory-only display clears on .* expiry' \
+            --repeat-each=5 --retries=0 --workers=1 --reporter=line,html,json
+      - name: Require complete inventory expiry repetition
+        if: always()
+        run: uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
+      - name: Upload inventory expiry repetition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-inventory-expiry-repeat-${{ github.sha }}
+          path: |
+            apps/web/test-results/inventory-expiry-repeat/
+            apps/web/test-results/inventory-expiry-repeat-proof/
+            apps/web/playwright-report/inventory-expiry-repeat/
+          if-no-files-found: error
       - name: Run offline fallback typecheck
         run: pnpm --filter @ocwp/web typecheck:offline
       - name: Verify OpenAPI contract
@@ -190,7 +214,9 @@ jobs:
         run: pnpm --filter @ocwp/api-client typecheck
       - name: Run V0.1 qualification verifier
         if: always()
-        run: uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+        run: |
+          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+          uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
       - name: Upload V0.1 qualification artifact
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Require retry-free inventory expiry evidence
+
+- Run the two existing inventory expiry journeys five times each with one worker,
+  zero retries and unchanged 45-second test budgets. Retain a separate native
+  browser report and source-bound completion evidence.
+- Require all ten fresh passes; skipped, failed, flaky, incomplete or stale
+  repetition evidence fails its dedicated check and the aggregate workflow step.
+- Local collection proves the exact two titles and ten repeated instances;
+  18 gate regressions and 25 repository checks passed. Native repetition remains
+  pending and the earlier expiry flake remains retained.
+
 ## Unreleased · Bound owned PostgreSQL fixture cleanup
 
 - Preserve the PR42 aggregate's new teardown error: the scoped 20,001-product
