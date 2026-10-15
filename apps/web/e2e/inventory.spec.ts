@@ -233,21 +233,38 @@ test('inventory navigation retains unsent forms and pre-existing local-only pend
 }, info) => {
   const f = fixture('preservation', info)
   await login(page, f, 'workshop')
+  const outboundWrites: { method: string; path: string }[] = []
+  context.on('request', (request) => {
+    const path = new URL(request.url()).pathname
+    if (path.startsWith('/api/v1/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method()))
+      outboundWrites.push({ method: request.method(), path })
+  })
   // This synthetic identity has real operational grants except sync.push.
   // Pending work therefore cannot race delivery while connected GETs run.
   const operation = await createCustomer(page, 'Inventario conserva el trabajo pendiente')
   const before = await kernelSnapshot(page)
   expect(before.context.capabilities).not.toContain('sync.push')
-  expect(before.delivery.find((row) => row.mutationId === operation.mutationId)?.state).toBe(
-    'pending',
-  )
-  expect(before.journal).toHaveLength(1)
-  expect(before.events.length).toBeGreaterThan(0)
+  expect(before.journal).toEqual([operation])
+  expect(before.delivery).toHaveLength(1)
+  expect(before.delivery[0]).toMatchObject({
+    mutationId: operation.mutationId,
+    state: 'pending',
+    unresolved: 1,
+    attempts: 0,
+    attemptId: null,
+    result: null,
+  })
+  // Customer creation has no domain event; without sync.push there must also
+  // be no dispatch/result event. Preserve this exact history rather than inventing one.
+  expect(before.events).toEqual([])
+  expect(outboundWrites).toEqual([])
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Guardado localmente')
   const expectPreserved = async () => {
     const snapshot = await kernelSnapshot(page)
     expect(snapshot.journal).toEqual(before.journal)
     expect(snapshot.delivery).toEqual(before.delivery)
     expect(snapshot.events).toEqual(before.events)
+    expect(outboundWrites).toEqual([])
   }
   await page.getByLabel('Nombre', { exact: true }).fill('Borrador local sin enviar')
   await page.getByRole('link', { name: 'Inventario', exact: true }).click()
@@ -259,6 +276,7 @@ test('inventory navigation retains unsent forms and pre-existing local-only pend
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))
   await expect(panel(page)).toContainText('Inventario no disponible sin conexión')
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Borrador local sin enviar')
   await expectPreserved()
   await page.reload()
   await waitForReady(page)
@@ -267,6 +285,8 @@ test('inventory navigation retains unsent forms and pre-existing local-only pend
   expect(after.journal).toEqual(before.journal)
   expect(after.delivery).toEqual(before.delivery)
   expect(after.events).toEqual(before.events)
+  expect(outboundWrites).toEqual([])
+  await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
   await capture(page, info, 'inventory-disconnected-journal-preserved')
 })
 
@@ -525,10 +545,20 @@ for (const theme of THEMES) {
     const f = fixture(`visual-${theme.id}`, info)
     test.setTimeout(120_000)
     await login(page, f, 'workshop')
-    await page.getByRole('button', { name: 'Personalización', exact: true }).click()
-    await page.getByRole('radio', { name: new RegExp(theme.label) }).check()
-    await expect(page.getByRole('radio', { name: new RegExp(theme.label) })).toBeChecked()
-    await page.keyboard.press('Escape')
+    const settings = page.getByRole('button', { name: 'Personalización', exact: true })
+    await settings.click()
+    await expect(settings).toHaveAttribute('aria-expanded', 'true')
+    const choice = page.getByRole('radio', { name: new RegExp(theme.label) })
+    // check() is a no-op for the initially selected Banco radio. Exercise the
+    // actual in-panel keyboard contract for every theme, including that default.
+    await choice.focus()
+    await choice.press('Space')
+    await expect(choice).toBeChecked()
+    await expect(choice).toBeFocused()
+    await choice.press('Escape')
+    await expect(page.locator('#personalization-panel')).toBeHidden()
+    await expect(settings).toHaveAttribute('aria-expanded', 'false')
+    await expect(settings).toBeFocused()
     await openInventory(page)
     await selectMain(page)
     for (const scene of [
