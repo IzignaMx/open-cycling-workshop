@@ -160,7 +160,18 @@ These counts do not qualify actual PostgreSQL, Caddy, native browser or pixels.
 
 The inherited main40 tree has 27 aggregate controls but retains one direct clock
 retry; its 63 aggregate browser passes are not a clean-direct claim. See the dated
-manual checklist for exact hosted references and the independent PR41 rollback
-correction awaiting reconciliation. No inherited result qualifies this new source.
+manual checklist for exact hosted references. Actual main41 merge
+`88ee267f2d9fa1e63836ca5c9a47e49f21882fd6` is now reconciled; its exact-tree
+premerge CI38681739711 passed 63 direct and 63 aggregate browser cases with zero
+flaky cases, 27 controls and retry-free 20+9+5 repetitions. Its cache rollback,
+offline coalescer and both admission-completion paths/tests remain intact.
+Main41 postmerge gates are pending at this checkpoint. No inherited result qualifies this new source.
 Exact final head/tree, full integrated results and remaining hosted gates belong in
 the coordinator handoff manifest after source reconciliation and freeze.
+
+The final runner entry-point follow-up also reproduced a hosted invocation issue:
+`python scripts/ci/inventory_read_proof.py` lacked the repository root on sys.path
+when no developer PYTHONPATH was present. A narrow direct-entry bootstrap and
+isolated subprocess regression now reach the safe invalid-target guard. Three
+runner tests and seven independent orchestration probes pass; no database or
+browser is launched by this check.

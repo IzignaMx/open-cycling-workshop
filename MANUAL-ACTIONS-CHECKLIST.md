@@ -2,6 +2,34 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Inherited main41 reconciliation · 2026-10-15
+
+[PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) is merged as
+`88ee267f2d9fa1e63836ca5c9a47e49f21882fd6`, tree
+`aed0ecde7216f815fd5ac1127370bde08c6598d0`. The inventory branch reconciles this
+actual merge, retaining the original cache rollback fences, finite offline
+coalescer and offline/connected admission-completion regressions. Its two merge
+conflicts were additive changelog/state sections; both histories were retained.
+
+- [x] Exact-tree [premerge CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739711)
+      passed 63 direct and 63 aggregate browser cases with zero flaky/skipped cases,
+      27 aggregate controls, 2,375 Python checks (14 explicit skips), 773 frontend
+      checks and retry-free 20 sync/order, 9 cutover and 5 clock repetitions.
+- [x] [Runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739626)
+      passed 11 checks, named-volume restart/restore and two PostgreSQL18
+      asset-aware recovery scenarios. Native ARM64 execution passed in 0.265133s;
+      all three builds passed. [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739673)
+      passed with zero findings.
+- [ ] Main41 postmerge gates are still pending at this checkpoint. Exact-tree
+      premerge evidence is not relabelled as a completed postmerge run.
+- [ ] [QEMU diagnostic](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739693)
+      failed at 2.011531s; original cause remains unproven and this remains
+      explicitly non-qualifying. Physical/operator gates remain open.
+
+These inherited results do not qualify the new inventory candidate. Earlier
+main40/PR41 failures below remain historical evidence; they are not erased by the
+later clean exact-tree premerge result.
+
 ## Inherited main40 evidence and current inventory boundary · 2026-10-15
 
 Main40 is `22b32a9e29f5b9dca9d52c2e8d36ac1228047c54`, tree
@@ -29,7 +57,8 @@ For that exact inherited tree:
 - [ ] [PR41](https://github.com/IzignaMx/open-cycling-workshop/pull/41) corrects the
       administration test clock and a separately reproduced branding-cache rollback
       boundary. Its first hosted core run failed; final corrected exact-source
-      integration and evidence are pending at this documentation checkpoint.
+      integration/evidence were pending at that historical checkpoint; see the
+      later main41 reconciliation summary above.
 - [ ] Real operator installation/grant adoption/recovery and physical Windows,
       Android, Raspberry, browser zoom/touch, screen-reader and glare gates remain
       open. Automated recovery does not claim client pending-mutation restoration.
@@ -54,7 +83,7 @@ SQL0011/local7/baseline-2, grants, commands and operational journals are unchang
       privacy regression, settled 503 capture and pre-existing local-only journal
       preservation assertions. Actual browser journeys remain unexecuted locally.
 - [ ] Exact integrated final Python/frontend/static/contracts/PWA/security/runtime,
-      recovery, native ARM64 and three-build qualification after main reconciliation.
+      recovery, native ARM64 and three-build qualification on the reconciled exact inventory source.
 - [ ] Actual PostgreSQL 18: 43 non-skipped race/budget/cleanup cases and measured
       20,001-product/100,000-movement plans within 2s lock/5s statement/8s total limits.
       `scripts/ci/inventory_read_proof.py` rejects incomplete/stale/source-mismatched
