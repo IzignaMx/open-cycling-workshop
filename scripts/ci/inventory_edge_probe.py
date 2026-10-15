@@ -11,6 +11,7 @@ import hashlib
 import http.client
 import json
 import os
+import re
 import selectors
 import shutil
 import ssl
@@ -29,6 +30,14 @@ IMAGE = "caddy:2.11.7-alpine"
 PRIVATE = "inventory-edge-private-canary"
 UNRELATED = "inventory-edge-unrelated-canary"
 MAX_COMMAND_OUTPUT = 64 * 1024
+SOURCE_PATHS = (
+    "infra/edge/Caddyfile",
+    "infra/edge/Caddyfile.lan",
+    "infra/edge/routes.caddy",
+    "infra/docker/web.Dockerfile",
+    "infra/docker/web.Dockerfile.dockerignore",
+    "scripts/ci/inventory_edge_probe.py",
+)
 
 
 class CommandFailure(RuntimeError):
@@ -217,7 +226,163 @@ def request(target: str, *, tls: ssl.SSLContext | None) -> tuple[int, dict[str, 
         connection.close()
 
 
-def probe(config: str, base: Path) -> dict[str, Any]:
+def container_arguments(name: str, data: Path, config: str) -> list[str]:
+    # Host UID override exists only to own the disposable bind-dir/isolated CA.
+    # main rejects root; it never relaxes the production cap/privilege restrictions.
+    return [
+        "run",
+        "--detach",
+        "--name",
+        name,
+        "--network",
+        "host",
+        "--add-host",
+        "api:127.0.0.1",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--tmpfs",
+        "/config:rw,nosuid,nodev,mode=1777",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,mode=1777",
+        "--env",
+        "OCWP_LAN_HOST=localhost",
+        "--env",
+        "XDG_DATA_HOME=/data",
+        "--volume",
+        f"{ROOT / 'infra/edge' / config}:/etc/caddy/Caddyfile:ro",
+        "--volume",
+        f"{ROOT / 'infra/edge/routes.caddy'}:/etc/caddy/routes.caddy:ro",
+        "--volume",
+        f"{data}:/data",
+    ]
+
+
+def launch_control(image: str, role: str, data: Path) -> dict[str, Any]:
+    """Only binary metadata/version, before any private request; never raw logs."""
+    name = f"ocwp-inventory-edge-{role}-" + uuid.uuid4().hex
+    failure = None
+    result = None
+    stage = "start"
+    observation: dict[str, Any] = {}
+    cleanup: dict[str, Any] = {}
+    try:
+        docker(
+            *container_arguments(name, data, "Caddyfile"),
+            image,
+            "sh",
+            "-c",
+            "sha256sum /usr/bin/caddy && getcap /usr/bin/caddy && /usr/bin/caddy version",
+            timeout=30,
+        )
+        stage = "wait"
+        code_text = docker("wait", name, timeout=10).strip()
+        assert re.fullmatch(r"[0-9]{1,3}", code_text) and int(code_text) <= 255
+        code = int(code_text)
+        observation["exit_code"] = code
+        stage = "binary_metadata"
+        lines = docker("logs", name, timeout=5).splitlines()
+        assert lines and re.fullmatch(r"[a-f0-9]{64}  /usr/bin/caddy", lines[0])
+        binary_sha256 = lines.pop(0).split()[0]
+        observation["binary_sha256"] = binary_sha256
+        stage = "capability_metadata"
+        capability = "none"
+        if lines and lines[0] == "/usr/bin/caddy cap_net_bind_service=ep":
+            capability = "cap_net_bind_service=ep"
+            lines.pop(0)
+        assert len(lines) == 1 and not lines[0].startswith("/usr/bin/caddy ")
+        observation["file_capability"] = capability
+        denied = "operation not permitted" in lines[0].lower()
+        version = "v2.11.7" if lines[0].startswith("v2.11.7 ") else None
+        observation.update(operation_not_permitted=denied, version=version)
+        stage = "expected_outcome"
+        assert (
+            role == "raw"
+            and code != 0
+            and denied
+            and version is None
+            and capability == "cap_net_bind_service=ep"
+        ) or (
+            role == "production" and code == 0 and version and not denied and capability == "none"
+        )
+        result = {
+            "image_id": image,
+            "binary_sha256": binary_sha256,
+            "file_capability": capability,
+            "exit_code": code,
+            "operation_not_permitted": denied,
+            "version": version,
+        }
+    except Exception as error:
+        failure = {
+            "phase": "launch_controls",
+            "control": role,
+            "stage": stage,
+            "observation": observation,
+            **safe_error(error),
+            "container": container_state(name),
+        }
+    finally:
+        try:
+            docker("rm", "--force", name, timeout=30)
+            cleanup["container"] = True
+        except Exception as error:
+            cleanup.update(container=False, container_error=safe_error(error))
+    if failure is None and not cleanup["container"]:
+        failure = {"phase": "launch_controls", "control": role, "error": "cleanup_failed"}
+    if failure is not None:
+        failure["cleanup"] = cleanup
+        raise EdgeProbeFailure(failure) from None
+    assert result is not None
+    return {**result, "cleanup": cleanup}
+
+
+def prepare_images(tag: str, base: Path, evidence: dict[str, Any]) -> str:
+    phase = "image_preflight"
+    try:
+        docker("info", "--format", "{{.ServerVersion}}")
+        docker("pull", IMAGE)
+        phase = "production_image_build"
+        docker(
+            "build",
+            "--quiet",
+            "--file",
+            str(ROOT / "infra/docker/web.Dockerfile"),
+            "--tag",
+            tag,
+            str(ROOT),
+            timeout=600,
+        )
+        phase = "image_identity"
+        images = {}
+        for role, reference in (("raw", IMAGE), ("production", tag)):
+            identity = docker(
+                "image", "inspect", "--format", "{{.Id}}", reference, timeout=5
+            ).strip()
+            assert re.fullmatch(r"sha256:[a-f0-9]{64}", identity)
+            images[role] = identity
+        evidence["image_ids"] = images
+        phase = "launch_controls"
+        data = base / "launch-controls"
+        data.mkdir(mode=0o700)
+        controls: dict[str, Any] = {}
+        evidence["launch_controls"] = controls
+        for role in ("raw", "production"):
+            controls[role] = launch_control(images[role], role, data)
+        assert controls["raw"]["binary_sha256"] == controls["production"]["binary_sha256"]
+        controls["equal_binary_sha256"] = True
+        return images["production"]
+    except EdgeProbeFailure:
+        raise
+    except Exception as error:
+        raise EdgeProbeFailure({"phase": phase, **safe_error(error)}) from None
+
+
+def probe(config: str, base: Path, *, image: str = IMAGE) -> dict[str, Any]:
     name = "ocwp-inventory-edge-" + uuid.uuid4().hex
     data = base / config
     root_ca = data / "caddy/pki/authorities/local/root.crt"
@@ -239,36 +404,8 @@ def probe(config: str, base: Path) -> dict[str, Any]:
         thread_started = True
         phase = "start"
         docker(
-            "run",
-            "--detach",
-            "--name",
-            name,
-            "--network",
-            "host",
-            "--add-host",
-            "api:127.0.0.1",
-            "--user",
-            f"{os.getuid()}:{os.getgid()}",
-            "--read-only",
-            "--cap-drop",
-            "ALL",
-            "--security-opt",
-            "no-new-privileges",
-            "--tmpfs",
-            "/config:rw,nosuid,nodev,mode=1777",
-            "--tmpfs",
-            "/tmp:rw,nosuid,nodev,mode=1777",
-            "--env",
-            "OCWP_LAN_HOST=localhost",
-            "--env",
-            "XDG_DATA_HOME=/data",
-            "--volume",
-            f"{ROOT / 'infra/edge' / config}:/etc/caddy/Caddyfile:ro",
-            "--volume",
-            f"{ROOT / 'infra/edge/routes.caddy'}:/etc/caddy/routes.caddy:ro",
-            "--volume",
-            f"{data}:/data",
-            IMAGE,
+            *container_arguments(name, data, config),
+            image,
             "caddy",
             "run",
             "--config",
@@ -392,26 +529,23 @@ def main() -> None:
     }
     # Invalidate prior success even if a required source cannot be read.
     destination.write_text(json.dumps(evidence, indent=2) + "\n")
-    for name in (
-        "infra/edge/Caddyfile",
-        "infra/edge/Caddyfile.lan",
-        "infra/edge/routes.caddy",
-        "scripts/ci/inventory_edge_probe.py",
-    ):
+    for name in SOURCE_PATHS:
         evidence["source_sha256"][name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
     destination.write_text(json.dumps(evidence, indent=2) + "\n")
     if shutil.which("docker") is None:
         raise SystemExit(
             "BLOCKED: actual inventory edge proof requires Docker; no runtime result claimed"
         )
-    docker("info", "--format", "{{.ServerVersion}}")
-    docker("pull", IMAGE)
+    if os.getuid() == 0:
+        raise SystemExit("BLOCKED: actual edge proof requires a nonroot host UID")
+    tag = "ocwp-inventory-edge-proof:" + evidence["run_id"]
     failure: dict[str, Any] | None = None
     try:
         with tempfile.TemporaryDirectory(prefix="ocwp-inventory-edge-") as temporary:
             try:
+                image = prepare_images(tag, Path(temporary), evidence)
                 for config in ("Caddyfile", "Caddyfile.lan"):
-                    evidence["cases"].append(probe(config, Path(temporary)))
+                    evidence["cases"].append(probe(config, Path(temporary), image=image))
                     destination.write_text(json.dumps(evidence, indent=2) + "\n")
             except EdgeProbeFailure as error:
                 # Preserve the original before TemporaryDirectory.__exit__ can fail.
@@ -424,7 +558,22 @@ def main() -> None:
         failure.setdefault("cleanup", {}).update(
             temporary_directory=False, temporary_directory_error=safe_error(error)
         )
+    finally:
+        try:
+            # Remove only this run's unique tag; never prune shared Docker cache.
+            docker("image", "rm", tag, timeout=30)
+            image_cleanup: dict[str, Any] = {"image": True}
+        except Exception as error:
+            image_cleanup = {"image": False, "image_error": safe_error(error)}
+            if failure is None:
+                failure = {"phase": "image_cleanup", "error": "cleanup_failed"}
+        evidence["cleanup"] = {
+            **image_cleanup,
+            "temporary_directory": failure is None
+            or failure.get("cleanup", {}).get("temporary_directory", True),
+        }
     if failure is not None:
+        failure.setdefault("cleanup", {}).update(image_cleanup)
         failure.setdefault("cleanup", {}).setdefault("temporary_directory", True)
         evidence.update(status="failed", failure=failure)
         destination.write_text(json.dumps(evidence, indent=2) + "\n")

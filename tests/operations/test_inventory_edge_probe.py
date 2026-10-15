@@ -68,6 +68,8 @@ def test_blocked_rerun_replaces_old_complete_artifact(tmp_path, monkeypatch) -> 
         "infra/edge/Caddyfile.lan",
         "infra/edge/routes.caddy",
         "scripts/ci/inventory_edge_probe.py",
+        "infra/docker/web.Dockerfile",
+        "infra/docker/web.Dockerfile.dockerignore",
     ):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)

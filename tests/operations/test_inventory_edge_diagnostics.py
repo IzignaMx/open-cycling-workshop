@@ -93,12 +93,16 @@ def test_main_writes_only_safe_failure_and_still_exits_nonzero(tmp_path, monkeyp
         "infra/edge/Caddyfile.lan",
         "infra/edge/routes.caddy",
         "scripts/ci/inventory_edge_probe.py",
+        "infra/docker/web.Dockerfile",
+        "infra/docker/web.Dockerfile.dockerignore",
     ):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("synthetic source")
     monkeypatch.setattr(probe, "ROOT", tmp_path)
     monkeypatch.setattr(probe.shutil, "which", lambda _: "docker")
+    monkeypatch.setattr(probe.os, "getuid", lambda: 1001)
+    monkeypatch.setattr(probe, "prepare_images", MagicMock(return_value="synthetic-image"))
     monkeypatch.setattr(probe, "docker", lambda *args, **kwargs: "synthetic")
     failure = {
         "configuration": "Caddyfile",
@@ -168,6 +172,8 @@ def test_directory_cleanup_does_not_mask_probe_failure(tmp_path, monkeypatch, or
         "infra/edge/Caddyfile.lan",
         "infra/edge/routes.caddy",
         "scripts/ci/inventory_edge_probe.py",
+        "infra/docker/web.Dockerfile",
+        "infra/docker/web.Dockerfile.dockerignore",
     ):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,6 +188,8 @@ def test_directory_cleanup_does_not_mask_probe_failure(tmp_path, monkeypatch, or
 
     monkeypatch.setattr(probe, "ROOT", tmp_path)
     monkeypatch.setattr(probe.shutil, "which", lambda _: "docker")
+    monkeypatch.setattr(probe.os, "getuid", lambda: 1001)
+    monkeypatch.setattr(probe, "prepare_images", MagicMock(return_value="synthetic-image"))
     monkeypatch.setattr(probe, "docker", lambda *args, **kwargs: "synthetic")
     monkeypatch.setattr(probe.tempfile, "TemporaryDirectory", lambda **kwargs: Directory())
     failure = {
