@@ -2,6 +2,35 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote catalog compatibility · 2026-10-15 local-only slice
+
+The [bounded compatibility slice](docs/10-spec-development/2026-10-15-quote-catalog-compatibility.md)
+adds three explicit literals and the current Owner starter snapshot. This is a
+separate prerequisite; earlier checkpoint-specific exclusions remain historical.
+
+- [x] Synthetic identity/CLI and generic frontend checks cover frozen legacy
+      grants, restrictive intersection, old owner edits, explicit full-current
+      owner operations, narrow branding adoption and fresh/stale catalogs.
+- [x] OpenAPI changes only two capability-list limits from 19 to 22; regenerated
+      TypeScript retains the same representation. Catalog v2, access policy 2,
+      operational read maps, SQL0012 and authenticated local schema 7 are unchanged.
+- [x] Final bounded local rerun: 704 passes / 156 explicit PostgreSQL/dialect
+      skips; core 912, static checks, HTTP smoke and current/pinned PWA builds
+      pass. Independent source probes and final document/evidence review are
+      closed with no remaining blocker for this bounded local scope.
+- [ ] Publication, exact-candidate hosted/native qualification, physical/operator
+      acceptance and deployment are not claimed.
+- [ ] Separate quote-only operator adoption, protected routes and fresh-authority
+      transactions, every stage-3/all-ingress fence, maximum-capacity/restore
+      qualification and real enrollment remain unimplemented or unqualified.
+      No real accounts, tokens or credentials were changed.
+
+Supported old APIs reject unknown quote literals. A manually preseeded quote
+literal in both account and signed token becomes recognized after this catalog
+addition; this unsupported state is explicitly outside the non-expansion claim.
+The existing frontend also refuses duplicate stored grants without normalizing
+or submitting them; exact duplicate preservation is backend evidence only.
+
 ## Quote/main45 reconciliation · 2026-10-15 current checkpoint
 
 Normal local merge `d45c22e1`, tree `d8f978f6`, joins reviewed quote parent

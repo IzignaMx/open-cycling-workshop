@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased · Explicit quote catalog compatibility
+
+- Add the three independent quote capability literals to the current 22-grant
+  catalog and current Owner starter only. Freeze the legacy seventeen-grant
+  wildcard, business set, v1 catalog/role aliases and other current starters.
+- Preserve supported old account/token authority, context epochs and minimal
+  owner edits. Explicit owner establishment/replacement requires the full current
+  snapshot and existing scoped delegation rules; branding adoption stays narrow.
+- Regenerate only the two OpenAPI capability-list limits. Qualify fresh/stale v2
+  administration parsing without changing frontend production source or protocol.
+- Document the unsupported both-side manually preseeded literal exception and
+  the existing frontend refusal of duplicate grant snapshots. No quote routes,
+  adoption command, real account changes or operational activation are included.
+
 ## Unreleased · Reconcile quote persistence with the reviewed expiry observer
 
 - Normally merge actual main `19882936`, preserving the fixture-only observer

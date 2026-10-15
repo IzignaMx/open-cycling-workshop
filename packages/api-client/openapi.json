@@ -926,7 +926,7 @@
                 "items": {
                   "type": "string"
                 },
-                "maxItems": 19,
+                "maxItems": 22,
                 "type": "array"
               },
               {
@@ -2017,7 +2017,7 @@
                 "items": {
                   "type": "string"
                 },
-                "maxItems": 19,
+                "maxItems": 22,
                 "type": "array"
               },
               {

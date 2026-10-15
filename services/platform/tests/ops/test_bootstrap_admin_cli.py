@@ -55,7 +55,11 @@ def test_bootstrap_admin_creates_first_tenant_location_and_admin_without_passwor
         user = session.get(UserRecord, output["user_id"])
         assert user is not None
         assert user.username == "admin"
+        assert user.organization_id == output["organization_id"]
+        assert user.location_id == output["location_id"]
+        assert user.is_owner is False
         assert user.capabilities == ["*"]
+        assert user.version == 1 and user.session_version == 1
         assert PasswordService().verify(user.password_hash, "correct horse battery staple") is True
 
 
