@@ -175,9 +175,14 @@ def seed_inventory_identities(database_url: str) -> None:
                         for entity, letter in ((1, "A"), (2, "B"))
                     )
                     session.flush()
+                    # A genuine local-only writer makes pre-existing pending work
+                    # deterministic without intercepting delivery or racing timers.
+                    workshop_grants = WORKSHOP_GRANTS | {"inventory.read"}
+                    if case == "preservation":
+                        workshop_grants = workshop_grants - {"sync.push"}
                     variants = (
                         (3, "reader", identity(1), {"inventory.read"}),
-                        (4, "workshop", identity(1), WORKSHOP_GRANTS | {"inventory.read"}),
+                        (4, "workshop", identity(1), workshop_grants),
                         (5, "directory", None, {"inventory.read", "locations.read"}),
                         (6, "writer", identity(1), {"inventory.write"}),
                         (7, "no-directory", None, {"inventory.read"}),

@@ -1,3 +1,4 @@
+import { fixtureHttp, fixtureJson } from './helpers/inventory-http.mjs'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
@@ -226,26 +227,39 @@ test('inventory.write alone and organization-wide account without a directory ca
   expect(requests.baseline).toEqual([])
 })
 
-test('inventory navigation retains unsent forms and disconnect/reload keeps the exact operational journal', async ({
+test('inventory navigation retains unsent forms and pre-existing local-only pending work through disconnect/reload', async ({
   page,
   context,
 }, info) => {
   const f = fixture('preservation', info)
   await login(page, f, 'workshop')
+  // This synthetic identity has real operational grants except sync.push.
+  // Pending work therefore cannot race delivery while connected GETs run.
+  const operation = await createCustomer(page, 'Inventario conserva el trabajo pendiente')
+  const before = await kernelSnapshot(page)
+  expect(before.context.capabilities).not.toContain('sync.push')
+  expect(before.delivery.find((row) => row.mutationId === operation.mutationId)?.state).toBe(
+    'pending',
+  )
+  expect(before.journal).toHaveLength(1)
+  expect(before.events.length).toBeGreaterThan(0)
+  const expectPreserved = async () => {
+    const snapshot = await kernelSnapshot(page)
+    expect(snapshot.journal).toEqual(before.journal)
+    expect(snapshot.delivery).toEqual(before.delivery)
+    expect(snapshot.events).toEqual(before.events)
+  }
   await page.getByLabel('Nombre', { exact: true }).fill('Borrador local sin enviar')
   await page.getByRole('link', { name: 'Inventario', exact: true }).click()
   await openInventory(page)
   await selectMain(page)
   await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Borrador local sin enviar')
+  await expectPreserved()
   await context.setOffline(true)
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))
   await expect(panel(page)).toContainText('Inventario no disponible sin conexión')
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
-  const operation = await createCustomer(page, 'Inventario conserva el trabajo pendiente')
-  const before = await kernelSnapshot(page)
-  expect(before.delivery.find((row) => row.mutationId === operation.mutationId)?.state).toBe(
-    'pending',
-  )
+  await expectPreserved()
   await page.reload()
   await waitForReady(page)
   await expect(panel(page)).not.toContainText(PRODUCT)
@@ -305,11 +319,13 @@ for (const transition of ['scope', 'product', 'logout'] as const) {
         return
       }
       once = false
-      const response = await route.fetch()
-      expect(response.status()).toBe(200)
+      const response = await fixtureHttp(new URL(page.url()).origin, route.request().url(), {
+        headers: route.request().headers(),
+      })
+      expect(response.status).toBe(200)
       held = true
       await gate
-      await route.fulfill({ response }).catch(() => undefined)
+      await route.fulfill(response).catch(() => undefined)
     })
     try {
       await panel(page).getByRole('button', { name: 'Actualizar cantidad', exact: true }).click()
@@ -368,26 +384,34 @@ for (const transition of ['scope', 'product', 'logout'] as const) {
 
 test('committed session revocation clears inventory on the next current read', async ({
   page,
-  request,
 }, info) => {
   const f = fixture('revocation', info)
   await login(page, f)
   await openInventory(page)
   await selectMain(page)
-  const loginResponse = await request.post('/api/v1/auth/login', {
-    data: {
+  const origin = new URL(page.url()).origin
+  const loginResponse = await fixtureHttp(origin, '/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       organization_id: f.organizationId,
       username: 'e2e-inventory-owner',
       password: PASSWORD,
+    }),
+  })
+  expect(loginResponse.status).toBe(200)
+  const accessToken = fixtureJson(loginResponse).access_token
+  if (typeof accessToken !== 'string' || !accessToken) throw new Error('Fixture session missing')
+  const revoked = await fixtureHttp(origin, `/api/v1/admin/users/${f.id(3)}/revoke-sessions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-OCWP-Write-Protocol': '1',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ expected_version: 1 }),
   })
-  expect(loginResponse.status()).toBe(200)
-  const accessToken = (await loginResponse.json()).access_token as string
-  const revoked = await request.post(`/api/v1/admin/users/${f.id(3)}/revoke-sessions`, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'X-OCWP-Write-Protocol': '1' },
-    data: { expected_version: 1 },
-  })
-  expect(revoked.status()).toBe(200)
+  expect(revoked.status).toBe(200)
   const denied = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === `/api/v1/inventory/products/${f.productId}/stock` &&
@@ -411,14 +435,16 @@ test('unsafe numeric wire values and a failed quantity refresh never show a roun
   const endpoint = `**/inventory/products/${f.productId}/stock`
   // Clearly labelled malformed-response injection, not authoritative server data.
   await page.route(endpoint, async (route) => {
-    const response = await route.fetch()
-    expect(response.status()).toBe(200)
-    const body = (await response.text()).replace(
+    const response = await fixtureHttp(new URL(page.url()).origin, route.request().url(), {
+      headers: route.request().headers(),
+    })
+    expect(response.status).toBe(200)
+    const body = response.body.replace(
       '"available_quantity":148',
       '"available_quantity":9007199254740991.1',
     )
     expect(body).toContain('9007199254740991.1')
-    await route.fulfill({ response, body })
+    await route.fulfill({ ...response, body })
   })
   await panel(page).getByRole('button', { name: 'Actualizar cantidad', exact: true }).click()
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
@@ -437,6 +463,17 @@ test('unsafe numeric wire values and a failed quantity refresh never show a roun
   )
   await panel(page).getByRole('button', { name: 'Actualizar cantidad', exact: true }).click()
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+  await expect(panel(page).getByRole('alert')).toHaveText(
+    'El inventario no está disponible en el servidor. Vuelve a consultar más tarde.',
+  )
+  await expect(
+    panel(page).getByRole('button', { name: 'Actualizar cantidad', exact: true }),
+  ).toBeEnabled()
+  await expect(
+    panel(page)
+      .getByRole('list', { name: 'Movimientos de inventario', exact: true })
+      .getByRole('listitem'),
+  ).toHaveCount(50)
   await capture(page, info, 'inventory-quantity-unavailable')
 })
 
@@ -460,9 +497,9 @@ test('empty catalog is explicit and inventory JSON is absent from production ser
       ).length
     }),
   ).toBe(0)
-  const api = await page.request.get('/api/v1/inventory/missing')
-  expect(api.status()).toBe(404)
-  expect(api.headers()['content-type']).toContain('application/json')
+  const api = await fixtureHttp(new URL(page.url()).origin, '/api/v1/inventory/missing')
+  expect(api.status).toBe(404)
+  expect(api.headers['content-type']).toContain('application/json')
   await capture(page, info, 'inventory-empty-catalog')
   const navigation = await page.context().newPage()
   await navigation.goto('/')

@@ -46,9 +46,10 @@ def test_inventory_seed_keeps_partial_grants_and_immutable_signed_history(
     url = f"sqlite+pysqlite:///{tmp_path / 'inventory-fixture.sqlite3'}"
     monkeypatch.setenv("OCWP_DATABASE_URL", url)
     monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
-    preparation.run_migrations(url)
     validated: list[str] = []
     monkeypatch.setattr(preparation, "validate_e2e_database_url", validated.append)
+    preparation.run_migrations(url)
+    validated.clear()
     inventory.seed_inventory_identities(url)
     assert validated == [url]
     engine = create_engine(url)
@@ -65,6 +66,12 @@ def test_inventory_seed_keeps_partial_grants_and_immutable_signed_history(
                     reader = session.get(UserRecord, identity(3))
                     directory = session.get(UserRecord, identity(5))
                     writer = session.get(UserRecord, identity(6))
+                    workshop = session.get(UserRecord, identity(4))
+                    assert workshop is not None
+                    assert ("sync.push" in workshop.capabilities) is (case != "preservation")
+                    assert {"inventory.read", "customers.write", "sync.pull"} <= set(
+                        workshop.capabilities
+                    )
                     assert reader is not None and directory is not None and writer is not None
                     assert reader.capabilities == ["inventory.read"]
                     assert reader.location_id == identity(1)
