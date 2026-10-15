@@ -319,3 +319,66 @@ Review report SHA-256:
 `760728e27a3d5f7ca78ee62fe33fcbed08c85b8311071b926d08f0ca15e1e43e`.
 New exact-head hosted three-cycle/full-CI evidence remains pending; no Docker or
 PostgreSQL execution is claimed locally.
+
+## Actual main42 reconciliation
+
+Normal merge `3e3b120ec85ac284c6ea7f5f5d81e929f19123f8`, tree
+`cdf523468b1c2c4133935211afc17dc9bc704343`, has parents reviewed restart/docs
+`20527a9a8faf65ad06915f1cdf7329eed75fb754` and actual merged main
+`5ab7dd7c21b9540db7cf9c4df63a3201239251fd`. No rebase or force update was used.
+Only changelog, checklist and execution-state sections conflicted; both additive
+histories were retained. All 75 incoming-main source/test/workflow/document blobs
+and all 28 quote/restart-only blobs match their respective parents exactly.
+
+The CI workflow is byte-identical to main42: inventory PostgreSQL budgets,
+authority and measured-plan proof, paired real Caddy/privacy checks, strict
+inventory browser types and mandatory zero-retry expiry evidence remain present.
+The quote extension in the existing PostgreSQL18 recovery wrapper remains intact.
+Workflow contents-read permissions, timeouts and fail-closed completion gates
+were not relaxed. Main42 adds no SQL migration; combined SQL head is 0012 and
+authenticated local schema remains 7. No quote capability/grant, route, enrollment,
+sync entity or operational order/inventory execution is added by reconciliation.
+
+Exact merged-source available local aggregate: **21 passing controls, zero
+failures and five environment blockers**. Python: **2,898 passed / 455 skipped /
+three warnings**. Frontend: **877 passed**, zero failed/skipped; API-client: one
+passed. Configured Python/frontend static checks, mypy 111 production sources,
+repository/OpenAPI/generated-client contracts, SQLite HTTP runtime, current PWA
+and reproducible pinned-old App/SW builds passed. Artifact SHA-256:
+`9304776dfc494018b20f8fff6d9a3f2cb702716785de1afdb5bdbf3a404b1384`.
+The five blockers remain missing PostgreSQL test URL, Docker, PostgreSQL tools,
+managed-browser navigation and destructive E2E database URL. Toolchain was locked
+Python 3.13.5 dependencies and Node 22.16.0; existing pnpm 11.25.0/dependencies were
+reused read-only with workspace links bound to this checkout. This is not a fresh
+pinned pnpm 11.17 install qualification.
+
+Independent combined review found no remaining merge-induced blocker: **1,206
+passes / 275 explicit PostgreSQL skips / three warnings**, plus two additional
+migrated-SQLite integration probes and two PostgreSQL skips. Those probes prove
+inventory reads preserve exact quote/order/ledger/outbox rows and inventory read
+admission cannot authorize quote repository access. Ruff/format 285 and mypy 112
+(including the runner) passed. These scopes are separate from the full aggregate.
+Review report SHA-256:
+`8dddca34a904796ad8276acdb80e2694f47b88483e5a1944f7ca8af68458749d`.
+
+The preceding follow-up's [CI 38708608754](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38708608754)
+subsequently completed successfully on its first attempt. Retained terminal logs
+show **2,952 Python passes / 23 skips / three warnings** in both direct and
+aggregate executions. The matching PostgreSQL 18.4 recovery wrapper passed all
+24 cases without skips: 21 quote contention/admission/rollback cases, one populated
+quote dump/restore/replay case and two branding recovery cases. Full Python still
+explicitly skips matching-client restore tests; the separate wrapper supplies
+real execution of the quote and branding restore tests, not the separately
+skipped generic backup integration test. Kernel browser: 14 passes; direct browser: 63; retry-free
+baseline/cutover/clock repetitions: 20/9/5; aggregate browser: 63. The retained
+qualification artifact 11961586512 reports **27 passing controls, zero blockers**,
+with ZIP SHA-256
+`6bbf4a551d4bbdfef8906e0ac679089c25c7c2294588af72ff64646f1a966cbe`.
+It binds to merge `e4677109` and earlier tree `8feed94b`, not this merged candidate.
+
+Fresh exact merged-tree PostgreSQL constraints/contention/restore, inventory
+expiry/browser/privacy, all three restart cycles, runtime/security/ARM and
+aggregate evidence remain required. Prior run 38708608754 belongs to the earlier
+26b589be tree and remains separate causal evidence. Maximum-fixture and
+activation gates remain open. The original restart failure's cause is still
+unknown; no passing later run or merge retroactively explains it.

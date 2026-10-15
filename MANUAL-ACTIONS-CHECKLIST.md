@@ -4,6 +4,13 @@
 
 ## Quote persistence · 2026-10-15 planned gates
 
+The candidate now normally merges actual inventory main `5ab7dd7c` at
+`3e3b120e`, preserving both source boundaries and all hosted gates. Its full
+available local aggregate passed 21 controls with zero failures and five
+environment blockers: 2,898 Python passes / 455 skips and 877 frontend passes.
+Independent combined review is closed; this is not fresh hosted PostgreSQL,
+native browser, expiry repetition or three-cycle runtime qualification.
+
 PR44's first hosted candidate failed direct Python tests and AMD64 runtime.
 Direct and aggregate Python each retained two varchar-refusal assertion failures,
 2,944 passes and 23 skips. The two tests now require the exact backend-specific

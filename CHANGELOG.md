@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Reconcile quote persistence with actual inventory main
+
+- Normally merge main `5ab7dd7c`, preserving its connected inventory read guards,
+  privacy/expiry qualification and source exactly alongside quote SQL0012.
+- Retain both additive documentation histories and the quote recovery-wrapper
+  extension. Full available combined local qualification passed 21 controls
+  with five explicit environment blockers; exact merged-head hosted proof remains.
+
 ## Unreleased · Require three consecutive API restart qualification cycles
 
 - Strengthen the existing disposable runtime check with three mandatory

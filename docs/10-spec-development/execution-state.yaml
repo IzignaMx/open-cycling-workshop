@@ -1265,6 +1265,33 @@ connected_inventory_read_2026_10_15:
   adr: docs/02-technical-architecture/2026-10-15-connected-inventory-read.md
   evidence: docs/10-spec-development/2026-10-15-connected-inventory-read.md
 
+quote_main42_reconciliation_2026_10_15:
+  status: independently_reviewed_locally_qualified_hosted_pending
+  merge: 3e3b120ec85ac284c6ea7f5f5d81e929f19123f8
+  tree: cdf523468b1c2c4133935211afc17dc9bc704343
+  parents: [20527a9a8faf65ad06915f1cdf7329eed75fb754, 5ab7dd7c21b9540db7cf9c4df63a3201239251fd]
+  resolution: only3_additive_documents_both_histories_retained_no_rebase_or_force
+  exact_union: 75_incoming_main_blobs_and28_quote_restart_blobs_unchanged
+  workflow: identical_to_main42_inventory_PG_edge_privacy_expiry_gates_preserved
+  recovery: quote_PG18_wrapper_extension_retained
+  schema_and_scope: combinedSQL0012_local7_no_quote_routes_grants_or_operational_activation
+  full_local_aggregate: 21_passed_zero_failed_five_environment_blockers
+  full_python: 2898_passed_455_skipped_three_warnings
+  frontend_core: 877_passed_zero_failed_zero_skipped
+  static_runtime_contract_build: configured_checks_mypy111_SQLite_HTTP_current_and_pinned_old_PWA_passed
+  aggregate_sha256: 9304776dfc494018b20f8fff6d9a3f2cb702716785de1afdb5bdbf3a404b1384
+  toolchain: locked_python3_13_5_Node22_16_reused_pnpm11_25_not_fresh_pinned_install
+  independent: no_blocker_1206_passed_275_PG_skips_plus2_SQLite_probes_2_PG_skips
+  source_review_sha256: 8dddca34a904796ad8276acdb80e2694f47b88483e5a1944f7ca8af68458749d
+  earlier_followup_CI: 38708608754_attempt1_27_controls_passed_no_blockers_tree8feed94b_only
+  earlier_followup_python: direct_and_aggregate_each2952_passed_23_skipped_three_warnings
+  earlier_followup_pg18_wrapper: 24_passed_zero_skipped_including22_quote_and2_branding
+  earlier_followup_browser: kernel14_direct63_repeats20_9_5_aggregate63_passed
+  earlier_qualification_artifact: 11961586512
+  new_exact_tree_hosted_and_maximum_fixture: pending
+  original_restart_cause: unknown_retained
+  evidence: docs/10-spec-development/2026-10-15-quote-persistence.md
+
 administration_probe_clock_2026_10_15:
   status: implemented_pending_evidence
   base: 22b32a9e29f5b9dca9d52c2e8d36ac1228047c54
