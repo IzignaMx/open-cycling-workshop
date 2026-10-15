@@ -171,3 +171,40 @@ run one explicitly supporting phase diagnostic with the same bounds. Instrumente
 second-child timing cannot prove the original bottleneck; its outcome cannot
 replace the original failure or exit status. Neither change edits production
 decoder limits or recovery authority. A new exact-source hosted run is required.
+
+## Corrected hosted run and standalone decoder startup
+
+The next published head `3271b9a45d507adf1438f8c3704a1111eb72a42d` has tree
+`bd0fa97aacca042f9ebb473f6622de4782f9b146`. Its
+[CI](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38657365015)
+passed both actual PostgreSQL recovery scenarios and the isolated kernel browser
+step. Direct browser execution is still running at this checkpoint; no screenshot
+or full browser qualification is inferred. The
+[runtime run](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38657365147)
+again passed named-volume save/read/restart/restored-byte checks, but its QEMU
+decoder attempt failed again.
+
+The retained original attempt reached its parent wall timeout at 2.010173 seconds,
+with 1.996704 seconds of child CPU and 0.006577 seconds spent creating the process.
+It was killed and reaped. A separate instrumented child observed `python_ready`
+at 0.450244 seconds and no worker entry before its own deadline. These data focus
+investigation on startup work, but cannot establish the original attempt's phase
+or distinguish all emulator effects. Both failures remain failed qualifications.
+
+The independently reviewed production correction in `3e51440963cfc37ce64327af1069dadb7af10bb7`
+keeps API-only imports, response DTO construction and the single decoder lock out
+of standalone child startup. Its private PNG record is now an immutable typed
+tuple. The worker still runs the same trusted file and subprocess arguments; the
+five parser/parent/worker function ASTs, all six admission/resource constants,
+deadline origin and refusal behavior are unchanged. No prewarming, retry, pool,
+limit extension or application state is introduced into the child.
+
+Fresh-process import-boundary and normal API/lock regressions pass. Local results
+are 84 decoder/probe tests and a separate broader 246 passed / 28 explicit
+PostgreSQL skips; eight synthetic canonical outputs retain exact digests, byte
+counts and dimensions. The complete native import graph drops from 155 to 122
+records, including the cost of `typing`; sampled native wall times remain about
+0.064 seconds before and after. This proves a reduced import graph, not a measured
+latency improvement or QEMU success. The changed installed-image worker digest
+must pass a new exact-source hosted probe. Physical-device resource qualification
+and the broader installation gates remain open.

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Standalone branding decoder startup
+
+- Keep API-only imports, immutable response DTO and decoder lock out of the
+  standalone image child; retain its private immutable PNG record and the exact
+  parser, decoder, subprocess contract and resource bounds.
+- Preserve both failed QEMU attempts. Local canonical-byte and import-boundary
+  regressions pass, with a smaller import graph but no measured native latency
+  improvement. Exact changed-image QEMU qualification remains pending.
+
 ## Unreleased · Branding qualification setup and ARM diagnostics
 
 - Prepare and validate the private artifact parent before the real recovery
