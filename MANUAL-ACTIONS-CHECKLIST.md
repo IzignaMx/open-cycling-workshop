@@ -891,3 +891,9 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
       direct/aggregate browser and retry-free clock repetition after the cache
       correction. Local Node 22.16 deterministic/fake-IDB evidence is not native
       browser storage or real installation qualification.
+- The next published tree `a57c700a` passed 741 core cases but failed the offline
+  branding journey in direct and aggregate browser execution (62/63 each). Both
+  direct attempts failed; no flaky pass occurred and repetition phases were
+  skipped. These failures remain retained. The [offline refresh correction](docs/10-spec-development/2026-10-15-offline-branding-refresh.md)
+  adds finite coalescing of the existing forced request without relaxing cache
+  rollback checks. The exact changed-head gates above remain open.

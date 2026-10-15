@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Recover explicitly requested offline branding refresh
+
+- Coalesce a forced branding refresh requested during an active flight into one
+  freshly captured/admitted trailing flight. Its finite budget prevents refresh
+  notifications from creating a loop; a null cache result alone never retries.
+- Reconcile branding after lease validation on a repeated offline notification.
+  Preserve conservative cache entry-time rollback, owner, snapshot and expiry
+  checks and all existing browser assertions.
+- Retain PR41's direct and aggregate offline-branding failures. Add deterministic
+  real-controller/kernel/cache coverage, including pending customer work during
+  logo validation and rollback/expiry/takeover/future-snapshot refusals. Fresh
+  exact-head native/browser and retry-free repetition evidence remains required.
+
 ## Unreleased · Preserve branding cache clock-rollback evidence
 
 - Keep the operation-entry timestamp when checking verified context, device

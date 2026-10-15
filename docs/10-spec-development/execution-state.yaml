@@ -1264,3 +1264,26 @@ branding_cache_clock_rollback_2026_10_15:
   public_API_schema_operational_data_and_production_deployment: unchanged
   native_browser_and_exact_changed_head_hosted: pending_not_proven_by_fake_IDB
   evidence: docs/10-spec-development/2026-10-15-branding-cache-clock-rollback.md
+  first_published_head: d4c05100e83da06710e0843c6c2fd18447095e2b
+  first_published_ci: 38676085071_failed_offline_branding_direct_and_aggregate
+  first_published_direct: 62_passed_one_failed_zero_flaky_both_attempts_before_first_reload
+  first_published_aggregate: 26_of27_controls_2375_python_14_skips_741_core_62_of63_browser
+  first_published_repetition: skipped
+
+offline_branding_refresh_2026_10_15:
+  status: implemented_pending_evidence
+  scope: finite_coalesced_explicit_force_and_repeated_offline_readmission
+  base: 19dcd926c96f975009a95b7726ae8e96cfa4319e
+  observed_ci: 38676085071
+  direct_artifact: 11946313686
+  aggregate_artifact: 11947545007
+  cause: conservative_cache_refusal_then_explicit_offline_recovery_request_discarded_by_single_flight
+  bounded_budget: one_initial_plus_at_most_one_trailing_flight_no_retry_on_null
+  security: fresh_capture_kernel_validation_wall_time_and_unchanged_cache_entry_time_checks
+  causal_red_node22_16: three_real_composition_failures_before_caller_correction
+  local_core_node22_16: 752_passed_zero_failed_or_skipped
+  negative_composition: rollback_expiry_takeover_future_snapshot_stay_closed_during_logo_digest
+  preservation: real_pending_customer_journal_and_snapshot_unchanged_by_refresh
+  original_browser_assertions_timeouts_and_six_cache_rollback_regressions: unchanged
+  exact_changed_head_native_browser_and_repetitions: pending
+  evidence: docs/10-spec-development/2026-10-15-offline-branding-refresh.md

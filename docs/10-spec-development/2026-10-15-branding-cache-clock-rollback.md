@@ -87,3 +87,24 @@ These are actual production repository checks with fake IndexedDB, not native
 browser execution. Fresh exact changed-head hosted qualification and the
 original browser/repetition gates remain required. Physical devices, screen
 readers, operator recovery and actual installation remain outside this proof.
+
+## Subsequent exact-head browser failure
+
+Published head `d4c05100e83da06710e0843c6c2fd18447095e2b`, tree
+`a57c700a764ec4f3aba322bfa763745f49b82358`, passed its 741 frontend core cases but
+[CI 38676085071](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38676085071)
+failed the offline-branding journey in both direct and aggregate execution.
+The direct report has 62 passing cases, one failing case and zero flaky cases;
+both attempts of that case failed before its first reload. Aggregate: 26/27
+controls passed, 2375 Python passes / 14 skips, 741 core passes, 62/63 browser
+passes. Repetition phases were skipped. Neither failed result is superseded by
+the local checks above.
+
+The repository correctly refused concurrent newer control evidence, but the
+display caller discarded an explicit recovery refresh while a flight was
+active. This made the previously documented conservative refusal an actual
+offline availability regression. The [bounded caller correction](2026-10-15-offline-branding-refresh.md)
+retains every repository rollback check and records deterministic composition
+RED/GREEN plus the original native evidence. The exact interleaved writer is
+not observable in the browser artifact; controlled composition tests prove the
+mechanism without claiming that missing trace detail.

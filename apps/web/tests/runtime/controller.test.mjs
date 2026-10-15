@@ -1786,3 +1786,152 @@ test('current editor403 retires operational branding admission and cannot republ
   assert.notEqual(reload.runtime.getSnapshot().phase, 'ready')
   assert.equal(reload.runtime.branding.getSnapshot().profile, null)
 })
+
+test('offline transition keeps verified branding while same-owner kernel observations advance', async (t) => {
+  const f = setup(t, { server: brandedApi() })
+  await login(f.runtime)
+  await until(() => f.runtime.branding.getSnapshot().profile !== null, 'brand missing')
+  let wall = NOW
+  Object.defineProperty(f.env, 'now', { get: () => ++wall })
+  t.mock.method(performance, 'now', () => wall - NOW)
+  f.env.online = false
+  await f.runtime.offline()
+  await until(() => !f.runtime.branding.getSnapshot().loading, 'offline branding did not finish')
+  assert.equal(f.runtime.getSnapshot().phase, 'ready')
+  assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+  assert.equal(f.runtime.branding.getSnapshot().cached, true)
+  assert.equal(await f.database.brandingSnapshots.count(), 1)
+  assert.equal(await f.database.operationJournal.count(), 0)
+})
+
+test('repeated offline notification readmits verified branding without changing pending work', async (t) => {
+  const f = setup(t, { server: brandedApi() })
+  await login(f.runtime)
+  await until(() => f.runtime.branding.getSnapshot().profile !== null, 'brand missing')
+  f.env.online = false
+  await f.runtime.offline()
+  await until(() => !f.runtime.branding.getSnapshot().loading, 'offline branding did not finish')
+  assert.equal(f.runtime.branding.getSnapshot().cached, true)
+  await f.runtime.createCustomer({
+    displayName: 'Pending offline customer',
+    email: null,
+    phone: null,
+  })
+  const journal = await f.database.operationJournal.toArray()
+  const snapshots = await f.database.brandingSnapshots.toArray()
+  await f.runtime.offline()
+  await until(
+    () => !f.runtime.branding.getSnapshot().loading,
+    'repeated offline read did not finish',
+  )
+  assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+  assert.equal(f.runtime.branding.getSnapshot().cached, true)
+  assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+  assert.deepEqual(await f.database.brandingSnapshots.toArray(), snapshots)
+})
+
+test('queued offline read recovers after a customer commit advances ownership during logo digest', async (t) => {
+  const { withLogo } = await import('../branding/fixture.mjs')
+  const f = setup(t, {
+    server: brandedApi(['branding.read'], (url) =>
+      response(url, withLogo({ display_name: 'Shared workshop' })),
+    ),
+  })
+  await login(f.runtime)
+  await until(() => f.runtime.branding.getSnapshot().profile !== null, 'brand missing')
+  const snapshots = await f.database.brandingSnapshots.toArray()
+  const digest = crypto.subtle.digest.bind(crypto.subtle)
+  let release,
+    entered,
+    calls = 0,
+    elapsed = 0
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  t.mock.method(performance, 'now', () => elapsed)
+  t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (++calls === 1) {
+      entered()
+      await gate
+    }
+    return digest(...args)
+  })
+  f.env.online = false
+  await f.runtime.offline()
+  await started
+  elapsed = 100
+  f.env.now = NOW + elapsed
+  await f.runtime.createCustomer({ displayName: 'Pending while logo validation waits' })
+  const journal = await f.database.operationJournal.toArray()
+  assert.equal(journal.length, 1)
+  release()
+  await until(() => !f.runtime.branding.getSnapshot().loading, 'queued cache read did not finish')
+  assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+  assert.equal(f.runtime.branding.getSnapshot().cached, true)
+  assert.equal(calls, 2)
+  assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+  assert.deepEqual(await f.database.brandingSnapshots.toArray(), snapshots)
+})
+
+for (const edge of ['rollback', 'expiry', 'takeover', 'future snapshot']) {
+  test(`queued offline read stays closed after ${edge} during digest`, async (t) => {
+    const { withLogo } = await import('../branding/fixture.mjs')
+    const f = setup(t, {
+      server: brandedApi(['branding.read'], (url) => response(url, withLogo())),
+    })
+    await login(f.runtime)
+    await until(() => f.runtime.branding.getSnapshot().profile !== null, 'brand missing')
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    let release,
+      entered,
+      calls = 0,
+      elapsed = 0
+    const gate = new Promise((resolve) => {
+      release = resolve
+    })
+    const started = new Promise((resolve) => {
+      entered = resolve
+    })
+    t.mock.method(performance, 'now', () => elapsed)
+    t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (++calls === 1) {
+        entered()
+        await gate
+      }
+      return digest(...args)
+    })
+    f.env.online = false
+    await f.runtime.offline()
+    await started
+    await f.runtime.branding.refresh(true)
+    elapsed = 2000
+    if (edge === 'rollback') f.env.now = NOW - 1
+    if (edge === 'expiry') f.env.now = NOW + 3600000
+    if (edge === 'takeover') {
+      const control = await f.database.deviceControl.get('device')
+      await f.database.deviceControl.put({
+        ...control,
+        generation: control.generation + 1,
+        tabAttemptId: 'another-owner',
+      })
+    }
+    if (edge === 'future snapshot') {
+      const row = (await f.database.brandingSnapshots.toArray())[0]
+      await f.database.brandingSnapshots.put({ ...row, observedAt: NOW + 1000 })
+    }
+    const snapshots = await f.database.brandingSnapshots.toArray()
+    release()
+    if (edge === 'rollback' || edge === 'expiry') await f.runtime.checkLease()
+    if (edge === 'takeover')
+      await until(() => f.runtime.getSnapshot().phase === 'held', 'takeover not held')
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'queued refusal did not finish')
+    assert.equal(f.runtime.branding.getSnapshot().profile, null)
+    assert.equal(calls, 1)
+    if (edge !== 'future snapshot') assert.equal(f.runtime.getSnapshot().phase, 'held')
+    assert.deepEqual(await f.database.brandingSnapshots.toArray(), snapshots)
+    assert.equal(await f.database.operationJournal.count(), 0)
+  })
+}

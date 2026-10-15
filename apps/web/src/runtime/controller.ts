@@ -1162,6 +1162,7 @@ export class WorkshopController {
     this.#locationPage++
     if (!this.#verifiedOnline && this.#active && this.#snapshot.sync === 'offline') {
       await this.checkLease()
+      this.branding.reconcile()
       return
     }
     this.#observedReachable = false

@@ -154,6 +154,10 @@ the verified context, device control and snapshot observation. Waiting cannot
 erase an invalid entry time; expiry checks continue advancing through final
 transactional admission. Concurrent newer trusted evidence may conservatively
 refuse an older operation, without deleting the snapshot or operational work.
+An explicit refresh requested during a branding flight is coalesced into one
+freshly captured and validated trailing flight. The trailing flight cannot queue
+another, and a null cache result does not itself retry. This preserves rollback
+refusal while honoring the offline transition's already-requested recovery.
 
 The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
 request/save. Exact saved session, current ticket/source generation, lease and
