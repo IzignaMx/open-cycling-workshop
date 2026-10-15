@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Reconcile request contracts with merged reads and catalog
+
+- Normally merge actual main47 `51c35186` into the original PR48 branch, retaining
+  the exact request, read-projection, catalog and generated-contract source blobs.
+- Preserve both histories and distinguish original hosted evidence from the
+  newly combined tree, whose own hosted and postmerge acceptance remain gates.
+- PR46 and PR47 are merged; PR48 integration is separately authorized and gated.
+  No quote routes, account adoption, schema, capacity trial or deployment is added.
+
 ## Unreleased · Bound inactive quote request inputs
 
 - Add closed create/revise and initial customer-decision input contracts with
@@ -8,6 +17,31 @@
   identity. No HTTP routes, services, grants, schema or offline behavior change.
 - Keep streaming HTTP integration, financial/application admission and activation
   gates explicitly deferred; local decoder tests do not qualify those boundaries.
+
+## Unreleased · Explicit quote catalog compatibility
+
+- Add the three independent quote capability literals to the current 22-grant
+  catalog and current Owner starter only. Freeze the legacy seventeen-grant
+  wildcard, business set, v1 catalog/role aliases and other current starters.
+- Preserve supported old account/token authority, context epochs and minimal
+  owner edits. Explicit owner establishment/replacement requires the full current
+  snapshot and existing scoped delegation rules; branding adoption stays narrow.
+- Regenerate only the two OpenAPI capability-list limits. Qualify fresh/stale v2
+  administration parsing without changing frontend production source or protocol.
+- Document the unsupported both-side manually preseeded literal exception and
+  the existing frontend refusal of duplicate grant snapshots. No quote routes,
+  adoption command, real account changes or operational activation are included.
+
+## Unreleased · Prepare bounded quote revision read contracts
+
+- Add closed, exact-integer revision metadata/detail projections from fully
+  reconstructed quote snapshots, with separate current lineage context.
+- Bound metadata pages to 25, responses to 1 MiB and allowlisted errors to 8 KiB;
+  keep proofs/evidence private and bind opaque positions to scope/head/sequence.
+- Verify small source-backed corruption, admission and projection cases only.
+  Application authority, HTTP/UI exposure and maximum capacity qualification
+  remain pending; explicit catalog compatibility is integrated separately.
+  No activation or Task 6 completion is claimed.
 
 ## Unreleased · Reconcile quote persistence with the reviewed expiry observer
 

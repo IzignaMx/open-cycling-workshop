@@ -475,14 +475,25 @@ def test_local_admin_cannot_move_target_outside_scope_or_self_escalate(db: Fixtu
 
 
 def test_non_owner_cannot_designate_owner_even_with_all_capabilities(db: Fixture):
-    db.seed("wide", location=None)
+    current_grants = ALL | {
+        "branding.read",
+        "branding.write",
+        "quotes.read",
+        "quotes.write",
+        "quotes.authorize",
+    }
+    db.seed("wide", location=None, capabilities=current_grants)
     assert (
         db.create(
-            headers=db.headers("wide"), location_id=None, role="Owner", is_owner=True
+            headers=db.headers("wide"),
+            location_id=None,
+            role=None,
+            capabilities=sorted(current_grants),
+            is_owner=True,
         ).status_code
         == 403
     )
-    db.seed("target", location=None)
+    db.seed("target", location=None, capabilities=current_grants)
     assert (
         db.client.patch(
             f"{ADMIN}/target",
@@ -499,9 +510,14 @@ def test_non_owner_cannot_designate_owner_even_with_all_capabilities(db: Fixture
 def test_owner_transfer_self_demotion_and_last_owner_guard(db: Fixture):
     from cycling_workshop.identity.audit import IdentityAuditRecord
 
-    db.seed(
-        "owner", location=None, owner=True, capabilities=ALL | {"branding.read", "branding.write"}
-    )
+    current_grants = ALL | {
+        "branding.read",
+        "branding.write",
+        "quotes.read",
+        "quotes.write",
+        "quotes.authorize",
+    }
+    db.seed("owner", location=None, owner=True, capabilities=current_grants)
     headers = db.headers("owner")
     for change in ({"is_active": False}, {"is_owner": False}, {"role": "Viewer"}):
         response = db.client.patch(
@@ -515,7 +531,7 @@ def test_owner_transfer_self_demotion_and_last_owner_guard(db: Fixture):
         username="successor",
         location_id=None,
         role=None,
-        capabilities=sorted(ALL | {"branding.read", "branding.write"}),
+        capabilities=sorted(current_grants),
         is_owner=True,
     )
     assert second.status_code == 201, second.text

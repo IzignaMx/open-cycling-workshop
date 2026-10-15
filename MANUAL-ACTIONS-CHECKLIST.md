@@ -2,6 +2,67 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote catalog/main46 reconciliation · 2026-10-15
+
+- [x] Preserve the exact catalog and pure-read sources through a normal merge,
+      retaining both documentation histories and independent union review.
+- [x] Fresh locked Python: 1,831 passes, eight skips, 477 deselections; Node24
+      core: 912 passes. Local static/types/contracts and current PWA pass.
+- [ ] Complete exact-candidate hosted qualification after local reconciliation;
+      main46 postmerge acceptance remains a separate prerequisite. Historical
+      per-slice passes below do not qualify the new integrated tree.
+- All adoption, application-route, capacity, physical/operator and deployment
+  gates below remain open. No real account or installation was changed.
+
+## Quote catalog compatibility · 2026-10-15 local-only slice
+
+The [bounded compatibility slice](docs/10-spec-development/2026-10-15-quote-catalog-compatibility.md)
+adds three explicit literals and the current Owner starter snapshot. This is a
+separate prerequisite; earlier checkpoint-specific exclusions remain historical.
+
+- [x] Synthetic identity/CLI and generic frontend checks cover frozen legacy
+      grants, restrictive intersection, old owner edits, explicit full-current
+      owner operations, narrow branding adoption and fresh/stale catalogs.
+- [x] OpenAPI changes only two capability-list limits from 19 to 22; regenerated
+      TypeScript retains the same representation. Catalog v2, access policy 2,
+      operational read maps, SQL0012 and authenticated local schema 7 are unchanged.
+- [x] Original bounded local rerun: 704 passes / 156 explicit PostgreSQL/dialect
+      skips; core 912, static checks, HTTP smoke and current/pinned PWA builds
+      pass. Independent source probes and final document/evidence review are
+      closed with no remaining blocker for this bounded local scope.
+- [ ] Publication, exact-candidate hosted/native qualification, physical/operator
+      acceptance and deployment are not claimed.
+- [ ] Separate quote-only operator adoption, protected routes and fresh-authority
+      transactions, every stage-3/all-ingress fence, maximum-capacity/restore
+      qualification and real enrollment remain unimplemented or unqualified.
+      No real accounts, tokens or credentials were changed.
+
+Supported old APIs reject unknown quote literals. A manually preseeded quote
+literal in both account and signed token becomes recognized after this catalog
+addition; this unsupported state is explicitly outside the non-expansion claim.
+The existing frontend also refuses duplicate stored grants without normalizing
+or submitting them; exact duplicate preservation is backend evidence only.
+
+## Quote revision read contracts · 2026-10-15 bounded preparation
+
+- [x] Implement and locally verify pure closed metadata/detail DTO projections
+      from complete repository snapshots; immutable financial data remains
+      separate from current lineage context. Small-fixture suite: 581 passes,
+      255 deliberately deselected; 67 new projection cases included.
+- [x] Independent source review: no remaining blocker, seven additional small
+      cases and the strengthened two-scope continuation test passed.
+- [ ] Later exact-source hosted qualification; no PostgreSQL/HTTP/UI or capacity
+      claim follows from the pure-slice review.
+- [ ] Catalog compatibility is now integrated separately; quote-only adoption,
+      fresh narrowed protocol-1 application admission, scoped resolution, transport
+      guards/private headers and OpenAPI/client evidence before exposing reads.
+- [ ] UI/API exposure, maximum-capacity qualification, complete Task 6 and all
+      activation/operator gates remain open. The failed separate 111-operation,
+      ~8.4 MB cumulative preflight and held guard review are not superseded by
+      small functional tests. No heavy fixture or PostgreSQL test ran here.
+
+See [read-contract scope and evidence](docs/10-spec-development/2026-10-15-quote-read-contracts.md).
+
 ## Quote/main45 reconciliation · 2026-10-15 current checkpoint
 
 Normal local merge `d45c22e1`, tree `d8f978f6`, joins reviewed quote parent
@@ -1264,3 +1325,14 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
 - Existing maximum-history capacity, hosted, recovery and physical-device gates
   remain open. No capacity trial, limit change or deployment was performed. See
   the [scope and evidence](docs/10-spec-development/2026-10-15-quote-request-contracts.md).
+
+## 2026-10-15 · Request/read/catalog normal integration
+
+- PR46 and PR47 are merged. Preserve their source-bound evidence and require
+  PR47 postmerge acceptance plus fresh combined PR48 hosted acceptance before
+  the separately authorized PR48 merge. Earlier checkpoint statements remain
+  historical and do not qualify this new tree.
+- Capacity review remains held; no maximum-history specimen or harness change
+  was run. HTTP streaming, scoped authority, all mutation-ingress fences and
+  physical/operator activation gates remain separate and open. See the
+  [reconciliation record](docs/10-spec-development/2026-10-15-quote-request-contracts.md#reconciliation-with-merged-read-and-catalog-prerequisites).

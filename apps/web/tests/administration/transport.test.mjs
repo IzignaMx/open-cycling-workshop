@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createAdministrationTransport } from '../../.tmp-administration/src/features/administration/transport.js'
+import {
+  canAdminister,
+  validateUserDraft,
+} from '../../.tmp-administration/src/features/administration/model.js'
+import { oldCapabilities, quoteCapabilities, quoteCatalog } from './quote-catalog-fixture.mjs'
 const legacy = [
   'customers.read',
   'customers.write',
@@ -408,4 +413,167 @@ test('native fetch-compatible receiver is preserved for every connected administ
   await transport.locations(capture)
   await transport.logoutAll(capture)
   assert.equal(calls.length, 4)
+})
+
+test('fresh twenty-two and stale nineteen literal catalogs retain the v2 transport shape', async () => {
+  const old = quoteCatalog(false)
+  for (const includeQuotes of [false, true]) {
+    const catalog = quoteCatalog(includeQuotes)
+    const before = structuredClone(catalog)
+    const calls = []
+    const transport = createAdministrationTransport({
+      apiRealm,
+      fetch: async (url, init) => {
+        calls.push([url, init])
+        return response(url, catalog)
+      },
+    })
+    const parsed = await transport.roles(capture)
+    assert.deepEqual(parsed, before)
+    assert.deepEqual(catalog, before)
+    assert.equal(parsed.catalog_version, 2)
+    assert.equal(parsed.capabilities.length, includeQuotes ? 22 : 19)
+    assert.deepEqual(parsed.legacy_wildcard_capabilities, legacy)
+    assert.deepEqual(
+      parsed.roles.filter((role) => role.name !== 'Owner'),
+      old.roles.filter((role) => role.name !== 'Owner'),
+    )
+    assert.deepEqual(
+      parsed.roles.find((role) => role.name === 'Owner').capabilities,
+      parsed.capabilities,
+    )
+    assert.deepEqual(parsed.roles.find((role) => role.name === 'TechnicalAdmin').capabilities, [])
+    assert.equal(calls.length, 1)
+    const [url, init] = calls[0]
+    assert.equal(url, 'https://example.test/api/v2/admin/roles')
+    assert.equal(init.method, 'GET')
+    assert.equal(init.cache, 'no-store')
+    assert.equal(init.credentials, 'omit')
+    assert.equal(init.redirect, 'error')
+    assert.equal(init.referrerPolicy, 'no-referrer')
+    assert.equal(init.headers.Authorization, 'Bearer captured')
+    assert.equal(Object.hasOwn(init.headers, 'X-OCWP-Write-Protocol'), false)
+    const actor = { ...user, capabilities: quoteCatalog().capabilities }
+    for (const grant of quoteCapabilities) {
+      const target = {
+        ...user,
+        username: 'a',
+        is_active: true,
+        is_owner: false,
+        version: 1,
+        capabilities: [grant],
+      }
+      assert.equal(validateUserDraft(target, parsed).length === 0, includeQuotes)
+      assert.equal(canAdminister(actor, target, target, 'owner', parsed), includeQuotes)
+    }
+  }
+})
+
+test('full current owner creation and explicit replacement transmit every grant on unchanged v1 routes', async () => {
+  const catalog = quoteCatalog()
+  const capabilities = [...catalog.capabilities].reverse()
+  const fullOwner = {
+    ...user,
+    username: 'a',
+    capabilities,
+    version: 4,
+    is_owner: true,
+    is_active: true,
+  }
+  const source = { ...capture, user: fullOwner }
+  const create = {
+    username: 'a',
+    display_name: 'A',
+    password: 'synthetic-password',
+    location_id: null,
+    capabilities,
+    is_owner: true,
+  }
+  const replace = { expected_version: 3, capabilities }
+  const before = structuredClone({ create, replace })
+  const calls = []
+  const transport = createAdministrationTransport({
+    apiRealm,
+    fetch: async (url, init) => {
+      calls.push([url, init])
+      return response(url, fullOwner, init.method === 'POST' ? 201 : 200)
+    },
+  })
+  assert.deepEqual(await transport.createUser(source, create), fullOwner)
+  assert.deepEqual(await transport.updateUser(source, user.user_id, replace), fullOwner)
+  assert.deepEqual(
+    calls.map(([url, init]) => [url, init.method]),
+    [
+      [`${apiRealm}/admin/users`, 'POST'],
+      [`${apiRealm}/admin/users/a`, 'PATCH'],
+    ],
+  )
+  assert.deepEqual(JSON.parse(calls[0][1].body), create)
+  assert.deepEqual(JSON.parse(calls[1][1].body), replace)
+  assert.deepEqual({ create, replace }, before)
+  for (const [, init] of calls) {
+    assert.equal(init.headers['X-OCWP-Write-Protocol'], '1')
+    assert.equal(init.cache, 'no-store')
+    assert.equal(Object.hasOwn(JSON.parse(init.body), 'role'), false)
+  }
+})
+
+const invalidQuoteCatalogs = [
+  ['legacy catalog version', (catalog) => (catalog.catalog_version = 1)],
+  ['unnegotiated catalog version', (catalog) => (catalog.catalog_version = 3)],
+  ['missing wildcard snapshot', (catalog) => delete catalog.legacy_wildcard_capabilities],
+  ['additional top-level field', (catalog) => (catalog.unknown = true)],
+  ['duplicate catalog grant', (catalog) => catalog.capabilities.push('quotes.read')],
+  ['non-string catalog grant', (catalog) => catalog.capabilities.push(null)],
+  ['wildcard in concrete catalog', (catalog) => catalog.capabilities.push('*')],
+  ['missing legacy catalog grant', (catalog) => catalog.capabilities.shift()],
+  ['narrowed legacy wildcard', (catalog) => catalog.legacy_wildcard_capabilities.pop()],
+  [
+    'duplicate legacy wildcard grant',
+    (catalog) => catalog.legacy_wildcard_capabilities.push('orders.read'),
+  ],
+  ...['branding.read', ...quoteCapabilities].map((grant) => [
+    `widened legacy wildcard with ${grant}`,
+    (catalog) => catalog.legacy_wildcard_capabilities.push(grant),
+  ]),
+  ['duplicate role grant', (catalog) => catalog.roles[0].capabilities.push('quotes.write')],
+  ['wildcard role grant', (catalog) => catalog.roles[0].capabilities.push('*')],
+  ['unknown role grant', (catalog) => catalog.roles[0].capabilities.push('quotes.unknown')],
+  [
+    'quote role grants outside stale catalog',
+    (catalog) => (catalog.capabilities = [...oldCapabilities]),
+  ],
+  ['duplicate role name', (catalog) => catalog.roles.push({ ...catalog.roles[0] })],
+  ['additional role field', (catalog) => (catalog.roles[0].unknown = true)],
+]
+for (const [reason, mutate] of invalidQuoteCatalogs) {
+  test(`quote catalog parsing fails closed for ${reason}`, async () => {
+    const malformed = quoteCatalog()
+    mutate(malformed)
+    const before = structuredClone(malformed)
+    const transport = createAdministrationTransport({
+      apiRealm,
+      fetch: async (url) => response(url, malformed),
+    })
+    await assert.rejects(transport.roles(capture), (error) => error.code === 'invalid_response')
+    assert.deepEqual(malformed, before)
+  })
+}
+
+test('quote-aware user parsing refuses duplicate historical grants without rewriting the snapshot', async () => {
+  const row = {
+    ...user,
+    username: 'a',
+    capabilities: [...oldCapabilities, 'orders.read'],
+    version: 4,
+    is_owner: true,
+    is_active: true,
+  }
+  const before = structuredClone(row)
+  const transport = createAdministrationTransport({
+    apiRealm,
+    fetch: async (url) => response(url, { items: [row], next_cursor: null }),
+  })
+  await assert.rejects(transport.users(capture), (error) => error.code === 'invalid_response')
+  assert.deepEqual(row, before)
 })

@@ -116,3 +116,66 @@ remain separate prerequisites. No capacity trials or harness/limit changes ran.
 - PostgreSQL/native/hosted/physical gates are not inferred. The full aggregate
   runtime verifier was intentionally not invoked for this finite pure boundary;
   no browser, deployment, maximum-history or CPU capacity trial ran.
+
+## Reconciliation with merged read and catalog prerequisites
+
+The normal merge joins the original published PR48 head
+`2f74f075d28d403621b0a87c720c785eae8f3a46` and actual main47
+`51c351864cec4dbf444e5f99d3c441239a4b2665` (tree
+`a9bb574604373788f604209feabcfd5541033804`) in that parent order.
+PR46 read contracts and PR47 catalog compatibility are now merged; the earlier
+records describe their original development checkpoints, not current unmerged
+status. The coordinator verified PR46 postmerge acceptance; PR47 postmerge and
+this new combined PR48 candidate require their own exact-source acceptance.
+The user's sequential integration approval does not authorize quote activation.
+
+Only changelog and execution-state content conflicted; both additions were kept.
+The checklist merged additively. Every production, test and generated-contract
+blob from either parent is preserved exactly. In particular, the unchanged
+request decoder now coexists with the read projections and explicit three-grant
+current catalog. Existing Owner19 does not acquire quote grants automatically.
+The incoming OpenAPI change remains exactly the catalog's two maxItems bounds;
+no quote route is registered and no new request DTO is exposed through OpenAPI.
+
+Original PR48 hosted qualification remains source-bound history: CI38805030185
+passed 27 controls, Python direct/aggregate each 3,425 passed with 23 explicit
+skips, and native browser groups passed direct80/aggregate80/sync20/cutover9/
+clock5/expiry10/kernel14 without retries. Runtime38805030145, Security38805030133
+and DCO38805030212 passed; QEMU38805030186 failed NON-QUALIFYING with original
+cause unproven. These results do not qualify this newly combined tree.
+
+Fresh combined local verification uses the existing separately frozen
+all-workspace Python 3.13.5 environment from the catalog reconciliation, verified
+against this tree's unchanged lockfile. Local frontend tools use Node24.19.0,
+not the pinned hosted Node22.16.0. No fresh installation is claimed for this
+worktree. No local PostgreSQL/native-browser/full aggregate or maximum-history
+capacity qualification is attempted; the existing 16 MiB serializer specimen
+is deliberately excluded from the bounded test selection. No production logic
+change or new test behavior is introduced, so this merge uses deterministic
+source-union proof and existing regressions rather than an artificial RED test.
+
+Fresh local combined results:
+
+- Bounded quote/identity/CLI/repository/CI selection: **1,366 passed, eight
+  skipped, 456 deselected**, one existing Starlette warning (159.94 s). Three
+  skips require real PostgreSQL; five require the hosted scanner. The explicit
+  16 MiB serializer specimen and other deselected cases are not passes.
+- Complete frontend core: **912 passed**; API-client core: **one passed**, with
+  no failures/skips. Web/API/offline types, ESLint and full Prettier pass.
+- Full Ruff check/format: **277 files**; mypy: **113 source files**. Repository
+  validation and generated OpenAPI/TypeScript checks pass. Production PWA builds
+  with its existing large-chunk warning; no limits are altered.
+- Independent review confirmed the exact parent source union and no production
+  blocker. Focused request/read/catalog tests passed **224**, with **65 explicit
+  PostgreSQL skips**, plus contract checks and focused Ruff.
+- Exact source union verifies **684** non-reconciliation-document paths: 666
+  shared, 16 incoming main47 and two original request files. Only four additive
+  reconciliation documents differ beyond those parent blobs. The prior state
+  statuses are retained as historical checkpoints, with current gates here and
+  in the new reconciliation block.
+
+Local proofs do not replace fresh combined-tree hosted or postmerge evidence.
+The coordinator owns publication using connector-managed account metadata;
+the separate local merge has truthful Codex <codex@openai.com> provenance and DCO.
+No author/committer override is supplied to the connector. Publication preserves
+the exact reviewed tree, ordered parents and message; its commit SHA may differ.

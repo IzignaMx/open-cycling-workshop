@@ -54,7 +54,9 @@ LEGACY_WILDCARD_CAPABILITIES = frozenset(
     }
 )
 BRANDING_CAPABILITIES = frozenset({"branding.read", "branding.write"})
-CAPABILITIES = LEGACY_WILDCARD_CAPABILITIES | BRANDING_CAPABILITIES
+# Quote grants are explicit-only; never extend the frozen business/legacy sets.
+QUOTE_CAPABILITIES = frozenset({"quotes.read", "quotes.write", "quotes.authorize"})
+CAPABILITIES = LEGACY_WILDCARD_CAPABILITIES | BRANDING_CAPABILITIES | QUOTE_CAPABILITIES
 LEGACY_ROLE_BUNDLES: Mapping[str, frozenset[str]] = MappingProxyType(
     {
         "Owner": LEGACY_WILDCARD_CAPABILITIES,
@@ -89,6 +91,7 @@ ROLE_BUNDLES: dict[str, frozenset[str]] = {
         if name != "TechnicalAdmin"
         else set()
     )
+    | (QUOTE_CAPABILITIES if name == "Owner" else frozenset())
     for name, grants in LEGACY_ROLE_BUNDLES.items()
 }
 

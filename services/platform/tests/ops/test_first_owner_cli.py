@@ -97,11 +97,46 @@ def test_first_owner_is_separate_account_and_never_promotes_legacy_admin(install
         assert after == before
         owner = session.get(UserRecord, output["user_id"])
         assert owner.is_owner and owner.location_id is None and owner.username == "owner"
-        assert "*" not in owner.capabilities and "users.grants.write" in owner.capabilities
+        # The explicit first-owner command snapshots the current catalog. Keep
+        # the expectation literal so a growing legacy bundle cannot satisfy it.
+        assert owner.capabilities == [
+            "bicycles.read",
+            "bicycles.write",
+            "branding.read",
+            "branding.write",
+            "customers.read",
+            "customers.write",
+            "inventory.read",
+            "inventory.write",
+            "locations.create",
+            "locations.read",
+            "orders.read",
+            "orders.write",
+            "quotes.authorize",
+            "quotes.read",
+            "quotes.write",
+            "sync.pull",
+            "sync.push",
+            "users.credentials.reset",
+            "users.grants.write",
+            "users.read",
+            "users.sessions.revoke",
+            "users.write",
+        ]
+        assert owner.version == 1 and owner.session_version == 1
         assert PasswordService().verify(owner.password_hash, password)
         audit = session.scalars(select(IdentityAuditRecord)).one()
         assert audit.action == "user.first_owner_created" and audit.actor_id is None
         assert audit.target_id == owner.id and audit.request_id.startswith("cli-")
+        assert audit.before is None
+        assert audit.after == {
+            "location_id": None,
+            "capabilities": owner.capabilities,
+            "is_active": True,
+            "is_owner": True,
+            "version": 1,
+            "session_version": 1,
+        }
         assert password not in json.dumps(audit.after) and owner.password_hash not in json.dumps(
             audit.after
         )
