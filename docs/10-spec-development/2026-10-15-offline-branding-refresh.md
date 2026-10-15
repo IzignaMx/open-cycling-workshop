@@ -173,3 +173,15 @@ with fake IndexedDB and controlled transport:
 Fresh exact changed-head hosted direct/aggregate browser and retry-free repeated
 journeys remain required. No native browser, physical device or deployment pass
 is inferred from this local evidence.
+
+### Subsequent aggregate evidence and connected completion
+
+The previously pending aggregate of CI38678325955 finished with **26/27 controls,
+2375 Python passes / 14 skips, 752 frontend passes**, and **60 first-pass browser
+cases, two flaky retry passes and one final failure**. The final failure remains
+the offline reload above. Two additional first-attempt failures rendered OCWP
+instead of current branding after connected relogin and connected preference
+reload. Both passed retry1. They are not covered by the offline-only completion
+request. The [separate connected follow-up](2026-10-15-connected-branding-refresh.md)
+records their artifacts, deterministic cause and bounded first-sync correction.
+The earlier local offline commit and its evidence remain retained.

@@ -906,3 +906,13 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   change cache admission or retry budgets. This new local composition evidence
   does not qualify the browser journey. Exact changed-head direct/aggregate and
   retry-free repetition gates remain open.
+
+- CI38678325955's aggregate subsequently finished: 26/27 controls, 2375 Python
+  passes / 14 skips and 752 frontend passes. Browser: **60 first-pass, two flaky
+  retry passes, one final failure**. Besides the retained offline reload failure,
+  connected relogin and connected v1-preference reload first rendered OCWP instead
+  of the current saved brand. Their retries passed; this does not erase either
+  first failure. The [connected startup correction](docs/10-spec-development/2026-10-15-connected-branding-refresh.md)
+  adds one current-admission completion request after the first settled sync.
+  New exact-head direct/aggregate and retry-free gates remain required before
+  integration; earlier local or hosted results do not qualify this combined tree.

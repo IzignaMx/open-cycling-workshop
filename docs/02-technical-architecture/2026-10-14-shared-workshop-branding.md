@@ -163,6 +163,12 @@ and issue reads finish: their kernel transactions may advance trusted observatio
 time after the first cache read began. The completion request requires the same
 still-current active source and uses the existing finite coalescer. It is not a
 retry triggered by cache refusal and does not run for connected startup.
+Connected admission keeps one source-bound completion request until its first
+settled sync finishes the final operational reads. Intermediate progress or
+transient retry does not consume it; cancellation, offline transition and a new
+admission replace it. Consume only after rechecking the current source following
+terminal publication. Subsequent sync polls and page changes do not request more
+branding. Both paths use the unchanged finite coalescer, not a cache-null loop.
 
 The runtime owns refresh on admission, reconnection, focus (throttled) and explicit
 request/save. Exact saved session, current ticket/source generation, lease and

@@ -140,6 +140,7 @@ export class WorkshopController {
   #sequence = 0
   #active: BaselineSession | null = null
   #working: BaselineSession | null = null
+  #brandingAdmissionRefresh: BaselineSession | null = null
   #timer: ReturnType<typeof setTimeout> | null = null
   #leaseTimer: ReturnType<typeof setTimeout> | null = null
   #observedAt = 0
@@ -556,6 +557,7 @@ export class WorkshopController {
     this.#push.invalidate()
     this.#active = null
     this.#working = null
+    this.#brandingAdmissionRefresh = null
     this.#preferences = null
     this.#running = false
     if (this.#timer !== null) clearTimeout(this.#timer)
@@ -995,6 +997,7 @@ export class WorkshopController {
     }
     if (!current()) return
     const connected = online && this.#verifiedOnline
+    this.#brandingAdmissionRefresh = connected ? source : null
     this.publish({
       phase: 'ready',
       user,
@@ -1160,6 +1163,7 @@ export class WorkshopController {
     await this.verifyStored(saved, source.context.selectedLocationId, source.ticket)
   }
   async offline() {
+    this.#brandingAdmissionRefresh = null
     this.branding.clear()
     this.invalidateAccount()
     this.#locationPage++
@@ -1460,6 +1464,12 @@ export class WorkshopController {
           ? 30000
           : Math.max(1000, Math.min(30000, this.#snapshot.nextRetryAt - this.#now())),
       )
+      // Admission's first settled sync can fence an overlapping branding write.
+      // Request once after its final reads, never on every subsequent poll/page.
+      if (current() && this.#brandingAdmissionRefresh === source) {
+        this.#brandingAdmissionRefresh = null
+        void this.branding.refresh(true)
+      }
     } catch {
       if (current()) this.held('storage_or_fence_failure')
     } finally {

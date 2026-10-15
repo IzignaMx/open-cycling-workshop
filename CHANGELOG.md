@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Finish branding admission after connected startup sync
+
+- Keep one source-bound branding refresh pending until a connected admission's
+  first settled sync finishes its operational reads. Clear it on cancellation,
+  offline transition or replacement; do not add branding polls to later syncs
+  or page navigation. Intermediate progress/transient retries retain the request.
+- Reproduce connected login, fresh login while an obsolete response is held, and
+  connected reload with preserved v1 personal preferences. Cover real delayed
+  logo hashing versus sync writes, finite requests and publication-time changes.
+- Preserve the aggregate's two first-attempt identity failures and retry passes,
+  separately from its final offline-reload failure. Cache security checks and
+  browser assertions/timeouts remain intact; exact hosted evidence is pending.
+
 ## Unreleased · Readmit branding after offline startup completes
 
 - Request one current-source offline branding refresh after initial customer,

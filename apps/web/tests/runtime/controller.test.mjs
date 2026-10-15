@@ -2141,3 +2141,382 @@ for (const edge of ['logout', 'takeover', 'expiry', 'session replacement']) {
     await assertReloadWorkPreserved(f)
   })
 }
+
+function holdFirstBrandingWrite(t, database) {
+  const transaction = database.transaction.bind(database)
+  let entered,
+    release,
+    held = false
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  t.after(() => release())
+  t.mock.method(database, 'transaction', async (...args) => {
+    if (!held && args[0] === 'rw' && args[1].some((table) => table.name === 'brandingSnapshots')) {
+      held = true
+      entered()
+      await gate
+    }
+    return transaction(...args)
+  })
+  return { started, release }
+}
+function waitForSyncResponse(server, pending) {
+  const fetch = server.fetch
+  server.fetch = async (url, init) => {
+    const result = await fetch(url, init)
+    const body = init.body ? JSON.parse(init.body) : null
+    if (url.endsWith('/deltas/page') && body.continuation !== 'delta') await pending.wait
+    return result
+  }
+}
+
+function advancingRuntimeClock(t, env) {
+  let wall = NOW
+  Object.defineProperty(env, 'now', { get: () => ++wall })
+  t.mock.method(performance, 'now', () => wall - NOW)
+}
+async function settledBranding(runtime) {
+  await until(
+    () => runtime.getSnapshot().sync === 'synced' && !runtime.branding.getSnapshot().loading,
+    'initial sync and branding did not settle',
+  )
+}
+for (const logo of [false, true]) {
+  test(`connected startup recovers verified branding after initial sync observations, logo ${logo}`, async (t) => {
+    const { withLogo } = await import('../branding/fixture.mjs')
+    const server = brandedApi(
+      ['branding.read'],
+      logo ? (url) => response(url, withLogo({ display_name: 'Shared workshop' })) : undefined,
+    )
+    const pending = { wait: Promise.resolve() }
+    waitForSyncResponse(server, pending)
+    const f = setup(t, { server }),
+      write = holdFirstBrandingWrite(t, f.database)
+    pending.wait = write.started
+    advancingRuntimeClock(t, f.env)
+    await f.runtime.start()
+    await login(f.runtime)
+    await write.started
+    await until(() => f.runtime.getSnapshot().sync === 'synced', 'initial sync did not finish')
+    write.release()
+    await settledBranding(f.runtime)
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    assert.equal(await f.database.operationJournal.count(), 0)
+    assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+    assert.equal(
+      (await f.database.brandingSnapshots.toArray())[0].profile.display_name,
+      'Shared workshop',
+    )
+    const brandingRequests = () =>
+      f.server.calls.filter((path) => path.endsWith('/branding')).length
+    const initialRequests = brandingRequests()
+    assert.equal(initialRequests, 2)
+    // Later polls and page navigation retain admitted memory without requesting
+    // branding again or creating a cache-result-driven refresh loop.
+    await f.runtime.sync()
+    await f.runtime.refresh('customer')
+    await f.runtime.refresh('service_order')
+    await f.runtime.loadIssues()
+    assert.equal(brandingRequests(), initialRequests)
+    assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+  })
+}
+
+test('connected relogin publishes current brand before an obsolete held response is released', async (t) => {
+  const { profile } = await import('../branding/fixture.mjs')
+  let version = 1,
+    hold = false,
+    entered,
+    release
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  t.after(() => release())
+  const server = brandedApi(['branding.read'], async (url) => {
+    const value = profile({ version, display_name: `Verified version ${version}` })
+    if (hold) {
+      hold = false
+      entered()
+      await gate
+    }
+    return response(url, value)
+  })
+  const pending = { wait: Promise.resolve() }
+  waitForSyncResponse(server, pending)
+  const f = setup(t, { server })
+  await login(f.runtime)
+  await settledBranding(f.runtime)
+  assert.equal(f.runtime.branding.getSnapshot().profile.version, 1)
+  version = 2
+  hold = true
+  const late = f.runtime.branding.refresh(true)
+  await started
+  await f.runtime.logout()
+  assert.equal(f.runtime.branding.getSnapshot().profile, null)
+  version = 3
+  const write = holdFirstBrandingWrite(t, f.database)
+  pending.wait = write.started
+  advancingRuntimeClock(t, f.env)
+  await login(f.runtime)
+  await write.started
+  await until(() => f.runtime.getSnapshot().sync === 'synced', 'new session sync did not finish')
+  write.release()
+  await settledBranding(f.runtime)
+  assert.equal(f.runtime.branding.getSnapshot().profile?.version, 3)
+  release()
+  await late
+  assert.equal(f.runtime.branding.getSnapshot().profile.version, 3)
+  const snapshots = await f.database.brandingSnapshots.toArray()
+  assert.equal(snapshots.length, 1)
+  assert.equal(snapshots[0].profile.version, 3)
+  assert.equal(await f.database.operationJournal.count(), 0)
+})
+
+test('connected reload readmits shared branding while v1 personal records survive explicit inheritance', async (t) => {
+  const { withLogo, PNG } = await import('../branding/fixture.mjs')
+  const first = setup(t, {
+    server: brandedApi(['branding.read'], (url) =>
+      response(url, withLogo({ display_name: 'Shared inheritance workshop' })),
+    ),
+  })
+  await login(first.runtime)
+  await settledBranding(first.runtime)
+  assert.equal(first.runtime.branding.getSnapshot().profile.version, 1)
+  const scope = { organizationId: 'org', userId: 'A', locationId: 'loc' }
+  const appearance = {
+    ...scope,
+    key: JSON.stringify(['appearance', 'org', 'A']),
+    locationId: null,
+    kind: 'appearance',
+    value: {
+      schemaVersion: 1,
+      themeId: 'noche',
+      paletteId: 'bosque',
+      scheme: 'light',
+      density: 'workshop',
+      logoDataUrl: null,
+    },
+  }
+  const logo = {
+    ...scope,
+    key: JSON.stringify(['logo', 'org', 'A', 'loc']),
+    kind: 'logo',
+    value: `data:image/png;base64,${PNG}`,
+  }
+  await first.database.presentationPreferences.bulkPut([appearance, logo])
+  const journal = await first.database.operationJournal.toArray()
+  first.runtime.dispose()
+  const { BrandingSnapshotRepository } = await import('../../.tmp-runtime/src/branding/cache.js')
+  const write = BrandingSnapshotRepository.prototype.write
+  const digest = crypto.subtle.digest.bind(crypto.subtle)
+  const fetch = first.server.fetch
+  let writing = false,
+    held = false,
+    release,
+    entered
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  t.after(() => release())
+  t.mock.method(BrandingSnapshotRepository.prototype, 'write', async function (...args) {
+    writing = true
+    try {
+      return await write.apply(this, args)
+    } finally {
+      writing = false
+    }
+  })
+  t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (writing && !held) {
+      held = true
+      entered()
+      await gate
+    }
+    return digest(...args)
+  })
+  // Let the real sync apply/refresh transactions advance control only after
+  // online branding has captured its cache-write entry time and begun hashing.
+  first.server.fetch = async (url, init) => {
+    const result = await fetch(url, init)
+    if (url.endsWith('/deltas/page')) await started
+    return result
+  }
+  const second = setup(t, { name: first.name, storage: first.storage, server: first.server })
+  const transaction = second.database.transaction.bind(second.database)
+  const page = second.runtime.repositories.page.bind(second.runtime.repositories)
+  let readEntered,
+    pageFinished,
+    readHeld = false
+  const reading = new Promise((resolve) => {
+    readEntered = resolve
+  })
+  const pageDone = new Promise((resolve) => {
+    pageFinished = resolve
+  })
+  t.mock.method(second.database, 'transaction', async (...args) => {
+    if (
+      !readHeld &&
+      args[0] === 'r' &&
+      args[1].some((table) => table.name === 'brandingSnapshots')
+    ) {
+      readHeld = true
+      readEntered()
+      await pageDone
+    }
+    return transaction(...args)
+  })
+  t.mock.method(second.runtime.repositories, 'page', async (...args) => {
+    if (args[1] !== 'customer') return page(...args)
+    await reading
+    const result = await page(...args)
+    pageFinished()
+    return result
+  })
+  advancingRuntimeClock(t, second.env)
+  await second.runtime.start()
+  await started
+  await until(() => second.runtime.getSnapshot().sync === 'synced', 'reload sync did not finish')
+  release()
+  await settledBranding(second.runtime)
+  const loaded = await second.runtime.preferences.load(scope)
+  assert.equal(loaded.valid, true)
+  assert.equal(loaded.preferences.themeId, 'noche')
+  assert.equal(loaded.preferences.paletteId, 'bosque')
+  assert.equal(loaded.preferences.logoDataUrl, logo.value)
+  assert.deepEqual(await second.database.presentationPreferences.toArray(), [appearance, logo])
+  await second.runtime.preferences.saveLogoMode(scope, 'workshop')
+  assert.equal((await second.runtime.preferences.load(scope)).preferences.logoMode, 'workshop')
+  assert.deepEqual(await second.database.presentationPreferences.get(appearance.key), appearance)
+  assert.deepEqual(await second.database.operationJournal.toArray(), journal)
+  assert.equal(
+    second.runtime.branding.getSnapshot().profile?.display_name,
+    'Shared inheritance workshop',
+  )
+  assert.equal(second.runtime.branding.getSnapshot().profile.logo_state, 'available')
+})
+
+function countForcedBrandingRefreshes(t, runtime) {
+  let forced = 0
+  const refresh = runtime.branding.refresh.bind(runtime.branding)
+  t.mock.method(runtime.branding, 'refresh', (...args) => {
+    if (args[0]) forced++
+    return refresh(...args)
+  })
+  return () => forced
+}
+
+test('first connected completion remains pending through actual progressed sync pages', async (t) => {
+  const server = brandedApi(),
+    fetch = server.fetch
+  let deltas = 0,
+    release
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  t.after(() => release())
+  server.fetch = async (url, init) => {
+    const body = init.body ? JSON.parse(init.body) : null
+    if (url.endsWith('/deltas/page') && body.continuation !== 'delta') {
+      deltas++
+      if (deltas === 2) await gate
+      const value = await (await fetch(url, init)).json()
+      if (deltas === 1) {
+        value.phase = 'catching_up'
+        value.completion = null
+      }
+      return response(url, value)
+    }
+    return fetch(url, init)
+  }
+  const f = setup(t, { server }),
+    forced = countForcedBrandingRefreshes(t, f.runtime)
+  await login(f.runtime)
+  await until(() => deltas === 2, 'progress did not request the next actual delta')
+  assert.equal(forced(), 1)
+  assert.equal(f.runtime.getSnapshot().sync, 'syncing')
+  release()
+  await settledBranding(f.runtime)
+  assert.equal(forced(), 2)
+  await f.runtime.sync()
+  assert.equal(forced(), 2)
+})
+
+test('first connected completion remains pending across a transient sync failure', async (t) => {
+  const server = brandedApi(),
+    fetch = server.fetch
+  let failed = false,
+    completed = 0
+  server.fetch = async (url, init) => {
+    const body = init.body ? JSON.parse(init.body) : null
+    if (!failed && url.endsWith('/deltas/page') && body.continuation !== 'delta') {
+      failed = true
+      throw new TypeError('Synthetic connection unavailable')
+    }
+    return fetch(url, init)
+  }
+  const f = setup(t, { server }),
+    forced = countForcedBrandingRefreshes(t, f.runtime),
+    sync = f.runtime.sync.bind(f.runtime)
+  t.mock.method(f.runtime, 'sync', async () => {
+    await sync()
+    completed++
+  })
+  await login(f.runtime)
+  await until(
+    () => completed === 1 && f.runtime.getSnapshot().sync === 'error',
+    'transient sync not settled',
+  )
+  assert.equal(forced(), 1)
+  f.env.now = NOW + 30000
+  await f.runtime.sync()
+  await settledBranding(f.runtime)
+  assert.equal(forced(), 2)
+  await f.runtime.sync()
+  assert.equal(forced(), 2)
+})
+
+for (const edge of ['logout', 'offline', 'replacement']) {
+  test(`terminal sync publication ${edge} suppresses an obsolete admission refresh`, async (t) => {
+    const f = setup(t, { server: brandedApi() }),
+      forced = countForcedBrandingRefreshes(t, f.runtime)
+    let triggered = false,
+      transition
+    f.runtime.subscribe(() => {
+      if (triggered || f.runtime.getSnapshot().sync !== 'synced') return
+      triggered = true
+      if (edge === 'logout') transition = f.runtime.logout()
+      if (edge === 'offline') {
+        f.env.online = false
+        transition = f.runtime.offline()
+      }
+      if (edge === 'replacement') {
+        f.runtime.sessionStore.setToken('replacement-synthetic-session')
+        transition = f.runtime.checkLease()
+      }
+    })
+    await f.runtime.login({ organization_id: 'org', username: 'A', password: 'synthetic' })
+    await until(() => triggered, 'terminal sync publication missing')
+    await transition
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'branding transition unfinished')
+    // Offline has its own reconcile and explicit transition request; a stale
+    // connected completion must not add another request to either path.
+    assert.equal(forced(), edge === 'offline' ? 3 : 1)
+    if (edge === 'offline') {
+      assert.equal(f.runtime.getSnapshot().phase, 'ready')
+      assert.equal(f.runtime.getSnapshot().sync, 'offline')
+    } else {
+      assert.equal(f.runtime.branding.getSnapshot().profile, null)
+      assert.equal(f.runtime.getSnapshot().phase, edge === 'logout' ? 'locked' : 'held')
+    }
+  })
+}
