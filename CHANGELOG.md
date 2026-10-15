@@ -57,6 +57,23 @@
 - Keep real PostgreSQL/restore evidence pending and preserve the separate grants,
   routes, all-ingress guards, mixed-writer rollout and operational execution gates.
 
+## Unreleased · Observe expiry inside the disposable browser fixture
+
+- Preserve postmerge main42's mandatory expiry result: nine passes and one CDP
+  body-unavailable failure with retries disabled. Direct80, aggregate80 and the
+  verifier's27 controls passed, but the workflow correctly failed its repetition
+  and final completion gates. Immediate CDP retrieval proved insufficient.
+- Observe only the intended actual scoped context response through a test-owned
+  fetch clone installed before application bootstrap. Retain only expiry/protocol
+  scalars, bound accepted bytes and the accumulation buffer to16 KiB, reject
+  missing/ambiguous/invalid responses,
+  and attempt cleanup on every exit without awaiting clone reads before returning
+  the app response. Closed-page cleanup failure cannot qualify an observation.
+- Preserve application fetch arguments, response and errors, all expiry/clock/UI
+  assertions and existing45-second budgets. Production and workflow sources are
+  unchanged. The separate correction still requires independent review and the
+  complete hosted matrix, including ten retry-free native expiry passes.
+
 ## Unreleased · Require retry-free inventory expiry evidence
 
 - Run the two existing inventory expiry journeys five times each with one worker,
