@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Reconcile quote persistence with the reviewed expiry observer
+
+- Normally merge actual main `19882936`, preserving the fixture-only observer
+  correction, all mandatory expiry gates and the quote SQL0012/runtime sources.
+- Retain the earlier combined PR44 tree's independently verified 27-control
+  hosted pass, populated quote restore and three consecutive restart cycles as
+  source-bound history; they do not qualify this newly reconciled tree.
+- Complete available local qualification: 21 passing controls, zero failures and
+  five environment blockers; 2,898 Python passes and 883 frontend passes.
+- Keep main45 postmerge CI and new exact-candidate hosted qualification pending.
+  Maximum quote capacity, full Task 6 and operational activation remain open.
+
 ## Unreleased · Reconcile quote persistence with actual inventory main
 
 - Normally merge main `5ab7dd7c`, preserving its connected inventory read guards,

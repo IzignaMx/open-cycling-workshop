@@ -382,3 +382,87 @@ aggregate evidence remain required. Prior run 38708608754 belongs to the earlier
 26b589be tree and remains separate causal evidence. Maximum-fixture and
 activation gates remain open. The original restart failure's cause is still
 unknown; no passing later run or merge retroactively explains it.
+
+## Actual main45 reconciliation
+
+Normal local merge `d45c22e14883bc43dd5815530fbe48a5926f0d5a`, tree
+`d8f978f6309c44aa6256a4da329ae0738b316920`, has parents prior reviewed
+`ae249f962820a893e35872b60ca414a77ccee2dd` and actual main
+`1988293629bf76a8c8d271516e876fa6e1133aa0`. The latter's tree is
+`4ccee08913f9511b4acb8f2e5e7d4bb037ee476a`, equal to the reviewed PR45 correction.
+Publication must preserve remote merge parents `3dd88d32` and `19882936`, not
+substitute the rewritten local first-parent SHA. No rebase or force is used.
+
+Only changelog and checklist conflicted; both additive histories were retained.
+Execution state merged automatically. Independent union inspection confirms all
+five incoming-only blobs and all 28 quote-only blobs equal their respective
+parents. The incoming change is four observer helper/spec/test files and its
+evidence document. CI/expiry guards, production source, SQL0012/local schema 7,
+three-cycle runtime and the quote PostgreSQL recovery wrapper remain unchanged.
+
+### Earlier combined-tree hosted evidence
+
+Before this reconciliation, published PR44 head `3dd88d32`, actual checkout
+`ddb0721e27cb874ca0ca910644ec4ffdddda8e37`, had reviewed tree `b43c6c94`.
+[CI 38713762360](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38713762360)
+passed on attempt 1 with **27 aggregate controls and zero blockers**. Direct and
+aggregate Python each passed **3,330 tests / 23 skips / three warnings**. Matching
+pg_dump/pg_restore 18.4 executed **24 cases without skips**: 21 quote contention/
+admission/rollback cases, one populated quote restore/replay case and two branding
+cases. The generic backup integration test remained separately skipped in broad
+Python runs and is not invoked by that wrapper.
+
+Inventory PostgreSQL proof passed 43 cases; both actual Caddy configurations
+passed. Browser executions were kernel 14, direct 80, baseline 20, cutover 9, clock 5,
+expiry 10 and aggregate 80. The post-aggregate expiry guard rechecks the same ten
+cases; it does not add ten executions. Qualification ZIP 11962929838 SHA-256:
+`095d0cd96cd71a499b7f58e3531c53d5f1bbcad9c67b7072fd3b1a8f45b62a41`.
+Independent CI review SHA-256:
+`1fac2ecf2cbf45a68b638c4f2103d394a6decd5197093f933412a73a2a3070c4`.
+
+That tree's [Runtime 38713762511](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38713762511)
+and [Security 38713762346](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38713762346)
+passed on attempt 1, with all three ARM64 builds and actual native decoder proof.
+Runtime passed all 11 checks and three consecutive restart cycles: 8.537/8.054/7.989
+seconds, followed by generic PostgreSQL18 and authenticated/branding recovery.
+Independent report SHA-256:
+`ba8757a3904d30a73a5e8b48e6a30bd0c955e57f9ff42046c04391e038562b4c`.
+The original restart cause stays unknown; the passing run did not exercise
+hosted failure diagnostics. None of these earlier results qualifies this new tree.
+
+### New combined-source local qualification
+
+The exact merge above passed the full available local aggregate: **21 controls,
+zero failures, five environment blockers**. Python: **2,898 passed / 455 skipped /
+three warnings** in 264.41s; frontend core: **883 passed**, zero failures/skips;
+API-client core: one passed. Configured static checks, mypy 111 production sources,
+contracts, SQLite HTTP, current PWA and reproducible pinned-old App/SW builds pass.
+Aggregate artifact SHA-256:
+`61d7ffc430c2c65628f48aaf02a40855e3160abf8ed2fdf042cc13915c8a3c8f`.
+
+The first aggregate session lost its execution-server connection, then returned
+unknown process ID. It produced no JSON and an empty log; no test outcome is
+inferred. The separate complete second attempt on unchanged source produced the
+result above and exit 0. Evidence from both attempts is retained.
+
+Toolchain: locked Python 3.13.5/Pillow 12.3.0, Node 22.16.0, reused pnpm 11.25.0 and
+read-only installed dependencies bound to this checkout; not a fresh pinned
+pnpm 11.17 installation. Blockers remain no PostgreSQL test URL, Docker or psql,
+managed Chromium URLBlocklist and no destructive E2E database URL. Separate
+observer 12 and Python 118 focused checks, strict inventory/branding E2E types,
+repository/format checks and collection of ten expiry instances passed. Collection
+is not native browser execution.
+
+Independent combined review found no merge-induced blocker: **735 passed /
+188 explicit PostgreSQL skips / one warning**, observer 12 on Node 22.16, Ruff/format
+285 and mypy 112 including the runner. This is a separate selected scope, not
+additional aggregate coverage. Review SHA-256:
+`4825e89aafe7124f17df3ca16b89ed81d13cac642393fb372f3b7bb4af0a8b43`.
+
+At this checkpoint main45 postmerge CI 38759501221 is still pending; independently
+verified runtime/security do not substitute for it. Coordinator publication waits
+for its reviewed green result. The new published candidate then requires its own
+exact-tree hosted matrix before merge. Maximum persisted quote capacity and full
+Task 6 qualification remain open; accepted codec bounds are not runtime capacity.
+The ADR's pre-activation/stage 3 capacity gate, grants/routes/all-ingress fences,
+offline/work/stock integration and physical/operator gates are not waived.
