@@ -2,6 +2,16 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote locked-history byte reuse · 2026-10-16
+
+- [x] Independently review the narrow private count reuse and tiny equivalence
+      tests, including the array-depth regression.
+- [ ] Qualify exact published source before accepting runtime claims.
+- [ ] Keep maximum capacity, latency, contention and restore gates open. PR51
+      one-shot failed after twelve acknowledged revisions; stop/removal verified.
+- [x] Preserve separate PR51 ordinary tiny/fixed success and failed trial evidence
+      in the [byte-reuse scope](docs/10-spec-development/2026-10-16-quote-prefix-byte-reuse.md).
+
 ## Quote contained microfixture · 2026-10-16
 
 - Diagnostic run 38893517005 isolated an invalid whitespace-containing fixture

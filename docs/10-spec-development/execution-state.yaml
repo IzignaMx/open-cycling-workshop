@@ -2023,3 +2023,12 @@ quote_record_reference_correction_2026_10_16:
   regression: exact2604byte_decoder_request_red_before_green_after_no_ledger_or_PG
   boundaries: all_line_edge_money_note_resource_and_deadline_dimensions_unchanged
   evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
+
+quote_prefix_byte_reuse_20261016:
+  status: local_tiny_source_review_passed_hosted_pending
+  scope: private_canonical_byte_count_from_same_fully_validated_locked_reconstruction
+  evidence: docs/10-spec-development/2026-10-16-quote-prefix-byte-reuse.md
+  trial_38900041213: failed_command_timeout_12_acknowledged_revisions_safe_stop_and_absence
+  ordinary_38900040965: tiny_and_fixed_passed_separate_from_maximum_failure
+  maximum_capacity: unqualified_no_new_trial_authorized
+  public_snapshot_and_validation_contracts: unchanged

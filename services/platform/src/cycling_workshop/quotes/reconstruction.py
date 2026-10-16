@@ -35,6 +35,7 @@ from cycling_workshop.quotes.storage import (
     Document,
     JsonValue,
     _document,
+    _history_byte_count,
     _id,
     _integer,
     _record,
@@ -43,7 +44,6 @@ from cycling_workshop.quotes.storage import (
     decode_quote,
     encode_entry,
     encode_quote,
-    validate_history_bytes,
     validate_storage_ledger,
 )
 
@@ -284,6 +284,20 @@ def reconstruct(
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
 ) -> QuoteSnapshot:
+    return _reconstruct_with_bytes(
+        lineage, revisions, lines, targets, decisions, operations, outboxes
+    )[0]
+
+
+def _reconstruct_with_bytes(
+    lineage: QuoteLineageRecord,
+    revisions: list[QuoteRevisionRecord],
+    lines: list[QuoteLineRecord],
+    targets: list[QuoteLineTargetRecord],
+    decisions: list[QuoteDecisionRecord],
+    operations: list[QuoteOperationRecord],
+    outboxes: list[OutboxRecord],
+) -> tuple[QuoteSnapshot, int]:
     try:
         return _reconstruct(lineage, revisions, lines, targets, decisions, operations, outboxes)
     except (ValueError, TypeError, AttributeError, KeyError, OverflowError) as error:
@@ -298,7 +312,7 @@ def _reconstruct(
     decisions: list[QuoteDecisionRecord],
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
-) -> QuoteSnapshot:
+) -> tuple[QuoteSnapshot, int]:
     _id(lineage.lineage_id, generated=True)
     if (
         lineage.root_quote_id != lineage.lineage_id
@@ -479,5 +493,5 @@ def _reconstruct(
         raise ValueError("lineage cursor disagrees with history")
     for value in (lineage.head_version, lineage.decision_sequence):
         _integer(value)
-    validate_history_bytes(logical)
-    return QuoteSnapshot(ledger, tuple(receipts))
+    size = _history_byte_count(logical)
+    return QuoteSnapshot(ledger, tuple(receipts)), size
