@@ -341,41 +341,86 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
         raise ProofFailure("unexpected_mount")
 
 
-def micro_result(raw: str) -> dict[str, object]:
+def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     value = json.loads(raw)
     expected = {
-        "new_operations": 3,
-        "revisions": 2,
+        "new_operations": 2 if single_record else 3,
+        "revisions": 1 if single_record else 2,
         "decisions": 1,
-        "lines_per_revision": 4,
+        "lines_per_revision": 100 if single_record else 4,
         "lock_timeout_ms": 15000,
         "statement_timeout_ms": 20000,
         "maximum_capacity_qualified": False,
     }
-    if type(value) is not dict or set(value) != set(expected) | {
-        "operation_seconds",
-        "process_cpu_seconds",
-    }:
+    fields = set(expected) | {"operation_seconds", "process_cpu_seconds"}
+    if single_record:
+        fields.add("record_feasibility")
+    if type(value) is not dict or set(value) != fields:
         raise ProofFailure("micro_evidence_shape")
     for key, wanted in expected.items():
         if type(value[key]) is not type(wanted) or value[key] != wanted:
             raise ProofFailure("micro_evidence_value")
     timings = value["operation_seconds"]
-    if type(timings) is not dict or set(timings) != {
-        "create",
-        "revise",
-        "decision",
-        "fresh_load",
-        "exact_retry",
-    }:
+    timing_fields = {"create", "decision", "fresh_load", "exact_retry"}
+    if not single_record:
+        timing_fields.add("revise")
+    if type(timings) is not dict or set(timings) != timing_fields:
         raise ProofFailure("micro_evidence_timings")
     for seconds in (*timings.values(), value["process_cpu_seconds"]):
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
             raise ProofFailure("micro_evidence_budget")
+    if single_record:
+        metrics = value["record_feasibility"]
+        fixed = dict(
+            target_edges=1000,
+            labor_lines=80,
+            discount_lines=10,
+            tax_lines=10,
+            approved_charges=80,
+            discount_allocations=500,
+            tax_targets=500,
+            description_codepoints=500,
+            description_utf8_bytes=500,
+            note_codepoints=2000,
+            note_utf8_bytes=2000,
+            source_reference_codepoints=200,
+            source_reference_utf8_bytes=200,
+            subtotal_minor=800000,
+            discount_minor=500,
+            tax_minor=499500,
+            total_minor=1299000,
+        )
+        bounds = dict(
+            raw_create_bytes=128 * 1024,
+            raw_decision_bytes=128 * 1024,
+            revision_logical_bytes=256 * 1024,
+            decision_logical_bytes=256 * 1024,
+            two_record_history_bytes=16 * 1024 * 1024,
+        )
+        if type(metrics) is not dict or set(metrics) != fixed.keys() | bounds.keys():
+            raise ProofFailure("feasibility_evidence_shape")
+        if any(type(v) is not int for v in metrics.values()):
+            raise ProofFailure("feasibility_evidence_value")
+        if any(metrics[k] != v for k, v in fixed.items()) or any(
+            not 0 < metrics[k] <= limit for k, limit in bounds.items()
+        ):
+            raise ProofFailure("feasibility_evidence_value")
+        if metrics["two_record_history_bytes"] != (
+            metrics["revision_logical_bytes"] + metrics["decision_logical_bytes"] + 3
+        ):
+            raise ProofFailure("feasibility_byte_accounting")
     return value
 
 
-def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path) -> None:
+def supervise(
+    worker_image: str,
+    pg_image: str,
+    commit: str,
+    evidence: Path,
+    owned: Path,
+    *,
+    single_record: bool = False,
+) -> None:
     started = time.monotonic()
     command_deadline = started + 900
 
@@ -390,7 +435,7 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
     report: dict[str, object] = {
         "schema": 1,
         "commit": commit,
-        "mode": "micro_only",
+        "mode": "single_record_feasibility" if single_record else "micro_only",
         "maximum_capacity_qualified": False,
         "status": "failed",
         "phase": "setup_and_containment",
@@ -605,7 +650,11 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
                     "no:cacheprovider",
                     "--tb=no",
                     "--basetemp=/tmp/quote-micro",
-                    "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py",
+                    (
+                        "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+                        if single_record
+                        else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+                    ),
                 ],
                 stdout=output,
                 stderr=output,
@@ -656,7 +705,8 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
         report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
         report["containers"] = final
         micro = micro_result(
-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"])
+            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+            single_record=single_record,
         )
         report["micro"] = micro
         if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
@@ -700,9 +750,17 @@ def main() -> None:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--owned", type=Path, required=True)
+    parser.add_argument("--single-record-feasibility", action="store_true")
     args = parser.parse_args()
     try:
-        supervise(args.worker_image, args.pg_image, args.commit, args.evidence, args.owned)
+        supervise(
+            args.worker_image,
+            args.pg_image,
+            args.commit,
+            args.evidence,
+            args.owned,
+            single_record=args.single_record_feasibility,
+        )
     except ProofFailure:
         raise SystemExit(1) from None
 

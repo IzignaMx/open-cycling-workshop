@@ -2,6 +2,10 @@
 
 ## Unreleased · Prepare contained quote microfixture
 
+- Record independently reviewed hosted micro/cancellation cleanup success; add
+  one fixed 100-line/1,000-edge feasibility fixture under unchanged limits.
+  Keep original baseline, separate artifacts and maximum capacity gates.
+
 - Preserve the first hosted preflight failure before canary/PG; make bounded Git
   source checks readonly and record closed command-stage/client-exit evidence.
 

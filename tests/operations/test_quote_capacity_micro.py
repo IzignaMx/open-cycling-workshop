@@ -200,7 +200,10 @@ def test_closed_micro_report_rejects_raw_proof_and_nonfinite_timings():
 
 
 @pytest.mark.parametrize("fault", ["none", "cleanup", "late_exit", "create_timeout", "mid_probe"])
-def test_supervisor_success_and_terminal_failures_are_closed(tmp_path, monkeypatch, fault):
+@pytest.mark.parametrize("single_record", [False, True])
+def test_supervisor_success_and_terminal_failures_are_closed(
+    tmp_path, monkeypatch, fault, single_record
+):
     import json
     from types import SimpleNamespace
 
@@ -238,6 +241,9 @@ def test_supervisor_success_and_terminal_failures_are_closed(tmp_path, monkeypat
             key: 0.1 for key in ("create", "revise", "decision", "fresh_load", "exact_retry")
         },
     )
+
+    if single_record:
+        micro = feasibility_result()
 
     def execute(args, **kwargs):
         calls.append(args)
@@ -311,10 +317,24 @@ def test_supervisor_success_and_terminal_failures_are_closed(tmp_path, monkeypat
     monkeypatch.setattr(module, "remove_owned", lambda ids: original_remove(ids, execute))
     target = tmp_path / "report.json"
     if fault == "none":
-        module.supervise("worker", "postgres", commit, target, tmp_path / "owned.json")
+        module.supervise(
+            "worker",
+            "postgres",
+            commit,
+            target,
+            tmp_path / "owned.json",
+            single_record=single_record,
+        )
     else:
         with pytest.raises(module.ProofFailure):
-            module.supervise("worker", "postgres", commit, target, tmp_path / "owned.json")
+            module.supervise(
+                "worker",
+                "postgres",
+                commit,
+                target,
+                tmp_path / "owned.json",
+                single_record=single_record,
+            )
     report = json.loads(target.read_text())
     assert report["status"] == ("micro_passed_not_capacity" if fault == "none" else "failed")
     assert report["cleanup"] == (
@@ -325,6 +345,11 @@ def test_supervisor_success_and_terminal_failures_are_closed(tmp_path, monkeypat
         assert report["identities"][2]["network"] == "container:" + "a" * 64
         assert report["identities"][2]["memory_max"] == 536870912
         assert report["lifetime_cpu_usec"] == 200
+        assert specimens[0][-1] == (
+            "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+            if single_record
+            else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+        )
 
 
 @pytest.mark.parametrize(
@@ -486,3 +511,68 @@ def test_source_failure_records_closed_stage_and_returncode(tmp_path, monkeypatc
     assert result["client_returncode"] == -25
     assert result["cleanup"] == "verified_absent"
     assert result["failure"] == "command_failed"
+
+
+def feasibility_result():
+    return dict(
+        new_operations=2,
+        revisions=1,
+        decisions=1,
+        lines_per_revision=100,
+        lock_timeout_ms=15000,
+        statement_timeout_ms=20000,
+        maximum_capacity_qualified=False,
+        process_cpu_seconds=0.00001,
+        operation_seconds=dict(create=0.1, decision=0.1, fresh_load=0.1, exact_retry=0.1),
+        record_feasibility=dict(
+            target_edges=1000,
+            labor_lines=80,
+            discount_lines=10,
+            tax_lines=10,
+            approved_charges=80,
+            discount_allocations=500,
+            tax_targets=500,
+            description_codepoints=500,
+            description_utf8_bytes=500,
+            note_codepoints=2000,
+            note_utf8_bytes=2000,
+            source_reference_codepoints=200,
+            source_reference_utf8_bytes=200,
+            subtotal_minor=800000,
+            discount_minor=500,
+            tax_minor=499500,
+            total_minor=1299000,
+            raw_create_bytes=100,
+            raw_decision_bytes=100,
+            revision_logical_bytes=200,
+            decision_logical_bytes=200,
+            two_record_history_bytes=403,
+        ),
+    )
+
+
+def test_fixed_feasibility_schema_accepts_only_reviewed_specimen():
+    import json
+
+    result = feasibility_result()
+    assert module.micro_result(json.dumps(result), single_record=True) == result
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("target_edges", 999),
+        ("raw_create_bytes", 131073),
+        ("revision_logical_bytes", 262145),
+        ("two_record_history_bytes", 404),
+        ("raw_decision_bytes", True),
+        ("unknown", 1),
+    ],
+)
+def test_fixed_feasibility_metrics_fail_closed(field, value):
+    import json
+
+    result = feasibility_result()
+    result["record_feasibility"][field] = value
+    with pytest.raises(module.ProofFailure):
+        module.micro_result(json.dumps(result), single_record=True)

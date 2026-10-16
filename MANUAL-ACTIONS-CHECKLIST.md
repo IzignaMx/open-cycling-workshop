@@ -7,8 +7,10 @@
 - First hosted run 38889970654 failed before canary/PG; cleanup passed. The
   readonly Git correction still needs exact-source hosted review.
 
-- [ ] Independently review the preflight and verify exact-source ordinary hosted
-      cgroup/Docker/PostgreSQL microfixture evidence. Local mocks are not proof.
+- [x] Independently review corrected run 38890620234 actual cgroups/privileges,
+      cancellation canary, tiny PostgreSQL fixture and final cleanup evidence.
+- [ ] Review exact-source single-record feasibility bytes/limits and cleanup;
+      original micro success does not qualify the new fixed larger record.
 - [ ] Separately review maximum fixtures and latency/organization-lock acceptance
       before implementing or running any maximum trial. No maximum mode exists.
 - [ ] Keep full capacity/atomicity/restore, application/fence, physical-device and

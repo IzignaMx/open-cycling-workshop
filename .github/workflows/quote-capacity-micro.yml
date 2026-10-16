@@ -48,6 +48,15 @@ jobs:
             --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
             --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-owned.json" \
             --evidence artifacts/quote-capacity-micro.json
+      - name: Verify one fixed record shape only
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+            --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
+            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-record-owned.json" \
+            --evidence artifacts/quote-record-feasibility.json --single-record-feasibility
       - name: Independently verify owned containers absent even after supervisor failure
         if: always()
         timeout-minutes: 1
@@ -56,15 +65,22 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
-          from scripts.ci.quote_capacity_micro import identifier, reconcile_owned, remove_owned, run
+          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
           root = Path(os.environ['RUNNER_TEMP'])
-          ids = [identifier(path.read_text().strip()) for path in root.glob('quote-owned.*.cid')]
-          present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
-          owned = root / 'quote-owned.json'
-          discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
-          if not set(ids).intersection(present).issubset(discovered):
-              raise SystemExit('Owned-container identity reconciliation failed')
-          remove_owned(discovered)
+          failed = False
+          for stem in ('quote-owned', 'quote-record-owned'):
+              try:
+                  ids = [identifier(path.read_text().strip()) for path in root.glob(f'{stem}.*.cid')]
+                  present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
+                  owned = root / f'{stem}.json'
+                  discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
+                  if not set(ids).intersection(present).issubset(discovered):
+                      raise ProofFailure('owned_identity_reconciliation')
+                  remove_owned(discovered)
+              except (ProofFailure, ValueError, OSError):
+                  failed = True
+          if failed:
+              raise SystemExit('Owned-container cleanup unverified')
           PY
       - name: Upload closed microfixture evidence only
         if: always()
@@ -72,4 +88,11 @@ jobs:
         with:
           name: quote-capacity-micro-${{ github.sha }}
           path: artifacts/quote-capacity-micro.json
+          if-no-files-found: error
+      - name: Upload fixed record feasibility evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-record-feasibility-${{ github.sha }}
+          path: artifacts/quote-record-feasibility.json
           if-no-files-found: error

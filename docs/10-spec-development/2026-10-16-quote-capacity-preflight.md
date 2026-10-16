@@ -191,3 +191,50 @@ publishing raw output. Two new tests first failed; all three new regressions
 then passed. Focused/repository checks total 70 passed and one hosted-PG skip;
 runner strict mypy and touched Ruff checks pass. No resource/deadline increase,
 original-run retry or maximum trial. Corrected hosted evidence remains pending.
+
+## Corrected micro closure and single-record feasibility gate
+
+[Corrected run 38890620234](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38890620234)
+passed on merge `d26eb5de3437d0e3989d86fc358cbd1bdf3d1111`, tree
+`55d64d47d3b4f7263432be89d56311bcd189ff15`, equal to reviewed correction
+head `4501687b27c4dbcd911947599f188f51655c496e`. Independent artifact review
+verified actual limits/privileges/network, three-generation cancellation canary,
+three-command PostgreSQL microfixture, fresh load/retry and independent cleanup.
+Total 5.768 seconds; bootstrap-inclusive micro 3.992 seconds; combined
+canary/worker/database CPU 5.341425 seconds. Artifact 12041079916 ZIP SHA-256
+`eed20561e9b8b2c4b069dc1c96894dffe82244c1bfa404cb5d32085558264874`.
+This qualifies the tiny contained probe only. Original failed evidence is retained.
+
+One separately recorded fixed feasibility fixture now uses the SAME 120-second
+host/20-second workload deadlines, resource caps and fresh cancellation canary.
+Original tiny baseline remains a separate run/artifact. Distinct owner manifests,
+cidfiles and evidence paths prevent confusion; independent cleanup attempts both
+fixed manifests even if one fails. No sweep, history builder, correction command
+or maximum-history mode is added.
+
+Reviewed input: 80 labor charges (60 minutes, 10,000 minor units/hour),
+10 discounts (50 minor units each), 10 taxes (1,000 basis points each), each
+adjustment targeting the first 50 charges: 100 lines and 1,000 edges. Raw and
+normalized descriptions are 500 ASCII codepoints/bytes, evidence note 2,000,
+source reference 200. These are fixed schema fields, not extra JSON padding.
+Maximum UTF-8 lengths are not simultaneously claimed: 100 descriptions of
+2,000 bytes alone exceed the 128 KiB request cap. No automatic downscaling.
+
+One create and one initial full approval use existing request decoders; all
+80 approved IDs derive from the locked revision, not a request selection.
+Expected subtotal 800,000, discount 500, tax 499,500 and total 1,299,000.
+Measure actual raw request bytes, joined canonical revision/decision bytes and
+the two-record list without duplicate inner proof. Fresh reconstruction/retry
+must retain two receipts/outboxes without added effects. Only closed metrics
+are uploaded. Exact byte results remain pending hosted execution; no local
+large-record/domain/PG construction was run. Seven small schema regressions
+first failed, then passed; supervisor mocks cover both fixed modes.
+
+A single-record result cannot prove valid 32/128 history. Correction-record
+sizes/composition need later reviewed evidence. Accepted ADR section 7 permits
+only ONE initial online decision after up to 32 pre-consent revisions, then
+refuses edits/decisions; richer repository/restored histories are separate.
+Ordinary API preliminary p50 <150 ms/p95 <500 ms/p99 <1 s come from phase-6 QA
+section 25 and require representative nominal-load/hardware measurements.
+Single hosted samples are not percentile or physical-device proof. Maximum
+capacity/restore/atomicity, organization contention and activation remain open.
