@@ -433,5 +433,15 @@ def validate_storage_ledger(ledger: QuoteDecisionLedger) -> None:
 
 def validate_history_bytes(logical_records: list[Document]) -> None:
     """Call with each joined financial/result/proof record exactly once."""
-    if len(canonical_bytes(logical_records)) > MAX_HISTORY_BYTES:
+    _history_byte_count(logical_records)
+
+
+def _check_history_byte_count(size: int) -> None:
+    if size > MAX_HISTORY_BYTES:
         raise ValueError("quote storage complete-history byte limit exceeded")
+
+
+def _history_byte_count(logical_records: list[Document]) -> int:
+    size = len(canonical_bytes(logical_records))
+    _check_history_byte_count(size)
+    return size

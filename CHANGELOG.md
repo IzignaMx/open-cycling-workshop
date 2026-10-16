@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · Reuse validated quote-history byte count
+
+- Reuse only the canonical byte count from the same fully validated locked load;
+  remove duplicate receipt replay without changing public snapshots or limits.
+- Preserve the failed one-shot capacity trial and safe cleanup; tiny equivalence
+  and call-count evidence does not establish maximum capacity or latency.
+
 ## Unreleased · Prepare contained quote microfixture
 
 - Correct the synthetic evidence reference to a same-length whitespace-free
