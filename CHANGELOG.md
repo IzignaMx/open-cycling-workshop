@@ -1,5 +1,80 @@
 # Changelog
 
+## Unreleased · Reconcile product-stack ordinary evidence
+
+- Record exact PR57 source qualification: 218 retry-free browser executions,
+  ordinary runtime/native ARM64/build/security and contained fixed-record success.
+- Preserve original browser, maximum/profile and non-qualifying QEMU failures.
+  Capacity, latency/contention, activation and physical/operator gates stay open.
+- Main integration is authorized and retargeted; exact-candidate verification
+  remains pending. The first status checkout used the old PR55 base, so this
+  subsequent documentation commit requires fresh CI against main. Earlier
+  same-tree evidence is retained separately. No performance claim follows.
+
+## Unreleased · Validate each reconstructed operation result once
+
+- Remove two discarded quote/decision codec calls already performed on the same
+  operation-time object by the joined logical-record formatter.
+- Keep proof, admission, stored-row, predecessor, outbox, final ledger and canonical
+  byte validation; compare tiny histories against an independent frozen PR55 oracle.
+- Preserve the failed PR56 diagnostic and verified cleanup. No latency or capacity
+  improvement is claimed from reduced codec calls.
+
+## Unreleased · Preserve same-session local sync wake
+
+- Coalesce committed local-write notifications while sync is busy, then dispatch
+  unchanged operations after the current successful cycle instead of losing the wake.
+- Fence notifications to their original session/network generation; retain offline,
+  cancellation and retry behavior, immutable journal and unattributed legacy evidence.
+- Reproduce the held-delta race deterministically and preserve QA54's failed first
+  browser attempt. Browser timeouts and strict hosted qualification stay unchanged.
+
+## Unreleased · Wait for administration visual identity
+
+- Wait for the exact singleton workshop name before theme captures using the
+  existing assertion budget; preserve all geometry and security checks.
+- Cover pending, permanent fallback, absent and duplicate identity observations
+  with real Playwright assertions outside a browser. Later combined-tree PR57
+  browser qualification passed; original PR53/54 failures remain preserved.
+
+## Unreleased · Reconstruct quote operations without repeated prefix ledgers
+
+- Validate chronological quote transitions with normal quote/entry constructors,
+  retaining final public ledger/storage validation and every historical record.
+- Preserve exact canonical bytes, prefix corruption detection, admission and
+  atomicity against an independent frozen PR52 oracle using tiny tests.
+- Keep residual row scans and failed capacity evidence visible; no maximum rerun,
+  new workflow, higher limits or performance qualification.
+
+## Unreleased · Reuse validated quote-history byte count
+
+- Reuse only the canonical byte count from the same fully validated locked load;
+  remove duplicate receipt replay without changing public snapshots or limits.
+- Preserve the failed one-shot capacity trial and safe cleanup; tiny equivalence
+  and call-count evidence does not establish maximum capacity or latency.
+
+## Unreleased · Prepare contained quote microfixture
+
+- Correct the synthetic evidence reference to a same-length whitespace-free
+  identifier after closed diagnostics isolated request decoding; preserve limits.
+
+- Preserve first fixed-record failure with unknown inner cause; add closed phase,
+  numeric-byte and safe failure diagnostics without changing shape or deadlines.
+
+- Record independently reviewed hosted micro/cancellation cleanup success; add
+  one fixed 100-line/1,000-edge feasibility fixture under unchanged limits.
+  Keep original baseline, separate artifacts and maximum capacity gates.
+
+- Preserve the first hosted preflight failure before canary/PG; make bounded Git
+  source checks readonly and record closed command-stage/client-exit evidence.
+
+- Add one isolated hosted containment preflight and exactly three synthetic quote
+  operations, fresh load and historical retry. No maximum fixture/mode exists.
+- Refuse missing resource controllers, identities, counters or cleanup proof;
+  preserve private bounded evidence and all existing quote/SQL limits.
+- Record PR49 actual-main instrumented closure separately; the original main48
+  restart failure still has unknown cause. Capacity and activation remain open.
+
 ## Unreleased · Observe bounded API restart lifecycle
 
 - Capture closed, project/API-bound inspect state and finite lifecycle events

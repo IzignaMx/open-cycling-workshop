@@ -46,13 +46,14 @@ from cycling_workshop.quotes.reconstruction import (
 from cycling_workshop.quotes.reconstruction import (
     QuoteReceipt,
     QuoteSnapshot,
+    _reconstruct_with_bytes,
     advance,
     event_payload,
     event_type,
     logical_record,
-    reconstruct,
 )
 from cycling_workshop.quotes.storage import (
+    _check_history_byte_count,
     _document,
     _id,
     _timestamp,
@@ -60,7 +61,6 @@ from cycling_workshop.quotes.storage import (
     encode_entry,
     encode_lines,
     encode_quote,
-    validate_history_bytes,
 )
 from cycling_workshop.service_orders.models import ServiceOrderRecord
 
@@ -141,6 +141,9 @@ class QuoteRepository:
         )
 
     def _load(self, lineage: QuoteLineageRecord) -> QuoteSnapshot:
+        return self._load_with_bytes(lineage)[0]
+
+    def _load_with_bytes(self, lineage: QuoteLineageRecord) -> tuple[QuoteSnapshot, int]:
         scope = lineage.lineage_id
 
         def rows[
@@ -183,7 +186,9 @@ class QuoteRepository:
                 .execution_options(populate_existing=True)
             )
         )
-        return reconstruct(lineage, revisions, lines, targets, decisions, operations, outboxes)
+        return _reconstruct_with_bytes(
+            lineage, revisions, lines, targets, decisions, operations, outboxes
+        )
 
     def load(self, organization_id: str, location_id: str, order_id: str) -> QuoteSnapshot | None:
         """Read a complete locked history; callers still own grant authorization."""
@@ -205,7 +210,9 @@ class QuoteRepository:
         self._admitted(command.organization_id, command.location_id, command.actor_id)
         order = self._order(command.organization_id, command.location_id, command.order_id)
         lineage = self._lineage(command.organization_id, command.order_id)
-        snapshot = self._load(lineage) if lineage is not None else None
+        snapshot, history_bytes = (
+            self._load_with_bytes(lineage) if lineage is not None else (None, 2)
+        )
         # Never fetch a foreign order/location proof merely because its operation
         # ID collides with this request. Org-wide uniqueness is handled below with
         # the same non-disclosing constraint conflict as other scoped identities.
@@ -254,14 +261,11 @@ class QuoteRepository:
                     is None
                 ):
                     raise QuoteConflictError("new quote part reference is outside order scope")
-        # One joined proof/result per logical operation, including the candidate.
-        logical = []
-        prefix: QuoteDecisionLedger | None = None
-        for receipt in snapshot.receipts if snapshot else ():
-            prefix = advance(prefix, receipt.command, receipt.recorded_at)
-            logical.append(logical_record(receipt.command, prefix))
-        logical.append(logical_record(command, ledger))
-        validate_history_bytes(logical)
+        # Reuse only the byte count from this same locked, fully validated load.
+        # Canonical arrays add one comma when appending to a nonempty history.
+        # Keep the original history-array JSON depth validation for the candidate.
+        candidate_bytes = len(canonical_bytes([logical_record(command, ledger)])) - 2
+        _check_history_byte_count(history_bytes + int(snapshot is not None) + candidate_bytes)
         # A local savepoint rolls back this operation on any late serialization,
         # constraint or admission failure. The caller still owns outer commit.
         connection = self.session.connection()
