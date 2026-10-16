@@ -1969,10 +1969,10 @@ bounded_restart_diagnostics_2026_10_16:
   evidence: docs/10-spec-development/2026-10-16-bounded-restart-diagnostics.md
 
 quote_containment_micro_2026_10_16:
-  status: locally_verified_preflight_hosted_pending
+  status: first_hosted_preflight_failed_readonly_git_correction_pending
   base: 3cc611e8f5cff8a0eb5c3bc40c8ae862e7eecf81
   scope: ownership_privilege_cgroup_preflight_sleeping_descendant_cancellation_then_three_quote_operations
-  local_focused_repository: 67_passed_one_explicit_hosted_PostgreSQL_skip_existing_Starlette_warning
+  local_focused_repository: 70_passed_one_explicit_hosted_PostgreSQL_skip_existing_Starlette_warning
   static: three_Python_Ruff_lint_format_one_runner_strict_mypy_five_Markdown_YAML_Prettier_clean_diff
   maximum_mode: absent_no_maximum_execution_authorized
   test_limits: worker1CPU512MiB64pids_database1CPU768MiB128pids_zero_extra_swap
@@ -1987,3 +1987,7 @@ quote_containment_micro_2026_10_16:
   main49_QEMU: 38851974945_failed_nonqualifying_physical_devices_open
   gates: independent_review_hosted_micro_review_then_separate_maximum_plan_fences_atomicity_restore_operator
   evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
+
+  first_hosted: run38889970654_command_failed_before_tree_canary_PG_cleanup_passed_0_223s
+  correction: readonly_Git_optional_index_writes_disabled_same16KiB_cap_closed_stage_numeric_exit
+  diagnosis: temporary_index_SIGXFSZ_reproduced_exact_hosted_stage_unrecorded

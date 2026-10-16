@@ -108,11 +108,11 @@ def test_failed_preflight_never_launches_specimen(tmp_path, monkeypatch):
 
     def fake(args, **kwargs):
         calls.append(args)
-        if args == ["git", "rev-parse", "HEAD"]:
+        if args == ["git", "--no-optional-locks", "rev-parse", "HEAD"]:
             return commit
-        if args == ["git", "status", "--porcelain"]:
+        if args == ["git", "--no-optional-locks", "status", "--porcelain"]:
             return ""
-        if args == ["git", "rev-parse", "HEAD^{tree}"]:
+        if args == ["git", "--no-optional-locks", "rev-parse", "HEAD^{tree}"]:
             return tree
         if args[:3] == ["docker", "image", "inspect"]:
             return tree if "ocwp.source-tree" in args[4] else "sha256:" + "e" * 64
@@ -241,9 +241,9 @@ def test_supervisor_success_and_terminal_failures_are_closed(tmp_path, monkeypat
 
     def execute(args, **kwargs):
         calls.append(args)
-        if args[:2] == ["git", "rev-parse"]:
+        if args[:3] == ["git", "--no-optional-locks", "rev-parse"]:
             return commit if args[-1] == "HEAD" else tree
-        if args[:2] == ["git", "status"]:
+        if args[:3] == ["git", "--no-optional-locks", "status"]:
             return ""
         if args[:3] == ["docker", "image", "inspect"]:
             return tree if "ocwp.source-tree" in args[4] else "sha256:" + "e" * 64
@@ -424,3 +424,65 @@ def test_canary_kills_client_then_requires_descendant_chain_and_removal(monkeypa
         with pytest.raises(module.ProofFailure):
             module.cancellation_canary("a" * 64, execute)
         assert "container_removed" not in calls
+
+
+def test_source_status_never_refreshes_large_index(tmp_path, monkeypatch):
+    import os
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(
+            ["git", *args], cwd=tmp_path, check=True, capture_output=True, timeout=3
+        )
+
+    git("init", "-q")
+    for i in range(240):
+        (tmp_path / f"fixture-{i:04d}.txt").write_text("tiny\n")
+    git("add", ".")
+    git("-c", "user.name=Codex", "-c", "user.email=codex@openai.com", "commit", "-qm", "fixture")
+    for path in tmp_path.glob("fixture-*"):
+        os.utime(path, ns=(path.stat().st_atime_ns, path.stat().st_mtime_ns + 1_000_000_000))
+    index = tmp_path / ".git/index"
+    before = index.read_bytes()
+    assert len(before) > module.LIMIT
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(module.ProofFailure):
+        module.run(["git", "status", "--porcelain"])
+    assert index.read_bytes() == before
+    # Failed optional refresh can leave a lock; readonly source checks must not need it.
+    assert module.source_query("status") == ""
+    assert index.read_bytes() == before
+    (tmp_path / "fixture-0000.txt").write_text("changed\n")
+    assert module.source_query("status")
+    assert index.read_bytes() == before
+
+
+def test_failed_client_retains_only_numeric_returncode():
+    import sys
+
+    with pytest.raises(module.ProofFailure) as error:
+        module.run([sys.executable, "-c", 'import sys; print("private"); sys.exit(7)'])
+    assert error.value.returncode == 7
+    assert str(error.value) == "command_failed"
+
+
+def test_source_failure_records_closed_stage_and_returncode(tmp_path, monkeypatch):
+    import json
+
+    def execute(args, **kwargs):
+        if args == ["git", "--no-optional-locks", "rev-parse", "HEAD"]:
+            return "c" * 40
+        if args == ["git", "--no-optional-locks", "status", "--porcelain"]:
+            raise module.ProofFailure("command_failed", returncode=-25)
+        assert args[:2] == ["docker", "ps"]
+        return ""
+
+    monkeypatch.setattr(module, "run", execute)
+    evidence = tmp_path / "evidence.json"
+    with pytest.raises(module.ProofFailure, match="micro_unqualified"):
+        module.supervise("worker", "pg", "c" * 40, evidence, tmp_path / "owned.json")
+    result = json.loads(evidence.read_text())
+    assert result["command_stage"] == "source_status"
+    assert result["client_returncode"] == -25
+    assert result["cleanup"] == "verified_absent"
+    assert result["failure"] == "command_failed"

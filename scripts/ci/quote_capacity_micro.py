@@ -36,7 +36,9 @@ PROBE = "set -eu; cat /proc/self/cgroup; " + "".join(
 
 
 class ProofFailure(RuntimeError):
-    pass
+    def __init__(self, reason: str, *, returncode: int | None = None) -> None:
+        super().__init__(reason)
+        self.returncode = returncode
 
 
 def identifier(value: str) -> str:
@@ -128,11 +130,20 @@ def run(args: list[str], *, timeout: float = 5) -> str:
                 if time.monotonic() - started >= timeout:
                     raise ProofFailure("command_timeout")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
-                    raise ProofFailure("command_failed")
+                    raise ProofFailure("command_failed", returncode=child.returncode)
         except OSError as error:
             raise ProofFailure("tool_unavailable") from error
         output.seek(0)
         return output.read(LIMIT).decode("utf-8", errors="strict").strip()
+
+
+def source_query(kind: str, execute: Callable[..., str] | None = None) -> str:
+    queries = {
+        "head": ["rev-parse", "HEAD"],
+        "status": ["status", "--porcelain"],
+        "tree": ["rev-parse", "HEAD^{tree}"],
+    }
+    return (execute or run)(["git", "--no-optional-locks", *queries[kind]])
 
 
 def remove_owned(ids: list[str], execute: Callable[..., str] | None = None) -> None:
@@ -391,11 +402,15 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
     signal.signal(signal.SIGTERM, interrupt)
     signal.signal(signal.SIGINT, interrupt)
     try:
-        if execute(["git", "rev-parse", "HEAD"]) != commit or execute(
-            ["git", "status", "--porcelain"]
-        ):
+        report["command_stage"] = "source_head"
+        if source_query("head", execute) != commit:
             raise ProofFailure("source_not_exact_clean_commit")
-        tree = execute(["git", "rev-parse", "HEAD^{tree}"])
+        report["command_stage"] = "source_status"
+        if source_query("status", execute):
+            raise ProofFailure("source_not_exact_clean_commit")
+        report["command_stage"] = "source_tree"
+        tree = source_query("tree", execute)
+        report["command_stage"] = "image_source_label"
         if (
             execute(
                 [
@@ -411,6 +426,7 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
         ):
             raise ProofFailure("image_source_mismatch")
         report["tree"] = tree
+        report["command_stage"] = "image_identity"
         images = [
             execute(["docker", "image", "inspect", "--format", "{{.Id}}", image])
             for image in (pg_image, worker_image)
@@ -505,6 +521,7 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
                     "/app/.venv/bin/python",
                 ]
                 args += [image, "-c", "import time; time.sleep(900)"]
+            report["command_stage"] = f"{role}_containment"
             creation_uncertain = True
             cid = identifier(execute(args))
             creation_uncertain = False
@@ -546,6 +563,7 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
                 report["cancellation_canary"] = (
                     "three_generations_survived_client_kill_then_container_absent"
                 )
+        report["command_stage"] = "database_readiness"
         deadline = time.monotonic() + 30
         while True:
             try:
@@ -567,6 +585,7 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
                     raise ProofFailure("database_readiness") from None
                 time.sleep(0.2)
         report["setup_seconds"] = round(time.monotonic() - started, 3)
+        report["command_stage"] = "microfixture"
         report["phase"] = "micro_with_pytest_bootstrap"
         # Only now may pytest import the fixed three-operation specimen.
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
@@ -646,6 +665,8 @@ def supervise(worker_image: str, pg_image: str, commit: str, evidence: Path, own
         report["status"] = "micro_passed_not_capacity"
     except (ProofFailure, ValueError, OSError) as error:
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
+        if isinstance(error, ProofFailure) and error.returncode is not None:
+            report["client_returncode"] = error.returncode
     finally:
         try:
             for role in ("canary", "db", "worker"):

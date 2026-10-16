@@ -4,6 +4,9 @@
 
 ## Quote contained microfixture · 2026-10-16
 
+- First hosted run 38889970654 failed before canary/PG; cleanup passed. The
+  readonly Git correction still needs exact-source hosted review.
+
 - [ ] Independently review the preflight and verify exact-source ordinary hosted
       cgroup/Docker/PostgreSQL microfixture evidence. Local mocks are not proof.
 - [ ] Separately review maximum fixtures and latency/organization-lock acceptance

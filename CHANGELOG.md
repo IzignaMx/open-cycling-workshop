@@ -2,6 +2,9 @@
 
 ## Unreleased · Prepare contained quote microfixture
 
+- Preserve the first hosted preflight failure before canary/PG; make bounded Git
+  source checks readonly and record closed command-stage/client-exit evidence.
+
 - Add one isolated hosted containment preflight and exactly three synthetic quote
   operations, fresh load and historical retry. No maximum fixture/mode exists.
 - Refuse missing resource controllers, identities, counters or cleanup proof;

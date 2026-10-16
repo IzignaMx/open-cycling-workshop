@@ -167,3 +167,27 @@ failed, NON-QUALIFYING. None of this proves physical Raspberry suitability.
 Original main48 Runtime 38827236201 remains failed 7/11 with unknown cause; an
 instrumented pass neither establishes temporal equivalence nor demonstrates a
 startup fix. These historical checks are not this microfixture's evidence.
+
+## First hosted preflight failure and bounded correction
+
+[Run 38889970654](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38889970654)
+checked out synthetic merge `1e355eec0c57b0a59967bce7908486088fe2fdc3`,
+whose tree `ebe77300083a188d57b23751f2e8a31e3d2ca478` equals reviewed PR50
+head `960edf9813541bb98c94ab389d733dd26598c4e9`. Image builds succeeded.
+The guard failed closed after 0.223 seconds, `command_failed` before source-tree
+recording. Independent cleanup succeeded; no canary or PostgreSQL microfixture
+was reached. Absence at cleanup does not prove the cancellation canary.
+Artifact 12040749556 ZIP SHA-256 is
+`8ccdb7fa5ecf4d84d40a39b7f488cb3ad10408f82a11821e15650e380c03eba3`.
+
+A bounded temporary Git repository reproduced an optional index-refresh write
+exceeding the unchanged 16 KiB child file-size cap: a 19,232-byte index caused
+SIGXFSZ. Readonly `git --no-optional-locks` source queries preserve the index
+bytes, accept unchanged committed contents and still expose dirty contents.
+The original hosted failing command was not recorded, so this remains a
+supported mechanism, not a proven exact hosted diagnosis. Closed command-stage
+and numeric client return-code evidence now distinguish future failures without
+publishing raw output. Two new tests first failed; all three new regressions
+then passed. Focused/repository checks total 70 passed and one hosted-PG skip;
+runner strict mypy and touched Ruff checks pass. No resource/deadline increase,
+original-run retry or maximum trial. Corrected hosted evidence remains pending.
