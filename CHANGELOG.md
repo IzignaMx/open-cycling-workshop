@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased · Reconcile request contracts with merged reads and catalog
+
+- Normally merge actual main47 `51c35186` into the original PR48 branch, retaining
+  the exact request, read-projection, catalog and generated-contract source blobs.
+- Preserve both histories and distinguish original hosted evidence from the
+  newly combined tree, whose own hosted and postmerge acceptance remain gates.
+- PR46 and PR47 are merged; PR48 integration is separately authorized and gated.
+  No quote routes, account adoption, schema, capacity trial or deployment is added.
+
+## Unreleased · Bound inactive quote request inputs
+
+- Add closed create/revise and initial customer-decision input contracts with
+  bounded actual-byte UTF-8/JSON decoding and fixed non-echoing errors.
+- Reuse typed line validation; retain server-owned route outcomes and recording
+  identity. No HTTP routes, services, grants, schema or offline behavior change.
+- Keep streaming HTTP integration, financial/application admission and activation
+  gates explicitly deferred; local decoder tests do not qualify those boundaries.
+
 ## Unreleased · Explicit quote catalog compatibility
 
 - Add the three independent quote capability literals to the current 22-grant

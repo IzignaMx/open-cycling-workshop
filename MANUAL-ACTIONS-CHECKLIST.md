@@ -1315,3 +1315,24 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   unsupported; immutable historical receipts and exact replay are retained.
   Physical-device, recovery and accessibility gates remain open. See the
   [scope and evidence](docs/10-spec-development/2026-10-15-quote-decision-domain.md).
+
+## 2026-10-15 · Inactive quote request input contracts
+
+- No new operator action is needed for the pure decoders. Before activation,
+  separately prove the actual HTTP streaming/encoding/no-store/correlation
+  boundary, locked scoped admission and every legacy-write fence. Do not treat
+  decoded input as authorized or financially admitted.
+- Existing maximum-history capacity, hosted, recovery and physical-device gates
+  remain open. No capacity trial, limit change or deployment was performed. See
+  the [scope and evidence](docs/10-spec-development/2026-10-15-quote-request-contracts.md).
+
+## 2026-10-15 · Request/read/catalog normal integration
+
+- PR46 and PR47 are merged. Preserve their source-bound evidence and require
+  PR47 postmerge acceptance plus fresh combined PR48 hosted acceptance before
+  the separately authorized PR48 merge. Earlier checkpoint statements remain
+  historical and do not qualify this new tree.
+- Capacity review remains held; no maximum-history specimen or harness change
+  was run. HTTP streaming, scoped authority, all mutation-ingress fences and
+  physical/operator activation gates remain separate and open. See the
+  [reconciliation record](docs/10-spec-development/2026-10-15-quote-request-contracts.md#reconciliation-with-merged-read-and-catalog-prerequisites).
