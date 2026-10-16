@@ -51,12 +51,12 @@ def test_locked_count_matches_operation_time_oracle_and_avoids_second_replay(dat
     with Session(database) as session:
         admitted(session)
         repo = repository.QuoteRepository(session)
-        for ordinal, command in enumerate(commands):
+        for command in commands:
             replay_before = len(replay_calls)
             before = len(calls)
             repo.apply(command, recorded_at=NOW)
             assert len(calls) - before == 1
-            assert len(replay_calls) - replay_before == ordinal
+            assert len(replay_calls) - replay_before == 0
         snapshot, size = repo._load_with_bytes(repo._lineage("a", "order-a"))
         prefix = None
         logical = []

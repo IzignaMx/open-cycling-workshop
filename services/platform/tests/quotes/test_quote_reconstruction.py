@@ -1,9 +1,12 @@
 """Corrupt stored rows fail closed even if a restore bypassed database guards."""
 
 from copy import deepcopy
+from dataclasses import asdict
 
 import pytest
+import quote_reconstruction_pr52_oracle as oracle
 from cycling_workshop.events.models import OutboxRecord
+from cycling_workshop.quotes import reconstruction
 from cycling_workshop.quotes.models import (
     QuoteDecisionRecord,
     QuoteLineageRecord,
@@ -12,7 +15,7 @@ from cycling_workshop.quotes.models import (
     QuoteOperationRecord,
     QuoteRevisionRecord,
 )
-from cycling_workshop.quotes.reconstruction import QuoteIntegrityError, reconstruct
+from cycling_workshop.quotes.reconstruction import QuoteIntegrityError
 from cycling_workshop.quotes.repository import QuoteRepository
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +23,21 @@ from test_identity_migration import identity_migration_database as identity_migr
 from test_quote_repository import admitted, creation, decision, revision
 from test_quote_repository import database as database
 from test_quote_storage import NOW, uid
+
+
+def reconstruct(*rows):
+    """Run frozen old and current paths independently, including expected failures."""
+    try:
+        old = oracle.reconstruct(*deepcopy(rows))
+    except oracle.QuoteIntegrityError as error:
+        with pytest.raises(reconstruction.QuoteIntegrityError) as current:
+            reconstruction.reconstruct(*deepcopy(rows))
+        assert str(current.value) == str(error)
+        raise current.value from None
+    current = reconstruction.reconstruct(*deepcopy(rows))
+    assert old.ledger == current.ledger
+    assert [asdict(item) for item in old.receipts] == [asdict(item) for item in current.receipts]
+    return current
 
 
 @pytest.fixture

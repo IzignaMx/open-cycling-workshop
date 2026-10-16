@@ -8,7 +8,7 @@ separately reviewed activation slice and fail closed in this repository version.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from cycling_workshop.events.models import OutboxRecord
@@ -20,7 +20,14 @@ from cycling_workshop.quotes.commands import (
     command_from_proof,
     operation_proof,
 )
-from cycling_workshop.quotes.decisions import QuoteDecisionLedger
+from cycling_workshop.quotes.decisions import (
+    EntryRecording,
+    QuoteDecisionEntry,
+    QuoteDecisionLedger,
+    _admit,
+    _line_decisions,
+    price_selection,
+)
 from cycling_workshop.quotes.domain import Quote
 from cycling_workshop.quotes.history import QuoteHistory
 from cycling_workshop.quotes.models import (
@@ -130,7 +137,21 @@ def event_payload(
     command: QuoteRepositoryCommand, ledger: QuoteDecisionLedger
 ) -> dict[str, object]:
     """Privacy-minimized identity/timeline metadata, never customer evidence."""
-    head = ledger.history.head
+    entry = ledger.entries[-1] if isinstance(command, RecordQuoteDecisionCommand) else None
+    return _event_payload(
+        command, ledger.history.head, ledger.history.lineage_id, ledger.sequence, entry
+    )
+
+
+def _event_payload(
+    command: QuoteRepositoryCommand,
+    head: Quote,
+    lineage_id: str,
+    sequence: int,
+    entry: QuoteDecisionEntry | None,
+) -> dict[str, object]:
+    if isinstance(command, RecordQuoteDecisionCommand) != (entry is not None):
+        raise ValueError("quote event result kind mismatch")
     result: dict[str, object] = dict(
         operation_id=command.operation_id,
         organization_id=head.organization_id,
@@ -140,18 +161,14 @@ def event_payload(
         else "create"
         if isinstance(command, CreateQuoteCommand)
         else "revise",
-        lineage_id=ledger.history.lineage_id,
+        lineage_id=lineage_id,
         order_id=head.order_id,
         quote_id=head.quote_id,
         quote_version=head.version,
-        decision_sequence=ledger.sequence,
-        ordinal=head.version + ledger.sequence,
+        decision_sequence=sequence,
+        ordinal=head.version + sequence,
     )
-    pricing = (
-        ledger.entries[-1].pricing
-        if isinstance(command, RecordQuoteDecisionCommand)
-        else head.totals
-    )
+    pricing = entry.pricing if entry is not None else head.totals
     result["pricing"] = dict(
         currency=head.currency,
         subtotal_minor=pricing.subtotal_minor,
@@ -159,14 +176,12 @@ def event_payload(
         tax_minor=pricing.tax_minor,
         total_minor=pricing.total_minor,
     )
-    if isinstance(command, RecordQuoteDecisionCommand):
+    if isinstance(command, RecordQuoteDecisionCommand) and entry is not None:
         result.update(
             decision_id=command.operation_id,
             domain_event_id=command.operation_id,
             approved_line_ids=list(command.command.approved_line_ids),
-            declined_line_ids=[
-                line.line_id for line in ledger.entries[-1].line_decisions if not line.approved
-            ],
+            declined_line_ids=[line.line_id for line in entry.line_decisions if not line.approved],
             mode=command.command.mode,
             outcome=command.command.outcome,
             evidence_entry_id=command.operation_id,
@@ -186,11 +201,22 @@ def event_type(command: QuoteRepositoryCommand) -> str:
 
 
 def logical_record(command: QuoteRepositoryCommand, ledger: QuoteDecisionLedger) -> Document:
-    if isinstance(command, RecordQuoteDecisionCommand):
-        result = encode_entry(ledger.entries[-1])
+    entry = ledger.entries[-1] if isinstance(command, RecordQuoteDecisionCommand) else None
+    return _logical_record(command, ledger.history.head, entry)
+
+
+def _logical_record(
+    command: QuoteRepositoryCommand,
+    head: Quote,
+    entry: QuoteDecisionEntry | None,
+) -> Document:
+    if isinstance(command, RecordQuoteDecisionCommand) != (entry is not None):
+        raise ValueError("quote logical result kind mismatch")
+    if entry is not None:
+        result = encode_entry(entry)
         del result["command"]  # Exactly one canonical inner proof, not two copies.
     else:
-        result = encode_quote(ledger.history.head)
+        result = encode_quote(head)
     return _record({"proof": operation_proof(command), "result": result})
 
 
@@ -353,7 +379,11 @@ def _reconstruct(
         )
         stored_quotes.append(decode_quote(doc))
     stored_history = QuoteHistory(tuple(stored_quotes))
-    ledger: QuoteDecisionLedger | None = None
+    head: Quote | None = None
+    predecessors: list[Quote] = []
+    entries: list[QuoteDecisionEntry] = []
+    latest: dict[str, QuoteDecisionEntry] = {}
+    customer_times: dict[str, datetime] = {}
     receipts: list[QuoteReceipt] = []
     logical: list[Document] = []
     for ordinal, operation in enumerate(operations, 1):
@@ -393,12 +423,84 @@ def _reconstruct(
             )
         ):
             raise ValueError("operational quote effects are not supported before activation")
-        ledger = advance(ledger, command, now)
-        head = ledger.history.head
+        entry: QuoteDecisionEntry | None = None
+        sequence = len(entries)
+        if (command.organization_id, command.location_id, command.order_id, command.lineage_id) != (
+            lineage.organization_id,
+            lineage.location_id,
+            lineage.order_id,
+            lineage.lineage_id,
+        ):
+            raise ValueError("command quote scope mismatch")
+        if isinstance(command, CreateQuoteCommand):
+            if head is not None:
+                raise ValueError("order already has a quote lineage")
+            head = Quote.for_order(
+                quote_id=command.quote_id,
+                organization_id=command.organization_id,
+                location_id=command.location_id,
+                order_id=command.order_id,
+                currency=command.currency,
+                lines=command.lines,
+                now=now,
+            )
+        else:
+            if head is None:
+                raise ValueError("quote lineage missing")
+            if (
+                command.expected_head_id,
+                command.expected_head_version,
+                command.expected_decision_sequence,
+            ) != (head.quote_id, head.version, sequence):
+                raise ValueError("stale quote head or decision sequence")
+            if isinstance(command, ReviseQuoteCommand):
+                if entries and now < entries[-1].recording.recorded_at:
+                    raise ValueError("revision cannot precede latest decision recording")
+                if not 1 <= head.version <= len(stored_quotes):
+                    raise ValueError("observed quote prefix is outside stored history")
+                pair = head.revise(lines=command.lines, quote_id=command.quote_id, now=now)
+                if pair.predecessor != stored_quotes[head.version - 1]:
+                    raise ValueError("generated predecessor differs from stored history")
+                encode_quote(pair.predecessor)
+                predecessors.append(pair.predecessor)
+                head = pair.successor
+            else:
+                proof = command.command
+                if (proof.quote_id, proof.quote_version) != (head.quote_id, head.version):
+                    raise ValueError("new decisions require the current revision")
+                recording = EntryRecording(proof.recorded_by_actor_id, now, proof.reason)
+                if entries and now < entries[-1].recording.recorded_at:
+                    raise ValueError("decision recording time cannot move backward")
+                _admit(
+                    head,
+                    proof,
+                    recording,
+                    latest.get(head.quote_id),
+                    customer_times.get(head.quote_id),
+                )
+                entry = QuoteDecisionEntry(
+                    proof,
+                    sequence + 1,
+                    recording,
+                    _line_decisions(head, proof),
+                    price_selection(head, proof.approved_line_ids),
+                )
+                encode_entry(entry)
+                entries.append(entry)
+                latest[head.quote_id] = entry
+                if proof.evidence is not None:
+                    customer_times[head.quote_id] = proof.evidence.decided_at
+                sequence += 1
+        if not isinstance(command, RecordQuoteDecisionCommand):
+            if head.version > len(stored_quotes) or head != replace(
+                stored_quotes[head.version - 1], superseded_at=None, superseded_by=None
+            ):
+                raise ValueError("generated quote differs from stored history")
+            encode_quote(head)
         if (operation.quote_id, operation.quote_version, operation.resulting_decision_sequence) != (
             head.quote_id,
             head.version,
-            ledger.sequence,
+            sequence,
         ):
             raise ValueError("receipt result disagrees with operation proof")
         if isinstance(command, RecordQuoteDecisionCommand):
@@ -436,7 +538,7 @@ def _reconstruct(
                     pricing=decision_row.pricing,
                 )
             )
-            if actual != ledger.entries[-1]:
+            if actual != entry:
                 raise ValueError("decision evidence result differs from proof")
         else:
             row_revision = revision_map.pop(command.quote_id)
@@ -463,28 +565,32 @@ def _reconstruct(
             lineage.organization_id,
             lineage.location_id,
             now,
-        ) or canonical_bytes(outbox.payload) != canonical_bytes(event_payload(command, ledger)):
+        ) or canonical_bytes(outbox.payload) != canonical_bytes(
+            _event_payload(command, head, lineage.lineage_id, sequence, entry)
+        ):
             raise ValueError("quote outbox disagrees with receipt")
-        logical.append(logical_record(command, ledger))
+        logical.append(_logical_record(command, head, entry))
         receipts.append(
             QuoteReceipt(
                 command,
                 head.quote_id,
                 head.version,
-                ledger.sequence,
+                sequence,
                 ordinal,
                 now,
                 operation.quote_outbox_id,
             )
         )
     if (
-        ledger is None
+        head is None
         or revision_map
         or decision_map
         or outbox_map
-        or ledger.history != stored_history
+        or (*predecessors, head) != stored_history.revisions
     ):
         raise ValueError("incomplete quote operation history")
+    ledger = QuoteDecisionLedger(stored_history, tuple(entries))
+    validate_storage_ledger(ledger)
     if (lineage.head_quote_id, lineage.head_version, lineage.decision_sequence) != (
         ledger.history.head.quote_id,
         ledger.history.head.version,

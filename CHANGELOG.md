@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Reconstruct quote operations without repeated prefix ledgers
+
+- Validate chronological quote transitions with normal quote/entry constructors,
+  retaining final public ledger/storage validation and every historical record.
+- Preserve exact canonical bytes, prefix corruption detection, admission and
+  atomicity against an independent frozen PR52 oracle using tiny tests.
+- Keep residual row scans and failed capacity evidence visible; no maximum rerun,
+  new workflow, higher limits or performance qualification.
+
 ## Unreleased · Reuse validated quote-history byte count
 
 - Reuse only the canonical byte count from the same fully validated locked load;

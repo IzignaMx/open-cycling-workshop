@@ -2,6 +2,16 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote operation replay · 2026-10-16
+
+- [x] Independently review the operation-loop rewrite, frozen differential oracle,
+      all 19 invariants and final public/storage validation.
+- [ ] Close exact final package/document review before publication.
+- [ ] Complete exact-source ordinary hosted qualification; keep any future maximum
+      verification separately authorized and the consumed PR51 workflow unchanged.
+- [ ] Preserve failed capacity, ordinary-latency, contention, restore and operator
+      gates in the [reconstruction scope](docs/10-spec-development/2026-10-16-quote-single-pass-reconstruction.md).
+
 ## Quote locked-history byte reuse · 2026-10-16
 
 - [x] Independently review the narrow private count reuse and tiny equivalence
