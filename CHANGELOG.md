@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Prepare one gated online quote profile
+
+- Prepare one separately triggered 32-revision/one-initial-decision repository
+  profile using the reviewed legal line/edge recipe, with no restored corrections.
+- Add host-granted operation deadlines and immutable 20/80/20-second phase budgets,
+  exact owned cleanup and an opened-only first-run/first-attempt workflow gate.
+- Record the independently verified PR50 single-record prerequisite; this larger
+  fixture remains unexecuted pending final CI50 and exact independent review.
+
 ## Unreleased · Prepare contained quote microfixture
 
 - Correct the synthetic evidence reference to a same-length whitespace-free

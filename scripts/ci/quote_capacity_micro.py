@@ -1,4 +1,4 @@
-"""Finite, quote-only hosted containment preflight. There is no maximum mode."""
+"""Quote-only containment, plus one separately gated fixed online-profile trial."""
 
 from __future__ import annotations
 
@@ -39,6 +39,51 @@ class ProofFailure(RuntimeError):
     def __init__(self, reason: str, *, returncode: int | None = None) -> None:
         super().__init__(reason)
         self.returncode = returncode
+
+
+class OnlineGate:
+    """Host-owned clocks for the single reviewed 39-step quote trial."""
+
+    def __init__(self, end: float, now: float) -> None:
+        self.end = end
+        self.deadline = min(end, now + 20)
+        self.ordinal = 0
+        self.state = "bootstrap"
+        self.complete = False
+        self.operation_started = now
+        self.completed_seconds: list[float] = []
+
+    def observe(self, raw: str, now: float) -> str | None:
+        if not math.isfinite(now) or now >= self.deadline:
+            raise ProofFailure("online_operation_deadline")
+        value = json.loads(raw)
+        if (
+            type(value) is not dict
+            or set(value) != {"ordinal", "state"}
+            or type(value["ordinal"]) is not int
+            or type(value["state"]) is not str
+        ):
+            raise ProofFailure("online_handshake")
+        ordinal, state = value["ordinal"], value["state"]
+        if (ordinal, state) == (self.ordinal, self.state):
+            return None
+        if (
+            state == "ready"
+            and self.state in {"bootstrap", "done"}
+            and ordinal == self.ordinal + 1
+            and ordinal <= 39
+        ):
+            self.ordinal, self.state = ordinal, state
+            self.operation_started = now
+            self.deadline = min(self.end, now + 20)
+            return f"grant:{ordinal}"
+        if state == "done" and self.state == "ready" and ordinal == self.ordinal:
+            self.completed_seconds.append(round(now - self.operation_started, 6))
+            self.state = state
+            self.complete = ordinal == 39
+            self.deadline = min(self.end, now + 20)
+            return f"ack:{ordinal}"
+        raise ProofFailure("online_handshake")
 
 
 def identifier(value: str) -> str:
@@ -306,8 +351,11 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> 
             client.wait(timeout=2)
 
 
-def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
-    fields = run(
+def inspect_owned(
+    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
+) -> None:
+    execute = execute or run
+    fields = execute(
         [
             "docker",
             "inspect",
@@ -325,7 +373,7 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
         or fields[6:] != ["true"]
     ):
         raise ProofFailure("container_identity")
-    mounts = run(
+    mounts = execute(
         [
             "docker",
             "inspect",
@@ -466,6 +514,63 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
+def online_result(raw: str) -> dict[str, object]:
+    value = json.loads(raw)
+    fixed = dict(
+        new_operations=33,
+        revisions=32,
+        decisions=1,
+        lines_per_revision=100,
+        target_edges=1000,
+        service_order_state="DIAGNOSIS",
+        service_order_version=1,
+        lock_timeout_ms=15000,
+        statement_timeout_ms=20000,
+        maximum_capacity_qualified=False,
+        revision33_rejected=True,
+        exact_retries=3,
+    )
+    fields = set(fixed) | {
+        "operation_seconds",
+        "process_cpu_seconds",
+        "record_bytes",
+        "history_bytes",
+        "raw_request_bytes",
+    }
+    if type(value) is not dict or set(value) != fields:
+        raise ProofFailure("online_result_shape")
+    if any(type(value[k]) is not type(v) or value[k] != v for k, v in fixed.items()):
+        raise ProofFailure("online_result_value")
+    for key, count, limit in (("record_bytes", 33, 262144), ("raw_request_bytes", 33, 131072)):
+        sizes = value[key]
+        if (
+            type(sizes) is not list
+            or len(sizes) != count
+            or any(type(n) is not int or not 0 < n <= limit for n in sizes)
+        ):
+            raise ProofFailure("online_result_bytes")
+    if (
+        type(value["history_bytes"]) is not int
+        or value["history_bytes"] != sum(value["record_bytes"]) + 34
+        or not 0 < value["history_bytes"] <= 8650786
+    ):
+        raise ProofFailure("online_result_framing")
+    durations = value["operation_seconds"]
+    if (
+        type(durations) is not list
+        or len(durations) != 39
+        or any(
+            type(n) not in (int, float) or not math.isfinite(n) or not 0 <= n < 20
+            for n in durations
+        )
+    ):
+        raise ProofFailure("online_result_timings")
+    cpu = value["process_cpu_seconds"]
+    if type(cpu) not in (int, float) or not math.isfinite(cpu) or not 0 <= cpu < 80:
+        raise ProofFailure("online_result_cpu")
+    return value
+
+
 def supervise(
     worker_image: str,
     pg_image: str,
@@ -474,9 +579,15 @@ def supervise(
     owned: Path,
     *,
     single_record: bool = False,
+    online_once: bool = False,
 ) -> None:
     started = time.monotonic()
-    command_deadline = started + 900
+    command_deadline = started + (20 if online_once else 900)
+    online_gate: OnlineGate | None = None
+    cpu_budget = 240 if online_once else 600
+    interrupted = False
+    online_started = False
+    final_deadline = started + 120
     micro_deadline = started  # Expired until the fixed workload actually starts.
 
     def execute(args: list[str], *, timeout: float = 5) -> str:
@@ -490,13 +601,19 @@ def supervise(
     report: dict[str, object] = {
         "schema": 1,
         "commit": commit,
-        "mode": "single_record_feasibility" if single_record else "micro_only",
+        "mode": "online_32_plus_1_once"
+        if online_once
+        else "single_record_feasibility"
+        if single_record
+        else "micro_only",
         "maximum_capacity_qualified": False,
         "status": "failed",
         "phase": "setup_and_containment",
     }
 
     def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        nonlocal interrupted
+        interrupted = True
         raise ProofFailure("interrupted")
 
     signal.signal(signal.SIGTERM, interrupt)
@@ -627,7 +744,7 @@ def supervise(
             creation_uncertain = False
             ids.append(cid)
             owned.write_text(json.dumps(ids))
-            inspect_owned(cid, image, label, network)
+            inspect_owned(cid, image, label, network, execute)
             execute(["docker", "start", cid])
             snapshots[role] = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
@@ -664,7 +781,7 @@ def supervise(
                     "three_generations_survived_client_kill_then_container_absent"
                 )
         report["command_stage"] = "database_readiness"
-        deadline = time.monotonic() + 30
+        deadline = min(time.monotonic() + 30, command_deadline)
         while True:
             try:
                 execute(
@@ -691,8 +808,26 @@ def supervise(
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
         previous = before
         with tempfile.TemporaryFile() as output:
-            micro_deadline = time.monotonic() + 20
-            command_deadline = micro_deadline
+            micro_deadline = (
+                min(started + 100, time.monotonic() + 80) if online_once else time.monotonic() + 20
+            )
+            if online_once:
+                execute(
+                    [
+                        "docker",
+                        "exec",
+                        ids[1],
+                        "sh",
+                        "-c",
+                        'printf \'%s\' \'{"ordinal":0,"state":"bootstrap"}\' '
+                        "> /tmp/quote-online-state.json",
+                    ]
+                )
+                online_gate = OnlineGate(micro_deadline, time.monotonic())
+            command_deadline = (
+                min(micro_deadline, online_gate.deadline) if online_gate else micro_deadline
+            )
+            online_started = online_once
             child = subprocess.Popen(
                 [
                     "docker",
@@ -707,7 +842,12 @@ def supervise(
                     "--tb=no",
                     "--basetemp=/tmp/quote-micro",
                     (
-                        "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+                        "services/platform/tests/quotes/test_quote_online_once_postgres.py"
+                        if online_once
+                        else (
+                            "services/platform/tests/quotes/"
+                            "test_quote_record_feasibility_postgres.py"
+                        )
                         if single_record
                         else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
                     ),
@@ -720,10 +860,33 @@ def supervise(
             micro_started = time.monotonic()
             try:
                 while child.poll() is None:
-                    if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
+                    if time.monotonic() >= command_deadline:
                         raise ProofFailure("wall_budget")
                     if os.fstat(output.fileno()).st_size >= LIMIT:
                         raise ProofFailure("output_limit")
+                    if online_gate:
+                        observed = execute(
+                            ["docker", "exec", ids[1], "cat", "/tmp/quote-online-state.json"]
+                        )
+                        grant = online_gate.observe(observed, time.monotonic())
+                        command_deadline = min(micro_deadline, online_gate.deadline)
+                        report["online_progress"] = {
+                            "ordinal": online_gate.ordinal,
+                            "state": online_gate.state,
+                        }
+                        report["host_operation_seconds"] = list(online_gate.completed_seconds)
+                        if grant:
+                            execute(
+                                [
+                                    "docker",
+                                    "exec",
+                                    ids[1],
+                                    "sh",
+                                    "-c",
+                                    f"printf '%s' '{grant}' > /tmp/quote-online-permit.tmp && "
+                                    "mv /tmp/quote-online-permit.tmp /tmp/quote-online-permit",
+                                ]
+                            )
                     current = {}
                     for cid, role, memory, pids in [
                         (ids[0], "db", 768, 128),
@@ -734,36 +897,42 @@ def supervise(
                         )
                         current[role] = snapshots[role]["cpu_usec"]
                     report["last_sampled_containers"] = dict(snapshots)
-                    cpu_delta(previous, current, 600)
-                    cpu_delta(dict.fromkeys(current, 0), current, 600)
+                    cpu_delta(previous, current, cpu_budget)
+                    cpu_delta(dict.fromkeys(current, 0), current, cpu_budget)
                     previous = current
                     time.sleep(0.1)
                 if time.monotonic() >= command_deadline:
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
+                if online_gate and not online_gate.complete:
+                    raise ProofFailure("online_incomplete")
                 report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
             finally:
                 if child.poll() is None:
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait(timeout=2)
-        command_deadline = started + 900
+        if online_once:
+            final_deadline = min(started + 120, time.monotonic() + 20)
+        command_deadline = final_deadline if online_once else started + 900
         # Containers remain alive: read final cgroup events after workload exit.
         final = {
             role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
             for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
         }
-        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
+        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, cpu_budget)
         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
+        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, cpu_budget)
         report["lifetime_cpu_usec"] = lifetime_cpu
-        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
+        if lifetime_cpu + canary_resources["cpu_usec"] > cpu_budget * 1_000_000:
             raise ProofFailure("cpu_budget")
-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
+        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, cpu_budget)
         report["containers"] = final
-        micro = micro_result(
-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
-            single_record=single_record,
+        raw_result = execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"])
+        micro = (
+            online_result(raw_result)
+            if online_once
+            else micro_result(raw_result, single_record=single_record)
         )
         report["micro"] = micro
         if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
@@ -802,6 +971,32 @@ def supervise(
                     else "invalid_evidence"
                 )
     finally:
+        # After workload failure or termination, only identity reconciliation/removal runs.
+        if online_once:
+            command_deadline = (
+                min(started + 150, time.monotonic() + 30)
+                if interrupted
+                else min(final_deadline, time.monotonic() + 20)
+            )
+        if online_started and report["status"] != "micro_passed_not_capacity":
+            # Client death does not stop in-container Python or an active SQL statement.
+            # Stop both already-validated exact IDs before any owner reconciliation.
+            stopped = True
+            for cid in reversed(ids[:2]):
+                try:
+                    execute(["docker", "kill", "--signal", "KILL", cid], timeout=5)
+                except (ProofFailure, OSError, ValueError):
+                    stopped = False
+            for cid in reversed(ids[:2]):
+                try:
+                    if (
+                        execute(["docker", "inspect", "--format", "{{.State.Running}}", cid])
+                        != "false"
+                    ):
+                        stopped = False
+                except (ProofFailure, OSError, ValueError):
+                    stopped = False
+            report["workload_stop"] = "verified_not_running" if stopped else "failed_or_unverified"
         try:
             for role in ("canary", "db", "worker"):
                 cidfile = owned.with_suffix(f".{role}.cid")
@@ -810,12 +1005,17 @@ def supervise(
                     if cid not in ids:
                         ids.append(cid)
             if owned.with_suffix(".owner.json").exists():
-                for cid in reconcile_owned(owned):
+                for cid in reconcile_owned(owned, execute if online_once else None):
                     if cid not in ids:
                         ids.append(cid)
-            remove_owned(ids)
+            if online_once:
+                remove_owned(ids, execute)
+            else:
+                remove_owned(ids)
             if creation_uncertain:
                 raise ProofFailure("creation_outcome_uncertain")
+            if online_once and time.monotonic() >= started + 120:
+                report["status"] = "failed"
             report["cleanup"] = "verified_absent"
         except (ProofFailure, OSError, ValueError):
             report["cleanup"] = "failed"
@@ -834,7 +1034,9 @@ def main() -> None:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--owned", type=Path, required=True)
-    parser.add_argument("--single-record-feasibility", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--single-record-feasibility", action="store_true")
+    mode.add_argument("--online-once", action="store_true")
     args = parser.parse_args()
     try:
         supervise(
@@ -844,6 +1046,7 @@ def main() -> None:
             args.evidence,
             args.owned,
             single_record=args.single_record_feasibility,
+            online_once=args.online_once,
         )
     except ProofFailure:
         raise SystemExit(1) from None

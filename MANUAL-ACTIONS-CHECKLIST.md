@@ -2,6 +2,21 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## One-shot online quote profile · 2026-10-16
+
+- [x] Independently verify PR50 run 38894594316 single-record/canary/cleanup evidence.
+- [ ] Close final exact-head CI50 before opening the separate trial PR.
+- [ ] Independently review exact fixed 39-operation fixture, host deadlines and
+      one-shot trigger; no local domain-history or Docker execution is permitted.
+- [x] Record the accepted remote workflow-metadata limitation: connected list API
+      is unsupported; inspected main/local history has no filename entry. Preserve
+      first-run/first-attempt gates; a skipped run cannot be bypassed by renaming.
+- [ ] Only after those gates, review the one source-bound hosted result and cleanup.
+      A failure requires diagnosis/review; no automatic retry or larger budget.
+- [ ] Keep application fencing/order transition, QA25 percentiles, contention,
+      richer restored history, recovery and operator activation gates open.
+- See [exact trial scope](docs/10-spec-development/2026-10-16-quote-online-profile-once.md).
+
 ## Quote contained microfixture · 2026-10-16
 
 - Diagnostic run 38893517005 isolated an invalid whitespace-containing fixture
