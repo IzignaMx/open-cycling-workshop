@@ -485,18 +485,17 @@ def _reconstruct(
                     _line_decisions(head, proof),
                     price_selection(head, proof.approved_line_ids),
                 )
-                encode_entry(entry)
                 entries.append(entry)
                 latest[head.quote_id] = entry
                 if proof.evidence is not None:
                     customer_times[head.quote_id] = proof.evidence.decided_at
                 sequence += 1
-        if not isinstance(command, RecordQuoteDecisionCommand):
-            if head.version > len(stored_quotes) or head != replace(
-                stored_quotes[head.version - 1], superseded_at=None, superseded_by=None
-            ):
-                raise ValueError("generated quote differs from stored history")
-            encode_quote(head)
+        if not isinstance(command, RecordQuoteDecisionCommand) and (
+            head.version > len(stored_quotes)
+            or head
+            != replace(stored_quotes[head.version - 1], superseded_at=None, superseded_by=None)
+        ):
+            raise ValueError("generated quote differs from stored history")
         if (operation.quote_id, operation.quote_version, operation.resulting_decision_sequence) != (
             head.quote_id,
             head.version,

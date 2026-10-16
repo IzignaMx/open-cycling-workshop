@@ -2,6 +2,17 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Reconstructed quote result codecs · 2026-10-16
+
+- [x] Independently review the two-call-only design and unchanged validation boundary.
+- [x] Complete tiny differential/count/rollback tests and independent source review.
+- [ ] Close exact package/body review before publication.
+- [ ] Qualify any subsequently published source through ordinary CI.
+- [ ] Preserve PR56's failed 20-second diagnostic, four completed revisions and
+      verified stop/absence; no rerun or timing prediction follows from this change.
+- [ ] Keep capacity, ordinary latency, contention and restore gates separate;
+      see [the narrow codec scope](docs/10-spec-development/2026-10-16-quote-result-codec-once.md).
+
 ## Session-bound local sync wake · 2026-10-16
 
 - [x] Reproduce a local commit overlapping an empty-push delta cycle before the fix.

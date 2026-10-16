@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Validate each reconstructed operation result once
+
+- Remove two discarded quote/decision codec calls already performed on the same
+  operation-time object by the joined logical-record formatter.
+- Keep proof, admission, stored-row, predecessor, outbox, final ledger and canonical
+  byte validation; compare tiny histories against an independent frozen PR55 oracle.
+- Preserve the failed PR56 diagnostic and verified cleanup. No latency or capacity
+  improvement is claimed from reduced codec calls.
+
 ## Unreleased · Preserve same-session local sync wake
 
 - Coalesce committed local-write notifications while sync is busy, then dispatch
