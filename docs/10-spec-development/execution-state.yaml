@@ -2014,3 +2014,12 @@ quote_record_diagnostics_2026_10_16:
   scope: fixed_shape_unchanged_closed_stage_failure_category_byte_counts_numeric_exit
   deadline: diagnostics_share_original20s_workload_never_extend_for_evidence
   evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
+
+quote_record_reference_correction_2026_10_16:
+  diagnosis: run38893517005_decision_decode_request_error_fixture_reference_whitespace
+  measured: raw_create101315_joined_revision207781_raw_decision2604_bytes
+  unknown: joined_decision_full_fixture_result_history_capacity
+  correction: same200ASCII_reference_spaces_to_hyphens_no_production_semantic_change
+  regression: exact2604byte_decoder_request_red_before_green_after_no_ledger_or_PG
+  boundaries: all_line_edge_money_note_resource_and_deadline_dimensions_unchanged
+  evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md

@@ -261,3 +261,24 @@ time; cleanup still runs. Checkpoint writes are included in the measured work,
 so later timings are instrumented diagnostic samples, not equivalent performance
 claims. Seven diagnostic-schema tests first failed; guarded failure/expired-time
 mocks cover capture without extending deadlines. No local recipe/PG execution.
+
+### Diagnostic cause: fixture reference must be an identifier
+
+[Diagnostic run 38893517005](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38893517005)
+on reviewed tree `5b34308a8ff856a72913abe3b85eb12c1d64fa30` isolated
+`decision_decode` / `request_error`, pytest exit 1. The revision had succeeded:
+raw create 101,315 bytes, joined revision 207,781 bytes; raw decision 2,604 bytes.
+No decision was applied and its joined size remains unknown. Actual containment,
+canary, final pressure readback and cleanup passed; total 7.574 seconds.
+Artifact 12042493766 ZIP SHA-256
+`f13df449311a6d8edbdd1af469bf356dbd85b3c1e366896ae4eca4bef3eb8d54`.
+
+The fixed prose source reference contained spaces. `DecisionEvidence` requires
+`source_reference` to be a whitespace-free identifier. A 2,604-byte decoder-only
+regression reproduced the rejection; changing spaces to hyphens preserves the
+200 ASCII codepoints/bytes and exact request length and passes decoding. Only
+this fixture reference changes; note, all 100 lines/1,000 edges, money, production
+validation and resource/deadline limits stay fixed. No local large-record/domain
+or PostgreSQL execution. This explains the diagnostic failure; corrected full
+fixture success still requires exact-source hosted evidence and independent review.
+Both prior failed artifacts remain retained; no maximum-capacity claim follows.

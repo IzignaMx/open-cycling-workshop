@@ -9,7 +9,11 @@ import pytest
 from cycling_workshop.quotes.domain import DiscountLine, LaborLine, TaxLine
 from cycling_workshop.quotes.reconstruction import logical_record
 from cycling_workshop.quotes.repository import QuoteRepository
-from cycling_workshop.quotes.requests import decode_initial_decision_request, decode_quote_request
+from cycling_workshop.quotes.requests import (
+    QuoteRequestError,
+    decode_initial_decision_request,
+    decode_quote_request,
+)
 from cycling_workshop.quotes.storage import canonical_bytes, encode_lines, validate_history_bytes
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,6 +21,50 @@ from test_administration_postgres import administration_postgres as administrati
 from test_quote_repository import admitted, counts, creation, decision
 from test_quote_repository_postgres import quote_postgres as quote_postgres
 from test_quote_storage import NOW, uid
+
+
+def record_reference():
+    return (
+        ("Synthetic inspection reference for the recorded customer approval. " * 4)[:199] + "."
+    ).replace(" ", "-")
+
+
+def test_fixed_reference_is_a_bounded_identifier_for_request_decoder():
+    original = ("Synthetic inspection reference for the recorded customer approval. " * 4)[
+        :199
+    ] + "."
+    note = (
+        "Synthetic customer approval recorded for this inspection and itemized estimate. " * 27
+    )[:1999] + "."
+    document = dict(
+        decision_id=uid(100),
+        expected_order_version=1,
+        lineage_id=uid(1),
+        expected_head_id=uid(1),
+        expected_head_version=1,
+        expected_decision_sequence=0,
+        evidence=dict(
+            party_kind="customer",
+            party_id="customer-a",
+            channel="written",
+            decided_at="2026-10-15T12:00:00.000000Z",
+            source_reference=original,
+            note=note,
+        ),
+    )
+    raw_original = canonical_bytes(document)
+    assert len(raw_original) == 2604
+    with pytest.raises(QuoteRequestError):
+        decode_initial_decision_request([raw_original], action="authorize")
+    reference = record_reference()
+    assert len(reference) == len(reference.encode("ascii")) == 200
+    document["evidence"]["source_reference"] = reference
+    raw_corrected = canonical_bytes(document)
+    assert len(raw_corrected) == len(raw_original)
+    decoded = decode_initial_decision_request([raw_corrected], action="authorize")
+    assert decoded.evidence.source_reference == reference
+    assert decoded.evidence.note == note
+    assert not any(character.isspace() for character in reference)
 
 
 @pytest.mark.skipif(
@@ -68,9 +116,7 @@ def fixed_record(quote_postgres, progress):
     note = (
         "Synthetic customer approval recorded for this inspection and itemized estimate. " * 27
     )[:1999] + "."
-    reference = ("Synthetic inspection reference for the recorded customer approval. " * 4)[
-        :199
-    ] + "."
+    reference = record_reference()
     for value, length in ((description, 500), (note, 2000), (reference, 200)):
         assert len(value) == len(value.encode("ascii")) == length
         assert " ".join(value.split()) == value

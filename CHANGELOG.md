@@ -2,6 +2,9 @@
 
 ## Unreleased · Prepare contained quote microfixture
 
+- Correct the synthetic evidence reference to a same-length whitespace-free
+  identifier after closed diagnostics isolated request decoding; preserve limits.
+
 - Preserve first fixed-record failure with unknown inner cause; add closed phase,
   numeric-byte and safe failure diagnostics without changing shape or deadlines.
 
