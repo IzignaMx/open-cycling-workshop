@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Prepare contained quote microfixture
+
+- Add one isolated hosted containment preflight and exactly three synthetic quote
+  operations, fresh load and historical retry. No maximum fixture/mode exists.
+- Refuse missing resource controllers, identities, counters or cleanup proof;
+  preserve private bounded evidence and all existing quote/SQL limits.
+- Record PR49 actual-main instrumented closure separately; the original main48
+  restart failure still has unknown cause. Capacity and activation remain open.
+
 ## Unreleased · Observe bounded API restart lifecycle
 
 - Capture closed, project/API-bound inspect state and finite lifecycle events

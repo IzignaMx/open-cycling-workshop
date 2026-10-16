@@ -2,6 +2,18 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Quote contained microfixture · 2026-10-16
+
+- [ ] Independently review the preflight and verify exact-source ordinary hosted
+      cgroup/Docker/PostgreSQL microfixture evidence. Local mocks are not proof.
+- [ ] Separately review maximum fixtures and latency/organization-lock acceptance
+      before implementing or running any maximum trial. No maximum mode exists.
+- [ ] Keep full capacity/atomicity/restore, application/fence, physical-device and
+      operator rollout gates open. No production activation is authorized.
+- PR49 actual-main instrumented CI/runtime/security closure is recorded in the
+  [preflight scope](docs/10-spec-development/2026-10-16-quote-capacity-preflight.md).
+  Original main48 restart cause remains unknown; QEMU remains non-qualifying failed.
+
 ## Quote catalog/main46 reconciliation · 2026-10-15
 
 - [x] Preserve the exact catalog and pure-read sources through a normal merge,
