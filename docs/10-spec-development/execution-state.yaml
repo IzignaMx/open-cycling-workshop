@@ -2032,3 +2032,12 @@ quote_prefix_byte_reuse_20261016:
   ordinary_38900040965: tiny_and_fixed_passed_separate_from_maximum_failure
   maximum_capacity: unqualified_no_new_trial_authorized
   public_snapshot_and_validation_contracts: unchanged
+
+quote_single_pass_reconstruction_20261016:
+  status: local_tiny_source_review_passed_hosted_pending
+  scope: chronological_operation_replay_without_complete_prefix_ledgers
+  evidence: docs/10-spec-development/2026-10-16-quote-single-pass-reconstruction.md
+  final_public_and_storage_validations: retained
+  residual_row_and_edge_scans: unchanged
+  maximum_capacity: unqualified_no_new_execution_authorized
+  consumed_pr51_workflow: unchanged
