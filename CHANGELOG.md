@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Reconcile product-stack ordinary evidence
+
+- Record exact PR57 source qualification: 218 retry-free browser executions,
+  ordinary runtime/native ARM64/build/security and contained fixed-record success.
+- Preserve original browser, maximum/profile and non-qualifying QEMU failures.
+  Capacity, latency/contention, activation and physical/operator gates stay open.
+- Main integration remains pending; this documentation changes the candidate tree
+  and requires its own exact-candidate verification. No performance claim follows.
+
 ## Unreleased · Validate each reconstructed operation result once
 
 - Remove two discarded quote/decision codec calls already performed on the same
@@ -23,7 +32,8 @@
 - Wait for the exact singleton workshop name before theme captures using the
   existing assertion budget; preserve all geometry and security checks.
 - Cover pending, permanent fallback, absent and duplicate identity observations
-  with real Playwright assertions outside a browser; exact hosted QA remains open.
+  with real Playwright assertions outside a browser. Later combined-tree PR57
+  browser qualification passed; original PR53/54 failures remain preserved.
 
 ## Unreleased · Reconstruct quote operations without repeated prefix ledgers
 
