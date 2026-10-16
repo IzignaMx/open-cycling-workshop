@@ -12,6 +12,7 @@ from cycling_workshop.quotes.repository import QuoteRepository
 from cycling_workshop.quotes.requests import decode_initial_decision_request, decode_quote_request
 from cycling_workshop.quotes.storage import canonical_bytes, encode_lines, validate_history_bytes
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from test_administration_postgres import administration_postgres as administration_postgres
 from test_quote_repository import admitted, counts, creation, decision
 from test_quote_repository_postgres import quote_postgres as quote_postgres
@@ -22,6 +23,35 @@ from test_quote_storage import NOW, uid
     os.environ.get("OCWP_QUOTE_MICRO") != "contained", reason="host containment preflight required"
 )
 def test_one_fixed_revision_and_initial_decision(quote_postgres):
+    progress = dict(stage="setup_sql", failure_type=None, byte_counts={})
+    checkpoint(progress, "setup_sql")
+    try:
+        fixed_record(quote_postgres, progress)
+    except Exception as error:
+        progress["failure_type"] = {
+            "AssertionError": "assertion",
+            "QuoteRequestError": "request_error",
+            "QuoteConflictError": "quote_conflict",
+            "QuoteIntegrityError": "quote_integrity",
+        }.get(
+            type(error).__name__,
+            "database_error"
+            if isinstance(error, SQLAlchemyError)
+            else "value_error"
+            if isinstance(error, ValueError)
+            else "unexpected",
+        )
+        checkpoint(progress, progress["stage"])
+        raise
+
+
+def checkpoint(progress, stage, **counts):
+    progress["stage"] = stage
+    progress["byte_counts"].update(counts)
+    Path("/tmp/quote-record-diagnostic.json").write_text(json.dumps(progress))
+
+
+def fixed_record(quote_postgres, progress):
     db = quote_postgres
     cpu_started = time.process_time()
     timings = {}
@@ -30,6 +60,7 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
         assert session.scalar(text("SHOW statement_timeout")) == "20s"
         assert int(session.scalar(text("SHOW server_version_num"))) // 10000 == 18
     started = time.monotonic()
+    checkpoint(progress, "input_text")
     # Fixed schema-field boundary text, no extra padding fields or parameter search.
     description = ("Synthetic inspection of braking steering bearings and drivetrain. " * 8)[
         :499
@@ -60,6 +91,7 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
             lines=encode_lines(lines),
         )
     )
+    checkpoint(progress, "create_decode", raw_create_bytes=len(raw_create))
     request = decode_quote_request([raw_create])
     assert len(request.lines) == 100
     assert all(line.description == description for line in request.lines)
@@ -70,12 +102,17 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
         expected_order_version=request.expected_order_version,
         currency=request.currency,
     )
+    checkpoint(progress, "create_apply")
     with db.factory() as session:
         admitted(session)
         created = QuoteRepository(session).apply(create, recorded_at=NOW)
         session.commit()
     timings["create"] = time.monotonic() - started
+    checkpoint(progress, "revision_bytes")
     revision_record = logical_record(create, created.ledger)
+    checkpoint(
+        progress, "revision_totals", revision_logical_bytes=len(canonical_bytes(revision_record))
+    )
     totals = created.ledger.history.head.totals
     assert (totals.subtotal_minor, totals.discount_minor, totals.tax_minor, totals.total_minor) == (
         800000,
@@ -102,8 +139,10 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
             ),
         )
     )
+    checkpoint(progress, "decision_decode", raw_decision_bytes=len(raw_decision))
     initial = decode_initial_decision_request([raw_decision], action="authorize")
     assert initial.approved_line_ids == ()  # The request cannot supply full-authorize selection.
+    checkpoint(progress, "decision_load")
     with db.factory() as session:
         admitted(session)
         locked = QuoteRepository(session).load("a", "location-a", "order-a")
@@ -125,10 +164,15 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
             evidence=initial.evidence,
         )
         assert approve.expected_order_version == initial.expected_order_version
+        checkpoint(progress, "decision_apply")
         decided = QuoteRepository(session).apply(approve, recorded_at=NOW)
         session.commit()
     timings["decision"] = time.monotonic() - started
+    checkpoint(progress, "decision_bytes")
     decision_record = logical_record(approve, decided.ledger)
+    checkpoint(
+        progress, "decision_pricing", decision_logical_bytes=len(canonical_bytes(decision_record))
+    )
     entry = decided.ledger.entries[-1]
     assert entry.command.evidence == initial.evidence
     assert entry.command.evidence.note == note
@@ -143,7 +187,9 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
         entry.pricing.total_minor,
     ) == (800000, 500, 499500, 1299000)
     logical = [revision_record, decision_record]
+    checkpoint(progress, "history_bytes", two_record_history_bytes=len(canonical_bytes(logical)))
     validate_history_bytes(logical)
+    checkpoint(progress, "fresh_load")
     started = time.monotonic()
     with db.factory() as session:
         admitted(session)
@@ -153,6 +199,7 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
         assert counts(session) == (1, 1, 2, 2)
         session.commit()
     timings["fresh_load"] = time.monotonic() - started
+    checkpoint(progress, "exact_retry")
     started = time.monotonic()
     with db.factory() as session:
         admitted(session)
@@ -163,6 +210,7 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
         session.commit()
     timings["exact_retry"] = time.monotonic() - started
     assert all(seconds < 20 for seconds in timings.values())
+    checkpoint(progress, "result_write")
     Path("/tmp/quote-micro-result.json").write_text(
         json.dumps(
             dict(
@@ -209,3 +257,5 @@ def test_one_fixed_revision_and_initial_decision(quote_postgres):
             )
         )
     )
+
+    checkpoint(progress, "complete")

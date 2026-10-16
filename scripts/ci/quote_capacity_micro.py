@@ -341,6 +341,60 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
         raise ProofFailure("unexpected_mount")
 
 
+def record_diagnostic(raw: str) -> dict[str, object]:
+    value = json.loads(raw)
+    stages = {
+        "setup_sql",
+        "input_text",
+        "create_decode",
+        "create_apply",
+        "revision_bytes",
+        "revision_totals",
+        "decision_decode",
+        "decision_load",
+        "decision_apply",
+        "decision_bytes",
+        "decision_pricing",
+        "history_bytes",
+        "fresh_load",
+        "exact_retry",
+        "result_write",
+        "complete",
+    }
+    kinds = {
+        None,
+        "assertion",
+        "value_error",
+        "request_error",
+        "quote_conflict",
+        "quote_integrity",
+        "database_error",
+        "unexpected",
+    }
+    fields = {
+        "raw_create_bytes",
+        "raw_decision_bytes",
+        "revision_logical_bytes",
+        "decision_logical_bytes",
+        "two_record_history_bytes",
+    }
+    if type(value) is not dict or set(value) != {"stage", "failure_type", "byte_counts"}:
+        raise ProofFailure("record_diagnostic_shape")
+    if type(value["stage"]) is not str or value["stage"] not in stages:
+        raise ProofFailure("record_diagnostic_stage")
+    kind = value["failure_type"]
+    if kind is not None and (type(kind) is not str or kind not in kinds):
+        raise ProofFailure("record_diagnostic_failure")
+    counts = value["byte_counts"]
+    if (
+        type(counts) is not dict
+        or not set(counts) <= fields
+        or any(type(v) is not int or not 0 <= v <= 16 * 1024 * 1024 for v in counts.values())
+    ):
+        raise ProofFailure("record_diagnostic_bytes")
+    return value
+
+
 def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     value = json.loads(raw)
     expected = {
@@ -423,6 +477,7 @@ def supervise(
 ) -> None:
     started = time.monotonic()
     command_deadline = started + 900
+    micro_deadline = started  # Expired until the fixed workload actually starts.
 
     def execute(args: list[str], *, timeout: float = 5) -> str:
         remaining = command_deadline - time.monotonic()
@@ -636,7 +691,8 @@ def supervise(
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
         previous = before
         with tempfile.TemporaryFile() as output:
-            command_deadline = time.monotonic() + 20
+            micro_deadline = time.monotonic() + 20
+            command_deadline = micro_deadline
             child = subprocess.Popen(
                 [
                     "docker",
@@ -677,6 +733,7 @@ def supervise(
                             execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
                         )
                         current[role] = snapshots[role]["cpu_usec"]
+                    report["last_sampled_containers"] = dict(snapshots)
                     cpu_delta(previous, current, 600)
                     cpu_delta(dict.fromkeys(current, 0), current, 600)
                     previous = current
@@ -684,7 +741,7 @@ def supervise(
                 if time.monotonic() >= command_deadline:
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
-                    raise ProofFailure("micro_failed")
+                    raise ProofFailure("micro_failed", returncode=child.returncode)
                 report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
             finally:
                 if child.poll() is None:
@@ -717,6 +774,33 @@ def supervise(
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
         if isinstance(error, ProofFailure) and error.returncode is not None:
             report["client_returncode"] = error.returncode
+        if single_record and report["phase"] == "micro_with_pytest_bootstrap":
+            # Even post-success validation failures cannot reuse the outer deadline.
+            command_deadline = min(command_deadline, micro_deadline)
+            # Diagnostic commands share the original workload deadline; never extend it.
+            try:
+                report["record_diagnostic"] = record_diagnostic(
+                    execute(["docker", "exec", ids[1], "cat", "/tmp/quote-record-diagnostic.json"])
+                )
+            except (ProofFailure, ValueError, OSError):
+                report["record_diagnostic"] = "unavailable_or_invalid"
+            try:
+                report["failure_final_containers"] = {
+                    role: parse_probe(
+                        execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+                    )
+                    for cid, role, memory, pids in [
+                        (ids[0], "db", 768, 128),
+                        (ids[1], "worker", 512, 64),
+                    ]
+                }
+                report["failure_final_probe"] = "passed"
+            except (ProofFailure, ValueError, OSError) as probe_error:
+                report["failure_final_probe"] = (
+                    str(probe_error)
+                    if isinstance(probe_error, ProofFailure)
+                    else "invalid_evidence"
+                )
     finally:
         try:
             for role in ("canary", "db", "worker"):

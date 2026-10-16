@@ -4,6 +4,9 @@
 
 ## Quote contained microfixture · 2026-10-16
 
+- Fixed-record run 38892696736 failed after containment/canary with cleanup
+  verified; inner cause/byte feasibility remain unknown pending closed diagnostics.
+
 - First hosted run 38889970654 failed before canary/PG; cleanup passed. The
   readonly Git correction still needs exact-source hosted review.
 

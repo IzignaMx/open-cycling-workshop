@@ -2,6 +2,9 @@
 
 ## Unreleased · Prepare contained quote microfixture
 
+- Preserve first fixed-record failure with unknown inner cause; add closed phase,
+  numeric-byte and safe failure diagnostics without changing shape or deadlines.
+
 - Record independently reviewed hosted micro/cancellation cleanup success; add
   one fixed 100-line/1,000-edge feasibility fixture under unchanged limits.
   Keep original baseline, separate artifacts and maximum capacity gates.

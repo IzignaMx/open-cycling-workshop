@@ -238,3 +238,26 @@ Ordinary API preliminary p50 <150 ms/p95 <500 ms/p99 <1 s come from phase-6 QA
 section 25 and require representative nominal-load/hardware measurements.
 Single hosted samples are not percentile or physical-device proof. Maximum
 capacity/restore/atomicity, organization contention and activation remain open.
+
+### First fixed-record result and bounded diagnostics
+
+[Run 38892696736](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38892696736)
+checked merge `3cc7c8911afdb8990247392a02d1e63c5dc0c6a5`, reviewed tree
+`fca6f3e4f636b82166d0c344715b22b6793a3003`. Tiny baseline passed; the fixed
+record failed `micro_failed` after 9.093 seconds, setup 2.033 seconds. Its actual
+cgroup/privilege/network checks and cancellation canary passed; cleanup verified
+absent and independent cleanup passed. Artifact 12042338200 ZIP SHA-256
+`02a3246cac3826bdea1e527889eb48146c051614be1cf81a9962e6a3891df741`.
+No inner phase, canonical byte totals or final resource snapshot was retained,
+so this does not establish an invalid shape, capacity limit or exact root cause.
+The recipe and all limits are unchanged; no blind rerun or parameter search.
+
+Fixed-record-only checkpoints now retain an allowlisted phase, normalized failure
+category and reached numeric byte counts, never raw exceptions/SQL/proofs.
+The runner retains numeric pytest exit and last sampled resources, and attempts
+closed checkpoint/final resource readback only within the ORIGINAL 20-second
+workload deadline. An exhausted deadline yields unavailable evidence, not extra
+time; cleanup still runs. Checkpoint writes are included in the measured work,
+so later timings are instrumented diagnostic samples, not equivalent performance
+claims. Seven diagnostic-schema tests first failed; guarded failure/expired-time
+mocks cover capture without extending deadlines. No local recipe/PG execution.

@@ -199,7 +199,18 @@ def test_closed_micro_report_rejects_raw_proof_and_nonfinite_timings():
         module.micro_result(json.dumps(record))
 
 
-@pytest.mark.parametrize("fault", ["none", "cleanup", "late_exit", "create_timeout", "mid_probe"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "none",
+        "cleanup",
+        "late_exit",
+        "create_timeout",
+        "mid_probe",
+        "fixture_exit",
+        "post_success_invalid",
+    ],
+)
 @pytest.mark.parametrize("single_record", [False, True])
 def test_supervisor_success_and_terminal_failures_are_closed(
     tmp_path, monkeypatch, fault, single_record
@@ -225,7 +236,7 @@ def test_supervisor_success_and_terminal_failures_are_closed(
             polls.append(1)
             return None if fault == "mid_probe" and len(polls) == 1 else 0
 
-        return SimpleNamespace(poll=poll, returncode=0)
+        return SimpleNamespace(poll=poll, returncode=1 if fault == "fixture_exit" else 0)
 
     monkeypatch.setattr(module.subprocess, "Popen", popen)
     micro = dict(
@@ -277,6 +288,17 @@ def test_supervisor_success_and_terminal_failures_are_closed(
             if args[3] == "pg_isready":
                 return ""
             if args[3] == "cat":
+                if args[-1] == "/tmp/quote-record-diagnostic.json":
+                    return json.dumps(
+                        dict(
+                            stage="create_decode",
+                            failure_type="request_error",
+                            byte_counts=dict(raw_create_bytes=100),
+                        )
+                    )
+                if fault == "post_success_invalid":
+                    clock[0] = 21.0
+                    return "{}"
                 return json.dumps(micro)
             if fault == "mid_probe" and specimens:
                 clock[0] = 21.0
@@ -341,6 +363,16 @@ def test_supervisor_success_and_terminal_failures_are_closed(
         "failed" if fault in {"cleanup", "create_timeout"} else "verified_absent"
     )
     assert len(specimens) == (0 if fault == "create_timeout" else 1)
+    if fault == "fixture_exit":
+        assert report["client_returncode"] == 1
+        if single_record:
+            assert report["record_diagnostic"]["stage"] == "create_decode"
+            assert report["failure_final_probe"] == "passed"
+            assert set(report["failure_final_containers"]) == {"db", "worker"}
+    if single_record and fault in {"late_exit", "mid_probe", "post_success_invalid"}:
+        assert report["record_diagnostic"] == "unavailable_or_invalid"
+        assert report["failure_final_probe"] == "wall_budget"
+        assert not any(c[-1] == "/tmp/quote-record-diagnostic.json" for c in calls)
     if fault == "none":
         assert report["identities"][2]["network"] == "container:" + "a" * 64
         assert report["identities"][2]["memory_max"] == 536870912
@@ -576,3 +608,31 @@ def test_fixed_feasibility_metrics_fail_closed(field, value):
     result["record_feasibility"][field] = value
     with pytest.raises(module.ProofFailure):
         module.micro_result(json.dumps(result), single_record=True)
+
+
+def test_record_failure_diagnostic_is_closed():
+    import json
+
+    value = dict(
+        stage="create_decode", failure_type="value_error", byte_counts=dict(raw_create_bytes=100)
+    )
+    assert module.record_diagnostic(json.dumps(value)) == value
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        dict(stage="private input"),
+        dict(failure_type="private exception"),
+        dict(byte_counts={"proof": 100}),
+        dict(byte_counts={"raw_create_bytes": True}),
+        dict(byte_counts={"raw_create_bytes": -1}),
+        dict(exception="private"),
+    ],
+)
+def test_record_failure_diagnostic_refuses_unclosed_fields(change):
+    import json
+
+    value = dict(stage="create_decode", failure_type="value_error", byte_counts={}) | change
+    with pytest.raises(module.ProofFailure):
+        module.record_diagnostic(json.dumps(value))

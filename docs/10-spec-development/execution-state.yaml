@@ -2006,3 +2006,11 @@ quote_single_record_feasibility_2026_10_16:
   acceptance: QA25_nominal_percentiles_representative_hardware_not_single_hosted_samples
   maximum_mode: absent_no_full_history_execution
   evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
+
+quote_record_diagnostics_2026_10_16:
+  original: run38892696736_treefca6f3e4_fixed_record_micro_failed_after9_093s
+  verified: baseline_pass_actual_fixed_containment_canary_final_cleanup_pass
+  unknown: inner_stage_canonical_bytes_terminal_resource_snapshot_root_cause
+  scope: fixed_shape_unchanged_closed_stage_failure_category_byte_counts_numeric_exit
+  deadline: diagnostics_share_original20s_workload_never_extend_for_evidence
+  evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
