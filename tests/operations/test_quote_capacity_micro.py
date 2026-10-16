@@ -211,12 +211,17 @@ def test_closed_micro_report_rejects_raw_proof_and_nonfinite_timings():
         "post_success_invalid",
     ],
 )
-@pytest.mark.parametrize("single_record", [False, True])
+@pytest.mark.parametrize("single_record", [False, True, "profile"])
 def test_supervisor_success_and_terminal_failures_are_closed(
     tmp_path, monkeypatch, fault, single_record
 ):
     import json
     from types import SimpleNamespace
+
+    from test_quote_profile_guard import profile_value
+
+    four_revision_profile = single_record == "profile"
+    single_record = single_record is True
 
     commit, tree = "c" * 40, "d" * 40
     clock = [0.0]
@@ -234,6 +239,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
 
         def poll():
             polls.append(1)
+            if fault == "checkpoint_timeout" and len(polls) <= 2:
+                return None
             return None if fault == "mid_probe" and len(polls) == 1 else 0
 
         return SimpleNamespace(poll=poll, returncode=1 if fault == "fixture_exit" else 0)
@@ -255,6 +262,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
 
     if single_record:
         micro = feasibility_result()
+    if four_revision_profile:
+        micro = profile_value()
 
     def execute(args, **kwargs):
         calls.append(args)
@@ -275,6 +284,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
             return ""
         if args[:2] == ["docker", "inspect"]:
             cid = args[-1]
+            if args[3] == "{{.State.Running}}":
+                return "false"
             if "range .Mounts" in args[3]:
                 return "tmpfs /tmp"
             label = next(
@@ -288,6 +299,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
             if args[3] == "pg_isready":
                 return ""
             if args[3] == "cat":
+                if fault == "incomplete_profile":
+                    return json.dumps(profile_value(5))
                 if args[-1] == "/tmp/quote-record-diagnostic.json":
                     return json.dumps(
                         dict(
@@ -300,6 +313,11 @@ def test_supervisor_success_and_terminal_failures_are_closed(
                     clock[0] = 21.0
                     return "{}"
                 return json.dumps(micro)
+            if four_revision_profile and args[-1].startswith("if test -f /tmp/quote-profile"):
+                if fault == "checkpoint_timeout" and len(polls) == 2:
+                    clock[0] = 21.0
+                    raise module.ProofFailure("command_timeout")
+                return json.dumps(profile_value(2))
             if fault == "mid_probe" and specimens:
                 clock[0] = 21.0
             return (
@@ -319,6 +337,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
                 raise module.ProofFailure("command_failed")
             containers.remove(args[-1])
             return ""
+        if args[:2] == ["docker", "kill"]:
+            return ""
         if args[:2] == ["docker", "ps"]:
             return "\n".join(containers)
         raise AssertionError(args)
@@ -333,10 +353,17 @@ def test_supervisor_success_and_terminal_failures_are_closed(
         "effective_privileges",
         lambda *args: {"uid": 10001, "effective_capabilities": 0, "no_new_privileges": True},
     )
-    monkeypatch.setattr(module, "reconcile_owned", lambda *args: list(containers))
+
+    def reconcile(*args):
+        calls.append(["reconcile"])
+        if fault == "slow_finalization":
+            clock[0] = 21.0
+        return list(containers)
+
+    monkeypatch.setattr(module, "reconcile_owned", reconcile)
     original_remove = module.remove_owned
     monkeypatch.setattr(module, "run", execute)
-    monkeypatch.setattr(module, "remove_owned", lambda ids: original_remove(ids, execute))
+    monkeypatch.setattr(module, "remove_owned", lambda ids, *args: original_remove(ids, execute))
     target = tmp_path / "report.json"
     if fault == "none":
         module.supervise(
@@ -346,6 +373,7 @@ def test_supervisor_success_and_terminal_failures_are_closed(
             target,
             tmp_path / "owned.json",
             single_record=single_record,
+            four_revision_profile=four_revision_profile,
         )
     else:
         with pytest.raises(module.ProofFailure):
@@ -356,11 +384,14 @@ def test_supervisor_success_and_terminal_failures_are_closed(
                 target,
                 tmp_path / "owned.json",
                 single_record=single_record,
+                four_revision_profile=four_revision_profile,
             )
     report = json.loads(target.read_text())
     assert report["status"] == ("micro_passed_not_capacity" if fault == "none" else "failed")
     assert report["cleanup"] == (
-        "failed" if fault in {"cleanup", "create_timeout"} else "verified_absent"
+        "failed"
+        if fault in {"cleanup", "create_timeout", "slow_finalization"}
+        else "verified_absent"
     )
     assert len(specimens) == (0 if fault == "create_timeout" else 1)
     if fault == "fixture_exit":
@@ -378,10 +409,81 @@ def test_supervisor_success_and_terminal_failures_are_closed(
         assert report["identities"][2]["memory_max"] == 536870912
         assert report["lifetime_cpu_usec"] == 200
         assert specimens[0][-1] == (
-            "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+            "services/platform/tests/quotes/test_quote_profile_postgres.py::test_four_revisions_fresh_load_and_exact_retry"
+            if four_revision_profile
+            else "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
             if single_record
             else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
         )
+        if four_revision_profile:
+            assert "profile" not in report
+            assert len(target.read_bytes()) < module.LIMIT
+            assert len(report["profile_last_observed"]["records"]) == 6
+            # Include every actual host identity/counter field in the bound check.
+            maximal = json.loads(target.read_bytes())
+            maximal["last_sampled_containers"] = maximal["containers"]
+            maximal["canary_resources"].update(observed_processes=64, memory_peak=536870912)
+            for row in maximal["profile_last_observed"]["records"]:
+                row["sql"]["calls"] = 1_000_000
+                row["sql"]["verbs"] = dict(SELECT=999996, INSERT=1, UPDATE=1, DELETE=1, OTHER=1)
+                for metrics in row["functions"].values():
+                    if metrics is not None:
+                        metrics.update(
+                            primitive_calls=1_000_000,
+                            total_calls=1_000_000,
+                            own_seconds=0.09999999999999999,
+                            cumulative_seconds=0.09999999999999999,
+                        )
+            assert module.profile_result(json.dumps(maximal["profile_last_observed"]), final=True)
+            encoded = module.profile_report(maximal)
+            assert len(encoded.encode()) < module.LIMIT
+            assert maximal["status"] == "micro_passed_not_capacity"
+            partial = json.loads(encoded)
+            partial.update(
+                status="failed",
+                failure="command_timeout",
+                failure_command_stage="profile_checkpoint_read",
+                failure_deadline_kind="workload",
+                workload_stop="verified_not_running",
+            )
+            partial["profile_last_observed"]["records"].pop()
+            partial["profile_last_observed"].update(
+                complete=False, active_ordinal=6, process_cpu_seconds=None
+            )
+            assert module.profile_result(json.dumps(partial["profile_last_observed"]))
+            encoded_partial = module.profile_report(partial)
+            assert len(encoded_partial.encode()) < module.LIMIT
+            assert len(json.loads(encoded_partial)["profile_last_observed"]["records"]) == 5
+    if four_revision_profile and fault in {
+        "late_exit",
+        "mid_probe",
+        "fixture_exit",
+        "post_success_invalid",
+        "incomplete_profile",
+        "checkpoint_timeout",
+    }:
+        assert report["workload_stop"] == "verified_not_running"
+        kill_indexes = [i for i, row in enumerate(calls) if row[:2] == ["docker", "kill"]]
+        reconcile_index = next(i for i, row in enumerate(calls) if row == ["reconcile"])
+        assert len(kill_indexes) == 2 and max(kill_indexes) < reconcile_index
+        if fault in {"mid_probe", "checkpoint_timeout"}:
+            assert report["profile_last_observed"] == profile_value(2)
+            assert not any(row[-1] == "/tmp/quote-profile-result.json" for row in calls)
+            assert report["failure_deadline_kind"] == "workload"
+            assert report["failure_command_stage"] == (
+                "profile_worker_pressure_probe"
+                if fault == "mid_probe"
+                else "profile_checkpoint_read"
+            )
+    if fault == "slow_finalization":
+        assert report["cleanup_failure"] == "finalization_wall_budget"
+
+
+@pytest.mark.parametrize("fault", ["incomplete_profile", "checkpoint_timeout", "slow_finalization"])
+def test_profile_incomplete_zero_exit_and_checkpoint_timeout(tmp_path, monkeypatch, fault):
+    test_supervisor_success_and_terminal_failures_are_closed(
+        tmp_path, monkeypatch, fault, "profile"
+    )
 
 
 @pytest.mark.parametrize(

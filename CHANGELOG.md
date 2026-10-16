@@ -9,6 +9,14 @@
 - Reproduce the held-delta race deterministically and preserve QA54's failed first
   browser attempt. Browser timeouts and strict hosted qualification stay unchanged.
 
+## Unreleased · Prepare one bounded quote diagnostic profile
+
+- Add a test-only four-revision, fresh-load and exact-retry profile with closed
+  component timings and host-retained partial evidence under a 20-second workload.
+- Reuse containment and immediate worker/database stop on failure; a distinct
+  opened-only first-run workflow remains gated on prior CI and exact review.
+- No production change, elapsed-time extrapolation or capacity qualification.
+
 ## Unreleased · Wait for administration visual identity
 
 - Wait for the exact singleton workshop name before theme captures using the

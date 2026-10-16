@@ -306,8 +306,11 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> 
             client.wait(timeout=2)
 
 
-def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
-    fields = run(
+def inspect_owned(
+    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
+) -> None:
+    execute = execute or run
+    fields = execute(
         [
             "docker",
             "inspect",
@@ -325,7 +328,7 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
         or fields[6:] != ["true"]
     ):
         raise ProofFailure("container_identity")
-    mounts = run(
+    mounts = execute(
         [
             "docker",
             "inspect",
@@ -466,6 +469,232 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
+def profile_result(raw: str, *, final: bool = False) -> dict[str, object]:
+    """Closed diagnostic schema: six fixed actions, never financial proof or SQL."""
+    if len(raw.encode("utf-8")) >= LIMIT:
+        raise ProofFailure("profile_output_limit")
+
+    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result = dict(pairs)
+        if len(result) != len(pairs):
+            raise ProofFailure("profile_duplicate_key")
+        return result
+
+    value = json.loads(raw, object_pairs_hook=unique)
+
+    def exact(obj: object, keys: set[str]) -> dict[str, object]:
+        if type(obj) is not dict or set(obj) != keys:
+            raise ProofFailure("profile_schema")
+        return cast(dict[str, object], obj)
+
+    def number(obj: object, *, count: bool = False, maximum: float = 20) -> None:
+        if (
+            type(obj) not in ((int,) if count else (int, float))
+            or not 0 <= cast(float, obj) < maximum
+            or (type(obj) is float and not math.isfinite(obj))
+        ):
+            raise ProofFailure("profile_number")
+
+    exact(value, {"schema", "active_ordinal", "complete", "process_cpu_seconds", "records"})
+    if (
+        type(value["schema"]) is not int
+        or value["schema"] != 1
+        or type(value["complete"]) is not bool
+    ):
+        raise ProofFailure("profile_schema")
+    rows = value["records"]
+    if type(rows) is not list or len(rows) > 6:
+        raise ProofFailure("profile_records")
+    active = value["active_ordinal"]
+    if active is not None and (type(active) is not int or active != len(rows) + 1 or active > 6):
+        raise ProofFailure("profile_ordinal")
+    complete = value["complete"]
+    if (
+        complete != (len(rows) == 6)
+        or (complete and active is not None)
+        or (final and not complete)
+    ):
+        raise ProofFailure("profile_incomplete")
+    if complete:
+        number(value["process_cpu_seconds"])
+    elif value["process_cpu_seconds"] is not None:
+        raise ProofFailure("profile_partial_cpu")
+    actions = ("create", "revise", "revise", "revise", "fresh_load", "exact_retry")
+    total_bytes = 2
+    for ordinal, row in enumerate(rows, 1):
+        exact(
+            row,
+            {
+                "ordinal",
+                "action",
+                "wall_seconds",
+                "process_cpu_seconds",
+                "candidate",
+                "reconstruction",
+                "commit",
+                "sql",
+                "functions",
+                "raw_request_bytes",
+                "logical_bytes",
+                "history_bytes",
+                "revisions",
+                "receipts",
+                "counts",
+            },
+        )
+        if (
+            type(row["ordinal"]) is not int
+            or row["ordinal"] != ordinal
+            or row["action"] != actions[ordinal - 1]
+        ):
+            raise ProofFailure("profile_ordinal")
+        number(row["wall_seconds"])
+        number(row["process_cpu_seconds"])
+        for span in ("candidate", "reconstruction", "commit", "sql"):
+            metrics = exact(
+                row[span], {"calls", "seconds", "verbs"} if span == "sql" else {"calls", "seconds"}
+            )
+            number(metrics["calls"], count=True, maximum=1_000_001)
+            number(metrics["seconds"])
+            if cast(float, metrics["seconds"]) > row["wall_seconds"] + 0.000001:
+                raise ProofFailure("profile_span_time")
+            if metrics["calls"] == 0 and metrics["seconds"] != 0:
+                raise ProofFailure("profile_span_time")
+            expected_calls = {
+                "candidate": int(ordinal <= 4),
+                "reconstruction": int(ordinal > 1),
+                "commit": 1,
+            }
+            if span in expected_calls and metrics["calls"] != expected_calls[span]:
+                raise ProofFailure("profile_instrumentation_missing")
+            if span == "sql":
+                verbs = exact(metrics["verbs"], {"SELECT", "INSERT", "UPDATE", "DELETE", "OTHER"})
+                for count in verbs.values():
+                    number(count, count=True, maximum=1_000_001)
+                if (
+                    sum(cast(int, v) for v in verbs.values()) != metrics["calls"]
+                    or cast(int, verbs["SELECT"]) < 1
+                ):
+                    raise ProofFailure("profile_sql_counts")
+        functions = exact(
+            row["functions"],
+            {"reconstruct", "row_assembly", "canonical_json", "quote_codec", "command_proof"},
+        )
+        for label, observation in functions.items():
+            absent = ordinal == 1 and label in {"reconstruct", "row_assembly"}
+            if observation is None:
+                if not absent:
+                    raise ProofFailure("profile_instrumentation_missing")
+                continue
+            if absent:
+                raise ProofFailure("profile_unexpected_reconstruction")
+            stats = exact(
+                observation, {"primitive_calls", "total_calls", "own_seconds", "cumulative_seconds"}
+            )
+            for key in ("primitive_calls", "total_calls"):
+                number(stats[key], count=True, maximum=1_000_001)
+            for key in ("own_seconds", "cumulative_seconds"):
+                number(stats[key])
+            if not 1 <= cast(int, stats["primitive_calls"]) <= cast(int, stats["total_calls"]):
+                raise ProofFailure("profile_calls")
+            if (
+                not cast(float, stats["own_seconds"])
+                <= cast(float, stats["cumulative_seconds"])
+                <= row["wall_seconds"] + 0.000001
+            ):
+                raise ProofFailure("profile_function_time")
+        n = min(ordinal, 4)
+        for key in ("revisions", "receipts"):
+            if type(row[key]) is not int or row[key] != n:
+                raise ProofFailure("profile_counts")
+        if (
+            type(row["counts"]) is not list
+            or any(type(v) is not int for v in row["counts"])
+            or row["counts"] != [1, n, n, n]
+        ):
+            raise ProofFailure("profile_counts")
+        for key, bound in (("raw_request_bytes", 131072), ("logical_bytes", 262144)):
+            if ordinal <= 4:
+                number(row[key], count=True, maximum=bound + 1)
+                if row[key] == 0:
+                    raise ProofFailure("profile_bytes")
+            elif row[key] is not None:
+                raise ProofFailure("profile_bytes")
+        if ordinal <= 4:
+            total_bytes += cast(int, row["logical_bytes"]) + (ordinal > 1)
+        if type(row["history_bytes"]) is not int or row["history_bytes"] != total_bytes:
+            raise ProofFailure("profile_bytes")
+    if (
+        complete
+        and sum(row["process_cpu_seconds"] for row in rows)
+        > value["process_cpu_seconds"] + 0.000001
+    ):
+        raise ProofFailure("profile_cpu_intervals")
+    return cast(dict[str, object], value)
+
+
+def profile_report(report: dict[str, object]) -> str:
+    """Bound the entire artifact, including identities and its sole metric copy."""
+    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    if len(encoded.encode("utf-8")) < LIMIT:
+        return encoded
+    report["status"] = "failed"
+    fallback: dict[str, object] = {
+        "schema": 1,
+        "mode": "four_revision_diagnostic",
+        "status": "failed",
+        "failure": "profile_evidence_output_limit",
+        "profile_metrics": "omitted_due_output_limit",
+        "cleanup": report.get("cleanup")
+        if report.get("cleanup") in {"verified_absent", "failed"}
+        else "unavailable",
+    }
+    for key in ("commit", "tree"):
+        value = report.get(key)
+        if type(value) is str and re.fullmatch(r"[0-9a-f]{40}", value):
+            fallback[key] = value
+    return json.dumps(fallback, sort_keys=True, separators=(",", ":")) + "\n"
+
+
+def profile_observation(
+    previous: dict[str, object] | None, current: dict[str, object]
+) -> dict[str, object]:
+    """Repeated atomic reads are legal; completed records can never disappear/change."""
+    if previous is not None:
+        old, new = cast(list[object], previous["records"]), cast(list[object], current["records"])
+        if (
+            len(new) < len(old)
+            or new[: len(old)] != old
+            or (previous["complete"] and current != previous)
+        ):
+            raise ProofFailure("profile_progress_regressed")
+        if (
+            len(new) == len(old)
+            and previous["active_ordinal"] is not None
+            and current["active_ordinal"] != previous["active_ordinal"]
+        ):
+            raise ProofFailure("profile_progress_regressed")
+    return current
+
+
+def stop_profile(ids: list[str], execute: Callable[..., str]) -> bool:
+    """Stop only the two already-validated IDs before slow owner reconciliation."""
+    stopped = True
+    for cid in reversed(ids):
+        identifier(cid)
+        try:
+            execute(["docker", "kill", "--signal", "KILL", cid], timeout=5)
+        except (ProofFailure, OSError, ValueError):
+            stopped = False
+    for cid in reversed(ids):
+        try:
+            if execute(["docker", "inspect", "--format", "{{.State.Running}}", cid]) != "false":
+                stopped = False
+        except (ProofFailure, OSError, ValueError):
+            stopped = False
+    return stopped
+
+
 def supervise(
     worker_image: str,
     pg_image: str,
@@ -474,9 +703,15 @@ def supervise(
     owned: Path,
     *,
     single_record: bool = False,
+    four_revision_profile: bool = False,
 ) -> None:
     started = time.monotonic()
-    command_deadline = started + 900
+    command_deadline = started + (20 if four_revision_profile else 900)
+    cpu_budget = 240 if four_revision_profile else 600
+    profile_started = False
+    interrupted = False
+    final_deadline = started + 120
+    progress: dict[str, object] | None = None
     micro_deadline = started  # Expired until the fixed workload actually starts.
 
     def execute(args: list[str], *, timeout: float = 5) -> str:
@@ -490,13 +725,21 @@ def supervise(
     report: dict[str, object] = {
         "schema": 1,
         "commit": commit,
-        "mode": "single_record_feasibility" if single_record else "micro_only",
+        "mode": "four_revision_diagnostic"
+        if four_revision_profile
+        else "single_record_feasibility"
+        if single_record
+        else "micro_only",
         "maximum_capacity_qualified": False,
         "status": "failed",
         "phase": "setup_and_containment",
     }
+    if four_revision_profile:
+        report["deadline_kind"] = "setup"
 
     def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        nonlocal interrupted
+        interrupted = True
         raise ProofFailure("interrupted")
 
     signal.signal(signal.SIGTERM, interrupt)
@@ -627,7 +870,7 @@ def supervise(
             creation_uncertain = False
             ids.append(cid)
             owned.write_text(json.dumps(ids))
-            inspect_owned(cid, image, label, network)
+            inspect_owned(cid, image, label, network, execute if four_revision_profile else None)
             execute(["docker", "start", cid])
             snapshots[role] = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
@@ -664,7 +907,7 @@ def supervise(
                     "three_generations_survived_client_kill_then_container_absent"
                 )
         report["command_stage"] = "database_readiness"
-        deadline = time.monotonic() + 30
+        deadline = min(time.monotonic() + 30, command_deadline)
         while True:
             try:
                 execute(
@@ -690,9 +933,21 @@ def supervise(
         # Only now may pytest import the fixed three-operation specimen.
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
         previous = before
+        specimen = "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+        if single_record:
+            specimen = "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+        if four_revision_profile:
+            specimen = (
+                "services/platform/tests/quotes/test_quote_profile_postgres.py"
+                "::test_four_revisions_fresh_load_and_exact_retry"
+            )
         with tempfile.TemporaryFile() as output:
             micro_deadline = time.monotonic() + 20
             command_deadline = micro_deadline
+            profile_started = four_revision_profile
+            if four_revision_profile:
+                report["deadline_kind"] = "workload"
+                report["command_stage"] = "profile_pytest_start"
             child = subprocess.Popen(
                 [
                     "docker",
@@ -706,71 +961,131 @@ def supervise(
                     "no:cacheprovider",
                     "--tb=no",
                     "--basetemp=/tmp/quote-micro",
-                    (
-                        "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
-                        if single_record
-                        else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
-                    ),
+                    specimen,
                 ],
                 stdout=output,
                 stderr=output,
                 start_new_session=True,
                 preexec_fn=output_limit,
             )
-            micro_started = time.monotonic()
+            micro_started = micro_deadline - 20 if four_revision_profile else time.monotonic()
             try:
                 while child.poll() is None:
-                    if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
+                    if four_revision_profile:
+                        report["command_stage"] = "profile_monitor_deadline"
+                    if time.monotonic() >= micro_deadline or time.monotonic() - started > 900:
                         raise ProofFailure("wall_budget")
                     if os.fstat(output.fileno()).st_size >= LIMIT:
                         raise ProofFailure("output_limit")
+                    if four_revision_profile:
+                        report["command_stage"] = "profile_checkpoint_read"
+                        raw_progress = execute(
+                            [
+                                "docker",
+                                "exec",
+                                ids[1],
+                                "sh",
+                                "-c",
+                                "if test -f /tmp/quote-profile-result.json; "
+                                "then cat /tmp/quote-profile-result.json; "
+                                "else printf unavailable; fi",
+                            ]
+                        )
+                        if raw_progress == "unavailable":
+                            if progress is not None:
+                                raise ProofFailure("profile_checkpoint_disappeared")
+                        else:
+                            progress = profile_observation(progress, profile_result(raw_progress))
+                            report["profile_last_observed"] = progress
+                            report["profile_observed_at_workload_seconds"] = (
+                                time.monotonic() - micro_started
+                            )
                     current = {}
                     for cid, role, memory, pids in [
                         (ids[0], "db", 768, 128),
                         (ids[1], "worker", 512, 64),
                     ]:
+                        if four_revision_profile:
+                            report["command_stage"] = f"profile_{role}_pressure_probe"
                         snapshots[role] = parse_probe(
                             execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
                         )
                         current[role] = snapshots[role]["cpu_usec"]
                     report["last_sampled_containers"] = dict(snapshots)
-                    cpu_delta(previous, current, 600)
-                    cpu_delta(dict.fromkeys(current, 0), current, 600)
+                    cpu_delta(previous, current, cpu_budget)
+                    cpu_delta(dict.fromkeys(current, 0), current, cpu_budget)
                     previous = current
                     time.sleep(0.1)
+                if four_revision_profile:
+                    report["command_stage"] = "profile_pytest_completion"
                 if time.monotonic() >= command_deadline:
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
                 report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
+                if four_revision_profile:
+                    # Result read/validation also consumes the immutable workload budget.
+                    report["command_stage"] = "profile_final_result_read"
+                    progress = profile_observation(
+                        progress,
+                        profile_result(
+                            execute(
+                                ["docker", "exec", ids[1], "cat", "/tmp/quote-profile-result.json"]
+                            ),
+                            final=True,
+                        ),
+                    )
+                    if time.monotonic() >= micro_deadline:
+                        raise ProofFailure("wall_budget")
+                    report["profile_last_observed"] = progress
+                    report["profile_observed_at_workload_seconds"] = (
+                        time.monotonic() - micro_started
+                    )
+                    report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
             finally:
                 if child.poll() is None:
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait(timeout=2)
-        command_deadline = started + 900
+        if four_revision_profile:
+            final_deadline = min(started + 120, time.monotonic() + 20)
+            report["deadline_kind"] = "finalization"
+            report["command_stage"] = "profile_final_pressure_probes"
+        command_deadline = final_deadline if four_revision_profile else started + 900
         # Containers remain alive: read final cgroup events after workload exit.
-        final = {
-            role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
-            for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
-        }
-        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
+        final = {}
+        for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]:
+            if four_revision_profile:
+                report["command_stage"] = f"profile_final_{role}_pressure_probe"
+            final[role] = parse_probe(
+                execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+            )
+        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, cpu_budget)
         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
+        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, cpu_budget)
         report["lifetime_cpu_usec"] = lifetime_cpu
-        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
+        if lifetime_cpu + canary_resources["cpu_usec"] > cpu_budget * 1_000_000:
             raise ProofFailure("cpu_budget")
-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
+        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, cpu_budget)
         report["containers"] = final
-        micro = micro_result(
-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
-            single_record=single_record,
+        micro = (
+            progress
+            if four_revision_profile
+            else micro_result(
+                execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+                single_record=single_record,
+            )
         )
-        report["micro"] = micro
+        assert micro is not None
+        if not four_revision_profile:
+            report["micro"] = micro
         if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
             raise ProofFailure("cpu_accounting_disagrees")
         report["phase"] = "micro_complete"
         report["status"] = "micro_passed_not_capacity"
     except (ProofFailure, ValueError, OSError) as error:
+        if four_revision_profile:
+            report["failure_command_stage"] = report.get("command_stage", "unavailable")
+            report["failure_deadline_kind"] = report["deadline_kind"]
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
         if isinstance(error, ProofFailure) and error.returncode is not None:
             report["client_returncode"] = error.returncode
@@ -802,7 +1117,21 @@ def supervise(
                     else "invalid_evidence"
                 )
     finally:
+        if four_revision_profile:
+            command_deadline = (
+                min(started + 150, time.monotonic() + 30)
+                if interrupted
+                else min(final_deadline, time.monotonic() + 20)
+            )
+            report["deadline_kind"] = "emergency_cleanup" if interrupted else "finalization"
+        if profile_started and report["status"] != "micro_passed_not_capacity":
+            report["command_stage"] = "profile_stop_worker_and_database"
+            report["workload_stop"] = (
+                "verified_not_running" if stop_profile(ids[:2], execute) else "failed_or_unverified"
+            )
         try:
+            if four_revision_profile:
+                report["command_stage"] = "profile_cleanup_reconciliation"
             for role in ("canary", "db", "worker"):
                 cidfile = owned.with_suffix(f".{role}.cid")
                 if cidfile.exists():
@@ -810,19 +1139,41 @@ def supervise(
                     if cid not in ids:
                         ids.append(cid)
             if owned.with_suffix(".owner.json").exists():
-                for cid in reconcile_owned(owned):
+                for cid in (
+                    reconcile_owned(owned, execute)
+                    if four_revision_profile
+                    else reconcile_owned(owned)
+                ):
                     if cid not in ids:
                         ids.append(cid)
-            remove_owned(ids)
+            if four_revision_profile:
+                report["command_stage"] = "profile_cleanup_removal"
+                remove_owned(ids, execute)
+            else:
+                remove_owned(ids)
             if creation_uncertain:
                 raise ProofFailure("creation_outcome_uncertain")
+            if four_revision_profile and time.monotonic() >= command_deadline:
+                raise ProofFailure("finalization_wall_budget")
             report["cleanup"] = "verified_absent"
-        except (ProofFailure, OSError, ValueError):
+            if four_revision_profile and time.monotonic() >= started + 120:
+                report["status"] = "failed"
+        except (ProofFailure, OSError, ValueError) as cleanup_error:
             report["cleanup"] = "failed"
             report["status"] = "failed"
+            if four_revision_profile:
+                report["cleanup_failure"] = (
+                    str(cleanup_error)
+                    if isinstance(cleanup_error, ProofFailure)
+                    else "invalid_evidence"
+                )
         report["elapsed_seconds"] = round(time.monotonic() - started, 3)
         evidence.parent.mkdir(parents=True, exist_ok=True)
-        evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
+        evidence.write_text(
+            profile_report(report)
+            if four_revision_profile
+            else json.dumps(report, sort_keys=True) + "\n"
+        )
     if report["status"] != "micro_passed_not_capacity":
         raise ProofFailure("micro_unqualified")
 
@@ -834,7 +1185,9 @@ def main() -> None:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--owned", type=Path, required=True)
-    parser.add_argument("--single-record-feasibility", action="store_true")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--single-record-feasibility", action="store_true")
+    modes.add_argument("--four-revision-profile", action="store_true")
     args = parser.parse_args()
     try:
         supervise(
@@ -844,6 +1197,7 @@ def main() -> None:
             args.evidence,
             args.owned,
             single_record=args.single_record_feasibility,
+            four_revision_profile=args.four_revision_profile,
         )
     except ProofFailure:
         raise SystemExit(1) from None
