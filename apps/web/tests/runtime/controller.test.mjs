@@ -2532,3 +2532,426 @@ for (const edge of ['logout', 'offline', 'replacement']) {
     }
   })
 }
+
+// Hold a real ordinary delta after dispatch inspected an empty journal. No sleeps
+// or readiness barrier can move the local commit outside this overlap.
+function heldEmptySync({ failDelta = false } = {}) {
+  const server = api(),
+    original = server.fetch
+  let release, reached
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const started = new Promise((resolve) => {
+    reached = resolve
+  })
+  const sent = []
+  let held = false
+  server.fetch = async (url, init) => {
+    const path = new URL(url).pathname
+    if (path.endsWith('/sync/mutations')) {
+      const mutations = JSON.parse(init.body).mutations
+      sent.push(mutations)
+      return response(url, {
+        results: mutations.map((row) => ({
+          mutation_id: row.mutation_id,
+          entity_id: row.entity_id,
+          status: 'applied',
+          entity_version: 1,
+          error_code: null,
+          error_message: null,
+        })),
+      })
+    }
+    if (path.endsWith('/deltas/page') && JSON.parse(init.body).continuation !== 'delta' && !held) {
+      held = true
+      reached()
+      await gate
+      if (failDelta) throw new Error('Temporary delta network failure')
+    }
+    return original(url, init)
+  }
+  return { server, started, release, sent }
+}
+
+function captureFirstSync(runtime) {
+  const sync = runtime.sync.bind(runtime)
+  let first,
+    latest,
+    count = 0
+  runtime.sync = () => {
+    const result = sync()
+    first ??= result
+    latest = result
+    count++
+    return result
+  }
+  const captured = () => first
+  captured.count = () => count
+  captured.latest = () => latest
+  return captured
+}
+
+test('local commit during an empty active sync wakes automatic unchanged-ID dispatch', async (t) => {
+  const hold = heldEmptySync(),
+    f = setup(t, { server: hold.server })
+  const firstSync = captureFirstSync(f.runtime)
+  t.after(hold.release)
+  await login(f.runtime)
+  await hold.started
+  await f.runtime.createCustomer({ displayName: 'During delta one' })
+  await f.runtime.createCustomer({ displayName: 'During delta two' })
+  const journal = await f.database.operationJournal.toArray()
+  assert.equal(hold.sent.length, 0)
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    hold.release()
+    await firstSync()
+    assert.equal(firstSync.count(), 1)
+    t.mock.timers.tick(0)
+    assert.equal(firstSync.count(), 2, 'two local commits must coalesce into one immediate drain')
+    await firstSync.latest()
+    assert.equal(hold.sent.length, 1)
+    // Applied delivery uses its ordinary follow-up read, then becomes idle.
+    t.mock.timers.tick(0)
+    assert.equal(firstSync.count(), 3)
+    await firstSync.latest()
+    t.mock.timers.tick(0)
+    assert.equal(firstSync.count(), 3, 'the consumed local wake must not perpetuate a drain loop')
+    assert.equal(f.runtime.getSnapshot().sync, 'synced')
+    assert.deepEqual(
+      hold.sent[0].map((row) => row.mutation_id).sort(),
+      journal.map((row) => row.mutationId).sort(),
+    )
+    assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+    assert.ok(
+      (await f.database.operationDelivery.toArray()).every((row) => row.state === 'applied'),
+    )
+    assert.equal(hold.sent.length, 1)
+  } finally {
+    t.mock.timers.reset()
+  }
+})
+
+for (const transition of ['logout', 'replacement', 'offline']) {
+  test(`local wake during active sync is discarded on ${transition}`, async (t) => {
+    const hold = heldEmptySync(),
+      f = setup(t, { server: hold.server })
+    const firstSync = captureFirstSync(f.runtime)
+    t.after(hold.release)
+    await login(f.runtime)
+    await hold.started
+    await f.runtime.createCustomer({ displayName: 'Original author only' })
+    const journal = await f.database.operationJournal.toArray()
+    if (transition === 'logout') await f.runtime.logout()
+    else if (transition === 'replacement') await login(f.runtime, 'B')
+    else {
+      f.env.online = false
+      await f.runtime.offline()
+    }
+    hold.release()
+    await firstSync()
+    assert.equal(hold.sent.length, 0)
+    assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+    assert.equal((await f.database.operationDelivery.toArray())[0].state, 'pending')
+    if (transition === 'replacement') assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
+    if (transition === 'offline') assert.equal(f.runtime.getSnapshot().sync, 'offline')
+  })
+}
+
+test('local wake preserves a failed delta backoff and generic busy sync creates no drain', async (t) => {
+  const hold = heldEmptySync({ failDelta: true }),
+    f = setup(t, { server: hold.server })
+  const firstSync = captureFirstSync(f.runtime)
+  t.after(hold.release)
+  await login(f.runtime)
+  await hold.started
+  await f.runtime.createCustomer({ displayName: 'Wait for delta recovery' })
+  await Promise.all([f.runtime.sync(), f.runtime.sync(), f.runtime.sync()])
+  const journal = await f.database.operationJournal.toArray()
+  const count = firstSync.count()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    hold.release()
+    await firstSync()
+    assert.equal(f.runtime.getSnapshot().sync, 'error')
+    const control = await f.database.deviceControl.get('device')
+    const partition = await f.database.cachePartitions.get(control.activePartitionId)
+    const delay = partition.incremental.hold.retryAt - f.env.now
+    assert.ok(delay >= 1000 && delay <= 30000)
+    t.mock.timers.tick(0)
+    assert.equal(firstSync.count(), count, 'failed cycle must not drain an immediate local wake')
+    t.mock.timers.tick(delay - 1)
+    assert.equal(firstSync.count(), count, 'retry must not run before its retained deadline')
+    assert.equal(hold.sent.length, 0)
+    assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+    assert.equal((await f.database.operationDelivery.toArray())[0].state, 'pending')
+    f.env.now += delay
+    t.mock.timers.tick(1)
+    assert.equal(firstSync.count(), count + 1, 'retry runs at its original deadline')
+    await firstSync.latest()
+  } finally {
+    t.mock.timers.reset()
+  }
+})
+
+test('generic busy sync calls do not create a local-commit drain', async (t) => {
+  const hold = heldEmptySync(),
+    f = setup(t, { server: hold.server })
+  const firstSync = captureFirstSync(f.runtime)
+  t.after(hold.release)
+  await login(f.runtime)
+  await hold.started
+  const calls = hold.server.calls.length
+  await Promise.all(Array.from({ length: 8 }, () => f.runtime.sync()))
+  const count = firstSync.count()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    hold.release()
+    await firstSync()
+    t.mock.timers.tick(0)
+    assert.equal(
+      firstSync.count(),
+      count,
+      'generic busy calls must not schedule an immediate drain',
+    )
+    t.mock.timers.tick(29999)
+    assert.equal(firstSync.count(), count)
+    assert.equal(f.runtime.getSnapshot().sync, 'synced')
+    assert.equal(hold.server.calls.length, calls + 1)
+    assert.equal(hold.sent.length, 0)
+    t.mock.timers.tick(1)
+    assert.equal(firstSync.count(), count + 1, 'ordinary idle poll retains its 30-second interval')
+    await firstSync.latest()
+  } finally {
+    t.mock.timers.reset()
+  }
+})
+
+test('local commit during sync refresh retains one same-session wake', async (t) => {
+  const hold = heldEmptySync(),
+    f = setup(t, { server: hold.server })
+  const firstSync = captureFirstSync(f.runtime)
+  t.after(hold.release)
+  await login(f.runtime)
+  await hold.started
+  let reached, release
+  const started = new Promise((resolve) => {
+    reached = resolve
+  })
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  t.after(() => release())
+  const refresh = f.runtime.refresh.bind(f.runtime)
+  let first = true
+  f.runtime.refresh = async () => {
+    if (first) {
+      first = false
+      reached()
+      await gate
+    }
+    return refresh()
+  }
+  hold.release()
+  await started
+  await f.runtime.createCustomer({ displayName: 'During refresh' })
+  const journal = await f.database.operationJournal.toArray()
+  release()
+  await firstSync()
+  await until(() => f.runtime.getSnapshot().sync === 'synced', 'refresh wake did not settle')
+  assert.deepEqual(
+    hold.sent.flat().map((row) => row.mutation_id),
+    journal.map((row) => row.mutationId),
+  )
+  assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+})
+
+test('refresh error holds admission and discards the local wake without altering journal', async (t) => {
+  const hold = heldEmptySync(),
+    f = setup(t, { server: hold.server })
+  const firstSync = captureFirstSync(f.runtime)
+  t.after(hold.release)
+  await login(f.runtime)
+  await hold.started
+  await f.runtime.createCustomer({ displayName: 'Preserve on refresh failure' })
+  const journal = await f.database.operationJournal.toArray()
+  f.runtime.refresh = async () => {
+    throw new Error('Controlled refresh failure')
+  }
+  hold.release()
+  await firstSync()
+  assert.equal(f.runtime.getSnapshot().phase, 'held')
+  assert.equal(hold.sent.length, 0)
+  assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+  assert.equal((await f.database.operationDelivery.toArray())[0].state, 'pending')
+})
+
+test('obsolete cycle completion cannot erase replacement-session wake or dispatch former author', async (t) => {
+  const server = api(),
+    original = server.fetch
+  const gates = Object.fromEntries(
+    ['A', 'B'].map((id) => {
+      let release, reached
+      const wait = new Promise((resolve) => {
+        release = resolve
+      })
+      const started = new Promise((resolve) => {
+        reached = resolve
+      })
+      t.after(() => release())
+      return [id, { wait, started, release, reached, held: false }]
+    }),
+  )
+  const sent = []
+  server.fetch = async (url, init) => {
+    const path = new URL(url).pathname
+    if (path.endsWith('/sync/mutations')) {
+      const mutations = JSON.parse(init.body).mutations
+      sent.push(...mutations)
+      return response(url, {
+        results: mutations.map((row) => ({
+          mutation_id: row.mutation_id,
+          entity_id: row.entity_id,
+          status: 'applied',
+          entity_version: 1,
+          error_code: null,
+          error_message: null,
+        })),
+      })
+    }
+    if (path.endsWith('/deltas/page') && JSON.parse(init.body).continuation !== 'delta') {
+      const id = init.headers.Authorization === 'Bearer token-A' ? 'A' : 'B'
+      const gate = gates[id]
+      if (!gate.held) {
+        gate.held = true
+        gate.reached()
+        await gate.wait
+      }
+    }
+    return original(url, init)
+  }
+  const f = setup(t, { server }),
+    cycles = []
+  const sync = f.runtime.sync.bind(f.runtime)
+  f.runtime.sync = () => {
+    const cycle = sync()
+    cycles.push(cycle)
+    return cycle
+  }
+  await login(f.runtime)
+  await gates.A.started
+  await f.runtime.createCustomer({ displayName: 'Retained author A' })
+  const old = (await f.database.operationJournal.toArray())[0]
+  await f.runtime.logout()
+  await login(f.runtime, 'B')
+  await gates.B.started
+  await f.runtime.createCustomer({ displayName: 'Current author B' })
+  const journal = await f.database.operationJournal.toArray()
+  const current = journal.find((row) => row.mutationId !== old.mutationId)
+  gates.A.release()
+  await cycles[0]
+  assert.equal(sent.length, 0)
+  gates.B.release()
+  await cycles[1]
+  await until(() => f.runtime.getSnapshot().sync === 'synced', 'replacement wake was erased')
+  assert.deepEqual(
+    sent.map((row) => row.mutation_id),
+    [current.mutationId],
+  )
+  assert.equal((await f.database.operationDelivery.get(old.mutationId)).state, 'pending')
+  assert.equal((await f.database.operationDelivery.get(current.mutationId)).state, 'applied')
+  assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+})
+
+for (const mixed of ['applied-and-delta-retry', 'push-retry-and-progressed-delta']) {
+  test(`local wake leaves pre-existing ${mixed} scheduling unchanged`, async (t) => {
+    const scheduled = []
+    for (const withWake of [false, true]) {
+      const server = api(),
+        original = server.fetch
+      const pushAttempts = []
+      let failedDeltaRequests = 0
+      let release,
+        reached,
+        afterPush = false
+      const gate = new Promise((resolve) => {
+        release = resolve
+      })
+      const started = new Promise((resolve) => {
+        reached = resolve
+      })
+      t.after(() => release())
+      server.fetch = async (url, init) => {
+        const path = new URL(url).pathname
+        if (path.endsWith('/sync/mutations')) {
+          pushAttempts.push(...JSON.parse(init.body).mutations.map((row) => row.mutation_id))
+          reached()
+          await gate
+          afterPush = true
+          if (mixed === 'push-retry-and-progressed-delta')
+            throw new Error('Controlled push failure')
+          return response(url, {
+            results: JSON.parse(init.body).mutations.map((row) => ({
+              mutation_id: row.mutation_id,
+              entity_id: row.entity_id,
+              status: 'applied',
+              entity_version: 1,
+              error_code: null,
+              error_message: null,
+            })),
+          })
+        }
+        if (afterPush && path.endsWith('/deltas/page')) {
+          if (mixed === 'applied-and-delta-retry') {
+            failedDeltaRequests++
+            throw new Error('Controlled delta failure')
+          }
+          const value = await (await original(url, init)).json()
+          value.phase = 'catching_up'
+          value.completion = null
+          return response(url, value)
+        }
+        return original(url, init)
+      }
+      const f = setup(t, { server }),
+        cycles = captureFirstSync(f.runtime)
+      await login(f.runtime)
+      await until(() => f.runtime.getSnapshot().sync === 'synced', 'initial sync did not settle')
+      await f.runtime.createCustomer({ displayName: 'Already selected for push' })
+      await started
+      const activeCycle = cycles.latest()
+      if (withWake) await f.runtime.createCustomer({ displayName: 'Commit during selected push' })
+      const journal = await f.database.operationJournal.toArray()
+      const count = cycles.count()
+      t.mock.timers.enable({ apis: ['setTimeout'] })
+      try {
+        release()
+        await activeCycle
+        const control = await f.database.deviceControl.get('device')
+        const partition = await f.database.cachePartitions.get(control.activePartitionId)
+        if (mixed === 'applied-and-delta-retry')
+          assert.ok(partition.incremental.hold.retryAt > f.env.now)
+        else
+          assert.equal(
+            (await f.database.operationDelivery.get(journal[0].mutationId)).state,
+            'retryable',
+          )
+        t.mock.timers.tick(0)
+        scheduled.push(cycles.count() - count)
+        await cycles.latest()
+        // The extra pre-existing scheduler cycle is not an early retry: both
+        // coordinators retain their own durable per-request/per-operation fence.
+        if (mixed === 'applied-and-delta-retry') assert.equal(failedDeltaRequests, 1)
+        else assert.equal(pushAttempts.filter((id) => id === journal[0].mutationId).length, 1)
+        assert.deepEqual(await f.database.operationJournal.toArray(), journal)
+      } finally {
+        t.mock.timers.reset()
+        f.runtime.dispose()
+        await cycles.latest()
+      }
+    }
+    t.diagnostic(`Immediate cycles without/with local wake: ${scheduled.join('/')}`)
+    assert.equal(scheduled[1], scheduled[0], 'local wake must not add a mixed-outcome drain')
+  })
+}

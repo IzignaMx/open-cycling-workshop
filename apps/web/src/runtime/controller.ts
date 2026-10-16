@@ -151,6 +151,7 @@ export class WorkshopController {
   #observedAt = 0
   #started = false
   #running = false
+  #localSyncWake: { source: BaselineSession; networkSequence: number } | null = null
   #verifiedOnline = false
   #observedReachable = false
   #sessionSnapshots = new WeakMap<BaselineSession, { saved: SessionSnapshot }>()
@@ -646,6 +647,7 @@ export class WorkshopController {
     this.#brandingAdmissionRefresh = null
     this.#preferences = null
     this.#running = false
+    this.#localSyncWake = null
     if (this.#timer !== null) clearTimeout(this.#timer)
     if (this.#leaseTimer !== null) clearTimeout(this.#leaseTimer)
     this.#timer = null
@@ -697,6 +699,19 @@ export class WorkshopController {
       if (this.#verifiedOnline && this.#active === source && source.isCurrent(source.identity))
         await this.sync()
     }, delay)
+  }
+  // Only a committed local write requests an extra pass. Polls and repeated
+  // manual sync calls must not turn a busy cycle into an unbounded drain loop.
+  private wakeLocalSync(source: BaselineSession, networkSequence: number) {
+    if (
+      this.#active !== source ||
+      this.#networkSequence !== networkSequence ||
+      !this.#verifiedOnline ||
+      !source.isCurrent(source.identity)
+    )
+      return
+    if (this.#running) this.#localSyncWake = { source, networkSequence }
+    else this.scheduleSync()
   }
   private held(reason: string) {
     const active = this.#active ?? this.#working
@@ -1295,6 +1310,7 @@ export class WorkshopController {
     this.#push.invalidate()
     this.#incremental.invalidate()
     this.#running = false
+    this.#localSyncWake = null
     if (this.#timer !== null) clearTimeout(this.#timer)
     this.#timer = null
     const source = this.#active
@@ -1436,26 +1452,29 @@ export class WorkshopController {
     email?: string | null
     phone?: string | null
   }) {
-    const source = this.requireActive()
+    const source = this.requireActive(),
+      networkSequence = this.#networkSequence
     await this.repositories.createCustomer(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    if (this.#verifiedOnline) this.scheduleSync()
+    this.wakeLocalSync(source, networkSequence)
   }
   async createOrder(input: IntakeInput) {
-    const source = this.requireActive()
+    const source = this.requireActive(),
+      networkSequence = this.#networkSequence
     await this.repositories.createOrder(source, input)
     if (this.#active !== source) return
     await this.refresh()
-    if (this.#verifiedOnline) this.scheduleSync()
+    this.wakeLocalSync(source, networkSequence)
   }
   async transition(orderId: string, action: OrderAction) {
-    const source = this.requireActive()
+    const source = this.requireActive(),
+      networkSequence = this.#networkSequence
     await this.repositories.transition(source, orderId, action)
     if (this.#active !== source) return
     await this.refresh()
     await this.timeline(orderId)
-    if (this.#verifiedOnline) this.scheduleSync()
+    this.wakeLocalSync(source, networkSequence)
   }
   async timeline(orderId: string) {
     const source = this.requireActive(),
@@ -1518,6 +1537,7 @@ export class WorkshopController {
       this.#active === source &&
       source.isCurrent(source.identity)
     const networkSession = { ...source, isCurrent: current }
+    let canDrainLocalWake = false
     try {
       const push = source.context.capabilities.includes('sync.push')
         ? await this.#push.step(networkSession)
@@ -1539,6 +1559,9 @@ export class WorkshopController {
       }
       await this.refresh()
       if (!current()) return
+      canDrainLocalWake =
+        (delta.state === 'READY' || delta.state === 'PROGRESSED') &&
+        (push.state === 'IDLE' || push.state === 'APPLIED')
       if (delta.state === 'PROGRESSED' || push.state === 'APPLIED') {
         this.scheduleSync()
         return
@@ -1589,7 +1612,14 @@ export class WorkshopController {
     } catch {
       if (current()) this.held('storage_or_fence_failure')
     } finally {
-      if (current()) this.#running = false
+      if (current()) {
+        this.#running = false
+        const wake = this.#localSyncWake
+        if (wake?.source === source && wake.networkSequence === networkSequence) {
+          this.#localSyncWake = null
+          if (canDrainLocalWake) this.scheduleSync()
+        }
+      }
     }
   }
   dispose() {

@@ -2051,3 +2051,15 @@ administration_identity_readiness_20261016:
   budgets: existing_browser_expect10000ms_Node_default5000ms_no_overrides
   production_and_retry_configuration: unchanged
   evidence: docs/10-spec-development/2026-10-16-administration-identity-readiness.md
+
+session_local_sync_wake_20261016:
+  status: deterministic_regression_and_source_review_passed_final_package_hosted_pending
+  scope: coalesced_local_postcommit_wake_bound_to_original_active_source_and_network_generation
+  failure: QA54_direct_artifact12054078215_first_attempt_pending_retry_passed_gate_failed
+  diagnosis: observed_commit_during_delta_inferred_dropped_busy_wake_reproduced_locally
+  preservation: immutable_journal_legacy_evidence_identity_fences_retry_deadlines_and_browser_timeout
+  mixed_outcomes: existing_immediate_scheduler_cycle_unchanged_failed_HTTP_work_not_retried_early
+  local_tests: core928_passed_including11_new_cases_repository_CI_contracts27_passed
+  static: web_typecheck_ESLint_Prettier_clean_diff_passed
+  profile_and_remote_actions: none
+  evidence: docs/10-spec-development/2026-10-16-session-local-sync-wake.md
