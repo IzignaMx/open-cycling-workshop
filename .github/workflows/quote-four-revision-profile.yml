@@ -1,0 +1,88 @@
+name: Quote four-revision diagnostic profile once
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  quote-four-revision-profile:
+    if: >-
+      github.event.action == 'opened' &&
+      github.head_ref == 'codex/quote-four-revision-profile' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.repository == 'IzignaMx/open-cycling-workshop' &&
+      github.run_number == '1' && github.run_attempt == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Build exact archived source with existing pinned runtime and lock
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/quote-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          tree="$(git rev-parse HEAD^{tree})"
+          timeout --signal=TERM --kill-after=5s 210s docker build --target build \
+            -f "$context/infra/docker/platform.local.Dockerfile" -t ocwp-quote-base "$context"
+          cat > "$RUNNER_TEMP/quote-proof.Dockerfile" <<'DOCKERFILE'
+          FROM ocwp-quote-base
+          RUN uv sync --all-packages --group dev --locked
+          COPY tests /app/tests
+          COPY scripts /app/scripts
+          ARG SOURCE_TREE
+          LABEL ocwp.source-tree=$SOURCE_TREE
+          ENV PYTHONDONTWRITEBYTECODE=1
+          DOCKERFILE
+          timeout --signal=TERM --kill-after=5s 210s docker build \
+            -f "$RUNNER_TEMP/quote-proof.Dockerfile" --build-arg "SOURCE_TREE=$tree" \
+            -t ocwp-quote-micro "$context"
+          timeout --signal=TERM --kill-after=5s 60s docker pull postgres:18.4-trixie
+      - name: One fixed four-revision diagnostic, fresh load and exact retry
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+            --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
+            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-profile-owned.json" \
+            --evidence artifacts/quote-four-revision-profile.json --four-revision-profile
+      - name: Independently verify owned containers absent even after supervisor failure
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
+          root = Path(os.environ['RUNNER_TEMP'])
+          failed = False
+          for stem in ('quote-profile-owned',):
+              try:
+                  ids = [identifier(path.read_text().strip()) for path in root.glob(f'{stem}.*.cid')]
+                  present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
+                  owned = root / f'{stem}.json'
+                  discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
+                  if not set(ids).intersection(present).issubset(discovered):
+                      raise ProofFailure('owned_identity_reconciliation')
+                  remove_owned(discovered)
+              except (ProofFailure, ValueError, OSError):
+                  failed = True
+          if failed:
+              raise SystemExit('Owned-container cleanup unverified')
+          PY
+      - name: Preserve closed profiling evidence
+        timeout-minutes: 1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-four-revision-profile-${{ github.run_id }}-${{ github.sha }}
+          path: artifacts/quote-four-revision-profile.json
+          if-no-files-found: error

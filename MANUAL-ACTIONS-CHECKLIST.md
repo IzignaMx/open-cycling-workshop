@@ -25,6 +25,15 @@
 
 ## Quote operation replay · 2026-10-16
 
+- [x] Close exact PR55 retry-free CI 38924829298 (218 browser tests, zero retries),
+      preserving earlier PR53/QA54 browser failures. Reconciled package review and
+      deliberate profile publication/opening remain pending.
+- [ ] Independently review exact test-only instrumentation and source package in
+      [the fixed profiling scope](docs/10-spec-development/2026-10-16-quote-four-revision-profile.md).
+- [ ] If subsequently authorized, execute the opened-only first attempt once,
+      preserve failure/skip as terminal, and independently review source-bound
+      profiling/containment/cleanup evidence before any capacity decision.
+
 - [x] Independently review the operation-loop rewrite, frozen differential oracle,
       all 19 invariants and final public/storage validation.
 - [ ] Close exact final package/document review before publication.

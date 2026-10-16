@@ -2063,3 +2063,13 @@ session_local_sync_wake_20261016:
   static: web_typecheck_ESLint_Prettier_clean_diff_passed
   profile_and_remote_actions: none
   evidence: docs/10-spec-development/2026-10-16-session-local-sync-wake.md
+
+quote_four_revision_profile_20261016:
+  status: local_source_review_passed_package_pending_no_execution
+  scope: four_fixed_revisions_fresh_load_exact_retry_test_only_instrumentation
+  evidence: docs/10-spec-development/2026-10-16-quote-four-revision-profile.md
+  workload_seconds_including_bootstrap_and_profiling: 20
+  profile_publication_gate: pr55_retry_free_CI_closed_reconciled_exact_package_review_required
+  trigger: distinct_opened_only_exact_branch_run1_attempt1
+  production: unchanged
+  maximum_capacity: unqualified_separate_decision_required
