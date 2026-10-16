@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · Wait for administration visual identity
+
+- Wait for the exact singleton workshop name before theme captures using the
+  existing assertion budget; preserve all geometry and security checks.
+- Cover pending, permanent fallback, absent and duplicate identity observations
+  with real Playwright assertions outside a browser; exact hosted QA remains open.
+
 ## Unreleased · Reconstruct quote operations without repeated prefix ledgers
 
 - Validate chronological quote transitions with normal quote/entry constructors,

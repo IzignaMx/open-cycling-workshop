@@ -9,6 +9,7 @@ import {
 } from '@playwright/test'
 import type { UserResponse } from '@ocwp/api-client'
 import { kernelSnapshot, PASSWORD, waitForReady } from './helpers/authenticated-workshop.js'
+import { expectWorkshopIdentity } from './helpers/workshop-identity.mjs'
 
 // Authentication and credential commands must not put even synthetic tokens or
 // password request bodies in Playwright traces/video/failure screenshots.
@@ -628,6 +629,7 @@ test('administration preserves mounted drafts across all themes with narrow refl
   await page.getByRole('button', { name: 'Taller administración A', exact: true }).click()
   await waitForReady(page)
   await openAdministration(page)
+  await expectWorkshopIdentity(page, expectedIdentity)
   const input = page.getByLabel('Nombre de ubicación', { exact: true })
   await input.fill('Borrador de ubicación con texto ampliado')
   const handle = await input.elementHandle()

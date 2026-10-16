@@ -2,6 +2,15 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Administration visual identity · 2026-10-16
+
+- [x] Complete independent exact-source review of the QA-only readiness change.
+- [ ] Close final package/body review before publication.
+- [ ] Run fresh exact-source direct and aggregate browser qualification with the
+      existing retry-free gate; preserve artifact 12051089473 and its failed run.
+- [ ] Do not claim a production branding fix or measured original recovery time;
+      see the [evidence boundary](docs/10-spec-development/2026-10-16-administration-identity-readiness.md).
+
 ## Quote operation replay · 2026-10-16
 
 - [x] Independently review the operation-loop rewrite, frozen differential oracle,
