@@ -18,6 +18,7 @@ import time
 import uuid
 from collections.abc import Callable
 from contextlib import suppress
+from datetime import datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -212,6 +213,248 @@ def diagnostic_capture(
             process.stdout.close()
 
 
+class RestartDiagnostics:
+    """Finite observations of one generated project's API, never a startup fix."""
+
+    INSPECT_FORMAT = (
+        "{"
+        + ",".join(
+            f'"{key}":{{{{json {expression}}}}}'
+            for key, expression in {
+                "id": ".Id",
+                "project": '(index .Config.Labels "com.docker.compose.project")',
+                "service": '(index .Config.Labels "com.docker.compose.service")',
+                "status": ".State.Status",
+                "running": ".State.Running",
+                "restarting": ".State.Restarting",
+                "exit_code": ".State.ExitCode",
+                "oom_killed": ".State.OOMKilled",
+                "restart_count": ".RestartCount",
+                "error_present": '(ne .State.Error "")',
+                "started_at": ".State.StartedAt",
+                "finished_at": ".State.FinishedAt",
+            }.items()
+        )
+        + "}"
+    )
+    EVENT_FORMAT = (
+        "{"
+        + ",".join(
+            f'"{key}":{{{{json {expression}}}}}'
+            for key, expression in {
+                "id": ".Actor.ID",
+                "type": ".Type",
+                "action": ".Action",
+                "time_nano": ".TimeNano",
+                "exit_code": '(index .Actor.Attributes "exitCode")',
+                "signal": '(index .Actor.Attributes "signal")',
+            }.items()
+        )
+        + "}"
+    )
+
+    def __init__(self, command: list[str], *, env: dict[str, str], secrets: list[str]) -> None:
+        self.command, self.env, self.secrets = command, env, secrets
+
+    def _probe(self, parts: list[str]) -> tuple[str, str]:
+        try:
+            result = diagnostic_capture(parts, env=self.env, secrets=self.secrets)
+            status = result.get("status")
+            if status in ("timeout", "output_limit", "unavailable"):
+                return str(status), ""
+            if status != "captured" or result.get("returncode") != 0:
+                return "command_failed", ""
+            return "captured", str(result["output"])
+        except Exception:
+            return "unavailable", ""
+
+    def _snapshot(self, container: str, project: str) -> dict[str, object]:
+        status, output = self._probe(
+            [
+                "docker",
+                "inspect",
+                "--type",
+                "container",
+                "--format",
+                self.INSPECT_FORMAT,
+                container,
+            ]
+        )
+        if status != "captured":
+            return {"status": status}
+        try:
+            row = json.loads(output)
+            if not isinstance(row, dict) or (
+                row.get("id"),
+                row.get("project"),
+                row.get("service"),
+            ) != (container, project, "api"):
+                raise ValueError("binding")
+            state = {
+                key: row[key]
+                for key in (
+                    "status",
+                    "running",
+                    "restarting",
+                    "exit_code",
+                    "oom_killed",
+                    "restart_count",
+                    "error_present",
+                    "started_at",
+                    "finished_at",
+                )
+            }
+            if state["status"] not in (
+                "created",
+                "running",
+                "paused",
+                "restarting",
+                "removing",
+                "exited",
+                "dead",
+            ):
+                raise ValueError("status")
+            for key in ("running", "restarting", "oom_killed", "error_present"):
+                if type(state[key]) is not bool:
+                    raise ValueError("boolean")
+            for key, maximum in (("exit_code", 255), ("restart_count", 2**31 - 1)):
+                if type(state[key]) is not int or not 0 <= state[key] <= maximum:
+                    raise ValueError("integer")
+            for key in ("started_at", "finished_at"):
+                value = state[key]
+                if not isinstance(value, str) or not re.fullmatch(
+                    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z", value
+                ):
+                    raise ValueError("timestamp")
+                datetime.fromisoformat(value)
+            return {"status": "captured", "state": state}
+        except (ValueError, TypeError, KeyError):
+            return {"status": "invalid_output"}
+
+    def _events(self, container: str, project: str, since: object) -> dict[str, object]:
+        try:
+            until = time.time_ns()
+            if type(since) is not int or type(until) is not int or not 0 < since <= until < 2**63:
+                return {"status": "invalid_window"}
+            status, output = self._probe(
+                [
+                    "docker",
+                    "events",
+                    "--since",
+                    f"{since // 10**9}.{since % 10**9:09d}",
+                    "--until",
+                    f"{until // 10**9}.{until % 10**9:09d}",
+                    "--filter",
+                    "type=container",
+                    "--filter",
+                    f"container={container}",
+                    "--filter",
+                    f"label=com.docker.compose.project={project}",
+                    "--format",
+                    self.EVENT_FORMAT,
+                ]
+            )
+            if status != "captured":
+                return {"status": status}
+            lines = [line for line in output.splitlines() if line.strip()]
+            if len(lines) > 128:
+                return {"status": "event_limit"}
+            events = []
+            for line in lines:
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError("shape")
+                stamp = row.get("time_nano")
+                if (
+                    row.get("id") != container
+                    or row.get("type") != "container"
+                    or row.get("action")
+                    not in (
+                        "create",
+                        "start",
+                        "stop",
+                        "kill",
+                        "die",
+                        "oom",
+                        "restart",
+                        "destroy",
+                        "pause",
+                        "unpause",
+                    )
+                    or type(stamp) is not int
+                    or not since <= stamp <= until
+                ):
+                    continue
+                event: dict[str, object] = {"action": row["action"], "time_nano": stamp}
+                for key, maximum in (("exit_code", 255), ("signal", 64)):
+                    value = row.get(key)
+                    event[key] = (
+                        int(value)
+                        if isinstance(value, str)
+                        and re.fullmatch(r"\d{1,3}", value)
+                        and 0 <= int(value) <= maximum
+                        else None
+                    )
+                events.append(event)
+            return {
+                "status": "captured",
+                "window_start_ns": since,
+                "window_end_ns": until,
+                "events": events,
+            }
+        except (ValueError, TypeError):
+            return {"status": "invalid_output"}
+        except Exception:
+            return {"status": "unavailable"}
+
+    def capture(self, record: dict[str, object], phase: str) -> None:
+        """Collector and clock failures cannot escape into qualification/cleanup."""
+        diagnostics = record.setdefault("diagnostics", {})
+        assert isinstance(diagnostics, dict)
+        snapshots = diagnostics.setdefault("snapshots", {})
+        assert isinstance(snapshots, dict)
+        snapshots[phase] = {"status": "unavailable"}
+        started = None
+        with suppress(Exception):
+            started = time.monotonic()
+        try:
+            project = self.command[self.command.index("-p") + 1]
+            if not re.fullmatch(r"ocwp-smoke-[a-f0-9]{12}", project):
+                snapshots[phase] = {"status": "invalid_project"}
+                return
+            container = diagnostics.get("container_id")
+            if phase == "before_stop":
+                with suppress(Exception):
+                    since = time.time_ns()
+                    if type(since) is int and 0 < since < 2**63:
+                        diagnostics["window_start_ns"] = since
+                status, output = self._probe([*self.command, "ps", "--all", "--quiet", "api"])
+                if status != "captured":
+                    snapshots[phase] = {"status": status}
+                    return
+                container = output.strip()
+            if not isinstance(container, str) or not re.fullmatch("[a-f0-9]{64}", container):
+                snapshots[phase] = {"status": "unbound_container"}
+                return
+            snapshots[phase] = self._snapshot(container, project)
+            if phase == "before_stop" and snapshots[phase]["status"] == "captured":
+                diagnostics["container_id"] = container
+            if phase in ("failed", "complete"):
+                diagnostics["events"] = self._events(
+                    container, project, diagnostics.get("window_start_ns")
+                )
+        except Exception:
+            snapshots[phase] = {"status": "unavailable"}
+        finally:
+            with suppress(Exception):
+                if started is not None:
+                    elapsed = time.monotonic() - started
+                    if math.isfinite(elapsed) and elapsed >= 0:
+                        diagnostics["elapsed_seconds"] = round(
+                            diagnostics.get("elapsed_seconds", 0) + elapsed, 3
+                        )
+
+
 def failure_diagnostics(
     command: list[str], *, env: dict[str, str], secrets: list[str]
 ) -> dict[str, object]:
@@ -329,8 +572,46 @@ def qualify_api_restarts(
     base: str,
     verify_branding: Callable[[], None],
     cycles: list[dict[str, object]],
+    *,
+    diagnostics: Callable[[dict[str, object], str], None] | None = None,
 ) -> None:
     """Three mandatory same-project cycles; the first failure is never retried."""
+
+    def capture(record: dict[str, object], phase: str) -> None:
+        if diagnostics is not None:
+            try:
+                diagnostics(record, phase)
+            except Exception:
+                record["diagnostic_callback_status"] = "unavailable"
+
+    def checked_command(record: dict[str, object], action: str) -> None:
+        if diagnostics is None:
+            compose(action, "api")
+            return
+        commands = record.setdefault("commands", {})
+        assert isinstance(commands, dict)
+        result: dict[str, object] = {"status": "running"}
+        commands[action] = result
+
+        def stamp(key: str) -> None:
+            with suppress(Exception):
+                value = time.monotonic()
+                if type(value) in (int, float) and math.isfinite(value) and value >= 0:
+                    result[key] = value
+
+        stamp("started_monotonic")
+        try:
+            completed = compose(action, "api")
+            result["status"] = "passed"
+            code = getattr(completed, "returncode", None)
+            if type(code) is int and -255 <= code <= 255:
+                result["returncode"] = code
+        except Exception:
+            result["status"] = "failed"
+            raise
+        finally:
+            stamp("finished_monotonic")
+
     for number in range(1, 4):
         record: dict[str, object] = {
             "cycle": number,
@@ -338,26 +619,32 @@ def qualify_api_restarts(
             "phase": "stopping",
         }
         cycles.append(record)
+
         started = None
         with suppress(Exception):
             started = time.monotonic()
         try:
-            compose("stop", "api")
+            capture(record, "before_stop")
+            checked_command(record, "stop")
+            capture(record, "after_stop")
             record["phase"] = "checking_outage"
             code, _, body = request(base, "/api/v1/auth/me")
             assert code == 502 and b'<div id="root">' not in body
             record["phase"] = "checking_static"
             assert request(base, "/")[0] == 200
             record["phase"] = "starting"
-            compose("start", "api")
+            checked_command(record, "start")
+            capture(record, "after_start")
             record["phase"] = "waiting_ready"
             wait_ready(base)
             record["phase"] = "checking_branding"
             verify_branding()
             record["phase"] = "complete"
             record["status"] = "passed"
+            capture(record, "complete")
         except Exception:
             record["status"] = "failed"
+            capture(record, "failed")
             raise
         finally:
             # Optional timing must never replace the original qualification error.
@@ -643,7 +930,14 @@ def main() -> int:
                 evidence["authenticated_recovery"] = "not run (requires --browser)"
             restart_cycles: list[dict[str, object]] = []
             evidence["api_restart_cycles"] = restart_cycles
-            qualify_api_restarts(compose, base, branding_probe.verify_restart, restart_cycles)
+            restart_diagnostics = RestartDiagnostics(command, env=env, secrets=secrets).capture
+            qualify_api_restarts(
+                compose,
+                base,
+                branding_probe.verify_restart,
+                restart_cycles,
+                diagnostics=restart_diagnostics,
+            )
             checks.append("backend_outage_returns_502_without_spa_fallback")
             # The backup/restore drill uses only a fresh, dedicated DB in this
             # generated Compose project; it cannot target an existing installation.

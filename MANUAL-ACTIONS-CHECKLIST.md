@@ -1336,3 +1336,15 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
   was run. HTTP streaming, scoped authority, all mutation-ingress fences and
   physical/operator activation gates remain separate and open. See the
   [reconciliation record](docs/10-spec-development/2026-10-15-quote-request-contracts.md#reconciliation-with-merged-read-and-catalog-prerequisites).
+
+## 2026-10-16 · Bounded API restart diagnostics
+
+- [ ] Preserve main48 Runtime 38827236201's failed third restart and unknown
+      cause. Earlier successful runs and new local capturer tests do not erase
+      that failure or qualify downstream restore/persistence checks.
+- [ ] Obtain separately authorized exact-candidate hosted evidence for the new
+      bounded inspect/event observations before claiming runtime qualification.
+      No workflow rerun or speculative startup correction is included.
+- No new operator action is needed for this test-only instrumentation. Existing
+  maximum quote capacity, recovery, physical-device and activation gates remain
+  open. See the [diagnostic scope and evidence](docs/10-spec-development/2026-10-16-bounded-restart-diagnostics.md).

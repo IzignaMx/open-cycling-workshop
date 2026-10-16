@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Observe bounded API restart lifecycle
+
+- Capture closed, project/API-bound inspect state and finite lifecycle events
+  around the disposable smoke harness's existing restart cycles. Preserve
+  bounded capture, redaction, original errors, readiness budget and cleanup.
+- Retain main48 Runtime 38827236201's failed third restart and unknown cause.
+  Instrumentation and synthetic tests do not demonstrate a startup correction.
+- No retries, runtime limits, workflows, capacity trial or deployment change.
+
 ## Unreleased · Reconcile request contracts with merged reads and catalog
 
 - Normally merge actual main47 `51c35186` into the original PR48 branch, retaining
