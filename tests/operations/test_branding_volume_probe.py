@@ -497,12 +497,12 @@ def test_container_http_program_compiles_and_rejects_malformed_input_without_lea
 
 
 def test_local_smoke_hooks_keep_browser_handshake_and_original_checks() -> None:
-    source = (ROOT / "scripts/ci/local_compose_smoke.py").read_text()
+    source = (ROOT / "scripts/ci/local_compose_smoke.py").read_text().split("def main()", 1)[1]
     ordered = [
         "branding_probe.prepare_restore_secret",
         "branding_probe.seed(",
         'browser.expect("ready_for_backup")',
-        "qualify_api_restarts(compose, base, branding_probe.verify_restart, restart_cycles)",
+        "qualify_api_restarts(",
         "branding_probe.backup()",
         'browser.expect("pending_preserved")',
         'compose("stop", "edge", "api", "worker")',
@@ -520,4 +520,10 @@ def test_local_smoke_hooks_keep_browser_handshake_and_original_checks() -> None:
     assert '"/state/secrets/branding_restore_url.txt "' in source
     assert (
         'evidence["branding_named_volume"] = branding_probe.verify_source_return(token)' in source
+    )
+
+    compact = "".join(source.split())
+    assert (
+        "qualify_api_restarts(compose,base,branding_probe.verify_restart,restart_cycles,"
+        "diagnostics=restart_diagnostics,)" in compact
     )
