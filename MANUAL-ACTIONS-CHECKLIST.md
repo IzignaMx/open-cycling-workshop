@@ -2,6 +2,18 @@
 
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
+## Session-bound local sync wake · 2026-10-16
+
+- [x] Reproduce a local commit overlapping an empty-push delta cycle before the fix.
+- [x] Check same-session coalescing, immutable IDs, cancellation, error and retry
+      deadline behavior with deterministic local tests and controlled clocks.
+- [ ] Close independent exact final package/body review before publication.
+- [ ] Obtain fresh exact-source hosted browser qualification without changing
+      timeouts, assertions or the strict retry-free gate. Preserve failed direct
+      artifact 12054078215 and its passing retry as distinct evidence.
+- [ ] Keep quote-capacity profile execution and production activation separate;
+      see the [bounded fix and timeline](docs/10-spec-development/2026-10-16-session-local-sync-wake.md).
+
 ## Administration visual identity · 2026-10-16
 
 - [x] Complete independent exact-source review of the QA-only readiness change.

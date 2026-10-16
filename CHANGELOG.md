@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Preserve same-session local sync wake
+
+- Coalesce committed local-write notifications while sync is busy, then dispatch
+  unchanged operations after the current successful cycle instead of losing the wake.
+- Fence notifications to their original session/network generation; retain offline,
+  cancellation and retry behavior, immutable journal and unattributed legacy evidence.
+- Reproduce the held-delta race deterministically and preserve QA54's failed first
+  browser attempt. Browser timeouts and strict hosted qualification stay unchanged.
+
 ## Unreleased · Wait for administration visual identity
 
 - Wait for the exact singleton workshop name before theme captures using the
