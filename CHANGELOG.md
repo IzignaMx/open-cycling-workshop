@@ -6,8 +6,10 @@
   ordinary runtime/native ARM64/build/security and contained fixed-record success.
 - Preserve original browser, maximum/profile and non-qualifying QEMU failures.
   Capacity, latency/contention, activation and physical/operator gates stay open.
-- Main integration remains pending; this documentation changes the candidate tree
-  and requires its own exact-candidate verification. No performance claim follows.
+- Main integration is authorized and retargeted; exact-candidate verification
+  remains pending. The first status checkout used the old PR55 base, so this
+  subsequent documentation commit requires fresh CI against main. Earlier
+  same-tree evidence is retained separately. No performance claim follows.
 
 ## Unreleased · Validate each reconstructed operation result once
 

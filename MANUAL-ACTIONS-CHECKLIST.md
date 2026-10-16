@@ -24,8 +24,11 @@ No screenshot-pixel review, speedup, percentile or physical-device claim follows
 
 - [x] Complete independent source/package/body review and ordinary hosted evidence
       for the PR57 tree containing the product stack, excluding experiments51/56.
-- [ ] Authorize and qualify the exact cumulative main-integration candidate; this
-      status-only reconciliation changes its tree and needs fresh review/CI.
+- [x] Authorize cumulative integration and retarget PR57 to main.
+- [ ] Qualify the exact cumulative main-integration candidate. The first docs
+      publication triggered checkout `046754f2` against old PR55 before retarget;
+      its identical tree does not qualify the main merge. This subsequent
+      status-only commit requires fresh review/CI against main.
 - [ ] Qualify maximum capacity, nominal latency/contention, application atomicity,
       activation-specific restore, physical devices and operator rollout.
 
