@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased · Typed computed-column adapter
+
+- Record repository/lint/format passes and six strict typing diagnostics in run 39061333413.
+- Type the existing SQLAlchemy visitor seam and reflected-column fallback without changing SQL.
+- Corrected static and functional verification remain pending.
+
 ## Unreleased · Final reported codec and writer formatting
 
 - Retain complete formatter report from run 39060973460; apply its five reviewed hunks.

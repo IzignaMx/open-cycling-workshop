@@ -1,16 +1,17 @@
 schema: 1
 
 bounded_effects_static_20261017:
-  status: complete_formatter_report_applied_pending_checks
-  run_id: 39060973460
-  source_commit: 35adb76ac22214fe0b782d9d2d459ef4b81ac365
-  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945]
+  status: strict_type_diagnostics_corrected_pending_checks
+  run_id: 39061333413
+  source_commit: d7e77aababba4161fd755cc33857be32053c1bc9
+  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945, 39060973460]
   repository: passed_on_reported_source
   lint: passed_on_reported_source
-  formatter_output_bytes: 2909
-  formatter_output_truncated: false
-  complete_hunks_applied: 5
-  later_commands: unrun
+  formatting: passed_on_reported_source
+  strict_type_diagnostics: 6
+  diagnostic_output_bytes: 880
+  diagnostic_output_truncated: false
+  generated_contracts: unrun
   fixed_commands: 6
   source_paths: 38
   production_type_roots: 13

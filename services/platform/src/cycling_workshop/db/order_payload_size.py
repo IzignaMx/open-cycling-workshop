@@ -4,13 +4,19 @@ PostgreSQL must persist this value before a bounded reader uses it. The SQLite
 VIRTUAL expression intentionally makes no database-memory/prefetch guarantee.
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, Protocol, cast
 
 from sqlalchemy import Computed, inspect, text
 from sqlalchemy.engine import Connection
+from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.exc import CompileError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import DDLCompiler
+
+
+class _ComputedColumnVisitor(Protocol):
+    # SQLAlchemy 2.0.52's base and PostgreSQL visitors return str but are untyped.
+    def __call__(self, generated: Computed, **kw: Any) -> str: ...
 
 
 class OrderPayloadRawOctets(Computed):
@@ -28,7 +34,8 @@ class OrderPayloadRawOctets(Computed):
 
 @compiles(OrderPayloadRawOctets, "postgresql")
 def _postgresql(element: OrderPayloadRawOctets, compiler: DDLCompiler, **kw: Any) -> str:
-    return compiler.visit_computed_column(element, **kw)
+    visit_computed = cast(_ComputedColumnVisitor, compiler.visit_computed_column)
+    return visit_computed(element, **kw)
 
 
 @compiles(OrderPayloadRawOctets, "sqlite")
@@ -38,7 +45,8 @@ def _sqlite(element: OrderPayloadRawOctets, compiler: DDLCompiler, **kw: Any) ->
         "THEN length(CAST(payload AS BLOB)) ELSE NULL END",
         persisted=False,
     )
-    return compiler.visit_computed_column(surrogate, **kw)
+    visit_computed = cast(_ComputedColumnVisitor, compiler.visit_computed_column)
+    return visit_computed(surrogate, **kw)
 
 
 @compiles(OrderPayloadRawOctets)
@@ -164,8 +172,8 @@ def require_order_payload_count_schema(connection: Connection) -> None:
             columns = {
                 column["name"]: column for column in inspector.get_columns(table, schema="main")
             }
-            payload = columns.get("payload", {})
-            count = columns.get("order_payload_raw_octets", {})
+            payload: ReflectedColumn | dict[str, Any] = columns.get("payload", {})
+            count: ReflectedColumn | dict[str, Any] = columns.get("order_payload_raw_octets", {})
             computed = count.get("computed", {})
             expected = (
                 f"CASE WHEN {discriminator} = 'service_order' "
