@@ -500,18 +500,18 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 
 SERVICE_NODES = (
-    "services/platform/tests/quotes/test_quote_command_response.py::"
-    "test_create_and_applied_decision_round_trip_exact_closed_fields",
-    "services/platform/tests/quotes/test_quote_command_response.py::"
-    "test_encoder_revalidates_nested_bypasses_and_checks_actual_utf8_bytes",
+    "services/platform/tests/quotes/test_quote_driver_budgets.py::"
+    "test_raw_driver_budget_failure_has_availability_category",
+    "services/platform/tests/quotes/test_quote_driver_budgets.py::"
+    "test_budget_first_round_trip_can_exhaust_original_deadline",
     "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_create_decide_replay_commits_one_complete_tuple[sqlite]",
+    "test_false_flag_denies_new_but_preserves_exact_revision_replay[sqlite]",
     "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_response_failure_rolls_back_all_decision_effects[sqlite]",
+    "test_foreign_actor_and_noncustomer_decision_are_refused[sqlite]",
     "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_expired_deadline_refuses_before_writer_or_effects[sqlite]",
+    "test_commit_ack_loss_is_unknown_and_same_identity_replays[sqlite]",
     "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_historical_quote_only_decision_replay_does_not_invent_transition[sqlite]",
+    "test_expiry_after_order_effect_flush_rolls_back_outer_transaction[sqlite]",
 )
 SERVICE_REPORT = "/tmp/quote-service-initial-result.json"
 SERVICE_FAILURE_MARKER = b"OCWP_SERVICE_FAILURE_V1:"

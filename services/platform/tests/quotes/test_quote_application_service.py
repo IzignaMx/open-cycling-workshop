@@ -223,6 +223,7 @@ def test_expiry_after_order_effect_flush_rolls_back_outer_transaction(database, 
                 session, actors, decision(),
                 deadline=QuoteDeadline(expires_at=8.0, clock=lambda: clock[0]),
             )
+        assert clock == [9.0]
         assert totals(session) == before
         assert session.get(ServiceOrderRecord, "order-a").version == 1
 

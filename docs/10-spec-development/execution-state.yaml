@@ -1,7 +1,74 @@
 schema: 1
 
+quote_service_semantic_qualification_20261017:
+  status: prepared_pending_exact_independent_review_unexecuted_unpublished
+  base_commit: 65e2e69df4c2ad134ff2256864e44256fc5d3b3a
+  base_tree: 6c5d5d3f2af75f505262901f8099e89f5942f50f
+  local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  workflow: .github/workflows/quote-service-semantic-qualification.yml
+  branch: codex/quote-service-semantic-qualification
+  required_run_number: 1
+  required_run_attempt: 1
+  selector: fixed_two_pure_fake_driver_and_four_SQLite_nodes_only
+  exact_nodes:
+    - services/platform/tests/quotes/test_quote_driver_budgets.py::test_raw_driver_budget_failure_has_availability_category
+    - services/platform/tests/quotes/test_quote_driver_budgets.py::test_budget_first_round_trip_can_exhaust_original_deadline
+    - services/platform/tests/quotes/test_quote_application_service.py::test_false_flag_denies_new_but_preserves_exact_revision_replay[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_foreign_actor_and_noncustomer_decision_are_refused[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_commit_ack_loss_is_unknown_and_same_identity_replays[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_expiry_after_order_effect_flush_rolls_back_outer_transaction[sqlite]
+  assertion_tightening: late_expiry_clock_equals_9_after_original_append_change_returns
+  false_flag_scope: creation_receipt_replay_not_revision_replay_or_delivery_assertion
+  service_guard_sha256: 8a60b0d1f7f774bf2800f72312ce40081f3f3c75d0f96e879cf4b93bb5fdce25
+  service_test_sha256: bd7eba2b375444adc48e07af183e739f161cdd6ef400de110cb572f7c14467ce
+  workflow_sha256: d2410a6cab96c7af55c4dc3b3c9efd4f99c1a3843c45274785d77b59ffa11794
+  guard_change: only_six_fixed_selector_values_no_new_mode_or_guard_layer
+  consumed_workflows: byte_identical_not_retried
+  product_schema_fixtures_locks: unchanged_schema_0012_no_0013
+  workload_seconds: 20
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_overhead_cpu: 1
+  database_overhead_memory_mib: 768
+  expected_SQLite_files: 4
+  expected_persisted_quote_operations: 5
+  expected_late_rolled_back_decision_attempts: 1
+  expected_footprint_basis: source_and_assertions_not_runtime_measurement
+  host_containment: unproved_no_local_runtime
+  local_import_compile_collection_tests_static_contracts: not_run
+  semantics_qualified: false
+  postgresql_capacity_activation_qualified: false
+  evidence: docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md
+
+quote_service_original_six_verified_20261017:
+  status: verified_exact_original_six_DTO_SQLite_cases_only
+  run: 39041920516
+  job: 117422972026
+  run_number: 1
+  run_attempt: 1
+  commit: 65e2e69df4c2ad134ff2256864e44256fc5d3b3a
+  tree: 6c5d5d3f2af75f505262901f8099e89f5942f50f
+  artifact: 12104491644
+  artifact_sha256: 673a87843db6f3379472a000ddfc3f761568174f3f7afb935f8bf53c8580e78b
+  tests_passed: 6
+  ordered_setup_call_teardown_phases_passed: 18
+  failures_skips_collection_protocol_unhandled_errors: 0
+  setup_seconds: 2.171
+  workload_seconds: 4.410
+  supervisor_seconds: 7.243
+  worker_peak_bytes: 107028480
+  database_peak_bytes: 83677184
+  combined_workload_cpu_usec: 4941034
+  actual_controls_canary_final_resources_client_reap_both_absence_receipts: independently_verified
+  service_failure_path_cancellation_or_diagnostic_transport: not_exercised_by_success
+  broad_service_postgresql_capacity_activation_qualified: false
+  initial_failed_run_preserved: 39039629649
+  initial_failed_run_initiating_exception: unknown_not_recovered
+  evidence: docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md
+
 quote_service_corrected_collection_gate_20261017:
-  status: prepared_pending_exact_review_and_single_execution
+  current_closure: quote_service_original_six_verified_20261017
+  checkpoint_status: prepared_pending_exact_review_and_single_execution
   base_commit: 54fe65bee87f615a78c771507515ab95e6ef247e
   base_tree: b480a2aaf641f7dd12c7bc22fa73ffceef436185
   regression_run: 39041234055
@@ -17,7 +84,7 @@ quote_service_corrected_collection_gate_20261017:
   branch: codex/quote-service-corrected-collection
   original_failed_run: 39039629649
   original_workflow: preserved_consumed_not_retried
-  service_qualified: false
+  checkpoint_service_qualified: false
   postgresql_capacity_activation_qualified: false
   evidence: docs/10-spec-development/2026-10-17-service-collection-correction.md
 

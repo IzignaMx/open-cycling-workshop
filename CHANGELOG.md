@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased · Fixed service semantic qualification prepared
+
+- Record independently accepted corrected run `39041920516` on `65e2e69d`:
+  six original DTO/SQLite tests and 18 successful ordered phases, zero
+  failures/skips/errors, 4.410-second workload and both final absence receipts.
+- Prepare one separate six-node semantic batch: two pure fake-driver checks and
+  four SQLite refusal/replay/commit-uncertainty/late-expiry cases. Tighten the
+  late-expiry test with one assertion proving its post-append hook was reached.
+- Change only the fixed guard selector tuple and that assertion, plus a new
+  first-run/first-attempt workflow and status documentation. Proven guard logic,
+  20-second workload, resources, product code, schema 0012 and locks stay intact.
+- Preparation is unexecuted and unpublished. Exact independent review is pending;
+  static/contracts, wider semantics, PostgreSQL, capacity and activation stay open.
+  Earlier pending entries below are historical checkpoints, not current outcomes.
+- Scope: [fixed semantic qualification](docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md).
+
 ## Unreleased · Corrected collection service qualification pending
 
 - Record correction gate `39041234055` on `54fe65be`: eight exact regressions

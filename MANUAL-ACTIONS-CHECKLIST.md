@@ -1,5 +1,24 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Fixed service semantic qualification · 2026-10-17
+
+- [x] Independently accept [corrected run 39041920516](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041920516):
+      exactly six original tests, all 18 ordered phases, scoped actual source and
+      resource evidence and both final absence receipts. This closes that gate.
+- [ ] Independently review the new exact source tree, six fixed selectors, one
+      late-expiry reachability assertion, workflow identity and unchanged bounds.
+- [ ] After acceptance, obtain a fresh remote parent/branch/trigger preflight and
+      separate one-shot publication decision. This preparation does not publish.
+- [ ] Execute the distinct six semantic nodes once, requiring every protocol,
+      scoped source/control/final resource evidence and both absence receipts.
+- [ ] Keep static/contracts, full grants/enrollment, APPROVE/REJECT, PostgreSQL,
+      hard deadlines, versioned payload admission, API/UI, capacity, restore and
+      activation pending. False-flag replay here means the creation receipt.
+- Every consumed workflow stays byte-identical and every prior run remains bound
+  to its original source. No retry or resource increase follows from preparation.
+  [Exact pending scope](docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md).
+  Earlier preparation blocks below remain historical checkpoints.
+
 ## Corrected-source service qualification · 2026-10-17
 
 - [x] Independently verify [correction run 39041234055](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041234055):
