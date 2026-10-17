@@ -1,0 +1,180 @@
+name: Quote service restore qualification
+
+on:
+  push:
+    branches: [codex/quote-service-restore]
+
+permissions:
+  contents: read
+
+jobs:
+  quote-service-restore:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/codex/quote-service-restore' &&
+      github.run_number == 1 && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Refuse any other event, branch, workflow, run or attempt before preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/codex/quote-service-restore
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/quote-service-restore.yml@$GITHUB_REF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Build exact archived source with bounded quiet preparation output
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/quote-service-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          export QUOTE_SERVICE_CONTEXT="$context"
+          cat > "$RUNNER_TEMP/quote-service-proof.Dockerfile" <<'DOCKERFILE'
+          FROM ocwp-quote-service-base
+          RUN uv sync --all-packages --group dev --locked
+          RUN set -eu; apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg \
+              && install -d -m 0755 /usr/share/postgresql-common/pgdg \
+              && curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+              && gpg --batch --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /tmp/pgdg-key-info \
+              && test "$(awk -F: '$1 == "pub" {n++} END {print n+0}' /tmp/pgdg-key-info)" = 1 \
+              && test "$(awk -F: '$1 == "pub" {primary=1; next} primary && $1 == "fpr" {print $10; primary=0}' /tmp/pgdg-key-info)" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 \
+              && printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt-archive.postgresql.org/pub/repos/apt trixie-pgdg-archive main' > /etc/apt/sources.list.d/pgdg.list \
+              && apt-get update -qq \
+              && apt-get install -y -qq --no-install-recommends postgresql-client-18=18.4-1.pgdg13+1 libpq5=18.4-1.pgdg13+1 \
+              && test "$(dpkg-query -W -f='${Version}' postgresql-client-18)" = 18.4-1.pgdg13+1 \
+              && test "$(dpkg-query -W -f='${Version}' libpq5)" = 18.4-1.pgdg13+1 \
+              && for tool in pg_dump pg_restore; do \
+                   ln -s /usr/lib/postgresql/18/bin/$tool /usr/local/bin/$tool || exit 1; \
+                   version="$(/usr/lib/postgresql/18/bin/$tool --version)" || exit 1; \
+                   case "$version" in "$tool (PostgreSQL) 18.4"|"$tool (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)") ;; *) exit 1;; esac; \
+                   ldd /usr/lib/postgresql/18/bin/$tool > /tmp/client-link-check || exit 1; \
+                   if grep -F 'not found' /tmp/client-link-check; then exit 1; else status=$?; test "$status" -eq 1 || exit 1; fi; \
+                   printf '%s\n' "$version"; \
+                 done \
+              && rm -rf /var/lib/apt/lists/* /tmp/client-link-check /tmp/pgdg-key-info
+          COPY tests /app/tests
+          COPY scripts /app/scripts
+          COPY ruff.toml mypy.ini LICENSE README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md GOVERNANCE.md MAINTAINERS.md ARCHITECTURE.md package.json pnpm-workspace.yaml tsconfig.base.json .python-version .nvmrc /app/
+          COPY packages/api-client/openapi.json /app/packages/api-client/openapi.json
+          COPY packages/api-client/src/generated.ts /app/packages/api-client/src/generated.ts
+          COPY apps/web/package.json /app/apps/web/package.json
+          COPY packages/ui/package.json /app/packages/ui/package.json
+          COPY packages/plugin-sdk/package.json /app/packages/plugin-sdk/package.json
+          COPY packages/branding/package.json /app/packages/branding/package.json
+          COPY infra/compose/docker-compose.dev.yml /app/infra/compose/docker-compose.dev.yml
+          COPY fixtures/minimal/fixture.json /app/fixtures/minimal/fixture.json
+          COPY fixtures/demo-workshop/fixture.json /app/fixtures/demo-workshop/fixture.json
+          COPY fixtures/load/fixture.json /app/fixtures/load/fixture.json
+          ARG SOURCE_TREE
+          LABEL ocwp.source-tree=$SOURCE_TREE
+          ENV PYTHONDONTWRITEBYTECODE=1
+          DOCKERFILE
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import ProofFailure, run, source_query
+          context = os.environ['QUOTE_SERVICE_CONTEXT']
+          root = Path(os.environ['RUNNER_TEMP'])
+          try:
+              tree = source_query('tree')
+              commands = [
+                  (300, ['docker', 'build', '--quiet', '--target', 'build', '-f',
+                         f'{context}/infra/docker/platform.local.Dockerfile',
+                         '-t', 'ocwp-quote-service-base', context]),
+                  (300, ['docker', 'build', '--quiet', '-f',
+                         str(root / 'quote-service-proof.Dockerfile'),
+                         '--build-arg', f'SOURCE_TREE={tree}',
+                         '-t', 'ocwp-quote-service-initial', context]),
+                  (60, ['docker', 'pull', '--quiet', 'postgres:18.4-trixie']),
+              ]
+              artifacts = Path('artifacts')
+              artifacts.mkdir(exist_ok=True)
+              for index, (seconds, command) in enumerate(commands, start=1):
+                  log = artifacts / f'quote-restore-preparation-{index}.txt'
+                  # Same helper/RLIMIT_FSIZE: each public build log is bounded to 16 KiB.
+                  # Keep failed preparation actionable without raw environments or credentials.
+                  os.environ['QUOTE_PREPARATION_LOG'] = str(log.resolve())
+                  try:
+                      run(['bash', '-c', '"$@" > "$QUOTE_PREPARATION_LOG" 2>&1', '--',
+                           'timeout', '--signal=TERM', '--kill-after=5s', f'{seconds}s',
+                           *command], timeout=seconds + 5)
+                  finally:
+                      size = log.stat().st_size if log.exists() else 0
+                      print(f'Preparation step {index}: retained_bytes={size}; '
+                            f'truncated_or_at_cap={size >= 16384}', flush=True)
+                      if log.exists():
+                          print(log.read_bytes()[:16384].decode('utf-8', errors='replace'), flush=True)
+          except (ProofFailure, OSError, ValueError):
+              raise SystemExit('Image preparation unqualified; no specimen launch') from None
+          PY
+      - name: Verify containment then run one fixed PostgreSQL restore and replay case once
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+            --worker-image ocwp-quote-service-initial --pg-image postgres:18.4-trixie \
+            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-service-owned.json" \
+            --evidence artifacts/quote-service-contained.json --service-initial
+      - name: Independently reconcile, remove and prove owned containers absent
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
+          deadline = time.monotonic() + 55
+          def execute(args, *, timeout=5):
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  raise ProofFailure('independent_cleanup_deadline')
+              result = run(args, timeout=min(timeout, remaining), deadline=deadline)
+              if time.monotonic() >= deadline:
+                  raise ProofFailure('independent_cleanup_deadline')
+              return result
+          result = {'schema': 1, 'cleanup': 'failed', 'commit': os.environ['GITHUB_SHA'],
+                    'run_id': os.environ['GITHUB_RUN_ID'], 'run_number': os.environ['GITHUB_RUN_NUMBER'],
+                    'run_attempt': os.environ['GITHUB_RUN_ATTEMPT']}
+          try:
+              root = Path(os.environ['RUNNER_TEMP'])
+              owned = root / 'quote-service-owned.json'
+              ids = [identifier(path.read_text().strip()) for path in root.glob('quote-service-owned.*.cid')]
+              present = execute(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
+              for cid in present:
+                  identifier(cid)
+              discovered = reconcile_owned(owned, execute) if owned.with_suffix('.owner.json').exists() else []
+              if not set(ids).intersection(present).issubset(discovered):
+                  raise ProofFailure('owned_identity_reconciliation')
+              remove_owned(discovered, execute)
+              result['cleanup'] = 'verified_absent'
+          except (ProofFailure, ValueError, OSError):
+              pass
+          finally:
+              Path('artifacts').mkdir(exist_ok=True)
+              Path('artifacts/quote-service-independent-cleanup.json').write_text(json.dumps(result) + '\n')
+          if result['cleanup'] != 'verified_absent':
+              raise SystemExit('Owned-container cleanup unverified')
+          PY
+      - name: Upload restore evidence, bounded preparation logs and independent absence result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-service-restore-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            artifacts/quote-service-contained.json
+            artifacts/quote-service-independent-cleanup.json
+            artifacts/quote-restore-preparation-*.txt
+          if-no-files-found: error

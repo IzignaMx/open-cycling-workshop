@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Valid service-effect restore preparation
+
+- Close three PostgreSQL migration integrity cases and nine phases in run 39066342042.
+- Prepare one real synthetic PG18.4 dump/restore of generated metadata and valid version-1 service effects, followed by incarnation recovery and exact replay.
+- Add pinned signed client preparation inside the existing proof image; retain bounded preparation failure logs.
+- Execution and broader integration remain pending; no production restore or capacity claim.
+- [Scope](docs/10-spec-development/2026-10-17-quote-service-restore.md).
+
 ## Unreleased · PostgreSQL 0013 finite closure and migration integrity preparation
 
 - Verify four PostgreSQL cases and twelve phases in run 39065290465, including guarded NULLs and historical replay.

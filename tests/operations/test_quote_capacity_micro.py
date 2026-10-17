@@ -640,23 +640,40 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 
 # The service guard delta below is authored but unexecuted. Run only in the
 # separately reviewed bootstrap container, never via the service business mode.
-def postgres_identity(node, index=0, revision=None):
-    if revision is None:
-        revision = module.SERVICE_FINAL_REVISIONS[module.SERVICE_NODES.index(node)]
-    schema = "ocwp_identity_migration_" + f"{index:032x}"
+def postgres_database_identity(node, role, suffix="0" * 32):
     return dict(
         node=node,
+        role=role,
         dialect="postgresql",
         driver="psycopg",
         driver_version="3.3.4",
-        database="ocwp_quote_micro_test",
-        schema=schema,
-        search_path=schema,
+        database=f"ocwp_backup_{role}_{suffix}_test",
+        schema="public",
+        search_path='"$user", public',
         server_version_num=180004,
         server_encoding="UTF8",
         client_encoding="UTF8",
-        schema_revision=revision,
+        schema_revision="0013",
         probe_connection_closed=True,
+    )
+
+
+def postgres_clients():
+    return [
+        dict(
+            tool=tool,
+            path=f"/usr/lib/postgresql/18/bin/{tool}",
+            version=f"{tool} (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)",
+        )
+        for tool in ("pg_dump", "pg_restore")
+    ]
+
+
+def postgres_identity(node):
+    return dict(
+        node=node,
+        databases=[postgres_database_identity(node, role) for role in ("source", "target")],
+        clients=postgres_clients(),
     )
 
 
@@ -667,8 +684,7 @@ def service_items():
         SimpleNamespace(
             nodeid=node,
             path=PATH.parents[2] / node.split("::")[0],
-            originalname=node.split("::")[1].removesuffix("[postgres]"),
-            callspec=SimpleNamespace(params={"identity_migration_database": "postgres"}),
+            originalname=node.split("::")[1],
         )
         for node in module.SERVICE_NODES
     ]
@@ -678,10 +694,8 @@ def service_report():
     return dict(
         schema=1,
         nodes=list(module.SERVICE_NODES),
-        postgres_identities=[
-            postgres_identity(node, index) for index, node in enumerate(module.SERVICE_NODES)
-        ],
-        collection_count=3,
+        postgres_identities=[postgres_identity(node) for node in module.SERVICE_NODES],
+        collection_count=1,
         collection_errors=0,
         unhandled_errors=0,
         protocol_errors=0,
@@ -700,8 +714,8 @@ def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
     monkeypatch.setenv("PGHOST", "untrusted.invalid")
     args = module.service_argv("a" * 64)
     assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
-    assert args[-3:] == list(module.SERVICE_NODES)
-    assert len(set(args[-3:])) == 3
+    assert args[-1:] == list(module.SERVICE_NODES)
+    assert len(set(args[-1:])) == 1
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
@@ -728,7 +742,7 @@ def test_service_report_requires_every_protocol_and_finish():
     assert module.service_result(json.dumps(good)) == good
     for field, wrong in (
         ("schema", True),
-        ("collection_count", 4),
+        ("collection_count", 2),
         ("collection_errors", 1),
         ("unhandled_errors", 1),
         ("protocol_errors", 1),
@@ -752,7 +766,7 @@ def test_service_report_requires_every_protocol_and_finish():
     ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"reports": rows}))
-    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 3):
+    for nodes in ([], ["foreign"], good["nodes"] * 2):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"nodes": nodes}))
 
@@ -790,7 +804,7 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
     hook = module.ServiceReportHook()
     hook.pytest_collection_finish(SimpleNamespace(items=good))
     assert hook.value["nodes"] == list(module.SERVICE_NODES)
-    for bad in (good[:-1], list(reversed(good)), good[:1] * 3, good + good[:1]):
+    for bad in ([], good * 2):
         hook = module.ServiceReportHook()
         with pytest.raises(pytest.UsageError, match="service_selection"):
             hook.pytest_collection_finish(SimpleNamespace(items=bad))
@@ -798,10 +812,8 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
         assert hook.value["nodes"] == []
 
 
-@pytest.mark.parametrize(
-    "fault", ["path", "name", "missing_callspec", "extra", "missing", "sqlite", "bool", "type"]
-)
-def test_postgres_collection_rejects_wrong_source_or_actual_parameters(fault):
+@pytest.mark.parametrize("fault", ["path", "name", "node", "callspec", "empty_callspec"])
+def test_postgres_collection_rejects_wrong_source_or_parameterization(fault):
     from types import SimpleNamespace
 
     items = service_items()
@@ -810,18 +822,12 @@ def test_postgres_collection_rejects_wrong_source_or_actual_parameters(fault):
         item.path = PATH
     elif fault == "name":
         item.originalname = "test_substituted"
-    elif fault == "missing_callspec":
-        del item.callspec
-    elif fault == "extra":
-        item.callspec.params["other"] = 0
-    elif fault == "missing":
-        item.callspec.params = {}
-    elif fault == "sqlite":
-        item.callspec.params["identity_migration_database"] = "sqlite"
-    elif fault == "bool":
-        item.callspec.params["identity_migration_database"] = True
-    elif fault == "type":
-        item.callspec.params = []
+    elif fault == "node":
+        item.nodeid += "[postgres]"
+    elif fault == "callspec":
+        item.callspec = SimpleNamespace(params={"identity_migration_database": "postgres"})
+    elif fault == "empty_callspec":
+        item.callspec = None
     hook = module.ServiceReportHook()
     with pytest.raises(pytest.UsageError, match="service_selection"):
         hook.pytest_collection_finish(SimpleNamespace(items=items))
@@ -829,54 +835,98 @@ def test_postgres_collection_rejects_wrong_source_or_actual_parameters(fault):
     assert hook.value["nodes"] == []
 
 
-def test_postgres_report_requires_exact_closed_ordered_distinct_identities():
+def test_postgres_report_requires_closed_source_target_and_client_identity():
     import copy
     import json
 
     good = service_report()
     identities = good["postgres_identities"]
-    for wrong in (None, identities[:-1], identities + identities[:1], list(reversed(identities))):
+    for wrong in (None, [], identities * 2):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"postgres_identities": wrong}))
-    for change in (
-        {"node": module.SERVICE_NODES[1]},
-        {"dialect": "sqlite"},
-        {"driver": "psycopg2"},
-        {"driver_version": "3.3.3"},
-        {"database": "other_test"},
-        {"schema": "public", "search_path": "public"},
-        {"search_path": "pg_catalog"},
-        {"server_version_num": 180003},
-        {"server_version_num": True},
-        {"server_encoding": "LATIN1"},
-        {"client_encoding": "LATIN1"},
-        {"schema_revision": "0013"},
-        {"probe_connection_closed": False},
-        {"probe_connection_closed": 1},
-        {"upgrade_revisions": ["0012", "0013"]},
-        {"url": "private"},
-    ):
+    for change in ({"node": "foreign"}, {"payload": "private"}, {"clients": []}):
         bad = copy.deepcopy(good)
         bad["postgres_identities"][0].update(change)
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(bad))
-    for index, expected in enumerate(module.SERVICE_FINAL_REVISIONS):
-        bad = copy.deepcopy(good)
-        bad["postgres_identities"][index]["schema_revision"] = (
-            "0013" if expected == "0012" else "0012"
-        )
-        with pytest.raises(module.ProofFailure):
-            module.service_result(json.dumps(bad))
+    for index in (0, 1):
+        for change in (
+            {"node": "foreign"},
+            {"role": "other"},
+            {"dialect": "sqlite"},
+            {"driver": "psycopg2"},
+            {"driver_version": "3.3.3"},
+            {"database": "other_test"},
+            {"schema": "other"},
+            {"search_path": "public"},
+            {"server_version_num": 180003},
+            {"server_version_num": True},
+            {"server_encoding": "LATIN1"},
+            {"client_encoding": "LATIN1"},
+            {"schema_revision": "0012"},
+            {"probe_connection_closed": False},
+            {"probe_connection_closed": 1},
+            {"upgrade_revisions": ["0012", "0013"]},
+            {"url": "private"},
+        ):
+            bad = copy.deepcopy(good)
+            bad["postgres_identities"][0]["databases"][index].update(change)
+            with pytest.raises(module.ProofFailure):
+                module.service_result(json.dumps(bad))
     for field in identities[0]:
         bad = copy.deepcopy(good)
         del bad["postgres_identities"][0][field]
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(bad))
+    for field in identities[0]["databases"][0]:
+        bad = copy.deepcopy(good)
+        del bad["postgres_identities"][0]["databases"][0][field]
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    databases = identities[0]["databases"]
+    for wrong in (None, databases[:1], databases * 2, list(reversed(databases))):
+        bad = copy.deepcopy(good)
+        bad["postgres_identities"][0]["databases"] = wrong
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
     bad = copy.deepcopy(good)
-    for field in ("schema", "search_path"):
-        bad["postgres_identities"][1][field] = bad["postgres_identities"][0][field]
+    bad["postgres_identities"][0]["databases"][1]["database"] = (
+        "ocwp_backup_target_" + "1" * 32 + "_test"
+    )
     with pytest.raises(module.ProofFailure):
         module.service_result(json.dumps(bad))
+
+
+def test_postgres_client_receipt_requires_exact_paths_and_versions():
+    import copy
+
+    clients = postgres_clients()
+    assert module.postgres_clients(clients) == clients
+    for index, tool in enumerate(("pg_dump", "pg_restore")):
+        bare = copy.deepcopy(clients)
+        bare[index]["version"] = f"{tool} (PostgreSQL) 18.4"
+        assert module.postgres_clients(bare) == bare
+        for change in (
+            {"tool": "other"},
+            {"path": f"/usr/bin/{tool}"},
+            {"version": f"{tool} (PostgreSQL) 18.6"},
+            {"version": f"{tool} (PostgreSQL) 18.4 (Debian untrusted)"},
+            {"version": "x" * 256},
+            {"version": True},
+            {"environment": "private"},
+        ):
+            bad = copy.deepcopy(clients)
+            bad[index].update(change)
+            with pytest.raises(module.ProofFailure):
+                module.postgres_clients(bad)
+        for field in clients[index]:
+            bad = copy.deepcopy(clients)
+            del bad[index][field]
+            with pytest.raises(module.ProofFailure):
+                module.postgres_clients(bad)
+    for bad in (None, [], clients[:1], clients * 2, list(reversed(clients))):
+        with pytest.raises(module.ProofFailure):
+            module.postgres_clients(bad)
 
 
 def test_postgres_report_fits_unchanged_cap_and_refuses_exact_limit():
@@ -893,7 +943,7 @@ def test_postgres_report_fits_unchanged_cap_and_refuses_exact_limit():
             for row in good["reports"]
         ],
     }
-    assert len(json.dumps(upper, sort_keys=True, allow_nan=False).encode("ascii")) < 8 * 1024
+    assert len(json.dumps(upper, sort_keys=True, allow_nan=False).encode("ascii")) < 4 * 1024
     assert module.LIMIT == 16 * 1024
     assert module.STATIC_FAILURE_LIMIT == 24 * 1024
     assert module.SERVICE_OUTPUT_LIMIT == 32 * 1024
@@ -949,7 +999,7 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     result = json.loads(target.read_text())
     assert result["protocol_errors"] == 4
     assert result["collection_errors"] == result["unhandled_errors"] == 2
-    assert len(result["reports"]) == 9
+    assert len(result["reports"]) == 3
     assert "private" not in target.read_text()
     with pytest.raises(module.ProofFailure):
         module.service_result(target.read_text())
@@ -969,7 +1019,7 @@ def test_postgres_hook_rejects_bad_teardown_properties(fault):
     elif fault == "name":
         properties = [("other", pair[1])]
     elif fault == "foreign":
-        properties = [(pair[0], postgres_identity(module.SERVICE_NODES[1]))]
+        properties = [(pair[0], postgres_identity("foreign"))]
     elif fault == "extra":
         properties = [(pair[0], pair[1] | {"payload": "private"})]
     hook = module.ServiceReportHook()
@@ -984,85 +1034,94 @@ def test_postgres_hook_rejects_bad_teardown_properties(fault):
     assert hook.failure_stage == 4
 
 
-@pytest.mark.parametrize("index", range(3))
-def test_postgres_final_observer_does_not_intercept_migration_failures(index, monkeypatch):
-    import sys
+def test_postgres_final_observer_waits_until_body_and_disposes_both_engines(monkeypatch):
     from types import SimpleNamespace
 
-    node = module.SERVICE_NODES[index]
-    config, engine = object(), object()
-    failure = RuntimeError("synthetic expected migration failure")
+    import sqlalchemy
+
+    node = module.SERVICE_NODES[0]
+    urls = tuple(
+        "postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/"
+        + postgres_database_identity(node, role)["database"]
+        for role in ("source", "target")
+    )
+    calls = []
+
+    def create_engine(url, *, hide_parameters):
+        assert hide_parameters is True
+        role = "source" if url == urls[0] else "target"
+        assert url in urls
+        calls.append(("engine", role))
+        return SimpleNamespace(role=role, dispose=lambda: calls.append(("dispose", role)))
+
+    def probe(engine, actual_node, role):
+        assert actual_node == node and engine.role == role
+        calls.append(("probe", role))
+        return postgres_database_identity(node, role)
+
+    monkeypatch.setattr(sqlalchemy, "create_engine", create_engine)
+    monkeypatch.setattr(module, "probe_postgres_identity", probe)
+    monkeypatch.setattr(module, "probe_postgres_clients", postgres_clients)
     request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
-    calls, probes = [], []
-
-    def upgrade(*args, **kwargs):
-        calls.append(("upgrade", args, kwargs))
-        raise failure
-
-    def downgrade(*args, **kwargs):
-        calls.append(("downgrade", args, kwargs))
-        raise failure
-
-    command = SimpleNamespace(upgrade=upgrade, downgrade=downgrade)
-    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
-
-    def observe(actual_engine, actual_node):
-        assert actual_engine is engine and actual_node == node
-        probes.append(node)
-        return postgres_identity(node, index)
-
-    monkeypatch.setattr(module, "probe_postgres_identity", observe)
-    fixture = module.observe_postgres((config, engine), request)
+    fixture = module.observe_postgres(urls, request)
     next(fixture)
-    assert calls == probes == []
-    assert command.upgrade is upgrade and command.downgrade is downgrade
-    with pytest.raises(RuntimeError) as caught:
-        command.upgrade(config, "head", sql=False)
-    assert caught.value is failure
-    with pytest.raises(RuntimeError) as caught:
-        command.downgrade(config=config, revision="0012")
-    assert caught.value is failure
-    assert probes == []
+    assert calls == [] and request.node.user_properties == []
+    calls.append(("body", "finished"))
     with pytest.raises(StopIteration):
         next(fixture)
-    assert command.upgrade is upgrade and command.downgrade is downgrade
     assert calls == [
-        ("upgrade", (config, "head"), {"sql": False}),
-        ("downgrade", (), {"config": config, "revision": "0012"}),
+        ("body", "finished"),
+        ("engine", "source"),
+        ("probe", "source"),
+        ("dispose", "source"),
+        ("engine", "target"),
+        ("probe", "target"),
+        ("dispose", "target"),
     ]
-    assert probes == [node]
-    assert request.node.user_properties == [
-        ("ocwp_postgres_identity", postgres_identity(node, index))
-    ]
+    assert request.node.user_properties == [("ocwp_postgres_identity", postgres_identity(node))]
 
 
 @pytest.mark.parametrize("fault", ["revision", "database", "open", "foreign_node", "probe"])
-def test_postgres_final_observer_refuses_wrong_identity(fault, monkeypatch):
+def test_postgres_final_observer_refuses_wrong_identity_and_disposes(fault, monkeypatch):
     from types import SimpleNamespace
 
-    node = module.SERVICE_NODES[0]
-    observed = postgres_identity(node)
-    if fault == "revision":
-        observed["schema_revision"] = "0013"
-    elif fault == "database":
-        observed["database"] = "other_test"
-    elif fault == "open":
-        observed["probe_connection_closed"] = False
-    elif fault == "foreign_node":
-        observed["node"] = module.SERVICE_NODES[1]
+    import sqlalchemy
 
-    def probe(*_):
+    node = module.SERVICE_NODES[0]
+    urls = tuple(
+        "postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/"
+        + postgres_database_identity(node, role)["database"]
+        for role in ("source", "target")
+    )
+    disposed = []
+
+    def create_engine(url, **_):
+        return SimpleNamespace(dispose=lambda: disposed.append(url))
+
+    def probe(_engine, actual_node, role):
         if fault == "probe":
             raise module.ProofFailure("synthetic_probe_failure")
+        observed = postgres_database_identity(actual_node, role)
+        if fault == "revision":
+            observed["schema_revision"] = "0012"
+        elif fault == "database":
+            observed["database"] = "ocwp_backup_" + role + "_" + "1" * 32 + "_test"
+        elif fault == "open":
+            observed["probe_connection_closed"] = False
+        elif fault == "foreign_node":
+            observed["node"] = "foreign"
         return observed
 
+    monkeypatch.setattr(sqlalchemy, "create_engine", create_engine)
     monkeypatch.setattr(module, "probe_postgres_identity", probe)
+    monkeypatch.setattr(module, "probe_postgres_clients", postgres_clients)
     request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
-    fixture = module.observe_postgres((object(), object()), request)
+    fixture = module.observe_postgres(urls, request)
     next(fixture)
     with pytest.raises(module.ProofFailure):
         next(fixture)
     assert request.node.user_properties == []
+    assert disposed == list(urls[:1] if fault in {"probe", "database"} else urls)
 
 
 @pytest.mark.parametrize("failure", [False, True])
@@ -1093,9 +1152,9 @@ def test_postgres_probe_closes_its_independent_connection(failure, monkeypatch):
                 raise RuntimeError("synthetic query failure")
             return SimpleNamespace(
                 one=lambda: (
-                    "ocwp_quote_micro_test",
-                    "ocwp_identity_migration_" + "0" * 32,
-                    "ocwp_identity_migration_" + "0" * 32,
+                    "ocwp_backup_source_" + "0" * 32 + "_test",
+                    "public",
+                    '"$user", public',
                     180004,
                     "UTF8",
                     "UTF8",
@@ -1112,13 +1171,45 @@ def test_postgres_probe_closes_its_independent_connection(failure, monkeypatch):
     engine = SimpleNamespace(
         dialect=SimpleNamespace(name="postgresql", driver="psycopg"), connect=Connection
     )
-    node = module.SERVICE_NODES[1]
+    node = module.SERVICE_NODES[0]
     if failure:
         with pytest.raises(RuntimeError, match="synthetic query failure"):
-            module.probe_postgres_identity(engine, node)
+            module.probe_postgres_identity(engine, node, "source")
     else:
-        assert module.probe_postgres_identity(engine, node) == postgres_identity(node)
+        assert module.probe_postgres_identity(engine, node, "source") == (
+            postgres_database_identity(node, "source")
+        )
     assert closed == [True]
+
+
+def test_postgres_client_probe_uses_fixed_resolved_paths_and_bounded_runner(monkeypatch):
+    calls = []
+    monkeypatch.setattr(module.shutil, "which", lambda tool: f"/usr/local/bin/{tool}")
+    monkeypatch.setattr(
+        module.Path,
+        "resolve",
+        lambda path, **_: Path(f"/usr/lib/postgresql/18/bin/{path.name}"),
+    )
+
+    def run(args, *, timeout):
+        calls.append((args, timeout))
+        return f"{Path(args[0]).name} (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)"
+
+    monkeypatch.setattr(module, "run", run)
+    assert module.probe_postgres_clients() == postgres_clients()
+    assert calls == [
+        ([f"/usr/lib/postgresql/18/bin/{tool}", "--version"], 2)
+        for tool in ("pg_dump", "pg_restore")
+    ]
+
+
+@pytest.mark.parametrize("found", [None, "/usr/bin/foreign"])
+def test_postgres_client_probe_rejects_missing_or_wrong_path(found, monkeypatch):
+    monkeypatch.setattr(module.shutil, "which", lambda _tool: found)
+    monkeypatch.setattr(module.Path, "resolve", lambda path, **_: path)
+    monkeypatch.setattr(module, "run", lambda *_args, **_kwargs: pytest.fail("client invoked"))
+    with pytest.raises(module.ProofFailure):
+        module.probe_postgres_clients()
 
 
 def test_service_hook_requires_explicit_contained_context(monkeypatch):
@@ -1472,7 +1563,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
+                "postgresql_service_restore_one_passed_not_production_recovery_or_capacity"
                 if fault == "success"
                 else "failed"
             ), fault

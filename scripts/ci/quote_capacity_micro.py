@@ -9,6 +9,7 @@ import math
 import os
 import re
 import resource
+import shutil
 import signal
 import subprocess
 import tempfile
@@ -515,14 +516,10 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
-METADATA_TEST = "services/platform/tests/quotes/test_quote_effect_metadata.py"
 SERVICE_NODES = (
-    f"{METADATA_TEST}::test_legacy_populated_tuple_refuses_before_any_ddl[postgres]",
-    f"{METADATA_TEST}::test_effect_version_constraint_retains_dependencies_and_immutability"
-    "[postgres]",
-    f"{METADATA_TEST}::test_upgrade_failure_rolls_back_all_added_columns[postgres]",
+    "services/platform/tests/quotes/test_quote_service_restore_postgres.py"
+    "::test_real_restore_preserves_version_one_service_effects_and_fresh_replay",
 )
-SERVICE_FINAL_REVISIONS = ("0012", "0013", "0013")
 
 # Fixed public source scope for the six static/contracts commands.
 STATIC_PATHS = (
@@ -562,6 +559,7 @@ STATIC_PATHS = (
     "services/platform/tests/quotes/test_quote_effect_metadata.py",
     "services/platform/tests/quotes/test_quote_historical_upgrade_postgres.py",
     "services/platform/tests/quotes/test_quote_schema.py",
+    "services/platform/tests/quotes/test_quote_service_restore_postgres.py",
     "services/platform/tests/sync/test_order_projection_integrity.py",
     "services/platform/tests/sync/test_prepared_order_change.py",
 )
@@ -624,38 +622,73 @@ def reject_constant(_value: str) -> None:
     raise ProofFailure("service_nonfinite")
 
 
+def postgres_clients(value: object) -> list[dict[str, str]]:
+    """Two exact installed client identities, with no caller-selected executable."""
+    if type(value) is not list or len(value) != 2:
+        raise ProofFailure("service_postgres_identity")
+    for actual, tool in zip(value, ("pg_dump", "pg_restore"), strict=True):
+        if (
+            type(actual) is not dict
+            or set(actual) != {"tool", "path", "version"}
+            or any(type(actual[key]) is not str for key in ("tool", "path", "version"))
+            or actual["tool"] != tool
+            or actual["path"] != f"/usr/lib/postgresql/18/bin/{tool}"
+            or actual["version"]
+            not in {
+                f"{tool} (PostgreSQL) 18.4",
+                f"{tool} (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)",
+            }
+        ):
+            raise ProofFailure("service_postgres_identity")
+    return value
+
+
 def postgres_identity(value: object, node: str) -> dict[str, object]:
-    """One closed final identity; never infer or retain migration chronology."""
-    if node not in SERVICE_NODES:
-        raise ProofFailure("service_postgres_identity")
-    expected = {
-        "node": node,
-        "dialect": "postgresql",
-        "driver": "psycopg",
-        "driver_version": "3.3.4",
-        "database": "ocwp_quote_micro_test",
-        "server_version_num": 180004,
-        "server_encoding": "UTF8",
-        "client_encoding": "UTF8",
-        "schema_revision": SERVICE_FINAL_REVISIONS[SERVICE_NODES.index(node)],
-        "probe_connection_closed": True,
-    }
-    if type(value) is not dict or set(value) != set(expected) | {"schema", "search_path"}:
-        raise ProofFailure("service_postgres_identity")
-    if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
-        raise ProofFailure("service_postgres_identity")
-    schema = value["schema"]
+    """One closed restore receipt; final source/target state is observed, not inferred."""
     if (
-        type(schema) is not str
-        or re.fullmatch(r"ocwp_identity_migration_[0-9a-f]{32}", schema) is None
-        or type(value["search_path"]) is not str
-        or value["search_path"] != schema
+        node not in SERVICE_NODES
+        or type(value) is not dict
+        or set(value) != {"node", "databases", "clients"}
+        or value["node"] != node
     ):
+        raise ProofFailure("service_postgres_identity")
+    postgres_clients(value["clients"])
+    databases = value["databases"]
+    if type(databases) is not list or len(databases) != 2:
+        raise ProofFailure("service_postgres_identity")
+    suffixes = []
+    for actual, role in zip(databases, ("source", "target"), strict=True):
+        expected = {
+            "node": node,
+            "role": role,
+            "dialect": "postgresql",
+            "driver": "psycopg",
+            "driver_version": "3.3.4",
+            "schema": "public",
+            "search_path": '"$user", public',
+            "server_version_num": 180004,
+            "server_encoding": "UTF8",
+            "client_encoding": "UTF8",
+            "schema_revision": "0013",
+            "probe_connection_closed": True,
+        }
+        if type(actual) is not dict or set(actual) != set(expected) | {"database"}:
+            raise ProofFailure("service_postgres_identity")
+        if any(type(actual[k]) is not type(v) or actual[k] != v for k, v in expected.items()):
+            raise ProofFailure("service_postgres_identity")
+        name = actual["database"]
+        if type(name) is not str:
+            raise ProofFailure("service_postgres_identity")
+        match = re.fullmatch(rf"ocwp_backup_{role}_([0-9a-f]{{32}})_test", name)
+        if match is None:
+            raise ProofFailure("service_postgres_identity")
+        suffixes.append(match[1])
+    if suffixes[0] != suffixes[1]:
         raise ProofFailure("service_postgres_identity")
     return value
 
 
-def probe_postgres_identity(engine: object, node: str) -> dict[str, object]:
+def probe_postgres_identity(engine: object, node: str, role: str) -> dict[str, object]:
     """Read committed state on one independent connection, closed before returning."""
     import psycopg
     from sqlalchemy import text
@@ -668,12 +701,13 @@ def probe_postgres_identity(engine: object, node: str) -> dict[str, object]:
                 "SELECT current_database(), current_schema(), current_setting('search_path'), "
                 "current_setting('server_version_num')::integer, "
                 "current_setting('server_encoding'), current_setting('client_encoding'), "
-                "(SELECT version_num FROM alembic_version)"
+                "(SELECT version_num FROM public.alembic_version)"
             )
         ).one()
     name, schema, search_path, version, server_encoding, client_encoding, revision = observed
     return {
         "node": node,
+        "role": role,
         "dialect": engine.dialect.name,
         "driver": engine.dialect.driver,
         "driver_version": psycopg.__version__,
@@ -688,15 +722,41 @@ def probe_postgres_identity(engine: object, node: str) -> dict[str, object]:
     }
 
 
-def observe_postgres(database: object, request: object) -> Iterator[None]:
-    """Probe final state only; leave all expected migration failures untouched."""
-    _config, engine = database
+def probe_postgres_clients() -> list[dict[str, str]]:
+    clients = []
+    for tool in ("pg_dump", "pg_restore"):
+        found = shutil.which(tool)
+        expected = f"/usr/lib/postgresql/18/bin/{tool}"
+        if found is None or str(Path(found).resolve(strict=True)) != expected:
+            raise ProofFailure("service_postgres_identity")
+        clients.append(
+            dict(tool=tool, path=expected, version=run([expected, "--version"], timeout=2))
+        )
+    return postgres_clients(clients)
+
+
+def observe_postgres(databases: object, request: object) -> Iterator[None]:
+    """Do not open either database until the body has completed its real restore."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
+
     node = request.node.nodeid
     if node not in SERVICE_NODES:
         raise ProofFailure("service_selection")
+    clients = probe_postgres_clients()
     yield
-    identity = postgres_identity(probe_postgres_identity(engine, node), node)
-    request.node.user_properties.append(("ocwp_postgres_identity", identity))
+    identities = []
+    for url, role in zip(databases, ("source", "target"), strict=True):
+        engine = create_engine(url, hide_parameters=True)
+        try:
+            identity = probe_postgres_identity(engine, node, role)
+            if identity["database"] != make_url(url).database:
+                raise ProofFailure("service_postgres_identity")
+            identities.append(identity)
+        finally:
+            engine.dispose()
+    receipt = postgres_identity(dict(node=node, databases=identities, clients=clients), node)
+    request.node.user_properties.append(("ocwp_postgres_identity", receipt))
 
 
 def postgres_observer_plugin() -> object:
@@ -704,20 +764,20 @@ def postgres_observer_plugin() -> object:
 
     class PostgresObserver:
         @pytest.fixture(autouse=True)
-        def ocwp_postgres_observer(self, identity_migration_database, request):
-            yield from observe_postgres(identity_migration_database, request)
+        def ocwp_postgres_observer(self, disposable_databases, request):
+            yield from observe_postgres(disposable_databases, request)
 
     return PostgresObserver()
 
 
 def service_result(raw: str) -> dict[str, object]:
-    """Accept three complete migration-integrity protocols and exact final identities."""
+    """Accept one complete real-restore protocol with its source/target identities."""
     if len(raw.encode("utf-8")) >= LIMIT:
         raise ProofFailure("service_report_limit")
     value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
     expected = {
         "schema": 1,
-        "collection_count": 3,
+        "collection_count": 1,
         "collection_errors": 0,
         "unhandled_errors": 0,
         "protocol_errors": 0,
@@ -735,7 +795,7 @@ def service_result(raw: str) -> dict[str, object]:
     if value["nodes"] != list(SERVICE_NODES):
         raise ProofFailure("service_selection")
     reports = value["reports"]
-    if type(reports) is not list or len(reports) != 9:
+    if type(reports) is not list or len(reports) != 3:
         raise ProofFailure("service_report_count")
     wanted = [(node, when) for node in SERVICE_NODES for when in ("setup", "call", "teardown")]
     for row, (node, when) in zip(reports, wanted, strict=True):
@@ -747,13 +807,9 @@ def service_result(raw: str) -> dict[str, object]:
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
             raise ProofFailure("service_report_duration")
     identities = value["postgres_identities"]
-    if type(identities) is not list or len(identities) != 3:
+    if type(identities) is not list or len(identities) != 1:
         raise ProofFailure("service_postgres_identity")
-    schemas = set()
-    for identity, node in zip(identities, SERVICE_NODES, strict=True):
-        schemas.add(postgres_identity(identity, node)["schema"])
-    if len(schemas) != 3:
-        raise ProofFailure("service_postgres_identity")
+    postgres_identity(identities[0], SERVICE_NODES[0])
     return value
 
 
@@ -935,17 +991,13 @@ class ServiceReportHook:
                 raise ProofFailure("service_selection")
             root = Path(__file__).resolve().parents[2]
             for item, selector in zip(session.items, SERVICE_NODES, strict=True):
-                source, name = selector.removesuffix("[postgres]").split("::")
+                source, name = selector.split("::")
                 path = getattr(item, "path", None)
-                params = getattr(getattr(item, "callspec", None), "params", None)
                 if (
                     not isinstance(path, Path)
                     or path.resolve() != root / source
                     or getattr(item, "originalname", None) != name
-                    or type(params) is not dict
-                    or set(params) != {"identity_migration_database"}
-                    or type(params["identity_migration_database"]) is not str
-                    or params["identity_migration_database"] != "postgres"
+                    or hasattr(item, "callspec")
                 ):
                     raise ProofFailure("service_selection")
         except (OSError, RuntimeError, ValueError) as error:
@@ -961,7 +1013,7 @@ class ServiceReportHook:
             node not in self.value["nodes"]
             or when not in {"setup", "call", "teardown"}
             or outcome not in {"passed", "failed", "skipped"}
-            or len(rows) >= 9
+            or len(rows) >= 3
             or type(seconds) not in (int, float)
             or not math.isfinite(seconds)
             or not 0 <= seconds < 20
@@ -1384,7 +1436,7 @@ def supervise(
             report["environment_overhead_before_workload_cpu_usec"] = {
                 role: data["cpu_usec"] for role, data in snapshots.items()
             }
-            report["database_role"] = "postgresql18_4_three_fresh_schemas_final_revision_observed"
+            report["database_role"] = "postgresql18_4_owned_source_target_restore_observed"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
         report["command_stage"] = "service_initial" if service_initial else "microfixture"
         report["phase"] = (
@@ -1541,7 +1593,9 @@ def supervise(
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("final_readback_deadline")
             report["phase"] = "service_complete"
-            report["status"] = "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
+            report["status"] = (
+                "postgresql_service_restore_one_passed_not_production_recovery_or_capacity"
+            )
         else:
             micro = micro_result(
                 execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
@@ -1616,7 +1670,7 @@ def supervise(
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
     wanted_status = (
-        "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
+        "postgresql_service_restore_one_passed_not_production_recovery_or_capacity"
         if service_initial
         else "micro_passed_not_capacity"
     )

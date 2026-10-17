@@ -1,6 +1,6 @@
 # Fixed PostgreSQL migration integrity qualification
 
-Status: preparation; exact review and execution pending. The previous [four-case PostgreSQL result](2026-10-17-bounded-effects-null.md#verified-corrected-result) is closed independently on the recovered exact source. This batch selects three different existing cases without changing their bodies or product code.
+Status: three fixed cases passed and were independently reviewed. The previous [four-case PostgreSQL result](2026-10-17-bounded-effects-null.md#verified-corrected-result) is closed independently on the recovered exact source. This batch selects three different existing cases without changing their bodies or product code.
 
 ## Exact scope
 
@@ -19,3 +19,27 @@ Use a final-only observer depending on the isolated-schema fixture. It must not 
 Reuse the established aggregate 20-second workload, 1 CPU / 512 MiB worker and 1 CPU / 768 MiB database, real cancellation canary, bounded short traceback and independent cleanup. No larger timeout or output cap is needed. The test's internal successful upgrade after its synthetic rollback is part of this fixed existing case; a failed workflow is not retried.
 
 Keep all previous consumed workflows and original failures intact. No deployment, real workshop data, API activation, concurrency or maximum capacity is included. Separate restore work needs PostgreSQL 18 client tools and must distinguish base metadata preservation from replay of a valid restored quote history. Those results remain pending.
+
+## Verified result
+
+[Run 39066342042](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39066342042),
+job 117494709161, number/attempt 1/1, used commit
+`cc1dc6b62748ddfd6a4c0593127401198954a313`, tree
+`12fbf2eb9355255040d600e1d9631cd2e8fa76df`. Artifact `12113905223`
+has SHA-256 `0cfadbcfab42ca4833ae770fbe4c9aac38dfad4cea754af40418cbd7738c779d`.
+All three cases and nine ordered phases passed, with zero skips/errors and
+three distinct PostgreSQL 18.4 / psycopg 3.3.4 UTF8 schemas. Final revisions
+were 0012, 0013 and 0013 respectively. The final-only observer did not intercept
+migration behavior; test assertions prove the intermediate retained snapshots.
+
+Measured workload was 4.337 seconds; setup 2.163 seconds and supervisor 6.898
+seconds. Final worker peak was 94,027,776 bytes, database peak 101,224,448 bytes.
+Final worker/database CPU counters were 3,927,756 / 2,122,618 microseconds;
+the observed workload delta was 5,071,080 microseconds. The separate cancellation
+canary observed four processes/three generations. Client reap and both primary
+and independent owned-container absence were verified. Successful execution does
+not claim the failure-path stop-before-reap sequence occurred for this specimen.
+
+This closes only the three named cases, including DDL rollback after the final
+ALTER. Logical restore, wider failure boundaries, concurrent operations, scale
+and capacity remain open. Previous consumed runs and failures are preserved.

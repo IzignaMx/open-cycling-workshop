@@ -1,7 +1,29 @@
 schema: 1
 
-quote_migration_integrity_20261017:
+quote_service_restore_20261017:
   status: prepared_pending_exact_review_and_run
+  expected_cases: 1
+  expected_phases: 3
+  database_roles: [source, target]
+  selected_revision: "0013"
+  client_server_release: "18.4"
+  client_package_revision: "18.4-1.pgdg13+1"
+  shared_workload_seconds: 20
+  scope: tiny_valid_version_one_effect_metadata_restore_and_fresh_replay
+  package_installation_and_duration: unverified
+  evidence: docs/10-spec-development/2026-10-17-quote-service-restore.md
+
+quote_migration_integrity_20261017:
+  status: passed_independently_reviewed
+  run_id: 39066342042
+  source_commit: cc1dc6b62748ddfd6a4c0593127401198954a313
+  source_tree: 12fbf2eb9355255040d600e1d9631cd2e8fa76df
+  artifact_id: 12113905223
+  artifact_sha256: 0cfadbcfab42ca4833ae770fbe4c9aac38dfad4cea754af40418cbd7738c779d
+  measured_workload_seconds: 4.337
+  final_worker_peak_bytes: 94027776
+  final_database_peak_bytes: 101224448
+  cleanup: verified_absent
   expected_cases: 3
   expected_phases: 9
   final_revisions: ["0012", "0013", "0013"]
