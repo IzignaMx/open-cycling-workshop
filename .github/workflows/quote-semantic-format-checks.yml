@@ -1,0 +1,67 @@
+name: Corrective quote semantic format checks
+
+on:
+  push:
+    branches: [codex/quote-semantic-format-checks]
+
+permissions:
+  contents: read
+
+jobs:
+  quote-semantic-format-checks:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/codex/quote-semantic-format-checks' &&
+      github.run_number == 1 && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OCWP_INTEGRITY_GROUP: static6
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Refuse any other event, branch, workflow, run or attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/codex/quote-semantic-format-checks
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/quote-semantic-format-checks.yml@$GITHUB_REF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Prepare the immutable exact-source image with locked dependencies
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 660s \
+            python3 -I scripts/ci/quote_integrity_checks.py prepare
+      - name: Prove real containment and run the fixed static-six group once
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s \
+            python3 -I scripts/ci/quote_integrity_checks.py run
+      - name: Independently reconcile ownership and prove final absence
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s \
+            python3 -I scripts/ci/quote_integrity_checks.py cleanup
+      - name: Upload static evidence, bounded diagnostics and independent absence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-semantic-format-static6-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            artifacts/quote-integrity-static6.json
+            artifacts/quote-integrity-static6-independent-cleanup.json
+            artifacts/quote-integrity-static6-diagnostic.txt
+          if-no-files-found: error

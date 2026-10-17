@@ -12,7 +12,14 @@ quote_semantic_closure_20261017:
   static_result: Ruff_one_I001_later_four_commands_unrun
   cleanup: all_seven_primary_and_independent_absence_verified
   postgres_workload_seconds: [7.112, 6.844, 7.173, 4.708, 8.945, 6.950]
-  correction: import_only_and_static_six_pending
+  correction: import_passed_formatter_one_hunk_pending
+  correction_run: 39078500578
+  correction_source: a047ca603697b76a2ccfe449412bcebda638206b
+  correction_tree: 09669755bc4e57355f2635a152bb8a3aa505615c
+  correction_artifact: 12117848133
+  correction_repository_and_ruff: passed
+  correction_formatter: failed_one_complete_hunk_712_bytes
+  correction_types_openapi_client: unrun
   design: independently_reviewed
   exact_implementation_review: independently_reviewed
   runtime: partial_failed_static

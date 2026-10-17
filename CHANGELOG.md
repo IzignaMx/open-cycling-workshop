@@ -1,5 +1,10 @@
 # Changelog
 
+## Quote semantic formatting correction · 2026-10-17
+
+- Preserve run 39078500578: repository and Ruff passed; formatter requested one exact line join, with 47 other files formatted and types/contracts unrun.
+- Apply only the complete retained hunk and prepare the existing static-six scope under unchanged limits; verification remains pending.
+
 ## Quote finite service semantics evidence · 2026-10-17
 
 - Verify 40 actual PostgreSQL cases and six selection mocks in run 39077801165, including complete decisions/replay, reached-write rollback, synthetic commit ambiguity, payload checks and small observed-lock races. Independent source/identity/resource/cleanup review passed.

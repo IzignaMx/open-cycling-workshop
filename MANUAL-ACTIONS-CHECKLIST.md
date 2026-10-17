@@ -16,7 +16,8 @@
 - [x] Close the four new SIM300 findings: repository and Ruff passed in run 39075919485.
 - [x] Verify the retained single-line formatting correction and all six static commands in run 39076298550, with independent evidence review.
 - [x] Qualify all 40 finite PostgreSQL service/payload/atomicity/race cases and six selection mocks in run 39077801165.
-- [ ] Close the single import-order finding and remaining static commands on the corrected source.
+- [x] Close the import-order finding: repository and Ruff passed in run 39078500578.
+- [ ] Verify the retained formatter hunk and remaining static commands.
 - [ ] Close the remaining affected integration regressions on the final intended integration tree.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.

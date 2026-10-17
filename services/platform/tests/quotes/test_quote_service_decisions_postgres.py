@@ -122,9 +122,7 @@ def test_service_decision_and_fresh_exact_replay(
     ]
     assert after["quote_lineages"] == [{**before["quote_lineages"][0], "decision_sequence": 1}]
     assert after["service_orders"] == [
-        {**row, "state": state, "version": 2, "updated_at": NOW}
-        if row["id"] == "order-a"
-        else row
+        {**row, "state": state, "version": 2, "updated_at": NOW} if row["id"] == "order-a" else row
         for row in before["service_orders"]
     ]
     for name in TABLES - {"quote_lineages"} | {"outbox_events"}:

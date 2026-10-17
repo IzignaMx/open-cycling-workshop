@@ -62,7 +62,7 @@ CANDIDATE_SHA = {
         "f3ccf930302e424830dd6346f2cc112778bffb88d4393fd795da65b1da27da7c"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "4243d459fa40380658e5f6c9783322c3cc44517a763a81f146424ab49a116d00"
+        "1f9434b49f370347611c83161cae00368f2c210bfa9af02c343245876ba3de23"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -89,7 +89,7 @@ CANDIDATE_SHA = {
         "27bb6de03bcfec349f18076363c16bcec0e1d624369c03b12d7a3a8b8fce814b"
     ),
     "services/platform/tests/quotes/test_quote_service_decisions_postgres.py": (
-        "e6ef7431067f34d20dc6404c3517e8cafc25657f6136b9f3020ec38dbd3b0d9f"
+        "d3abe336efcf23a333a46f8475db8d70ed946e95a06b9093e859de3dc35293f2"
     ),
     "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py": (
         "2f69a3fd8ce6d3f1532821377bf144c5e16ba4177c3ea1318785a1723f9655c4"
@@ -105,6 +105,9 @@ CANDIDATE_SHA = {
     ),
     ".github/workflows/quote-semantic-style-checks.yml": (
         "d702dbf02aea6022c9f684d9105ae622975d65e554cd0557fdcaf5247e1b3f92"
+    ),
+    ".github/workflows/quote-semantic-format-checks.yml": (
+        "353f4c0a5f178d1ecb00314ecb43c4cef9c92727624ffbcfda724f6a6ef2eda3"
     ),
 }
 LOCKED_INPUT_SHA = {
@@ -132,6 +135,8 @@ SEMANTIC_BRANCH = "refs/heads/codex/quote-semantic-closure-checks"
 SEMANTIC_WORKFLOW = ".github/workflows/quote-semantic-closure-checks.yml"
 SEMANTIC_STYLE_BRANCH = "refs/heads/codex/quote-semantic-style-checks"
 SEMANTIC_STYLE_WORKFLOW = ".github/workflows/quote-semantic-style-checks.yml"
+SEMANTIC_FORMAT_BRANCH = "refs/heads/codex/quote-semantic-format-checks"
+SEMANTIC_FORMAT_WORKFLOW = ".github/workflows/quote-semantic-format-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -396,6 +401,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == SEMANTIC_STYLE_BRANCH:
         require(GROUP_KEY == "static6")
         branch, workflow = SEMANTIC_STYLE_BRANCH, SEMANTIC_STYLE_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == SEMANTIC_FORMAT_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = SEMANTIC_FORMAT_BRANCH, SEMANTIC_FORMAT_WORKFLOW
     elif os.environ.get("GITHUB_REF") == SEMANTIC_BRANCH:
         require(GROUP_KEY == "selection_static12")
         branch, workflow = SEMANTIC_BRANCH, SEMANTIC_WORKFLOW
