@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Actionable static diagnostic preparation
+
+- Retain run `39048370590`: repository passed, Ruff failed with 679 output
+  bytes and seven unparsed lines; four later commands were unrun.
+- Prepare generic bounded Ruff codes and standard source-only messages in the
+  existing diagnostic marker, with explicit incompleteness and unchanged
+  execution resources. No remaining product defect is inferred from lost text.
+- Scope: [retention correction and evidence](docs/10-spec-development/2026-10-17-static-diagnostic-retention.md).
+
 ## Unreleased · Direct static source repair pending qualification
 
 - Preserve the bounded static failure: repository check passed, Ruff failed,

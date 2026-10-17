@@ -1,7 +1,27 @@
 schema: 1
 
-quote_service_manual_static_repair_20261017:
+quote_static_diagnostic_retention_20261017:
   status: prepared_pending_review_and_actual_qualification
+  source_commit: 038a463c3339210488a80e5c8b0d61fc83edfdad
+  source_tree: 1e68b89488d65ba8f828da122e48ae9d34be51ba
+  failed_run: 39048370590
+  artifact: 12106453817
+  result: repository_passed_ruff_failed_four_later_checks_unrun
+  ruff_output_bytes: 679
+  unparsed_lines: 7
+  exact_remaining_diagnostics: unavailable
+  cancellation_reap_both_absence: independently_verified
+  correction: generic_codes_standard_public_source_messages_existing_marker
+  ruff_marker_budget_bytes: 12288
+  host_spool_budget_bytes: 16384
+  complete_arbitrary_16k_output_transport: not_guaranteed
+  execution_resources_product_schema_tool_commands: unchanged
+  evidence: docs/10-spec-development/2026-10-17-static-diagnostic-retention.md
+
+quote_service_manual_static_repair_20261017:
+  status: failed_ruff_after_repository_pass_later_checks_unrun
+  run: 39048370590
+  artifact: 12106453817
   base_commit: dff067af840b8e83d87d17ae6fa36cfd10e75653
   base_tree: c3ba32738c5996badcf575bc47dfac9b9499fb4f
   branch: codex/quote-service-static-manual-qualification
@@ -13,7 +33,7 @@ quote_service_manual_static_repair_20261017:
   correction: direct_source_edits_no_generated_patch_applied
   rules_product_schema_resource_limits: preserved
   consumed_workflows: unchanged_not_retried
-  actual_new_static_checks: not_run
+  actual_new_static_checks: repository_passed_ruff_failed_four_later_checks_unrun
   evidence: docs/10-spec-development/2026-10-17-direct-static-source-repair.md
 
 quote_service_static_contracts_20261017:

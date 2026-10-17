@@ -21,6 +21,9 @@ from scripts.ci.quote_capacity_micro import (
     STATIC_FAILURE_LIMIT,
     STATIC_FAILURE_MARKER,
     STATIC_PATHS,
+    STATIC_RUFF_CODE_PATTERN,
+    STATIC_RUFF_FAILURE_LIMIT,
+    STATIC_RUFF_MESSAGE_LIMIT,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,9 +68,59 @@ def _limit_output() -> None:
     resource.setrlimit(resource.RLIMIT_FSIZE, (LIMIT, LIMIT))
 
 
-def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, int]:
-    """Discard text; keep only exact source paths, bounded lines and enumerated rules."""
+def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, int, int | None]:
+    """Retain source-bound Ruff messages; other tools keep their closed summaries."""
     rows: list[dict[str, object]] = []
+    if tool == 1:
+        seen_ruff: set[tuple[str, int, int, str, str]] = set()
+        unparsed, duplicates = 0, 0
+        reported = None
+        lines = output.split(b"\n")
+        if lines[-1]:
+            unparsed += 1  # A partial trailing line is not a complete diagnostic.
+        for raw in lines[:-1]:
+            if not raw:
+                continue
+            try:
+                text = raw.decode("utf-8", errors="strict")
+            except UnicodeError:
+                unparsed += 1
+                continue
+            summary = re.fullmatch(r"Found ([0-9]{1,5}) errors?\.", text)
+            if summary:
+                count = int(summary[1])
+                if reported is not None or not 1 <= count <= LIMIT:
+                    unparsed += 1
+                else:
+                    reported = count
+                continue
+            match = re.fullmatch(r"(.+):([0-9]{1,7}):([0-9]{1,7}): ([^ :]{1,64}):? (.+)", text)
+            if match is None:
+                unparsed += 1
+                continue
+            path, number, column_number, rule, message = match.groups()
+            path = path.removeprefix("/app/")
+            line, column = int(number), int(column_number)
+            if (
+                path not in STATIC_PATHS
+                or not 1 <= line <= 1_000_000
+                or not 1 <= column <= 1_000_000
+                or re.fullmatch(STATIC_RUFF_CODE_PATTERN, rule) is None
+                or not message.isprintable()
+                or not 1 <= len(message.encode("utf-8")) <= STATIC_RUFF_MESSAGE_LIMIT
+            ):
+                unparsed += 1
+                continue
+            key = (path, line, column, rule, message)
+            if key in seen_ruff:
+                duplicates += 1
+                continue
+            seen_ruff.add(key)
+            rows.append(
+                {"path": path, "line": line, "column": column, "rule": rule, "message": message}
+            )
+        return rows, duplicates, unparsed, reported
+
     seen: set[tuple[str, int, str]] = set()
     unparsed = 0
     for text in output.decode("utf-8", errors="replace").splitlines():
@@ -79,11 +132,6 @@ def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, 
                 path, rule = text[4:], "missing"
             elif text == "LICENSE does not contain GNU AGPL text":
                 path, rule = "LICENSE", "license"
-        elif tool == 1:
-            match = re.fullmatch(r"(.+):([0-9]+):[0-9]+: ([A-Z]+[0-9]+) .+", text)
-            if match:
-                path, number, rule = match.groups()
-                line = int(number) if len(number) <= 7 else -1
         elif tool == 2 and text.startswith("Would reformat: "):
             path, rule = text.removeprefix("Would reformat: "), "format"
         elif tool == 3:
@@ -110,7 +158,7 @@ def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, 
             seen.add(key)
             if len(rows) < 12:
                 rows.append({"path": path, "line": line, "rule": rule})
-    return rows, max(0, len(seen) - len(rows)), unparsed
+    return rows, max(0, len(seen) - len(rows)), unparsed, None
 
 
 def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
@@ -154,7 +202,7 @@ def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
         kind = 3
     if kind == 1 and returncode == 0:
         return
-    rows, omitted, unparsed = _summarize(tool, captured)
+    rows, omitted, unparsed, reported = _summarize(tool, captured)
     value = {
         "schema": 1,
         "tool": tool,
@@ -165,12 +213,42 @@ def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
         "unparsed_lines": unparsed,
         "diagnostics": rows,
     }
+    marker_limit = STATIC_FAILURE_LIMIT
+    if tool == 1:
+        marker_limit = STATIC_RUFF_FAILURE_LIMIT
+        # Reserve 1 KiB for all fixed keys, bounded counters, reasons and framing.
+        # Keep a whole-row prefix; serialized escaping is included in the budget.
+        retained: list[dict[str, object]] = []
+        row_bytes = 2  # JSON array brackets.
+        for row in rows:
+            encoded = json.dumps(row, sort_keys=True, separators=(",", ":")).encode("ascii")
+            needed = len(encoded) + (1 if retained else 0)
+            if row_bytes + needed > marker_limit - 1024:
+                value["omitted"] += len(rows) - len(retained)
+                break
+            retained.append(row)
+            row_bytes += needed
+        value["diagnostics"] = retained
+        value["reported_diagnostics"] = reported
+        reasons = []
+        if kind != 1 or returncode != 1:
+            reasons.append("tool_status")
+        if value["output_bytes"] == LIMIT:
+            reasons.append("output_limit")
+        if unparsed:
+            reasons.append("unparsed_lines")
+        if value["omitted"]:
+            reasons.append("omitted_rows")
+        if reported is None or reported != len(retained) + value["omitted"]:
+            reasons.append("summary_mismatch")
+        value["complete"] = not reasons
+        value["incomplete_reasons"] = reasons
     marker = (
         STATIC_FAILURE_MARKER
         + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("ascii")
         + b"\n"
     )
-    if len(marker) <= STATIC_FAILURE_LIMIT:
+    if len(marker) <= marker_limit:
         # Emit this closed marker only. Never release captured tool/pytest output.
         with suppress(OSError), capfd.disabled():
             os.write(1, b"\n" + marker)

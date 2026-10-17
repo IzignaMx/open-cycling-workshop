@@ -1509,8 +1509,19 @@ def static_failure_summary():
         "returncode": 1,
         "output_bytes": 100,
         "omitted": 0,
-        "unparsed_lines": 1,
-        "diagnostics": [{"path": module.STATIC_PATHS[0], "line": 12, "rule": "E501"}],
+        "unparsed_lines": 0,
+        "reported_diagnostics": 1,
+        "complete": True,
+        "incomplete_reasons": [],
+        "diagnostics": [
+            {
+                "path": module.STATIC_PATHS[0],
+                "line": 12,
+                "column": 101,
+                "rule": "E501",
+                "message": "Line too long (101 > 100)",
+            }
+        ],
     }
 
 
@@ -1576,6 +1587,15 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
         {"output_bytes": True},
         {"omitted": 1},
         {"unparsed_lines": module.LIMIT + 1},
+        {"reported_diagnostics": True},
+        {"reported_diagnostics": 0},
+        {"reported_diagnostics": module.LIMIT + 1},
+        {"reported_diagnostics": None},
+        {"reported_diagnostics": 2},
+        {"complete": 1},
+        {"complete": False},
+        {"incomplete_reasons": ["unknown"]},
+        {"incomplete_reasons": ["omitted_rows", "omitted_rows"]},
         {"message": "private"},
         {"diagnostics": good["diagnostics"] * 13},
         {"diagnostics": good["diagnostics"] * 2},
@@ -1588,12 +1608,24 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
         {"path": module.STATIC_PATHS[0] + "\n"},
         {"path": "private"},
         {"line": True},
+        {"line": 0},
         {"line": -1},
         {"line": 1_000_001},
-        {"rule": "E999999"},
-        {"rule": "private-word"},
+        {"column": True},
+        {"column": 0},
+        {"column": -1},
+        {"column": 1_000_001},
+        {"rule": "RUF-"},
+        {"rule": "not a code"},
+        {"rule": "E" * 64 + "1"},
         {"rule": "E501\x00"},
-        {"message": "private"},
+        {"message": None},
+        {"message": ""},
+        {"message": "line\ncontinuation"},
+        {"message": "\x1b[31mred"},
+        {"message": "tab\there"},
+        {"message": "\ud800"},
+        {"message": "é" * 513},
     ):
         bad = good | {"diagnostics": [good["diagnostics"][0] | change]}
         with pytest.raises(module.ProofFailure):
@@ -1612,7 +1644,7 @@ def test_static_failure_marker_rejects_duplicate_nonfinite_truncated_and_oversiz
         marker.replace(b'"output_bytes":100', b'"output_bytes":Infinity'),
         marker.replace(b'"output_bytes":100', b'"output_bytes":100.0'),
         marker.replace(b'"schema":1', b'"schema": 1'),
-        module.STATIC_FAILURE_MARKER + b" " * module.STATIC_FAILURE_LIMIT + b"\n",
+        module.STATIC_FAILURE_MARKER + b" " * module.STATIC_RUFF_FAILURE_LIMIT + b"\n",
         b" " * module.LIMIT + marker,
     ):
         with pytest.raises(module.ProofFailure):
@@ -1623,17 +1655,24 @@ def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
     good = static_failure_summary()
     protocol = static_protocol_summary()
     for change in (
-        {"kind": 2, "returncode": -9},
-        {"kind": 3, "returncode": -25, "output_bytes": module.LIMIT},
+        {"kind": 2, "returncode": -9, "incomplete_reasons": ["tool_status"]},
+        {
+            "kind": 3,
+            "returncode": -25,
+            "output_bytes": module.LIMIT,
+            "incomplete_reasons": ["tool_status", "output_limit"],
+        },
         {
             "kind": 4,
             "returncode": None,
             "output_bytes": 0,
             "diagnostics": [],
             "unparsed_lines": 0,
+            "reported_diagnostics": None,
+            "incomplete_reasons": ["tool_status", "summary_mismatch"],
         },
     ):
-        value = good | change
+        value = good | change | {"complete": False}
         assert (
             module.static_failure_diagnostic(static_failure_marker(value), failure=protocol)
             == value
@@ -1645,3 +1684,142 @@ def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)
+
+
+def test_static_ruff_rows_allow_generic_codes_and_more_than_twelve_complete_findings():
+    good = static_failure_summary()
+    rows = [
+        good["diagnostics"][0]
+        | {
+            "line": index + 1,
+            "column": index + 1,
+            "rule": ("invalid-syntax", "NEW1234", "E999999")[index % 3],
+            "message": 'Expected `:` after "public_name"; café \\ path',
+        }
+        for index in range(30)
+    ]
+    value = good | {"diagnostics": rows, "reported_diagnostics": len(rows)}
+    marker = static_failure_marker(value)
+    assert module.STATIC_FAILURE_LIMIT < len(marker) <= module.STATIC_RUFF_FAILURE_LIMIT
+    assert module.static_failure_diagnostic(marker, failure=static_protocol_summary()) == value
+    for change in (
+        {"diagnostics": [], "reported_diagnostics": 1},
+        {"reported_diagnostics": 2},
+        {"reported_diagnostics": None},
+    ):
+        incomplete = good | change | {
+            "complete": False,
+            "incomplete_reasons": ["summary_mismatch"],
+        }
+        assert (
+            module.static_failure_diagnostic(
+                static_failure_marker(incomplete), failure=static_protocol_summary()
+            )
+            == incomplete
+        )
+
+
+def test_static_non_ruff_failure_keeps_its_existing_schema():
+    value = {
+        "schema": 1,
+        "tool": 2,
+        "kind": 1,
+        "returncode": 1,
+        "output_bytes": 100,
+        "omitted": 0,
+        "unparsed_lines": 1,
+        "diagnostics": [{"path": module.STATIC_PATHS[0], "line": 0, "rule": "format"}],
+    }
+    protocol = static_protocol_summary() | {
+        "report_count": 9,
+        "setup_reports": 3,
+        "call_reports": 3,
+        "teardown_reports": 3,
+    }
+    assert module.static_failure_diagnostic(static_failure_marker(value), failure=protocol) == value
+    for change in (
+        {"complete": True},
+        {"reported_diagnostics": 1},
+        {"diagnostics": [value["diagnostics"][0] | {"column": 1}]},
+        {"diagnostics": [value["diagnostics"][0] | {"rule": "NEW1234"}]},
+        {"diagnostics": value["diagnostics"] * 13},
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(
+                static_failure_marker(value | change),
+                failure=protocol,
+            )
+
+
+def test_static_ruff_wrapper_retains_only_complete_rows_with_a_serialized_byte_budget(monkeypatch):
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+
+    wrapper_path = PATH.parents[2] / "tests/operations/test_quote_service_static_contracts.py"
+    wrapper_spec = importlib.util.spec_from_file_location(
+        "static_contract_test_wrapper",
+        wrapper_path,
+    )
+    wrapper = importlib.util.module_from_spec(wrapper_spec)
+    wrapper_spec.loader.exec_module(wrapper)
+    path = "scripts/ci/quote_guard_bootstrap.py"
+    first = f"{path}:7:2: invalid-syntax: Expected `:`\n".encode()
+    second = f"/app/{path}:8:3: NEW1234 Public diagnostic\n".encode()
+    rows, omitted, unparsed, reported = wrapper._summarize(1, first + second + b"Found 2 errors.\n")
+    assert (omitted, unparsed, reported) == (0, 0, 2)
+    assert [row["rule"] for row in rows] == ["invalid-syntax", "NEW1234"]
+    assert [row["column"] for row in rows] == [2, 3]
+    assert all(row["path"] == path for row in rows)
+    assert wrapper._summarize(1, first.replace(b"invalid-syntax:", b"E501"))[0][0]["rule"] == "E501"
+    assert wrapper._summarize(1, b"Found 1 error.\n") == ([], 0, 0, 1)
+    assert wrapper._summarize(1, first + first + b"Found 2 errors.\n")[1:] == (1, 0, 2)
+    assert wrapper._summarize(1, b"Found 1 error.\nFound 1 error.\n") == ([], 0, 1, 1)
+    for raw in (
+        first.replace(path.encode(), b"../private.py"),
+        first.replace(b"7:2", b"0:2"),
+        first.replace(b"7:2", b"7:1000001"),
+        first.replace(b"invalid-syntax", b"bad-code!"),
+        first.replace(b"invalid-syntax:", b"invalid-syntax::"),
+        first.replace(b"invalid-syntax:", b"invalid:syntax:"),
+        first.replace(b"Expected `:`", b"\x1b[31mred"),
+        first.replace(b"Expected `:`", b"bad\xff"),
+        first.replace(b"Expected `:`", "é".encode() * 513),
+        first[:-1],
+        b"  | source excerpt\n",
+    ):
+        assert wrapper._summarize(1, raw) == ([], 0, 1, None)
+    assert wrapper._summarize(2, f"Would reformat: {path}\n".encode()) == (
+        [{"path": path, "line": 0, "rule": "format"}],
+        0,
+        0,
+        None,
+    )
+
+    # These are mocked future-CI checks. No subprocess or containment path is invoked.
+    monkeypatch.setattr(wrapper, "ROOT", Path("/app"))
+    monkeypatch.setenv("OCWP_QUOTE_SERVICE_INITIAL", "contained")
+    emitted = []
+    monkeypatch.setattr(wrapper.os, "write", lambda fd, raw: emitted.append(raw) or len(raw))
+    for message in ("x" * 60, 'é"\\' * 20):
+        output = b"".join(
+            f"{path}:{index}:1: NEW1234 {message}\n".encode() for index in range(1, 81)
+        ) + b"Found 80 errors.\n"
+        assert len(output) < module.LIMIT
+
+        def fake_popen(*args, output=output, **kwargs):
+            kwargs["stdout"].write(output)
+            kwargs["stdout"].flush()
+            return SimpleNamespace(wait=lambda timeout: 1)
+
+        monkeypatch.setattr(wrapper.subprocess, "Popen", fake_popen)
+        with pytest.raises(pytest.fail.Exception):
+            wrapper._check(1, SimpleNamespace(disabled=nullcontext))
+        marker = emitted[-1]
+        assert len(marker) <= module.STATIC_RUFF_FAILURE_LIMIT + 1
+        value = module.static_failure_diagnostic(marker, failure=static_protocol_summary())
+        assert 12 < len(value["diagnostics"]) < 80
+        assert len(value["diagnostics"]) + value["omitted"] == 80
+        assert value["reported_diagnostics"] == 80
+        assert value["complete"] is False
+        assert value["incomplete_reasons"] == ["omitted_rows"]
+        assert all(row["message"] == message for row in value["diagnostics"])

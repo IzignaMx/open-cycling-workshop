@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Static diagnostic retention · 2026-10-17
+
+- [x] Independently close failed run `39048370590`; verify cancellation and absence.
+- [ ] Review the minimal diagnostic correction without guessed product changes.
+- [ ] Run the fixed static gate and retain actionable standard diagnostics.
+- [ ] Close actual static findings before PostgreSQL-0012 qualification.
+- [Current evidence and pending scope](docs/10-spec-development/2026-10-17-static-diagnostic-retention.md).
+  Earlier preparation blocks are historical checkpoints.
+
 ## Direct static source repair · 2026-10-17
 
 - [x] Retain static run `39044828140`: repository passed, Ruff failed; later checks unrun.

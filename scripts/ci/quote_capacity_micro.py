@@ -511,7 +511,7 @@ SERVICE_NODES = (
     "tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract",
 )
 
-# Closed diagnostic vocabulary for this fixed static/contracts batch only.
+# Fixed public source scope; non-Ruff tools retain their closed diagnostic vocabulary.
 STATIC_PATHS = (
     "services/platform/src/cycling_workshop/quotes/effects.py",
     "services/platform/src/cycling_workshop/quotes/reconstruction.py",
@@ -559,17 +559,10 @@ STATIC_REPOSITORY_PATHS = (
     "fixtures/demo-workshop",
     "fixtures/load",
 )
-STATIC_RUFF_RULES = frozenset(
-    (
-        "B006 B007 B008 B009 B010 B011 B017 B018 B023 B904 B905 E402 E501 E711 E712 E713 E714 "
-        "E721 E722 E731 F401 F402 F403 F405 F541 F601 F602 F621 F622 F631 F632 F633 F634 F701 "
-        "F702 F704 F706 F707 F811 F821 F822 F823 F841 F901 I001 I002 RUF005 RUF010 RUF012 "
-        "RUF013 RUF015 RUF019 RUF020 RUF022 RUF023 RUF100 SIM102 SIM103 SIM105 SIM108 SIM110 "
-        "SIM115 SIM117 SIM118 SIM201 SIM202 SIM208 SIM210 SIM211 SIM212 UP006 UP007 UP008 UP009 "
-        "UP010 UP015 UP017 UP018 UP024 UP031 UP032 UP034 UP035 UP037 UP038 UP039 UP040 UP041 "
-        "UP042 UP043 UP045"
-    ).split()
-)
+# Ruff emits ordinary lint codes and lowercase hyphenated syntax-diagnostic codes.
+STATIC_RUFF_CODE_PATTERN = r"(?:[A-Z]+[0-9]+|[a-z][a-z0-9]*(?:-[a-z0-9]+)*)"
+STATIC_RUFF_FAILURE_LIMIT = 12 * 1024
+STATIC_RUFF_MESSAGE_LIMIT = 1024
 STATIC_MYPY_RULES = frozenset(
     (
         "abstract annotation-unchecked arg-type assert-type assignment attr-defined "
@@ -599,7 +592,7 @@ STATIC_ALLOWED_PATHS = (
 )
 STATIC_ALLOWED_RULES = (
     frozenset({"missing", "license"}),
-    STATIC_RUFF_RULES,
+    frozenset(),  # Ruff uses the bounded generic grammar, not a rule catalog.
     frozenset({"format"}),
     STATIC_MYPY_RULES,
     frozenset({"contract"}),
@@ -751,11 +744,11 @@ def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]
 
 
 def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[str, object]:
-    """One bounded source-path/rule summary, bound to the first failed tool protocol."""
+    """One bounded source-only diagnostic, bound to the first failed tool protocol."""
     if type(raw) is not bytes or len(raw) >= LIMIT or raw.count(STATIC_FAILURE_MARKER) != 1:
         raise ProofFailure("static_diagnostic_invalid")
     lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(STATIC_FAILURE_MARKER)]
-    if len(lines) != 1 or len(lines[0]) + 1 > STATIC_FAILURE_LIMIT:
+    if len(lines) != 1 or len(lines[0]) + 1 > STATIC_RUFF_FAILURE_LIMIT:
         raise ProofFailure("static_diagnostic_invalid")
     payload = lines[0][len(STATIC_FAILURE_MARKER) :]
     try:
@@ -774,7 +767,13 @@ def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[st
         "omitted": (0, LIMIT),
         "unparsed_lines": (0, LIMIT),
     }
-    if type(value) is not dict or set(value) != set(bounds) | {"returncode", "diagnostics"}:
+    if type(value) is not dict:
+        raise ProofFailure("static_diagnostic_invalid")
+    ruff = type(value.get("tool")) is int and value["tool"] == 1
+    extra = {"complete", "incomplete_reasons", "reported_diagnostics"} if ruff else set()
+    if set(value) != set(bounds) | {"returncode", "diagnostics"} | extra:
+        raise ProofFailure("static_diagnostic_invalid")
+    if len(lines[0]) + 1 > (STATIC_RUFF_FAILURE_LIMIT if ruff else STATIC_FAILURE_LIMIT):
         raise ProofFailure("static_diagnostic_invalid")
     if any(
         type(value[k]) is not int or not low <= value[k] <= high
@@ -810,28 +809,65 @@ def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[st
     if failure != expected or any(type(v) is not int for v in failure.values()):
         raise ProofFailure("static_diagnostic_protocol")
     rows = value["diagnostics"]
-    if type(rows) is not list or len(rows) > 12:
+    if type(rows) is not list or len(rows) > (512 if ruff else 12):
         raise ProofFailure("static_diagnostic_invalid")
-    seen: set[tuple[str, int, str]] = set()
+    seen: set[tuple[object, ...]] = set()
     for row in rows:
+        fields = {"path", "line", "rule"} | ({"column", "message"} if ruff else set())
         if (
             type(row) is not dict
-            or set(row) != {"path", "line", "rule"}
+            or set(row) != fields
             or type(row["path"]) is not str
             or row["path"] not in STATIC_ALLOWED_PATHS[tool]
             or type(row["line"]) is not int
-            or not 0 <= row["line"] <= 1_000_000
+            or not (1 if ruff else 0) <= row["line"] <= 1_000_000
             or type(row["rule"]) is not str
-            or row["rule"] not in STATIC_ALLOWED_RULES[tool]
         ):
             raise ProofFailure("static_diagnostic_invalid")
         key = (row["path"], row["line"], row["rule"])
+        if ruff:
+            if (
+                not 1 <= len(row["rule"]) <= 64
+                or re.fullmatch(STATIC_RUFF_CODE_PATTERN, row["rule"]) is None
+                or type(row["column"]) is not int
+                or not 1 <= row["column"] <= 1_000_000
+                or type(row["message"]) is not str
+                or not row["message"].isprintable()
+                or not 1 <= len(row["message"].encode("utf-8")) <= STATIC_RUFF_MESSAGE_LIMIT
+            ):
+                raise ProofFailure("static_diagnostic_invalid")
+            key += (row["column"], row["message"])
+        elif row["rule"] not in STATIC_ALLOWED_RULES[tool]:
+            raise ProofFailure("static_diagnostic_invalid")
         if key in seen:
             raise ProofFailure("static_diagnostic_invalid")
         seen.add(key)
+    if ruff:
+        reported = value["reported_diagnostics"]
+        if reported is not None and (type(reported) is not int or not 1 <= reported <= LIMIT):
+            raise ProofFailure("static_diagnostic_invalid")
+        reasons = []
+        if kind != 1 or returncode != 1:
+            reasons.append("tool_status")
+        if value["output_bytes"] == LIMIT:
+            reasons.append("output_limit")
+        if value["unparsed_lines"]:
+            reasons.append("unparsed_lines")
+        if value["omitted"]:
+            reasons.append("omitted_rows")
+        if reported is None or reported != len(rows) + value["omitted"]:
+            reasons.append("summary_mismatch")
+        if (
+            type(value["complete"]) is not bool
+            or value["complete"] != (not reasons)
+            or type(value["incomplete_reasons"]) is not list
+            or value["incomplete_reasons"] != reasons
+        ):
+            raise ProofFailure("static_diagnostic_invalid")
     if (
         (kind == 4 and (rows or value["omitted"] or value["unparsed_lines"]))
-        or (value["omitted"] and len(rows) != 12)
+        or (ruff and kind == 4 and value["reported_diagnostics"] is not None)
+        or (not ruff and value["omitted"] and len(rows) != 12)
         or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
     ):
         raise ProofFailure("static_diagnostic_invalid")
