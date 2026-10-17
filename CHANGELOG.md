@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased · Prepare closed contained service qualification
+
+- Prepare a fixed six-case service selector, closed result validation and bounded descendant cancellation using existing containment helpers.
+- Keep publication/execution blocked pending exact review and independent guard qualification; no tests or workflows have run for this preparation.
+- Preserve consumed experiments and record schema 0013/service-version reconciliation as a prerequisite if combined. No service activation follows.
+
 ## Unreleased · Reconcile product-stack ordinary evidence
 
 - Record exact PR57 source qualification: 218 retry-free browser executions,

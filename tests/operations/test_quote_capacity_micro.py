@@ -636,3 +636,432 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
     value = dict(stage="create_decode", failure_type="value_error", byte_counts={}) | change
     with pytest.raises(module.ProofFailure):
         module.record_diagnostic(json.dumps(value))
+
+
+# The service guard delta below is authored but unexecuted. Run only in the
+# separately reviewed bootstrap container, never via the service business mode.
+def service_report():
+    return dict(
+        schema=1, nodes=list(module.SERVICE_NODES), collection_count=6,
+        collection_errors=0, unhandled_errors=0, protocol_errors=0,
+        session_finished=True, session_exitstatus=0,
+        reports=[
+            dict(node=node, when=when, outcome="passed", seconds=0.001)
+            for node in module.SERVICE_NODES for when in ("setup", "call", "teardown")
+        ],
+    )
+
+
+def test_service_selection_is_closed_and_environment_is_empty():
+    args = module.service_argv("a" * 64)
+    assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
+    assert args[-6:] == list(module.SERVICE_NODES)
+    assert len(set(args[-6:])) == 6
+    assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
+    assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
+    assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
+    assert not any("DATABASE" in arg or "PASSWORD" in arg or "PYTEST_ADDOPTS" in arg for arg in args)
+    with pytest.raises(module.ProofFailure):
+        module.service_argv("arbitrary-name")
+
+
+def test_service_report_requires_every_protocol_and_finish():
+    import copy
+    import json
+
+    good = service_report()
+    assert module.service_result(json.dumps(good)) == good
+    for field, wrong in (
+        ("schema", True), ("collection_count", 5), ("collection_errors", 1),
+        ("unhandled_errors", 1), ("protocol_errors", 1),
+        ("session_finished", False), ("session_exitstatus", 1),
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(good | {field: wrong}))
+    for index in (0, 1, 2):
+        for outcome in ("failed", "skipped", "xfailed", "xpassed"):
+            bad = copy.deepcopy(good)
+            bad["reports"][index]["outcome"] = outcome
+            with pytest.raises(module.ProofFailure):
+                module.service_result(json.dumps(bad))
+    for rows in (good["reports"][:-1], good["reports"] + [good["reports"][0]],
+                 good["reports"][::3], list(reversed(good["reports"]))):
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(good | {"reports": rows}))
+    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 6):
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(good | {"nodes": nodes}))
+
+
+def test_service_report_rejects_duplicate_unknown_nonfinite_and_oversize_fields():
+    import copy
+    import json
+
+    good = service_report()
+    raw = json.dumps(good)
+    for bad in (
+        raw.replace('"schema": 1', '"schema": 1, "schema": 1'),
+        raw.replace('"seconds": 0.001', '"seconds": 0.001, "seconds": 0.001', 1),
+        json.dumps(good | {"raw_error": "private"}), " " * module.LIMIT,
+    ):
+        with pytest.raises((module.ProofFailure, ValueError)):
+            module.service_result(bad)
+    for seconds in (True, -1, 20, float("nan"), float("inf"), -float("inf")):
+        bad = copy.deepcopy(good)
+        bad["reports"][0]["seconds"] = seconds
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    for field in ("captured", "longrepr", "wasxfail"):
+        bad = copy.deepcopy(good)
+        bad["reports"][0][field] = "private"
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+
+
+def test_service_hook_refuses_collection_mismatch_before_fixtures():
+    from types import SimpleNamespace
+
+    good = [SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES]
+    hook = module.ServiceReportHook()
+    hook.pytest_collection_finish(SimpleNamespace(items=good))
+    assert hook.value["nodes"] == list(module.SERVICE_NODES)
+    for bad in (good[:-1], list(reversed(good)), good[:1] * 6, good + good[:1]):
+        hook = module.ServiceReportHook()
+        with pytest.raises(pytest.UsageError, match="service_selection"):
+            hook.pytest_collection_finish(SimpleNamespace(items=bad))
+        assert hook.value["protocol_errors"] == 1
+        assert hook.value["nodes"] == []
+
+
+def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    hook = module.ServiceReportHook()
+    hook.pytest_collection_finish(SimpleNamespace(
+        items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES]
+    ))
+    for row in service_report()["reports"]:
+        hook.pytest_runtest_logreport(SimpleNamespace(
+            nodeid=row["node"], when=row["when"], outcome=row["outcome"],
+            duration=row["seconds"], longrepr="private", capstdout="private",
+        ))
+    target = tmp_path / "closed.json"
+    monkeypatch.setattr(module, "SERVICE_REPORT", str(target))
+    hook.pytest_sessionfinish(SimpleNamespace(), 0)
+    assert module.service_result(target.read_text()) == service_report()
+    assert "private" not in target.read_text()
+    assert len(target.read_bytes()) < module.LIMIT
+    for change in ({"nodeid": "private"}, {"when": "private"}, {"duration": float("nan")},
+                   {"wasxfail": "private"}):
+        hook.pytest_runtest_logreport(SimpleNamespace(**(
+            dict(nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1)
+            | change
+        )))
+    hook.pytest_collectreport(SimpleNamespace(outcome="failed", longrepr="private"))
+    hook.pytest_collectreport(SimpleNamespace(outcome="skipped", longrepr="private"))
+    hook.pytest_internalerror()
+    hook.pytest_keyboard_interrupt()
+    hook.pytest_sessionfinish(SimpleNamespace(), 1)
+    result = json.loads(target.read_text())
+    assert result["protocol_errors"] == 4
+    assert result["collection_errors"] == result["unhandled_errors"] == 2
+    assert len(result["reports"]) == 18
+    assert "private" not in target.read_text()
+    with pytest.raises(module.ProofFailure):
+        module.service_result(target.read_text())
+
+
+def test_service_hook_requires_explicit_contained_context(monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+    config = SimpleNamespace(pluginmanager=SimpleNamespace(register=lambda *args: calls.append(args)))
+    monkeypatch.delenv("OCWP_QUOTE_SERVICE_INITIAL", raising=False)
+    with pytest.raises(module.ProofFailure, match="service_hook_context"):
+        module.pytest_configure(config)
+    assert calls == []
+    monkeypatch.setenv("OCWP_QUOTE_SERVICE_INITIAL", "contained")
+    module.pytest_configure(config)
+    assert len(calls) == 1 and isinstance(calls[0][0], module.ServiceReportHook)
+
+
+def test_service_cancellation_signals_both_before_stopped_state_readback():
+    calls = []
+    ids = ["a" * 64, "b" * 64]
+
+    def execute(args, **kwargs):
+        calls.append((args, kwargs))
+        if args[1] == "kill":
+            raise module.ProofFailure("command_failed")
+        return "\n".join(f"{cid}|false" for cid in reversed(ids))
+
+    module.cancel_runtime(ids, execute)
+    assert calls[0][0] == ["docker", "kill", "--signal", "KILL", *reversed(ids)]
+    assert calls[0][1]["timeout"] == 2
+    assert calls[1][0][1] == "inspect" and calls[1][1]["timeout"] == 3
+    for answer in ("", f'{ids[1]}|true\n{ids[0]}|false', f'{ids[1]}|false',
+                   f'{ids[0]}|false\n{ids[1]}|false'):
+        with pytest.raises(module.ProofFailure):
+            module.cancel_runtime(ids, lambda *args, **kwargs: answer)
+    for bad in ([], ["foreign"], ids + ["c" * 64], [ids[0], ids[0]]):
+        with pytest.raises(module.ProofFailure):
+            module.cancel_runtime(bad, lambda *a, **kw: pytest.fail("docker called"))
+
+
+def test_service_inspection_inherits_the_stage_executor():
+    calls = []
+    cid, image, token = "a" * 64, "sha256:" + "b" * 64, "c" * 32
+
+    def execute(args, **kwargs):
+        calls.append(args)
+        return "tmpfs /tmp" if "range .Mounts" in args[3] else "|".join(
+            (cid, image, token, "none", "false", "1", "true")
+        )
+
+    module.inspect_owned(cid, image, token, "none", execute)
+    assert len(calls) == 2
+    with pytest.raises(module.ProofFailure, match="wall_budget"):
+        module.inspect_owned(cid, image, token, "none", lambda *a, **kw: (_ for _ in ()).throw(
+            module.ProofFailure("wall_budget")
+        ))
+
+
+def test_service_bounded_client_cancels_before_reap_and_respects_reap_deadline(monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+    clock = [0.0]
+    child = SimpleNamespace(pid=123, returncode=None, poll=lambda: None)
+
+    def wait(*, timeout):
+        calls.append(("wait", timeout))
+        raise module.subprocess.TimeoutExpired("synthetic", timeout)
+
+    child.wait = wait
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(module.time, "sleep", lambda seconds: clock.__setitem__(0, 1.0))
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: child)
+    monkeypatch.setattr(module.os, "killpg", lambda *a: calls.append("client_kill"))
+    with pytest.raises(module.ProofFailure, match="client_reap_unverified"):
+        module.run(["synthetic"], timeout=0.1, deadline=0.1,
+                   before_reap=lambda: calls.append("container_kill"))
+    assert calls == ["container_kill", "client_kill", ("wait", 0)]
+
+
+def test_service_mode_conflict_refuses_before_tools(tmp_path, monkeypatch):
+    monkeypatch.setattr(module, "run", lambda *a, **kw: pytest.fail("tool called"))
+    with pytest.raises(module.ProofFailure, match="mode_conflict"):
+        module.supervise("worker", "pg", "c" * 40, tmp_path / "report.json",
+                         tmp_path / "owned.json", single_record=True, service_initial=True)
+
+
+def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
+    """Twelve tiny mocked paths. No Docker, business imports or DB setup."""
+    import json
+    from types import SimpleNamespace
+
+    scenarios = (
+        "success", "source", "preflight", "setup_deadline", "fixture_exit", "workload_deadline",
+        "mid_probe", "final_deadline", "invalid_report", "cancellation_unknown", "cleanup", "create_timeout",
+    )
+    for fault in scenarios:
+        with monkeypatch.context() as patch:
+            folder = tmp_path / fault
+            folder.mkdir()
+            clock, calls, containers, launches = [0.0], [], {}, []
+            commit, tree, image = "c" * 40, "d" * 40, "sha256:" + "e" * 64
+            patch.setattr(module.time, "monotonic", lambda: clock[0])
+            patch.setattr(module.time, "sleep", lambda seconds: None)
+            patch.setattr(module.os, "killpg", lambda *a: calls.append(["client_kill"]))
+            patch.setattr(module.signal, "signal", lambda *a: None)
+
+            def popen(args, **kwargs):
+                launches.append(args)
+                child = SimpleNamespace(pid=123, returncode=0)
+                active = fault in {"workload_deadline", "mid_probe", "cancellation_unknown"}
+                child.returncode = None if active else (1 if fault == "fixture_exit" else 0)
+                child.poll = lambda: child.returncode
+
+                def wait(*, timeout):
+                    calls.append(["client_wait"])
+                    child.returncode = -9
+                    return -9
+
+                child.wait = wait
+                if fault == "workload_deadline":
+                    clock[0] = 21.0
+                return child
+
+            patch.setattr(module.subprocess, "Popen", popen)
+
+            def execute(args, **kwargs):
+                calls.append(args)
+                if args[:3] == ["git", "--no-optional-locks", "rev-parse"]:
+                    return ("x" * 40 if fault == "source" else commit) if args[-1] == "HEAD" else tree
+                if args[:3] == ["git", "--no-optional-locks", "status"]:
+                    return ""
+                if args[:3] == ["docker", "image", "inspect"]:
+                    return tree if "ocwp.source-tree" in args[4] else image
+                if args[:2] == ["docker", "create"]:
+                    role = args[args.index("--name") + 1].rsplit("-", 1)[1]
+                    cid = {"canary": "a", "db": "b", "worker": "c"}[role] * 64
+                    containers[cid] = role
+                    Path(args[args.index("--cidfile") + 1]).write_text(cid)
+                    if fault == "create_timeout":
+                        raise module.ProofFailure("command_timeout")
+                    return cid
+                if args[:2] == ["docker", "start"]:
+                    return ""
+                if args[:2] == ["docker", "inspect"]:
+                    if "State.Running" in args[3]:
+                        return "\n".join(f'{cid}|{"true" if fault == "cancellation_unknown" else "false"}'
+                                         for cid in args[4:])
+                    if fault == "setup_deadline":
+                        clock[0] = 30.0
+                    if "range .Mounts" in args[3]:
+                        return "tmpfs /tmp"
+                    cid, role = args[-1], containers[args[-1]]
+                    token = next(row[row.index("--label") + 1].split("=")[1] for row in calls
+                                 if row[:2] == ["docker", "create"])
+                    network = "container:" + "b" * 64 if role == "worker" else "none"
+                    return "|".join((cid, image, token, network, "false", "1", "true"))
+                if args[:2] == ["docker", "kill"]:
+                    return "\n".join(args[4:])
+                if args[:2] == ["docker", "exec"]:
+                    if args[3] == "pg_isready":
+                        return ""
+                    if args[3] == "cat":
+                        return "{}" if fault == "invalid_report" else json.dumps(service_report())
+                    if fault == "preflight":
+                        return "missing"
+                    if launches and fault in {"mid_probe", "cancellation_unknown"}:
+                        kwargs["before_reap"]()
+                        raise module.ProofFailure("command_timeout")
+                    if launches and fault == "final_deadline":
+                        clock[0] = 5.0
+                    raw = probe()
+                    return raw.replace("536870912", "805306368").replace(
+                        "---pids.max---\n64", "---pids.max---\n128"
+                    ) if containers[args[2]] == "db" else raw
+                if args[:2] == ["docker", "rm"]:
+                    if fault == "cleanup":
+                        raise module.ProofFailure("command_failed")
+                    containers.pop(args[-1], None)
+                    return ""
+                if args[:2] == ["docker", "ps"]:
+                    return "\n".join(containers)
+                raise AssertionError(args)
+
+            def canary(cid, execute, **kwargs):
+                containers.pop(cid)
+                return {"cpu_usec": 100, "memory_peak": 8192}
+
+            def reconcile(owned, execute):
+                calls.append(["reconcile"])
+                return list(containers)
+
+            patch.setattr(module, "run", execute)
+            patch.setattr(module, "cancellation_canary", canary)
+            patch.setattr(module, "effective_privileges", lambda *a: {
+                "uid": 10001, "effective_capabilities": 0, "no_new_privileges": True,
+            })
+            patch.setattr(module, "reconcile_owned", reconcile)
+            evidence, owned = folder / "report.json", folder / "owned.json"
+            if fault == "success":
+                module.supervise("worker", "pg", commit, evidence, owned, service_initial=True)
+            else:
+                with pytest.raises(module.ProofFailure, match="service_unqualified"):
+                    module.supervise("worker", "pg", commit, evidence, owned, service_initial=True)
+            result = json.loads(evidence.read_text())
+            expected_launches = 0 if fault in {"source", "preflight", "setup_deadline", "create_timeout"} else 1
+            assert len(launches) == expected_launches, fault
+            if launches:
+                assert launches[0] == module.service_argv("c" * 64)
+                assert type(result["specimen_returncode"]) is int
+                assert result["specimen_client_reap"] == "verified"
+            assert result["status"] == (
+                "service_initial_passed_not_postgresql_or_capacity" if fault == "success" else "failed"
+            ), fault
+            assert result["cleanup"] == ("failed" if fault in {"cleanup", "create_timeout"} else "verified_absent")
+            if fault in {"fixture_exit", "workload_deadline", "mid_probe", "final_deadline",
+                         "invalid_report", "cancellation_unknown"}:
+                kill = next(i for i, row in enumerate(calls) if row[:2] == ["docker", "kill"])
+                assert calls[kill] == ["docker", "kill", "--signal", "KILL", "c" * 64, "b" * 64]
+                assert kill < calls.index(["reconcile"])
+                if ["client_wait"] in calls:
+                    assert kill < calls.index(["client_wait"])
+                assert result["cancellation"] == ("unverified" if fault == "cancellation_unknown" else "verified_stopped")
+            if fault == "success":
+                assert result["observed_workload_cpu_usec"] == 0
+                assert result["lifetime_cpu_usec"] == 200
+                assert result["environment_overhead_before_workload_cpu_usec"] == {"db": 100, "worker": 100}
+                assert result["specimen_returncode"] == 0
+                assert not any(row[:2] == ["docker", "kill"] for row in calls)
+
+
+def test_service_canary_respects_remaining_setup_deadline(monkeypatch):
+    from types import SimpleNamespace
+
+    clock, calls = [29.9], []
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(module.time, "sleep", lambda seconds: calls.append("slept"))
+    monkeypatch.setattr(module.os, "killpg", lambda *args: calls.append("client_killed"))
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: SimpleNamespace(
+        pid=123, poll=lambda: -9, wait=lambda **kw: calls.append("client_reaped")
+    ))
+
+    def execute(args, **kwargs):
+        assert kwargs["timeout"] <= 0.101
+        clock[0] = 30.0
+        raise module.ProofFailure("command_timeout")
+
+    with pytest.raises(module.ProofFailure, match="canary_readiness"):
+        module.cancellation_canary("a" * 64, execute, aggregate_deadline=30.0)
+    assert "slept" not in calls
+
+
+def test_service_hook_rejects_each_untrusted_event_without_retaining_it():
+    from types import SimpleNamespace
+
+    for change in ({"nodeid": "private"}, {"when": "private"}, {"duration": float("nan")},
+                   {"duration": True}, {"wasxfail": "private"}, {"outcome": "xpassed"}):
+        hook = module.ServiceReportHook()
+        hook.pytest_runtest_logreport(SimpleNamespace(**(
+            dict(nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1)
+            | change
+        )))
+        assert hook.value["protocol_errors"] == 1
+        assert hook.value["reports"] == []
+        assert "private" not in str(hook.value)
+
+
+def test_service_workflow_is_one_fixed_push_and_one_business_invocation():
+    workflow = PATH.parents[2] / ".github/workflows/quote-service-contained.yml"
+    text = workflow.read_text()
+    assert "branches: [codex/quote-service-contained-initial]" in text
+    assert "github.run_number == 1 && github.run_attempt == 1" in text
+    assert 'test "$GITHUB_RUN_NUMBER" = 1' in text
+    assert 'test "$GITHUB_RUN_ATTEMPT" = 1' in text
+    assert "quote-service-contained.yml@$GITHUB_REF" in text
+    assert text.count("--service-initial") == 1
+    assert "--single-record-feasibility" not in text
+    for forbidden in ("pull_request:", "workflow_dispatch:", "workflow_run:", "schedule:",
+                      "workflow_call:", "matrix:", "--collect-only", "uv run pytest"):
+        assert forbidden not in text
+    assert "if: always()" in text and "quote-service-independent-cleanup.json" in text
+    assert "--quiet" in text and "timeout=seconds + 5" in text
+    assert text.index('test "$GITHUB_RUN_NUMBER" = 1') < text.index("git archive HEAD")
+
+
+def test_service_rejects_all_controller_pressure_boundaries():
+    for old, new in (
+        ("0::/", "0::/other"), ("536870912", "max"),
+        ("100000 100000", "max 100000"), ("---pids.max---\n64", "---pids.max---\nmax"),
+        ("---memory.swap.max---\n0", "---memory.swap.max---\n1"),
+        ("usage_usec 100", "usage_usec -1"), ("usage_usec 100", "usage_usec nope"),
+        ("oom_kill 0", "oom_kill 1"), ("---cpu.stat---", "MISSING"),
+        ("8192", "536870913"), ("---pids.events---\nmax 0", "---pids.events---\nmax 1"),
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.parse_probe(probe().replace(old, new), 512, 64)

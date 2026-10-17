@@ -2121,3 +2121,17 @@ product_stack57_ordinary_closure_20261016:
   superseded_checkout: 046754f2ccae18561012b57c2139f519b8096abe_against_PR55_same_tree_not_main_qualification
   integration_trigger: ordinary_new_commit_after_retarget_no_consumed_experiment_rerun
   evidence: https://github.com/IzignaMx/open-cycling-workshop/pull/57
+
+contained_service_preparation_20261017:
+  status: local_unexecuted_preparation
+  source_base_tree: 323661ade5a3540f389bfb5b965d4ff63b400d5c
+  plan: docs/10-spec-development/2026-10-17-contained-service-preparation.md
+  workload_seconds: 20
+  exact_service_cases: 6
+  tests_executed: false
+  publication_triggers_execution: true
+  pending:
+    - independent_finite_guard_qualification
+    - exact_combined_service_source_review
+    - schema0013_effect_version_reconciliation_if_combined
+    - real_postgresql_compatibility_and_cleanup_evidence

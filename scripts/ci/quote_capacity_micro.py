@@ -108,29 +108,42 @@ def output_limit() -> None:
     resource.setrlimit(resource.RLIMIT_FSIZE, (LIMIT, LIMIT))
 
 
-def run(args: list[str], *, timeout: float = 5) -> str:
-    """Bound Docker/Git client output on disk and never echo raw errors."""
+def run(
+    args: list[str], *, timeout: float = 5, before_reap: Callable[[], None] | None = None,
+    deadline: float | None = None,
+) -> str:
+    """Bound output and client lifetime; service failure cancels containers before reaping."""
     with tempfile.TemporaryFile() as output:
         try:
-            with subprocess.Popen(
+            child = subprocess.Popen(
                 args, stdout=output, stderr=output, start_new_session=True, preexec_fn=output_limit
-            ) as child:
-                started = time.monotonic()
-                try:
-                    while child.poll() is None:
-                        if time.monotonic() - started > timeout:
-                            raise ProofFailure("command_timeout")
-                        if os.fstat(output.fileno()).st_size >= LIMIT:
-                            raise ProofFailure("output_limit")
-                        time.sleep(0.02)
-                finally:
-                    if child.poll() is None:
-                        os.killpg(child.pid, signal.SIGKILL)
-                        child.wait(timeout=2)
+            )
+            started = time.monotonic()
+            try:
+                while child.poll() is None:
+                    if time.monotonic() - started > timeout:
+                        raise ProofFailure("command_timeout")
+                    if os.fstat(output.fileno()).st_size >= LIMIT:
+                        raise ProofFailure("output_limit")
+                    time.sleep(0.02)
                 if time.monotonic() - started >= timeout:
                     raise ProofFailure("command_timeout")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("command_failed", returncode=child.returncode)
+            except (ProofFailure, OSError):
+                if before_reap is not None:
+                    before_reap()
+                raise
+            finally:
+                if child.poll() is None:
+                    os.killpg(child.pid, signal.SIGKILL)
+                    reap_seconds = 2 if deadline is None else max(
+                        0, min(2, deadline - time.monotonic())
+                    )
+                    try:
+                        child.wait(timeout=reap_seconds)
+                    except subprocess.TimeoutExpired:
+                        raise ProofFailure("client_reap_unverified") from None
         except OSError as error:
             raise ProofFailure("tool_unavailable") from error
         output.seek(0)
@@ -245,7 +258,9 @@ def effective_privileges(
         raise ProofFailure("effective_privileges_unavailable") from error
 
 
-def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> dict[str, int]:
+def cancellation_canary(
+    cid: str, execute: Callable[..., str] | None = None, *, aggregate_deadline: float | None = None,
+) -> dict[str, int]:
     """Three sleeping Python generations; terminate client before container cleanup."""
     execute = execute or run
     grandchild = (
@@ -266,6 +281,8 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> 
         start_new_session=True,
     )
     deadline = time.monotonic() + 10
+    if aggregate_deadline is not None:
+        deadline = min(deadline, aggregate_deadline)
     try:
         while True:
             remaining = deadline - time.monotonic()
@@ -278,9 +295,16 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> 
                 )
                 break
             except ProofFailure:
-                time.sleep(0.05)
+                if time.monotonic() >= deadline:
+                    raise ProofFailure("canary_readiness") from None
+                time.sleep(min(0.05, deadline - time.monotonic()))
         os.killpg(client.pid, signal.SIGKILL)
-        client.wait(timeout=2)
+        try:
+            client.wait(timeout=2 if aggregate_deadline is None else max(
+                0, min(2, aggregate_deadline - time.monotonic())
+            ))
+        except subprocess.TimeoutExpired:
+            raise ProofFailure("canary_client_reap_unverified") from None
         # Prove the exec client's death did not itself clean up the descendants.
         rows = execute(["docker", "top", cid, "-eo", "pid,ppid"]).splitlines()
         if not rows or rows[0].split() != ["PID", "PPID"]:
@@ -303,11 +327,19 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> 
     finally:
         if client.poll() is None:
             os.killpg(client.pid, signal.SIGKILL)
-            client.wait(timeout=2)
+            try:
+                client.wait(timeout=2 if aggregate_deadline is None else max(
+                    0, min(2, aggregate_deadline - time.monotonic())
+                ))
+            except subprocess.TimeoutExpired:
+                raise ProofFailure("canary_client_reap_unverified") from None
 
 
-def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
-    fields = run(
+def inspect_owned(
+    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
+) -> None:
+    execute = execute or run
+    fields = execute(
         [
             "docker",
             "inspect",
@@ -325,7 +357,7 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
         or fields[6:] != ["true"]
     ):
         raise ProofFailure("container_identity")
-    mounts = run(
+    mounts = execute(
         [
             "docker",
             "inspect",
@@ -466,6 +498,165 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
+
+SERVICE_NODES = (
+    "services/platform/tests/quotes/test_quote_command_response.py::"
+    "test_create_and_applied_decision_round_trip_exact_closed_fields",
+    "services/platform/tests/quotes/test_quote_command_response.py::"
+    "test_encoder_revalidates_nested_bypasses_and_checks_actual_utf8_bytes",
+    "services/platform/tests/quotes/test_quote_application_service.py::"
+    "test_create_decide_replay_commits_one_complete_tuple[sqlite]",
+    "services/platform/tests/quotes/test_quote_application_service.py::"
+    "test_response_failure_rolls_back_all_decision_effects[sqlite]",
+    "services/platform/tests/quotes/test_quote_application_service.py::"
+    "test_expired_deadline_refuses_before_writer_or_effects[sqlite]",
+    "services/platform/tests/quotes/test_quote_application_service.py::"
+    "test_historical_quote_only_decision_replay_does_not_invent_transition[sqlite]",
+)
+SERVICE_REPORT = "/tmp/quote-service-initial-result.json"
+
+
+def service_argv(cid: str) -> list[str]:
+    """One closed selection; env -i drops inherited pytest/application/PG settings."""
+    return [
+        "docker", "exec", identifier(cid), "env", "-i",
+        "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/tmp",
+        "PYTHONDONTWRITEBYTECODE=1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+        "OCWP_QUOTE_SERVICE_INITIAL=contained", "/app/.venv/bin/python",
+        "-m", "pytest", "-q", "-o", "addopts=", "-p", "no:cacheprovider",
+        "-p", "scripts.ci.quote_capacity_micro", "--tb=no", "--show-capture=no",
+        "--capture=fd", "--maxfail=1", "--basetemp=/tmp/quote-service-initial",
+        "-W", "error::pytest.PytestUnhandledThreadExceptionWarning",
+        "-W", "error::pytest.PytestUnraisableExceptionWarning", *SERVICE_NODES,
+    ]
+
+
+def strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ProofFailure("service_duplicate_key")
+        result[key] = value
+    return result
+
+
+def reject_constant(_value: str) -> None:
+    raise ProofFailure("service_nonfinite")
+
+
+def service_result(raw: str) -> dict[str, object]:
+    """Accept only six complete successful protocols, never six call-only passes."""
+    if len(raw.encode("utf-8")) >= LIMIT:
+        raise ProofFailure("service_report_limit")
+    value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
+    expected = {
+        "schema": 1, "collection_count": 6, "collection_errors": 0,
+        "unhandled_errors": 0, "protocol_errors": 0, "session_finished": True,
+        "session_exitstatus": 0,
+    }
+    if type(value) is not dict or set(value) != set(expected) | {"nodes", "reports"}:
+        raise ProofFailure("service_report_shape")
+    if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
+        raise ProofFailure("service_report_outcome")
+    if value["nodes"] != list(SERVICE_NODES):
+        raise ProofFailure("service_selection")
+    reports = value["reports"]
+    if type(reports) is not list or len(reports) != 18:
+        raise ProofFailure("service_report_count")
+    wanted = [(node, when) for node in SERVICE_NODES for when in ("setup", "call", "teardown")]
+    for row, (node, when) in zip(reports, wanted, strict=True):
+        if type(row) is not dict or set(row) != {"node", "when", "outcome", "seconds"}:
+            raise ProofFailure("service_report_shape")
+        if row["node"] != node or row["when"] != when or row["outcome"] != "passed":
+            raise ProofFailure("service_report_outcome")
+        seconds = row["seconds"]
+        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
+            raise ProofFailure("service_report_duration")
+    return value
+
+
+class ServiceReportHook:
+    """Small explicit pytest plugin. Retain no payload, trace, exception or captured text."""
+
+    def __init__(self) -> None:
+        self.value: dict[str, object] = {
+            "schema": 1, "nodes": [], "collection_count": 0,
+            "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
+            "session_finished": False, "session_exitstatus": -1, "reports": [],
+        }
+
+    def bump(self, field: str) -> None:
+        self.value[field] = min(100, cast(int, self.value[field]) + 1)
+
+    def pytest_collectreport(self, report: object) -> None:
+        if getattr(report, "outcome", None) != "passed":
+            self.bump("collection_errors")
+
+    def pytest_collection_finish(self, session: object) -> None:
+        import pytest
+
+        nodes = [getattr(item, "nodeid", None) for item in getattr(session, "items")]
+        self.value["collection_count"] = min(100, len(nodes))
+        if nodes != list(SERVICE_NODES) or len(set(nodes)) != 6:
+            self.bump("protocol_errors")
+            raise pytest.UsageError("service_selection")
+        self.value["nodes"] = list(SERVICE_NODES)
+
+    def pytest_runtest_logreport(self, report: object) -> None:
+        node, when = getattr(report, "nodeid", None), getattr(report, "when", None)
+        outcome, seconds = getattr(report, "outcome", None), getattr(report, "duration", None)
+        rows = cast(list[dict[str, object]], self.value["reports"])
+        if (
+            node not in SERVICE_NODES or when not in {"setup", "call", "teardown"}
+            or outcome not in {"passed", "failed", "skipped"} or len(rows) >= 18
+            or type(seconds) not in (int, float) or not math.isfinite(seconds)
+            or not 0 <= seconds < 20 or hasattr(report, "wasxfail")
+        ):
+            self.bump("protocol_errors")
+            return
+        rows.append({"node": node, "when": when, "outcome": outcome, "seconds": seconds})
+
+    def pytest_internalerror(self) -> None:
+        self.bump("unhandled_errors")
+
+    def pytest_keyboard_interrupt(self) -> None:
+        self.bump("unhandled_errors")
+
+    def pytest_sessionfinish(self, session: object, exitstatus: int) -> None:
+        self.value["session_finished"] = True
+        self.value["session_exitstatus"] = int(exitstatus)
+        raw = json.dumps(self.value, allow_nan=False, sort_keys=True)
+        if len(raw.encode("utf-8")) >= LIMIT:
+            raise ProofFailure("service_report_limit")
+        Path(SERVICE_REPORT).write_text(raw, encoding="utf-8")
+
+
+def pytest_configure(config: object) -> None:
+    # Only the explicitly loaded plugin participates; CLI imports never import pytest.
+    if os.environ.get("OCWP_QUOTE_SERVICE_INITIAL") != "contained":
+        raise ProofFailure("service_hook_context")
+    getattr(config, "pluginmanager").register(ServiceReportHook(), "quote-service-closed-report")
+
+
+def cancel_runtime(ids: list[str], execute: Callable[..., str]) -> None:
+    """Caller supplies a single five-second deadline; signal both before any inspection."""
+    if not ids or len(ids) > 2 or len(set(ids)) != len(ids):
+        raise ProofFailure("cancellation_identity")
+    for cid in ids:
+        identifier(cid)
+    targets = list(reversed(ids))
+    try:
+        execute(["docker", "kill", "--signal", "KILL", *targets], timeout=2)
+    except ProofFailure:
+        # A concurrently stopped container can make kill fail. Only readback proves stopped.
+        pass
+    rows = execute([
+        "docker", "inspect", "--format", "{{.Id}}|{{.State.Running}}", *targets,
+    ], timeout=3).splitlines()
+    if rows != [f"{cid}|false" for cid in targets]:
+        raise ProofFailure("cancellation_unverified")
+
+
 def supervise(
     worker_image: str,
     pg_image: str,
@@ -474,27 +665,76 @@ def supervise(
     owned: Path,
     *,
     single_record: bool = False,
+    service_initial: bool = False,
 ) -> None:
+    if single_record and service_initial:
+        raise ProofFailure("mode_conflict")
     started = time.monotonic()
-    command_deadline = started + 900
+    command_deadline = started + (30 if service_initial else 900)
     micro_deadline = started  # Expired until the fixed workload actually starts.
 
     def execute(args: list[str], *, timeout: float = 5) -> str:
         remaining = command_deadline - time.monotonic()
         if remaining <= 0:
+            if service_initial and report["phase"] in {
+                "service_with_pytest_bootstrap", "service_final_readback"
+            }:
+                cancel_workload()
             raise ProofFailure("wall_budget")
-        return run(args, timeout=min(timeout, remaining))
+        if service_initial and report["phase"] in {
+                "service_with_pytest_bootstrap", "service_final_readback"
+            }:
+            result = run(
+                args, timeout=min(timeout, remaining), before_reap=cancel_workload,
+                deadline=command_deadline,
+            )
+        elif service_initial:
+            result = run(args, timeout=min(timeout, remaining), deadline=command_deadline)
+        else:
+            result = run(args, timeout=min(timeout, remaining))
+        if service_initial and time.monotonic() >= command_deadline:
+            if report["phase"] in {"service_with_pytest_bootstrap", "service_final_readback"}:
+                cancel_workload()
+            raise ProofFailure("wall_budget")
+        return result
 
     ids: list[str] = []
     creation_uncertain = False
+    validated_runtime_ids: list[str] = []
+    cancellation_started = False
     report: dict[str, object] = {
-        "schema": 1,
+        "schema": 2 if service_initial else 1,
         "commit": commit,
-        "mode": "single_record_feasibility" if single_record else "micro_only",
+        "mode": "service_initial" if service_initial else (
+            "single_record_feasibility" if single_record else "micro_only"
+        ),
         "maximum_capacity_qualified": False,
         "status": "failed",
         "phase": "setup_and_containment",
     }
+
+    def cancel_workload() -> None:
+        nonlocal cancellation_started
+        if cancellation_started or not validated_runtime_ids:
+            return
+        cancellation_started = True
+        deadline = time.monotonic() + 5
+
+        def kill_execute(args: list[str], *, timeout: float = 5) -> str:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProofFailure("cancellation_deadline")
+            result = run(args, timeout=min(timeout, remaining), deadline=deadline)
+            if time.monotonic() >= deadline:
+                raise ProofFailure("cancellation_deadline")
+            return result
+
+        try:
+            cancel_runtime(validated_runtime_ids, kill_execute)
+            report["cancellation"] = "verified_stopped"
+        except (ProofFailure, ValueError, OSError):
+            report["cancellation"] = "unverified"
+        report["cancellation_seconds"] = round(time.monotonic() - (deadline - 5), 3)
 
     def interrupt(_signum: int, _frame: FrameType | None) -> None:
         raise ProofFailure("interrupted")
@@ -627,7 +867,12 @@ def supervise(
             creation_uncertain = False
             ids.append(cid)
             owned.write_text(json.dumps(ids))
-            inspect_owned(cid, image, label, network)
+            if service_initial:
+                inspect_owned(cid, image, label, network, execute)
+                if role != "canary":
+                    validated_runtime_ids.append(cid)
+            else:
+                inspect_owned(cid, image, label, network)
             execute(["docker", "start", cid])
             snapshots[role] = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
@@ -650,7 +895,10 @@ def supervise(
                 }
             )
             if role == "canary":
-                canary_resources = cancellation_canary(cid, execute)
+                canary_resources = (
+                    cancellation_canary(cid, execute, aggregate_deadline=command_deadline)
+                    if service_initial else cancellation_canary(cid, execute)
+                )
                 report["canary_resources"] = canary_resources
                 cpu_delta(
                     {"canary": snapshots["canary"]["cpu_usec"]},
@@ -681,20 +929,40 @@ def supervise(
                 )
                 break
             except ProofFailure:
-                if time.monotonic() >= deadline:
+                if time.monotonic() >= min(deadline, command_deadline):
                     raise ProofFailure("database_readiness") from None
                 time.sleep(0.2)
+        if service_initial:
+            # Fresh baseline separates PostgreSQL startup from the SQLite workload.
+            snapshots = {
+                role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
+                for cid, role, memory, pids in [
+                    (ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)
+                ]
+            }
+            if time.monotonic() >= command_deadline:
+                raise ProofFailure("setup_deadline")
+            cpu_delta({"db": 0, "worker": 0}, {
+                role: data["cpu_usec"] for role, data in snapshots.items()
+            }, 60)
+            report["environment_overhead_before_workload_cpu_usec"] = {
+                role: data["cpu_usec"] for role, data in snapshots.items()
+            }
+            report["database_role"] = "unused_postgresql_environment_overhead_sqlite_tests_only"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
-        report["command_stage"] = "microfixture"
-        report["phase"] = "micro_with_pytest_bootstrap"
-        # Only now may pytest import the fixed three-operation specimen.
+        report["command_stage"] = "service_initial" if service_initial else "microfixture"
+        report["phase"] = (
+            "service_with_pytest_bootstrap" if service_initial else "micro_with_pytest_bootstrap"
+        )
+        # Only now may pytest import the selected closed specimen.
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
         previous = before
         with tempfile.TemporaryFile() as output:
             micro_deadline = time.monotonic() + 20
             command_deadline = micro_deadline
+            micro_started = time.monotonic()
             child = subprocess.Popen(
-                [
+                service_argv(ids[1]) if service_initial else [
                     "docker",
                     "exec",
                     ids[1],
@@ -717,7 +985,6 @@ def supervise(
                 start_new_session=True,
                 preexec_fn=output_limit,
             )
-            micro_started = time.monotonic()
             try:
                 while child.poll() is None:
                     if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
@@ -734,43 +1001,84 @@ def supervise(
                         )
                         current[role] = snapshots[role]["cpu_usec"]
                     report["last_sampled_containers"] = dict(snapshots)
-                    cpu_delta(previous, current, 600)
-                    cpu_delta(dict.fromkeys(current, 0), current, 600)
+                    cpu_delta(previous, current, 40 if service_initial else 600)
+                    cpu_delta(dict.fromkeys(current, 0), current, 60 if service_initial else 600)
+                    if service_initial:
+                        cpu_delta(before, current, 40)
+                        if sum(current.values()) + canary_resources["cpu_usec"] > 70_000_000:
+                            raise ProofFailure("cpu_budget")
                     previous = current
                     time.sleep(0.1)
                 if time.monotonic() >= command_deadline:
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
-                report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
+                report["workload_wall_seconds" if service_initial else "micro_wall_seconds"] = round(
+                    time.monotonic() - micro_started, 3
+                )
+            except (ProofFailure, ValueError, OSError):
+                if service_initial:
+                    cancel_workload()
+                raise
             finally:
                 if child.poll() is None:
+                    if service_initial:
+                        cancel_workload()
                     os.killpg(child.pid, signal.SIGKILL)
-                    child.wait(timeout=2)
-        command_deadline = started + 900
+                    try:
+                        child.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        if service_initial:
+                            report["specimen_client_reap"] = "unverified"
+                        raise ProofFailure("client_reap_unverified") from None
+                if service_initial:
+                    if type(child.returncode) is not int:
+                        raise ProofFailure("specimen_exit_unverified")
+                    report["specimen_returncode"] = child.returncode
+                    report["specimen_client_reap"] = "verified"
+        command_deadline = time.monotonic() + 5 if service_initial else started + 900
+        if service_initial:
+            report["phase"] = "service_final_readback"
         # Containers remain alive: read final cgroup events after workload exit.
         final = {
             role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
             for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
         }
-        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
-        final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
-        report["lifetime_cpu_usec"] = lifetime_cpu
-        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
-            raise ProofFailure("cpu_budget")
-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
-        report["containers"] = final
-        micro = micro_result(
-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
-            single_record=single_record,
+        cpu_delta(
+            previous, {role: value["cpu_usec"] for role, value in final.items()},
+            40 if service_initial else 600,
         )
-        report["micro"] = micro
-        if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
-            raise ProofFailure("cpu_accounting_disagrees")
-        report["phase"] = "micro_complete"
-        report["status"] = "micro_passed_not_capacity"
+        final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
+        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 60 if service_initial else 600)
+        report["lifetime_cpu_usec"] = lifetime_cpu
+        if lifetime_cpu + canary_resources["cpu_usec"] > (70_000_000 if service_initial else 600_000_000):
+            raise ProofFailure("cpu_budget")
+        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 40 if service_initial else 600)
+        report["containers"] = final
+        if service_initial:
+            report["workload_cpu_usec_by_role"] = {
+                role: final_cpu[role] - before[role] for role in before
+            }
+            report["service"] = service_result(
+                execute(["docker", "exec", ids[1], "cat", SERVICE_REPORT])
+            )
+            if time.monotonic() >= command_deadline:
+                raise ProofFailure("final_readback_deadline")
+            report["phase"] = "service_complete"
+            report["status"] = "service_initial_passed_not_postgresql_or_capacity"
+        else:
+            micro = micro_result(
+                execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+                single_record=single_record,
+            )
+            report["micro"] = micro
+            if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
+                raise ProofFailure("cpu_accounting_disagrees")
+            report["phase"] = "micro_complete"
+            report["status"] = "micro_passed_not_capacity"
     except (ProofFailure, ValueError, OSError) as error:
+        if service_initial:
+            cancel_workload()
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
         if isinstance(error, ProofFailure) and error.returncode is not None:
             report["client_returncode"] = error.returncode
@@ -802,6 +1110,8 @@ def supervise(
                     else "invalid_evidence"
                 )
     finally:
+        if service_initial:
+            command_deadline = time.monotonic() + 35
         try:
             for role in ("canary", "db", "worker"):
                 cidfile = owned.with_suffix(f".{role}.cid")
@@ -810,10 +1120,16 @@ def supervise(
                     if cid not in ids:
                         ids.append(cid)
             if owned.with_suffix(".owner.json").exists():
-                for cid in reconcile_owned(owned):
+                discovered = (
+                    reconcile_owned(owned, execute) if service_initial else reconcile_owned(owned)
+                )
+                for cid in discovered:
                     if cid not in ids:
                         ids.append(cid)
-            remove_owned(ids)
+            if service_initial:
+                remove_owned(ids, execute)
+            else:
+                remove_owned(ids)
             if creation_uncertain:
                 raise ProofFailure("creation_outcome_uncertain")
             report["cleanup"] = "verified_absent"
@@ -823,8 +1139,12 @@ def supervise(
         report["elapsed_seconds"] = round(time.monotonic() - started, 3)
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
-    if report["status"] != "micro_passed_not_capacity":
-        raise ProofFailure("micro_unqualified")
+    wanted_status = (
+        "service_initial_passed_not_postgresql_or_capacity" if service_initial
+        else "micro_passed_not_capacity"
+    )
+    if report["status"] != wanted_status:
+        raise ProofFailure("service_unqualified" if service_initial else "micro_unqualified")
 
 
 def main() -> None:
@@ -834,7 +1154,9 @@ def main() -> None:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--owned", type=Path, required=True)
-    parser.add_argument("--single-record-feasibility", action="store_true")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--single-record-feasibility", action="store_true")
+    modes.add_argument("--service-initial", action="store_true")
     args = parser.parse_args()
     try:
         supervise(
@@ -844,6 +1166,7 @@ def main() -> None:
             args.evidence,
             args.owned,
             single_record=args.single_record_feasibility,
+            service_initial=args.service_initial,
         )
     except ProofFailure:
         raise SystemExit(1) from None

@@ -325,7 +325,7 @@ conflicts were additive changelog/state sections; both histories were retained.
       27 aggregate controls, 2,375 Python checks (14 explicit skips), 773 frontend
       checks and retry-free 20 sync/order, 9 cutover and 5 clock repetitions.
 - [x] [Runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739626)
-      passed 11 checks, named-volume restart/restore and two PostgreSQL18
+      passed 11 checks, named-volume restart/restore and two PostgreSQL 18
       asset-aware recovery scenarios. Native ARM64 execution passed in 0.265133s;
       all three builds passed. [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739673)
       passed with zero findings.
@@ -1455,3 +1455,10 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
 - No new operator action is needed for this test-only instrumentation. Existing
   maximum quote capacity, recovery, physical-device and activation gates remain
   open. See the [diagnostic scope and evidence](docs/10-spec-development/2026-10-16-bounded-restart-diagnostics.md).
+
+
+## Contained service preparation (2026-10-17)
+
+Unexecuted local preparation. Do not publish the fixed service-trigger branch until its independent guard prerequisite and exact service tree are accepted: a push launches the workload immediately. Do not open a PR merely to store the package, because ordinary CI also runs. A consumed/skipped first run stops without renaming or counter changes.
+
+Do not combine frozen service writes with schema 0013 unchanged: explicit effect-version write/replay handling is required. Real PostgreSQL migration, restore and resource evidence remain pending. SQLite service passes would establish only the named functional cases, not capacity, safe activation or physical readiness.
