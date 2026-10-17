@@ -46,17 +46,23 @@ def test_version_one_binds_both_measured_raw_copies_and_replays(database, actors
     with Session(database) as session:
         execute(session, actors, creation())
         applied = execute(session, actors, decision())
-        versions = list(session.scalars(select(QuoteOperationRecord.order_effect_version).order_by(
-            QuoteOperationRecord.ordinal
-        )))
+        versions = list(
+            session.scalars(
+                select(QuoteOperationRecord.order_effect_version).order_by(
+                    QuoteOperationRecord.ordinal
+                )
+            )
+        )
         assert versions == [None, 1] and type(versions[1]) is int
         projection = measured[-1]
-        change = session.execute(select(
-            cast(ChangeRecord.payload, Text), ChangeRecord.order_payload_raw_octets
-        )).one()
-        outbox = session.execute(select(
-            cast(OutboxRecord.payload, Text), OutboxRecord.order_payload_raw_octets
-        ).where(OutboxRecord.aggregate_type == "service_order")).one()
+        change = session.execute(
+            select(cast(ChangeRecord.payload, Text), ChangeRecord.order_payload_raw_octets)
+        ).one()
+        outbox = session.execute(
+            select(cast(OutboxRecord.payload, Text), OutboxRecord.order_payload_raw_octets).where(
+                OutboxRecord.aggregate_type == "service_order"
+            )
+        ).one()
         assert change == outbox == (projection.raw_json, projection.raw_octets)
         assert len(change[0].encode("utf-8")) == change[1]
         assert json.loads(change[0]) == dict(projection.payload)
@@ -111,9 +117,7 @@ def test_exhausted_version_refuses_new_enrollment_but_preserves_replay(
             original = QuoteRepository(session).apply(creation(), recorded_at=NOW)
             session.commit()
     with database.begin() as connection:
-        connection.execute(text(
-            "UPDATE service_orders SET version=2147483647 WHERE id='order-a'"
-        ))
+        connection.execute(text("UPDATE service_orders SET version=2147483647 WHERE id='order-a'"))
     writes = []
 
     def forbidden(*_args, **_kwargs):
@@ -180,9 +184,9 @@ def test_historical_replay_does_not_hydrate_oversized_current_text(database, act
         repository.apply(decision(), recorded_at=NOW)
         session.commit()
     with database.begin() as connection:
-        connection.execute(text(
-            "UPDATE service_orders SET diagnosis = repeat('é', 131073) WHERE id = 'order-a'"
-        ))
+        connection.execute(
+            text("UPDATE service_orders SET diagnosis = repeat('é', 131073) WHERE id = 'order-a'")
+        )
 
     def forbidden(*_args, **_kwargs):
         pytest.fail("exact quote-only replay hydrated current Text")
@@ -192,9 +196,14 @@ def test_historical_replay_does_not_hydrate_oversized_current_text(database, act
         result = execute(session, actors, decision(), enabled=False)
         assert result["receipt"]["effects"]["kind"] == "quote_only"
         assert totals(session) == (2, 0, 0, 2)
-        assert session.scalar(select(QuoteOperationRecord.order_effect_version).where(
-            QuoteOperationRecord.kind == "decision"
-        )) is None
+        assert (
+            session.scalar(
+                select(QuoteOperationRecord.order_effect_version).where(
+                    QuoteOperationRecord.kind == "decision"
+                )
+            )
+            is None
+        )
 
 
 @pytest.mark.parametrize("version", [None, 0, 2, -1, True, "1"])
@@ -226,10 +235,13 @@ def test_invalid_version_refuses_before_generic_payload_fetch(
 @pytest.mark.parametrize("value", ["infinity", "-infinity", "10000-01-01 00:00:00+00"])
 def test_order_timestamp_guard_refuses_before_driver_conversion(database, actors, value):
     with database.begin() as connection:
-        connection.execute(text(
-            "UPDATE service_orders SET created_at = CAST(:value AS timestamptz) "
-            "WHERE id = 'order-a'"
-        ), {"value": value})
+        connection.execute(
+            text(
+                "UPDATE service_orders SET created_at = CAST(:value AS timestamptz) "
+                "WHERE id = 'order-a'"
+            ),
+            {"value": value},
+        )
     with Session(database) as session:
         with pytest.raises(QuoteServiceError, match="quote_integrity_failed"):
             execute(session, actors, creation())
@@ -266,10 +278,13 @@ def test_source_utf8_boundary_is_checked_before_enrollment(database, monkeypatch
     limit = 32
     source = "é🚲" + "x" * (limit - 7 + delta)
     with database.begin() as connection:
-        connection.execute(text(
-            "UPDATE service_orders SET reported_problem=:source, priority='n', "
-            "intake_condition=NULL, accessories=NULL, diagnosis=NULL WHERE id='order-a'"
-        ), {"source": source})
+        connection.execute(
+            text(
+                "UPDATE service_orders SET reported_problem=:source, priority='n', "
+                "intake_condition=NULL, accessories=NULL, diagnosis=NULL WHERE id='order-a'"
+            ),
+            {"source": source},
+        )
     monkeypatch.setattr(repository_module, "ORDER_SOURCE_MAX_BYTES", limit)
     with Session(database) as session:
         admitted(session)
@@ -285,9 +300,11 @@ def test_two_transition_claims_refuse_before_generic_payload_fetch(database, act
     with Session(database) as session:
         execute(session, actors, creation())
         execute(session, actors, decision())
-        effect = _order_effects(session.scalar(select(QuoteOperationRecord).where(
-            QuoteOperationRecord.kind == "decision"
-        )))
+        effect = _order_effects(
+            session.scalar(
+                select(QuoteOperationRecord).where(QuoteOperationRecord.kind == "decision")
+            )
+        )
 
     def duplicated(_operation):
         return effect
@@ -360,9 +377,9 @@ def test_order_row_lock_is_retained_during_prepare_and_persist(database, actors,
     def assert_locked(phase):
         with database.connect() as contender:
             with pytest.raises(DBAPIError) as error:
-                contender.execute(text(
-                    "SELECT id FROM service_orders WHERE id='order-a' FOR UPDATE NOWAIT"
-                ))
+                contender.execute(
+                    text("SELECT id FROM service_orders WHERE id='order-a' FOR UPDATE NOWAIT")
+                )
             assert error.value.orig.sqlstate == "55P03"
             contender.rollback()
             observed.append(phase)
@@ -384,13 +401,15 @@ def test_order_row_lock_is_retained_during_prepare_and_persist(database, actors,
 
 def test_small_compressed_text_is_refused_by_length_without_hydration(database, monkeypatch):
     with database.begin() as connection:
-        connection.execute(text(
-            "UPDATE service_orders SET diagnosis=repeat('é',8192) WHERE id='order-a'"
-        ))
-        compressed, actual = connection.execute(text(
-            "SELECT pg_column_size(diagnosis), octet_length(diagnosis) "
-            "FROM service_orders WHERE id='order-a'"
-        )).one()
+        connection.execute(
+            text("UPDATE service_orders SET diagnosis=repeat('é',8192) WHERE id='order-a'")
+        )
+        compressed, actual = connection.execute(
+            text(
+                "SELECT pg_column_size(diagnosis), octet_length(diagnosis) "
+                "FROM service_orders WHERE id='order-a'"
+            )
+        ).one()
         assert compressed < actual == 16384
     statements = []
 
@@ -411,28 +430,33 @@ def test_small_compressed_text_is_refused_by_length_without_hydration(database, 
             statement for statement in statements if "pg_catalog.octet_length" in statement
         )
         assert length_query.count("OPERATOR(pg_catalog.+)") == 4
-        scalar_query = next(
-            statement for statement in statements if " AS created_at" in statement
-        )
+        scalar_query = next(statement for statement in statements if " AS created_at" in statement)
         assert "pg_catalog.isfinite" in scalar_query
         assert "OPERATOR(pg_catalog.>=)" in scalar_query
         assert "OPERATOR(pg_catalog.<=)" in scalar_query
         assert totals(session) == (0, 0, 0, 0)
     with database.connect() as connection:
-        assert connection.scalar(text(
-            "SELECT octet_length(diagnosis) FROM service_orders WHERE id='order-a'"
-        )) == 16384
-        assert connection.scalar(text(
-            "SELECT diagnosis FROM service_orders WHERE id='order-a'"
-        )) == "é" * 8192
+        assert (
+            connection.scalar(
+                text("SELECT octet_length(diagnosis) FROM service_orders WHERE id='order-a'")
+            )
+            == 16384
+        )
+        assert (
+            connection.scalar(text("SELECT diagnosis FROM service_orders WHERE id='order-a'"))
+            == "é" * 8192
+        )
 
 
-@pytest.mark.parametrize("field,value", [
-    ("raw_json", "{}"),
-    ("raw_octets", 1),
-    ("canonical_utf8", b"{}"),
-    ("payload", {"version": True}),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("raw_json", "{}"),
+        ("raw_octets", 1),
+        ("canonical_utf8", b"{}"),
+        ("payload", {"version": True}),
+    ],
+)
 def test_bypassed_prepared_projection_refuses_before_any_write(
     database, actors, monkeypatch, field, value
 ):

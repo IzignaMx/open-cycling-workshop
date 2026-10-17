@@ -104,18 +104,21 @@ def seed_effect_dependencies(engine):
 
 
 def effect_values(**changes):
-    return operation_values(
-        operation_id="new",
-        kind="decision",
-        decision_id="new",
-        ordinal=3,
-        resulting_decision_sequence=2,
-        quote_outbox_id="quote-outbox",
-        order_event_id="order-event",
-        resulting_order_version=2,
-        change_cursor=100,
-        order_outbox_id="order-outbox",
-    ) | changes
+    return (
+        operation_values(
+            operation_id="new",
+            kind="decision",
+            decision_id="new",
+            ordinal=3,
+            resulting_decision_sequence=2,
+            quote_outbox_id="quote-outbox",
+            order_event_id="order-event",
+            resulting_order_version=2,
+            change_cursor=100,
+            order_outbox_id="order-outbox",
+        )
+        | changes
+    )
 
 
 def assert_generated_schema(engine):
@@ -157,7 +160,8 @@ def test_empty_upgrade_has_generated_dialect_schema(identity_migration_database)
     command.upgrade(config, "head")
     assert_generated_schema(engine)
     version = next(
-        column for column in inspect(engine).get_columns("quote_operations")
+        column
+        for column in inspect(engine).get_columns("quote_operations")
         if column["name"] == "order_effect_version"
     )
     assert version["nullable"] is True and version["default"] is None
@@ -187,15 +191,22 @@ def test_seeded_upgrade_preserves_bytes_and_regenerates_counts(identity_migratio
             connection.scalars(text("SELECT order_effect_version FROM quote_operations"))
         ) == {None}
         for table, _ in PAIRS:
-            row = connection.execute(text(
-                f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
-                "WHERE order_payload_raw_octets IS NOT NULL"
-            )).one()
+            row = connection.execute(
+                text(
+                    f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
+                    "WHERE order_payload_raw_octets IS NOT NULL"
+                )
+            ).one()
             assert row == (RAW, len(RAW.encode("utf-8")))
-        assert connection.scalar(text(
-            "SELECT count(*) FROM outbox_events WHERE aggregate_type='quote' "
-            "AND order_payload_raw_octets IS NOT NULL"
-        )) == 0
+        assert (
+            connection.scalar(
+                text(
+                    "SELECT count(*) FROM outbox_events WHERE aggregate_type='quote' "
+                    "AND order_payload_raw_octets IS NOT NULL"
+                )
+            )
+            == 0
+        )
     changed = '{"x":"éé"}'
     cast = "CAST(:raw AS JSON)" if engine.dialect.name == "postgresql" else ":raw"
     with engine.begin() as connection:
@@ -215,10 +226,12 @@ def test_seeded_upgrade_preserves_bytes_and_regenerates_counts(identity_migratio
         )
     with engine.connect() as connection:
         for table, discriminator in PAIRS:
-            assert connection.scalar(text(
-                f"SELECT order_payload_raw_octets FROM {table} "
-                f"WHERE {discriminator}='service_order'"
-            )) == len(changed.encode("utf-8"))
+            assert connection.scalar(
+                text(
+                    f"SELECT order_payload_raw_octets FROM {table} "
+                    f"WHERE {discriminator}='service_order'"
+                )
+            ) == len(changed.encode("utf-8"))
     for table, _ in PAIRS:
         with pytest.raises(DBAPIError), engine.begin() as connection:
             connection.execute(text(f"UPDATE {table} SET order_payload_raw_octets=0"))
@@ -298,9 +311,12 @@ def test_effect_version_constraint_retains_dependencies_and_immutability(
         with pytest.raises(IntegrityError), engine.begin() as connection:
             connection.execute(text(statement))
     with engine.connect() as connection:
-        assert connection.scalar(text(
-            "SELECT order_effect_version FROM quote_operations WHERE operation_id='new'"
-        )) == 1
+        assert (
+            connection.scalar(
+                text("SELECT order_effect_version FROM quote_operations WHERE operation_id='new'")
+            )
+            == 1
+        )
     before = snapshot(engine)
     with pytest.raises(RuntimeError, match="forward-only"):
         command.downgrade(config, "0012")
@@ -377,14 +393,21 @@ def test_real_logical_restore_recomputes_generated_counts(disposable_databases, 
         assert snapshot(target) == before
         assert_generated_schema(target)
         with target.connect() as connection:
-            assert connection.scalar(text(
-                "SELECT order_effect_version FROM quote_operations WHERE operation_id='new'"
-            )) == 1
+            assert (
+                connection.scalar(
+                    text(
+                        "SELECT order_effect_version FROM quote_operations WHERE operation_id='new'"
+                    )
+                )
+                == 1
+            )
             for table, discriminator in PAIRS:
-                row = connection.execute(text(
-                    f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
-                    f"WHERE {discriminator}='service_order'"
-                )).one()
+                row = connection.execute(
+                    text(
+                        f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
+                        f"WHERE {discriminator}='service_order'"
+                    )
+                ).one()
                 assert row == (RAW, len(RAW.encode("utf-8")))
         # This is schema/base-value preservation. It deliberately does NOT call
         # these toy payloads valid quote effects or qualify restore/replay service.
@@ -397,12 +420,20 @@ def test_real_logical_restore_recomputes_generated_counts(disposable_databases, 
 @pytest.mark.parametrize(
     "fault",
     [
-        "mutable", "wrong_type", "wrong_expression", "wrong_discriminator",
-        "jsonb", "virtual", "inherited",
+        "mutable",
+        "wrong_type",
+        "wrong_expression",
+        "wrong_discriminator",
+        "jsonb",
+        "virtual",
+        "inherited",
     ],
 )
 def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
-    identity_migration_database, table, discriminator, fault,
+    identity_migration_database,
+    table,
+    discriminator,
+    fault,
 ):
     from cycling_workshop.db.order_payload_size import (
         OrderPayloadCountSchemaError,
@@ -417,9 +448,9 @@ def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
         require_order_payload_count_schema(connection)
         connection.execute(text(f"ALTER TABLE {table} DROP COLUMN order_payload_raw_octets"))
         if fault == "jsonb":
-            connection.execute(text(
-                f"ALTER TABLE {table} ALTER COLUMN payload TYPE JSONB USING payload::jsonb"
-            ))
+            connection.execute(
+                text(f"ALTER TABLE {table} ALTER COLUMN payload TYPE JSONB USING payload::jsonb")
+            )
         if fault == "mutable":
             declaration = "BIGINT"
         else:

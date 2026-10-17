@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased · Retained bounded-effects test formatting
+
+- Preserve run 39059789509 and apply its next 18 complete reviewed test-format hunks.
+- Exclude the incomplete metadata hunk and unseen output; validation remains pending.
+
 ## Unreleased · Retained bounded-effects formatter changes
 
 - Record repository/lint passes and formatter output-cap failure in run 39057919833.

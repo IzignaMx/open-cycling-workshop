@@ -2,13 +2,15 @@ schema: 1
 
 bounded_effects_static_20261017:
   status: failed_formatter_output_cap_partial_correction_pending
-  run_id: 39057919833
-  source_commit: 3ef85d1947be9bf2f65e4f3440cf5b40633bf757
-  previous_failed_runs: [39056889116, 39057515145]
+  run_id: 39059789509
+  source_commit: f40900551f4510819baa907bf7defbbc1eb4737a
+  previous_failed_runs: [39056889116, 39057515145, 39057919833]
   lint_diagnostics: 0
   formatter_output_bytes: 16384
   formatter_output_truncated: true
-  complete_retained_file_sections_applied: 6
+  earlier_complete_file_sections_applied: 6
+  next_complete_hunks_applied: 18
+  incomplete_metadata_hunk: excluded
   later_commands: unrun
   fixed_commands: 6
   source_paths: 38
