@@ -1,5 +1,10 @@
 # Changelog
 
+## Quote finite service semantics evidence · 2026-10-17
+
+- Verify 40 actual PostgreSQL cases and six selection mocks in run 39077801165, including complete decisions/replay, reached-write rollback, synthetic commit ambiguity, payload checks and small observed-lock races. Independent source/identity/resource/cleanup review passed.
+- Preserve the overall failed result: repository passed, Ruff found one import-order issue, and four later static commands were unrun. Prepare only the import correction and static-six verification under unchanged limits.
+
 ## Quote semantic closure preparation · 2026-10-17
 
 - Prepare 40 finite service decision, retained-payload, reached-write atomicity and small PostgreSQL race cases with reviewed designs and unchanged resource limits. Product and schema behavior remain unchanged.

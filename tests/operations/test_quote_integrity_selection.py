@@ -1139,6 +1139,8 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         + JUNIT_COUNTS["selection_static12"]
         == 52
     )
+    assert combined.SEMANTIC_STYLE_BRANCH == "refs/heads/codex/quote-semantic-style-checks"
+    assert combined.SEMANTIC_STYLE_WORKFLOW == ".github/workflows/quote-semantic-style-checks.yml"
     assert combined.SEMANTIC_BRANCH == "refs/heads/codex/quote-semantic-closure-checks"
     assert combined.SEMANTIC_WORKFLOW == ".github/workflows/quote-semantic-closure-checks.yml"
     assert combined.LOADER_BRANCH == "refs/heads/codex/quote-loader-writer-checks"
@@ -1162,6 +1164,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         (combined.LOADER_STATIC_BRANCH, combined.LOADER_STATIC_WORKFLOW),
         (combined.LOADER_FORMAT_BRANCH, combined.LOADER_FORMAT_WORKFLOW),
         (combined.SEMANTIC_BRANCH, combined.SEMANTIC_WORKFLOW),
+        (combined.SEMANTIC_STYLE_BRANCH, combined.SEMANTIC_STYLE_WORKFLOW),
     )
     for group, module in modules.items():
         for branch, workflow in branches:
@@ -1176,6 +1179,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
                         combined.FORMAT_BRANCH,
                         combined.LOADER_STATIC_BRANCH,
                         combined.LOADER_FORMAT_BRANCH,
+                        combined.SEMANTIC_STYLE_BRANCH,
                     )
                     and group == "static6"
                 )

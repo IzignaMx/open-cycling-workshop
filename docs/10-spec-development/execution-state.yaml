@@ -1,10 +1,21 @@
 schema: 1
 
 quote_semantic_closure_20261017:
-  status: implemented_pending_evidence
+  status: postgres_and_mock_passed_static_failed_independently_reviewed
+  run_id: 39077801165
+  source_commit: f5066d0056322ea1845bbfded24924e4ac90e8ae
+  source_tree: c4fbd6c163722e192cd4663086deddfa6015c422
+  postgres_cases_passed: 40
+  postgres_phases_passed: 120
+  mock_cases_passed: 6
+  repository_check: passed
+  static_result: Ruff_one_I001_later_four_commands_unrun
+  cleanup: all_seven_primary_and_independent_absence_verified
+  postgres_workload_seconds: [7.112, 6.844, 7.173, 4.708, 8.945, 6.950]
+  correction: import_only_and_static_six_pending
   design: independently_reviewed
   exact_implementation_review: independently_reviewed
-  runtime: unexecuted
+  runtime: partial_failed_static
   postgres_group_cases: [7, 7, 7, 6, 8, 5]
   combined_mock_static_cases: 12
   total_selected_checks: 52

@@ -1,8 +1,8 @@
 # Finite quote service semantic closure
 
-Status: test-only preparation. Designs and exact implementation have independent review; collection, static checks and hosted execution remain pending. No product behavior or schema change is proposed.
+Status: all 40 PostgreSQL cases and six selection mocks passed with independent evidence review. Repository contract passed; Ruff failed one import-order finding, and four later static commands were unrun. The narrow correction and static-only verification are pending. No product behavior or schema change is proposed.
 
-## Acceptance and bounded selection
+## Historical preparation plan: acceptance and bounded selection
 
 This planned selection targets the remaining narrow service and retained-effect cases identified after the [32 PostgreSQL loader/writer cases and static closure](2026-10-17-quote-loader-writer-checks.md). It follows the complete integrity requirements in the [bounded-effects amendment](../02-technical-architecture/2026-10-17-bounded-quote-order-effects.md), especially sections 6 and 8. Existing PARTIAL, metadata, migration and tiny valid restore evidence remains separately source-bound.
 
@@ -29,3 +29,13 @@ The new modules reuse the existing pre-service PostgreSQL identity fixture: Post
 Passing this finite selection would not close the complete candidate integration suite. The final intended integration tree still needs affected reconstruction/oracle/repository, migration, sync/outbox, cutover and backup regressions, plus the relevant SQLite surrogate checks. Full-history integrity validation before recovery reopening remains an explicit implementation gap; the earlier valid logical restore does not establish that gate.
 
 Capacity, normal-use latency and contention budgets, a verified total Python deadline, actual network cancellation, ingress/adoption, HTTP/TypeScript/UI and physical/operator installation remain separate. Preserve failed experiments 51 and 56 and the unknown original restart cause. This preparation does not mount routes, grant real permissions, activate commands or deploy.
+
+## Observed finite result and import-only correction
+
+[Run 39077801165](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39077801165), first run/attempt, tested commit `f5066d0056322ea1845bbfded24924e4ac90e8ae`, tree `c4fbd6c163722e192cd4663086deddfa6015c422`. All six PostgreSQL workloads passed 40 cases and 120 ordered phases, with 40 distinct actual PostgreSQL 18.4 / psycopg 3.3.4 / UTF8 / revision-0013 identities. Independent review verified source bindings, serialized jobs, canaries, client reap, primary cleanup and independent absence for all seven jobs.
+
+Workload durations were 7.112 / 6.844 / 7.173 / 4.708 / 8.945 / 6.950 seconds for decision, identity mismatch, content mismatch, storage, atomicity and race groups respectively. These are complete small-fixture workload measurements, not product latency or capacity qualifications. The narrow race assertions observed the intended live lock waits before releasing participants. The acknowledgement-loss case injected an exception after a real successful commit; it does not simulate a network outage. Successful service bodies do not exercise failure-path specimen cancellation; the separate real canary remains its own evidence.
+
+The PostgreSQL artifacts are `12117797076`, `12117747255`, `12116864750`, `12117722448`, `12117438699` and `12117284468` in the same order. The combined artifact `12118320104` preserves six passing selection mocks and a passing repository check, followed by one complete 178-byte Ruff I001 import-order finding in `test_quote_service_races_postgres.py`. Formatting, production types, OpenAPI and generated client were unrun. The workflow therefore failed and is not 52 passing checks. The failed combined report has no final worker resource counters; none are inferred from sampled values or pass markers.
+
+The correction combines only the split ordinary imports from `test_quote_application_service`, preserving the explicit fixture re-export and all function bodies. A new literal `codex/quote-semantic-style-checks` / `.github/workflows/quote-semantic-style-checks.yml` pair selects only the existing six static commands in the proven controller. Refresh the affected source pins and preserve all consumed workflows, PostgreSQL controller and budgets. Exact correction review is complete; execution remains pending. The added mock branch vectors are prepared but are not executed by this static-six-only follow-on. No functional or mock workload is repeated by this static-only correction; broader integration and activation gates remain open.

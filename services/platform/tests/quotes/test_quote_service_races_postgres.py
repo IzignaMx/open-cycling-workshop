@@ -17,9 +17,8 @@ from cycling_workshop.tenancy.models import OrganizationRecord
 from sqlalchemy import event, select, text
 from sqlalchemy.orm import Session
 from test_identity_migration import identity_migration_database as identity_migration_database
-from test_quote_application_service import GRANTS
+from test_quote_application_service import GRANTS, execute, totals
 from test_quote_application_service import actors as actors
-from test_quote_application_service import execute, totals
 from test_quote_application_service_postgres import postgres_identity as postgres_identity
 from test_quote_repository import creation, decision
 from test_quote_repository import database as database
