@@ -20,7 +20,12 @@ from cycling_workshop.quotes.commands import (
 )
 from cycling_workshop.quotes.decisions import DecisionCommand, DecisionEvidence
 from cycling_workshop.quotes.domain import LaborLine
-from cycling_workshop.quotes.reconstruction import advance, event_payload, event_type, logical_record
+from cycling_workshop.quotes.reconstruction import (
+    advance,
+    event_payload,
+    event_type,
+    logical_record,
+)
 from cycling_workshop.quotes.service import QuoteDeadline, QuoteService
 from cycling_workshop.quotes.storage import (
     decode_entry,
@@ -277,7 +282,9 @@ def test_valid_quote_only_0012_upgrade_replays_without_inventing_transition(
         for name in ("sync_changes", "outbox_events"):
             assert "order_payload_raw_octets" not in tables[name].c
         users = Table("users", MetaData(), autoload_with=connection, resolve_fks=False)
-        organizations = Table("organizations", MetaData(), autoload_with=connection, resolve_fks=False)
+        organizations = Table(
+            "organizations", MetaData(), autoload_with=connection, resolve_fks=False
+        )
         connection.execute(
             users.update().where(users.c.id == "actor-a").values(capabilities=sorted(GRANTS))
         )
@@ -305,7 +312,9 @@ def test_valid_quote_only_0012_upgrade_replays_without_inventing_transition(
         assert versions == [None, None]
         persisted = connection.execute(
             select(users.c.session_version, users.c.capabilities, organizations.c.dataset_incarnation)
-            .select_from(users.join(organizations, users.c.organization_id == organizations.c.id))
+            .select_from(
+                users.join(organizations, users.c.organization_id == organizations.c.id)
+            )
             .where(users.c.id == "actor-a", organizations.c.id == "a")
         ).one()
         assert frozenset(persisted.capabilities) == GRANTS
@@ -341,7 +350,12 @@ def test_valid_quote_only_0012_upgrade_replays_without_inventing_transition(
         assert legacy_snapshot(connection, tables) == before
         assert tuple(
             connection.scalar(select(func.count()).select_from(tables[name]))
-            for name in ("quote_operations", "service_order_events", "sync_changes", "outbox_events")
+            for name in (
+                "quote_operations",
+                "service_order_events",
+                "sync_changes",
+                "outbox_events",
+            )
         ) == (2, 0, 0, 2)
         versions = connection.scalars(
             text("SELECT order_effect_version FROM quote_operations ORDER BY ordinal")

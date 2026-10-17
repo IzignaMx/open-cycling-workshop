@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · Bounded-effects source diagnostic corrections
+
+- Preserve failed static run 39056889116 and its complete 35-issue Ruff output.
+- Prepare directly diagnosed source repairs for unchanged bounded static checks.
+- Types, contracts and all new runtime evidence remain pending.
+- [Scope](docs/10-spec-development/2026-10-17-bounded-effects-source-repair.md).
+
 ## Unreleased · Joint bounded-effects static qualification preparation
 
 - Reuse the proven six-command contained profile across 38 Python paths and 13 type roots.

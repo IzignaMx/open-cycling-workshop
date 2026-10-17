@@ -23,8 +23,8 @@ from cycling_workshop.quotes.service import _persist_order_effect
 from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
 from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
 from cycling_workshop.sync.models import ChangeRecord
-from cycling_workshop.sync.projections import order_payload
 from cycling_workshop.sync.order_projection_integrity import encode_order_projection
+from cycling_workshop.sync.projections import order_payload
 from cycling_workshop.sync.writes import append_change
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session

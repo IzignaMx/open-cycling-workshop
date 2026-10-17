@@ -190,9 +190,10 @@ def _lexical_preflight(raw: str) -> None:
             while end < len(raw) and raw[end] not in ' \t\r\n,:{}[]"':
                 end += 1
             token = raw[index:end]
-            if token not in ("null", "true", "false"):
-                if len(token) > 11 or _INTEGER.fullmatch(token) is None:
-                    raise OrderProjectionIntegrityError("order projection integer lexeme required")
+            if token not in ("null", "true", "false") and (
+                len(token) > 11 or _INTEGER.fullmatch(token) is None
+            ):
+                raise OrderProjectionIntegrityError("order projection integer lexeme required")
             index = end
             continue
         index += 1

@@ -87,7 +87,9 @@ def test_preflight_precedes_json_loads(monkeypatch):
 
 
 @pytest.mark.parametrize("offset", [-1, 0, 1])
-@pytest.mark.parametrize("limit_name", ["ORDER_SOURCE_MAX_BYTES", "ORDER_CANONICAL_MAX_BYTES", "ORDER_RAW_MAX_BYTES"])
+@pytest.mark.parametrize(
+    "limit_name", ["ORDER_SOURCE_MAX_BYTES", "ORDER_CANONICAL_MAX_BYTES", "ORDER_RAW_MAX_BYTES"]
+)
 def test_each_byte_boundary(monkeypatch, offset, limit_name):
     payload = projection()
     prepared = codec.encode_order_projection(payload)

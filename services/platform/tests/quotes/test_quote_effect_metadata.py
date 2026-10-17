@@ -162,7 +162,8 @@ def test_empty_upgrade_has_generated_dialect_schema(identity_migration_database)
     )
     assert version["nullable"] is True and version["default"] is None
     assert "ck_quote_operation_effect_version" in {
-        constraint["name"] for constraint in inspect(engine).get_check_constraints("quote_operations")
+        constraint["name"]
+        for constraint in inspect(engine).get_check_constraints("quote_operations")
     }
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0013"
@@ -182,7 +183,9 @@ def test_seeded_upgrade_preserves_bytes_and_regenerates_counts(identity_migratio
     assert before == after
     assert_generated_schema(engine)
     with engine.connect() as connection:
-        assert set(connection.scalars(text("SELECT order_effect_version FROM quote_operations"))) == {None}
+        assert set(
+            connection.scalars(text("SELECT order_effect_version FROM quote_operations"))
+        ) == {None}
         for table, _ in PAIRS:
             row = connection.execute(text(
                 f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
@@ -196,13 +199,25 @@ def test_seeded_upgrade_preserves_bytes_and_regenerates_counts(identity_migratio
     changed = '{"x":"éé"}'
     cast = "CAST(:raw AS JSON)" if engine.dialect.name == "postgresql" else ":raw"
     with engine.begin() as connection:
-        connection.execute(text(f"UPDATE sync_changes SET payload={cast} WHERE cursor=100"), {"raw": changed})
-        connection.execute(text(f"UPDATE outbox_events SET payload={cast} WHERE event_id='order-outbox'"), {"raw": changed})
-        connection.execute(text("UPDATE outbox_events SET attempts=3, published_at=:now WHERE event_id='order-outbox'"), {"now": NOW})
+        connection.execute(
+            text(f"UPDATE sync_changes SET payload={cast} WHERE cursor=100"), {"raw": changed}
+        )
+        connection.execute(
+            text(f"UPDATE outbox_events SET payload={cast} WHERE event_id='order-outbox'"),
+            {"raw": changed},
+        )
+        connection.execute(
+            text(
+                "UPDATE outbox_events SET attempts=3, published_at=:now "
+                "WHERE event_id='order-outbox'"
+            ),
+            {"now": NOW},
+        )
     with engine.connect() as connection:
         for table, discriminator in PAIRS:
             assert connection.scalar(text(
-                f"SELECT order_payload_raw_octets FROM {table} WHERE {discriminator}='service_order'"
+                f"SELECT order_payload_raw_octets FROM {table} "
+                f"WHERE {discriminator}='service_order'"
             )) == len(changed.encode("utf-8"))
     for table, _ in PAIRS:
         with pytest.raises(DBAPIError), engine.begin() as connection:
@@ -234,12 +249,18 @@ def test_legacy_populated_tuple_refuses_before_any_ddl(identity_migration_databa
         event.remove(engine.__class__, "before_cursor_execute", observed)
     assert not any(statement.lstrip().upper().startswith("ALTER TABLE") for statement in statements)
     assert snapshot(engine) == before
-    assert "order_effect_version" not in {column["name"] for column in inspect(engine).get_columns("quote_operations")}
+    assert "order_effect_version" not in {
+        column["name"] for column in inspect(engine).get_columns("quote_operations")
+    }
     for table, _ in PAIRS:
-        assert "order_payload_raw_octets" not in {column["name"] for column in inspect(engine).get_columns(table)}
+        assert "order_payload_raw_octets" not in {
+            column["name"] for column in inspect(engine).get_columns(table)
+        }
 
 
-def test_effect_version_constraint_retains_dependencies_and_immutability(identity_migration_database):
+def test_effect_version_constraint_retains_dependencies_and_immutability(
+    identity_migration_database,
+):
     config, engine = identity_migration_database
     command.upgrade(config, "head")
     seed_base(engine)
@@ -254,9 +275,17 @@ def test_effect_version_constraint_retains_dependencies_and_immutability(identit
     # checks avoid SQL UNKNOWN admitting the otherwise-complete version-null row.
     for field in fields:
         with pytest.raises(IntegrityError), engine.begin() as connection:
-            insert(connection, "quote_operations", **effect_values(order_effect_version=1, **{field: None}))
+            insert(
+                connection,
+                "quote_operations",
+                **effect_values(order_effect_version=1, **{field: None}),
+            )
     with pytest.raises(IntegrityError), engine.begin() as connection:
-        insert(connection, "quote_operations", **effect_values(order_effect_version=1, **dict.fromkeys(fields)))
+        insert(
+            connection,
+            "quote_operations",
+            **effect_values(order_effect_version=1, **dict.fromkeys(fields)),
+        )
     with engine.begin() as connection:
         insert(connection, "quote_operations", **effect_values(order_effect_version=1))
     for statement in (
@@ -269,7 +298,9 @@ def test_effect_version_constraint_retains_dependencies_and_immutability(identit
         with pytest.raises(IntegrityError), engine.begin() as connection:
             connection.execute(text(statement))
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT order_effect_version FROM quote_operations WHERE operation_id='new'")) == 1
+        assert connection.scalar(text(
+            "SELECT order_effect_version FROM quote_operations WHERE operation_id='new'"
+        )) == 1
     before = snapshot(engine)
     with pytest.raises(RuntimeError, match="forward-only"):
         command.downgrade(config, "0012")
@@ -295,9 +326,13 @@ def test_upgrade_failure_rolls_back_all_added_columns(identity_migration_databas
     finally:
         event.remove(engine.__class__, "after_cursor_execute", fail_after_counts)
     assert snapshot(engine) == before
-    assert "order_effect_version" not in {column["name"] for column in inspect(engine).get_columns("quote_operations")}
+    assert "order_effect_version" not in {
+        column["name"] for column in inspect(engine).get_columns("quote_operations")
+    }
     for table, _ in PAIRS:
-        assert "order_payload_raw_octets" not in {column["name"] for column in inspect(engine).get_columns(table)}
+        assert "order_payload_raw_octets" not in {
+            column["name"] for column in inspect(engine).get_columns(table)
+        }
     command.upgrade(config, "head")
     assert_generated_schema(engine)
 
@@ -342,7 +377,9 @@ def test_real_logical_restore_recomputes_generated_counts(disposable_databases, 
         assert snapshot(target) == before
         assert_generated_schema(target)
         with target.connect() as connection:
-            assert connection.scalar(text("SELECT order_effect_version FROM quote_operations WHERE operation_id='new'")) == 1
+            assert connection.scalar(text(
+                "SELECT order_effect_version FROM quote_operations WHERE operation_id='new'"
+            )) == 1
             for table, discriminator in PAIRS:
                 row = connection.execute(text(
                     f"SELECT CAST(payload AS TEXT), order_payload_raw_octets FROM {table} "
@@ -357,7 +394,13 @@ def test_real_logical_restore_recomputes_generated_counts(disposable_databases, 
 
 
 @pytest.mark.parametrize("table,discriminator", PAIRS)
-@pytest.mark.parametrize("fault", ["mutable", "wrong_type", "wrong_expression", "wrong_discriminator", "jsonb", "virtual", "inherited"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "mutable", "wrong_type", "wrong_expression", "wrong_discriminator",
+        "jsonb", "virtual", "inherited",
+    ],
+)
 def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
     identity_migration_database, table, discriminator, fault,
 ):
@@ -374,7 +417,9 @@ def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
         require_order_payload_count_schema(connection)
         connection.execute(text(f"ALTER TABLE {table} DROP COLUMN order_payload_raw_octets"))
         if fault == "jsonb":
-            connection.execute(text(f"ALTER TABLE {table} ALTER COLUMN payload TYPE JSONB USING payload::jsonb"))
+            connection.execute(text(
+                f"ALTER TABLE {table} ALTER COLUMN payload TYPE JSONB USING payload::jsonb"
+            ))
         if fault == "mutable":
             declaration = "BIGINT"
         else:
@@ -388,7 +433,9 @@ def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
                 f"{kind} GENERATED ALWAYS AS (CASE WHEN {discriminator} = '{scope}' "
                 f"THEN {expression} ELSE NULL END) {storage}"
             )
-        connection.execute(text(f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets {declaration}"))
+        connection.execute(text(
+            f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets {declaration}"
+        ))
         if fault == "inherited":
             connection.execute(text(f"CREATE TABLE inherited_count_child () INHERITS ({table})"))
         with pytest.raises(OrderPayloadCountSchemaError):

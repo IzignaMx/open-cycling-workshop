@@ -1,7 +1,11 @@
 schema: 1
 
 bounded_effects_static_20261017:
-  status: prepared_pending_exact_review_and_run
+  status: failed_lint_source_correction_pending
+  run_id: 39056889116
+  source_commit: ce62aa466af75c4adf1d4cd2eb1b1d70ea187554
+  lint_diagnostics: 35
+  later_commands: unrun
   fixed_commands: 6
   source_paths: 38
   production_type_roots: 13

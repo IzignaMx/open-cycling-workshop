@@ -115,7 +115,10 @@ def test_historical_quote_only_decision_replay_does_not_invent_transition(databa
         assert replay["receipt"]["effects"]["kind"] == "quote_only"
         assert replay["order"]["state"] == "DIAGNOSIS"
         assert totals(session) == (2, 0, 0, 2)
-        assert list(session.scalars(select(QuoteOperationRecord.order_effect_version))) == [None, None]
+        assert list(session.scalars(select(QuoteOperationRecord.order_effect_version))) == [
+            None,
+            None,
+        ]
 
 
 def test_response_failure_rolls_back_all_decision_effects(database, actors, monkeypatch):

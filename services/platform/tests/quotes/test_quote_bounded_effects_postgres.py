@@ -160,9 +160,11 @@ def test_actual_projection_preparation_refuses_before_savepoint_or_write(
     monkeypatch.setattr(service_module, "encode_order_projection", fail)
     event.listen(database, "before_cursor_execute", capture)
     try:
-        with Session(database) as session:
-            with pytest.raises(QuoteServiceError, match="quote_conflict"):
-                execute(session, actors, decision())
+        with (
+            Session(database) as session,
+            pytest.raises(QuoteServiceError, match="quote_conflict"),
+        ):
+            execute(session, actors, decision())
     finally:
         event.remove(database, "before_cursor_execute", capture)
     assert writes == []
@@ -196,7 +198,9 @@ def test_historical_replay_does_not_hydrate_oversized_current_text(database, act
 
 
 @pytest.mark.parametrize("version", [None, 0, 2, -1, True, "1"])
-def test_invalid_version_refuses_before_generic_payload_fetch(database, actors, monkeypatch, version):
+def test_invalid_version_refuses_before_generic_payload_fetch(
+    database, actors, monkeypatch, version
+):
     with Session(database) as session:
         execute(session, actors, creation())
         execute(session, actors, decision())
@@ -212,16 +216,19 @@ def test_invalid_version_refuses_before_generic_payload_fetch(database, actors, 
 
     monkeypatch.setattr(repository_module, "_order_effects", forged)
     monkeypatch.setattr(QuoteRepository, "_load_order_effect_sources", forbidden)
-    with Session(database) as session:
-        with pytest.raises(QuoteServiceError, match="quote_integrity_failed"):
-            execute(session, actors, decision(), enabled=False)
+    with (
+        Session(database) as session,
+        pytest.raises(QuoteServiceError, match="quote_integrity_failed"),
+    ):
+        execute(session, actors, decision(), enabled=False)
 
 
 @pytest.mark.parametrize("value", ["infinity", "-infinity", "10000-01-01 00:00:00+00"])
 def test_order_timestamp_guard_refuses_before_driver_conversion(database, actors, value):
     with database.begin() as connection:
         connection.execute(text(
-            "UPDATE service_orders SET created_at = CAST(:value AS timestamptz) WHERE id = 'order-a'"
+            "UPDATE service_orders SET created_at = CAST(:value AS timestamptz) "
+            "WHERE id = 'order-a'"
         ), {"value": value})
     with Session(database) as session:
         with pytest.raises(QuoteServiceError, match="quote_integrity_failed"):
@@ -290,9 +297,11 @@ def test_two_transition_claims_refuse_before_generic_payload_fetch(database, act
 
     monkeypatch.setattr(repository_module, "_order_effects", duplicated)
     monkeypatch.setattr(QuoteRepository, "_load_order_effect_sources", forbidden)
-    with Session(database) as session:
-        with pytest.raises(QuoteServiceError, match="quote_integrity_failed"):
-            execute(session, actors, decision(), enabled=False)
+    with (
+        Session(database) as session,
+        pytest.raises(QuoteServiceError, match="quote_integrity_failed"),
+    ):
+        execute(session, actors, decision(), enabled=False)
 
 
 def test_both_raw_casts_share_both_count_guards_without_orm_materialization(
@@ -444,9 +453,11 @@ def test_bypassed_prepared_projection_refuses_before_any_write(
     monkeypatch.setattr(service_module, "encode_order_projection", forged)
     event.listen(database, "before_cursor_execute", capture)
     try:
-        with Session(database) as session:
-            with pytest.raises(QuoteServiceError, match="quote_integrity_failed"):
-                execute(session, actors, decision())
+        with (
+            Session(database) as session,
+            pytest.raises(QuoteServiceError, match="quote_integrity_failed"),
+        ):
+            execute(session, actors, decision())
     finally:
         event.remove(database, "before_cursor_execute", capture)
     assert writes == []

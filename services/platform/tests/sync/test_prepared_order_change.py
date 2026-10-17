@@ -243,10 +243,13 @@ def test_prepared_inserts_are_owned_by_caller_rollback(database, failure_after):
 
     event.listen(database, "after_cursor_execute", fail_after_insert)
     try:
-        with Session(database) as session:
-            with pytest.raises(RuntimeError, match="synthetic"), session.begin():
-                append(session, projection())
-                raise RuntimeError("synthetic caller refusal")
+        with (
+            Session(database) as session,
+            pytest.raises(RuntimeError, match="synthetic"),
+            session.begin(),
+        ):
+            append(session, projection())
+            raise RuntimeError("synthetic caller refusal")
     finally:
         event.remove(database, "after_cursor_execute", fail_after_insert)
     assert reached == (
