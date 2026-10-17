@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Static output retention · 2026-10-17
+
+- [x] Preserve run `39050280067`: repository and Ruff lint passed, format failed.
+- [ ] Review and run bounded direct tool-output retention without catalogs.
+- [ ] Apply observed format corrections, then close types and contracts.
+- [ ] Continue finite PostgreSQL-0012 qualification after static closure.
+- [Evidence and limits](docs/10-spec-development/2026-10-17-static-output-retention.md).
+  Earlier preparation blocks remain historical.
+
 ## Observed Ruff corrections · 2026-10-17
 
 - [x] Retain all four diagnostic records from run `39049797128`.

@@ -1,7 +1,28 @@
 schema: 1
 
-quote_observed_ruff_corrections_20261017:
+static_output_retention_20261017:
   status: prepared_pending_review_and_qualification
+  source_commit: 603f7cd2878f616d34e78b0e825db983d064d1b2
+  source_tree: 9c54a8b1b645eb046d540883bae82c3405dd3331
+  failed_run: 39050280067
+  artifact: 12107930877
+  repository_and_ruff_lint: passed
+  format: failed
+  mypy_openapi_client: unrun
+  formatter_output_bytes: 11498
+  formatter_unparsed_lines: 212
+  exact_discarded_formatter_output: unavailable
+  correction: bounded_original_public_tool_output_without_catalogs
+  tool_output_limit_bytes: 16384
+  static_marker_limit_bytes: 24576
+  service_spool_limit_bytes: 32768
+  execution_resource_limits: unchanged
+  evidence: docs/10-spec-development/2026-10-17-static-output-retention.md
+
+quote_observed_ruff_corrections_20261017:
+  status: ruff_verified_formatter_failed_later_checks_unrun
+  qualification_run: 39050280067
+  qualification_artifact: 12107930877
   source_commit: 5513ead255ec64128de1230009dc7fe0bc4acba1
   source_tree: aaa9578ccaabbc15e0526019b53d65f3b7f66c59
   failed_run: 39049797128

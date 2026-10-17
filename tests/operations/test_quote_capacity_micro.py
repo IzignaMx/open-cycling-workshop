@@ -957,7 +957,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 with temporary_file() as output:
                     def read(limit):
                         calls.append(["spool_read"])
-                        assert limit == module.LIMIT
+                        assert limit == module.SERVICE_OUTPUT_LIMIT
                         return output.read(limit)
 
                     yield SimpleNamespace(
@@ -971,6 +971,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             patch.setattr(module.tempfile, "TemporaryFile", traced_spool)
 
             def popen(args, *, launches=launches, fault=fault, calls=calls, clock=clock, **kwargs):
+                assert kwargs["preexec_fn"] is module.service_output_limit
                 launches.append(args)
                 child = SimpleNamespace(pid=123, returncode=0)
                 active = fault in {
@@ -990,7 +991,9 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 elif fault == "diagnostic_invalid":
                     marker = marker.replace(b'"stage":1', b'"stage":"private"')
                 kwargs["stdout"].write(
-                    b"private\xff\n" + marker if fault != "output_limit" else b"x" * module.LIMIT
+                    b"private\xff\n" + marker
+                    if fault != "output_limit"
+                    else b"x" * module.SERVICE_OUTPUT_LIMIT
                 )
                 kwargs["stdout"].flush()
 
@@ -1399,7 +1402,7 @@ def test_service_failure_diagnostic_rejects_bad_framing_and_duplicate_keys():
         marker.replace(b"{", b"{ "),
         marker[:-1] + b" private\n",
         b"OCWP_SERVICE_FAILURE_V1:" + b" " * 512 + b"\n",
-        marker + b"x" * module.LIMIT,
+        marker + b"x" * module.SERVICE_OUTPUT_LIMIT,
         marker + b"OCWP_SERVICE_FAILURE_V1:incomplete",
         marker.decode("ascii"),
     ):
@@ -1502,30 +1505,22 @@ def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_err
 # Review-only additions for a future ordinary contained test selection. These are
 # deliberately not extra execution nodes in the six-tool static/contracts gate.
 def static_failure_summary():
+    import base64
+
+    output = b"public source tool diagnostic\n"
     return {
-        "schema": 1,
+        "schema": 2,
         "tool": 1,
         "kind": 1,
         "returncode": 1,
-        "output_bytes": 100,
-        "omitted": 0,
-        "unparsed_lines": 0,
-        "reported_diagnostics": 1,
-        "complete": True,
-        "incomplete_reasons": [],
-        "diagnostics": [
-            {
-                "path": module.STATIC_PATHS[0],
-                "line": 12,
-                "column": 101,
-                "rule": "E501",
-                "message": "Line too long (101 > 100)",
-            }
-        ],
+        "output_bytes": len(output),
+        "output_truncated": False,
+        "output_base64": base64.b64encode(output).decode("ascii"),
     }
 
 
-def static_protocol_summary():
+def static_protocol_summary(tool=1):
+    protocols = tool + 1
     return {
         "schema": 1,
         "stage": 3,
@@ -1534,10 +1529,10 @@ def static_protocol_summary():
         "collection_errors": 0,
         "unhandled_errors": 0,
         "protocol_errors": 0,
-        "report_count": 6,
-        "setup_reports": 2,
-        "call_reports": 2,
-        "teardown_reports": 2,
+        "report_count": protocols * 3,
+        "setup_reports": protocols,
+        "call_reports": protocols,
+        "teardown_reports": protocols,
         "failed_reports": 1,
         "skipped_reports": 0,
     }
@@ -1573,6 +1568,7 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
             module.static_failure_diagnostic(static_failure_marker(), failure=protocol | change)
     for change in (
         {"schema": True},
+        {"schema": 1},
         {"tool": -1},
         {"tool": 6},
         {"tool": True},
@@ -1583,53 +1579,30 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
         {"returncode": None},
         {"returncode": 256},
         {"output_bytes": module.LIMIT},
+        {"output_bytes": module.LIMIT + 1},
         {"output_bytes": -1},
         {"output_bytes": True},
-        {"omitted": 1},
-        {"unparsed_lines": module.LIMIT + 1},
-        {"reported_diagnostics": True},
-        {"reported_diagnostics": 0},
-        {"reported_diagnostics": module.LIMIT + 1},
-        {"reported_diagnostics": None},
-        {"reported_diagnostics": 2},
-        {"complete": 1},
-        {"complete": False},
-        {"incomplete_reasons": ["unknown"]},
-        {"incomplete_reasons": ["omitted_rows", "omitted_rows"]},
-        {"message": "private"},
-        {"diagnostics": good["diagnostics"] * 13},
-        {"diagnostics": good["diagnostics"] * 2},
+        {"output_bytes": 0},
+        {"output_truncated": True},
+        {"output_truncated": 0},
+        {"output_base64": None},
+        {"output_base64": "!"},
+        {"output_base64": "é"},
+        {"output_base64": good["output_base64"] + "\n"},
+        {"output_base64": good["output_base64"] + "="},
+        {"output_base64": "A" * (4 * ((module.LIMIT + 2) // 3) + 4)},
+        {"output_base64": "YR==", "output_bytes": 1},  # Nonzero padding bits.
+        {"output_base64": "YQ==YQ==", "output_bytes": 2},
+        {"message": "unexpected field"},
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)
-    for change in (
-        {"path": "../secret"},
-        {"path": "/app/" + module.STATIC_PATHS[0]},
-        {"path": module.STATIC_PATHS[0] + "\n"},
-        {"path": "private"},
-        {"line": True},
-        {"line": 0},
-        {"line": -1},
-        {"line": 1_000_001},
-        {"column": True},
-        {"column": 0},
-        {"column": -1},
-        {"column": 1_000_001},
-        {"rule": "RUF-"},
-        {"rule": "not a code"},
-        {"rule": "E" * 64 + "1"},
-        {"rule": "E501\x00"},
-        {"message": None},
-        {"message": ""},
-        {"message": "line\ncontinuation"},
-        {"message": "\x1b[31mred"},
-        {"message": "tab\there"},
-        {"message": "\ud800"},
-        {"message": "é" * 513},
-    ):
-        bad = good | {"diagnostics": [good["diagnostics"][0] | change]}
+    for key in good:
         with pytest.raises(module.ProofFailure):
-            module.static_failure_diagnostic(static_failure_marker(bad), failure=protocol)
+            module.static_failure_diagnostic(
+                static_failure_marker({k: v for k, v in good.items() if k != key}),
+                failure=protocol,
+            )
 
 
 def test_static_failure_marker_rejects_duplicate_nonfinite_truncated_and_oversize_bytes():
@@ -1639,40 +1612,37 @@ def test_static_failure_marker_rejects_duplicate_nonfinite_truncated_and_oversiz
         marker + marker,
         marker[:-1],
         b"x" + marker,
-        marker.replace(b'"schema":1', b'"schema":1,"schema":1'),
-        marker.replace(b'"output_bytes":100', b'"output_bytes":NaN'),
-        marker.replace(b'"output_bytes":100', b'"output_bytes":Infinity'),
-        marker.replace(b'"output_bytes":100', b'"output_bytes":100.0'),
-        marker.replace(b'"schema":1', b'"schema": 1'),
-        module.STATIC_FAILURE_MARKER + b" " * module.STATIC_RUFF_FAILURE_LIMIT + b"\n",
-        b" " * module.LIMIT + marker,
+        marker.replace(b'"schema":2', b'"schema":2,"schema":2'),
+        marker.replace(b'"schema":2', b'"schema":NaN'),
+        marker.replace(b'"schema":2', b'"schema":Infinity'),
+        marker.replace(b'"schema":2', b'"schema":2.0'),
+        marker.replace(b'"schema":2', b'"schema": 2'),
+        marker[:-1] + b"{}\n",
+        module.STATIC_FAILURE_MARKER + b" " * module.STATIC_FAILURE_LIMIT + b"\n",
+        b" " * module.SERVICE_OUTPUT_LIMIT + marker,
+        marker.decode("ascii"),
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(bad, failure=static_protocol_summary())
 
 
 def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
+    import base64
+
     good = static_failure_summary()
     protocol = static_protocol_summary()
     for change in (
-        {"kind": 2, "returncode": -9, "incomplete_reasons": ["tool_status"]},
+        {"kind": 2, "returncode": -9},
         {
             "kind": 3,
             "returncode": -25,
             "output_bytes": module.LIMIT,
-            "incomplete_reasons": ["tool_status", "output_limit"],
+            "output_truncated": True,
+            "output_base64": base64.b64encode(b"x" * module.LIMIT).decode("ascii"),
         },
-        {
-            "kind": 4,
-            "returncode": None,
-            "output_bytes": 0,
-            "diagnostics": [],
-            "unparsed_lines": 0,
-            "reported_diagnostics": None,
-            "incomplete_reasons": ["tool_status", "summary_mismatch"],
-        },
+        {"kind": 4, "returncode": None, "output_bytes": 0, "output_base64": ""},
     ):
-        value = good | change | {"complete": False}
+        value = good | change
         assert (
             module.static_failure_diagnostic(static_failure_marker(value), failure=protocol)
             == value
@@ -1680,78 +1650,52 @@ def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
     for change in (
         {"kind": 3},
         {"kind": 4},
-        {"kind": 4, "returncode": None, "output_bytes": 0},
+        {"kind": 4, "returncode": None},
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)
 
 
-def test_static_ruff_rows_allow_generic_codes_and_more_than_twelve_complete_findings():
-    good = static_failure_summary()
-    rows = [
-        good["diagnostics"][0]
-        | {
-            "line": index + 1,
-            "column": index + 1,
-            "rule": ("invalid-syntax", "NEW1234", "E999999")[index % 3],
-            "message": 'Expected `:` after "public_name"; café \\ path',
-        }
-        for index in range(30)
-    ]
-    value = good | {"diagnostics": rows, "reported_diagnostics": len(rows)}
-    marker = static_failure_marker(value)
-    assert module.STATIC_FAILURE_LIMIT < len(marker) <= module.STATIC_RUFF_FAILURE_LIMIT
-    assert module.static_failure_diagnostic(marker, failure=static_protocol_summary()) == value
-    for change in (
-        {"diagnostics": [], "reported_diagnostics": 1},
-        {"reported_diagnostics": 2},
-        {"reported_diagnostics": None},
-    ):
-        incomplete = good | change | {
-            "complete": False,
-            "incomplete_reasons": ["summary_mismatch"],
-        }
-        assert (
-            module.static_failure_diagnostic(
-                static_failure_marker(incomplete), failure=static_protocol_summary()
-            )
-            == incomplete
-        )
+def test_all_six_static_tools_retain_exact_bytes_with_numeric_marker_at_full_cap():
+    import base64
 
-
-def test_static_non_ruff_failure_keeps_its_existing_schema():
-    value = {
-        "schema": 1,
-        "tool": 2,
-        "kind": 1,
-        "returncode": 1,
-        "output_bytes": 100,
-        "omitted": 0,
-        "unparsed_lines": 1,
-        "diagnostics": [{"path": module.STATIC_PATHS[0], "line": 0, "rule": "format"}],
-    }
-    protocol = static_protocol_summary() | {
-        "report_count": 9,
-        "setup_reports": 3,
-        "call_reports": 3,
-        "teardown_reports": 3,
-    }
-    assert module.static_failure_diagnostic(static_failure_marker(value), failure=protocol) == value
-    for change in (
-        {"complete": True},
-        {"reported_diagnostics": 1},
-        {"diagnostics": [value["diagnostics"][0] | {"column": 1}]},
-        {"diagnostics": [value["diagnostics"][0] | {"rule": "NEW1234"}]},
-        {"diagnostics": value["diagnostics"] * 13},
-    ):
+    output = bytes(range(256)) * 64
+    assert len(output) == module.LIMIT
+    for tool in range(6):
+        value = static_failure_summary() | {
+            "tool": tool,
+            "kind": 3,
+            "returncode": -25,
+            "output_bytes": len(output),
+            "output_truncated": True,
+            "output_base64": base64.b64encode(output).decode("ascii"),
+        }
+        protocol = static_protocol_summary(tool)
+        marker = static_failure_marker(value)
+        spool = marker + service_failure_marker(protocol)
+        assert module.LIMIT < len(marker) <= module.STATIC_FAILURE_LIMIT
+        assert len(spool) < module.SERVICE_OUTPUT_LIMIT
+        assert module.service_failure_diagnostic(spool, returncode=1) == protocol
+        retained = module.static_failure_diagnostic(spool, failure=protocol)
+        assert retained == value
+        assert base64.b64decode(retained["output_base64"], validate=True) == output
         with pytest.raises(module.ProofFailure):
-            module.static_failure_diagnostic(
-                static_failure_marker(value | change),
-                failure=protocol,
-            )
+            module.static_failure_diagnostic(spool, failure=static_protocol_summary((tool + 1) % 6))
 
 
-def test_static_ruff_wrapper_retains_only_complete_rows_with_a_serialized_byte_budget(monkeypatch):
+def test_service_spool_and_ordinary_output_limits_remain_separate(monkeypatch):
+    calls = []
+    monkeypatch.setattr(module.resource, "setrlimit", lambda *args: calls.append(args))
+    module.output_limit()
+    module.service_output_limit()
+    assert calls == [
+        (module.resource.RLIMIT_FSIZE, (16 * 1024, 16 * 1024)),
+        (module.resource.RLIMIT_FSIZE, (32 * 1024, 32 * 1024)),
+    ]
+
+
+def test_static_wrapper_retains_verbatim_public_output_without_changing_failure(monkeypatch):
+    import base64
     from contextlib import nullcontext
     from types import SimpleNamespace
 
@@ -1762,64 +1706,32 @@ def test_static_ruff_wrapper_retains_only_complete_rows_with_a_serialized_byte_b
     )
     wrapper = importlib.util.module_from_spec(wrapper_spec)
     wrapper_spec.loader.exec_module(wrapper)
-    path = "scripts/ci/quote_guard_bootstrap.py"
-    first = f"{path}:7:2: invalid-syntax: Expected `:`\n".encode()
-    second = f"/app/{path}:8:3: NEW1234 Public diagnostic\n".encode()
-    rows, omitted, unparsed, reported = wrapper._summarize(1, first + second + b"Found 2 errors.\n")
-    assert (omitted, unparsed, reported) == (0, 0, 2)
-    assert [row["rule"] for row in rows] == ["invalid-syntax", "NEW1234"]
-    assert [row["column"] for row in rows] == [2, 3]
-    assert all(row["path"] == path for row in rows)
-    assert wrapper._summarize(1, first.replace(b"invalid-syntax:", b"E501"))[0][0]["rule"] == "E501"
-    assert wrapper._summarize(1, b"Found 1 error.\n") == ([], 0, 0, 1)
-    assert wrapper._summarize(1, first + first + b"Found 2 errors.\n")[1:] == (1, 0, 2)
-    assert wrapper._summarize(1, b"Found 1 error.\nFound 1 error.\n") == ([], 0, 1, 1)
-    for raw in (
-        first.replace(path.encode(), b"../private.py"),
-        first.replace(b"7:2", b"0:2"),
-        first.replace(b"7:2", b"7:1000001"),
-        first.replace(b"invalid-syntax", b"bad-code!"),
-        first.replace(b"invalid-syntax:", b"invalid-syntax::"),
-        first.replace(b"invalid-syntax:", b"invalid:syntax:"),
-        first.replace(b"Expected `:`", b"\x1b[31mred"),
-        first.replace(b"Expected `:`", b"bad\xff"),
-        first.replace(b"Expected `:`", "é".encode() * 513),
-        first[:-1],
-        b"  | source excerpt\n",
-    ):
-        assert wrapper._summarize(1, raw) == ([], 0, 1, None)
-    assert wrapper._summarize(2, f"Would reformat: {path}\n".encode()) == (
-        [{"path": path, "line": 0, "rule": "format"}],
-        0,
-        0,
-        None,
-    )
-
-    # These are mocked future-CI checks. No subprocess or containment path is invoked.
     monkeypatch.setattr(wrapper, "ROOT", Path("/app"))
     monkeypatch.setenv("OCWP_QUOTE_SERVICE_INITIAL", "contained")
     emitted = []
     monkeypatch.setattr(wrapper.os, "write", lambda fd, raw: emitted.append(raw) or len(raw))
-    for message in ("x" * 60, 'é"\\' * 20):
-        output = b"".join(
-            f"{path}:{index}:1: NEW1234 {message}\n".encode() for index in range(1, 81)
-        ) + b"Found 80 errors.\n"
-        assert len(output) < module.LIMIT
+    outputs = (
+        b"--- a/scripts/ci/quote_guard_bootstrap.py\n+++ b/scripts/ci/quote_guard_bootstrap.py\n"
+        b"@@ -1 +1 @@\n-old public source\n+new public source\n\x1b[0m\xff",
+        bytes(range(256)) * 64,
+    )
+    for tool in range(6):
+        for output in outputs:
 
-        def fake_popen(*args, output=output, **kwargs):
-            kwargs["stdout"].write(output)
-            kwargs["stdout"].flush()
-            return SimpleNamespace(wait=lambda timeout: 1)
+            def fake_popen(*args, output=output, **kwargs):
+                kwargs["stdout"].write(output)
+                kwargs["stdout"].flush()
+                assert kwargs["preexec_fn"] is wrapper._limit_output
+                return SimpleNamespace(wait=lambda timeout: 1)
 
-        monkeypatch.setattr(wrapper.subprocess, "Popen", fake_popen)
-        with pytest.raises(pytest.fail.Exception):
-            wrapper._check(1, SimpleNamespace(disabled=nullcontext))
-        marker = emitted[-1]
-        assert len(marker) <= module.STATIC_RUFF_FAILURE_LIMIT + 1
-        value = module.static_failure_diagnostic(marker, failure=static_protocol_summary())
-        assert 12 < len(value["diagnostics"]) < 80
-        assert len(value["diagnostics"]) + value["omitted"] == 80
-        assert value["reported_diagnostics"] == 80
-        assert value["complete"] is False
-        assert value["incomplete_reasons"] == ["omitted_rows"]
-        assert all(row["message"] == message for row in value["diagnostics"])
+            monkeypatch.setattr(wrapper.subprocess, "Popen", fake_popen)
+            with pytest.raises(pytest.fail.Exception):
+                wrapper._check(tool, SimpleNamespace(disabled=nullcontext))
+            marker = emitted[-1]
+            assert len(marker) <= module.STATIC_FAILURE_LIMIT + 1
+            value = module.static_failure_diagnostic(marker, failure=static_protocol_summary(tool))
+            assert value["output_bytes"] == len(output)
+            assert value["output_truncated"] == (len(output) == module.LIMIT)
+            assert value["kind"] == (3 if len(output) == module.LIMIT else 1)
+            assert value["returncode"] == 1
+            assert base64.b64decode(value["output_base64"], validate=True) == output

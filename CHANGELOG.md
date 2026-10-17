@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Direct bounded static output retention
+
+- Record repository and Ruff-lint passes in run `39050280067`, followed by a
+  formatter failure whose default diagnostic/diff output escaped the old parser.
+- Replace static diagnostic catalogs with bounded original public-source tool
+  output, explicit truncation and existing failure/cleanup binding.
+- Preserve 16-KiB tool output and execution limits; size the base64 marker and
+  service spool explicitly at 24/32 KiB. Actual verification remains pending.
+- Scope: [output retention](docs/10-spec-development/2026-10-17-static-output-retention.md).
+
 ## Unreleased · Four observed Ruff corrections pending qualification
 
 - Correct SIM905, two RUF043 reports and SIM300 observed in run `39049797128`.
