@@ -516,17 +516,13 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 
 METADATA_TEST = "services/platform/tests/quotes/test_quote_effect_metadata.py"
-BOUNDED_TEST = "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py"
-HISTORICAL_TEST = "services/platform/tests/quotes/test_quote_historical_upgrade_postgres.py"
 SERVICE_NODES = (
-    f"{METADATA_TEST}::test_seeded_upgrade_preserves_bytes_and_regenerates_counts[postgres]",
-    f"{BOUNDED_TEST}::test_version_one_binds_both_measured_raw_copies_and_replays[postgres]",
-    f"{BOUNDED_TEST}::test_both_raw_casts_share_both_count_guards_without_orm_materialization"
+    f"{METADATA_TEST}::test_legacy_populated_tuple_refuses_before_any_ddl[postgres]",
+    f"{METADATA_TEST}::test_effect_version_constraint_retains_dependencies_and_immutability"
     "[postgres]",
-    f"{HISTORICAL_TEST}::test_valid_quote_only_0012_upgrade_replays_without_inventing_transition"
-    "[postgres]",
+    f"{METADATA_TEST}::test_upgrade_failure_rolls_back_all_added_columns[postgres]",
 )
-SERVICE_REVISIONS = (("0012", "0013"), ("0013",), ("0013",), ("0012", "0013"))
+SERVICE_FINAL_REVISIONS = ("0012", "0013", "0013")
 
 # Fixed public source scope for the six static/contracts commands.
 STATIC_PATHS = (
@@ -628,8 +624,10 @@ def reject_constant(_value: str) -> None:
     raise ProofFailure("service_nonfinite")
 
 
-def postgres_identity(value: object, node: str, *, revision: str = "0013") -> dict[str, object]:
-    """One closed observed identity; never retain URLs, SQL or arbitrary properties."""
+def postgres_identity(value: object, node: str) -> dict[str, object]:
+    """One closed final identity; never infer or retain migration chronology."""
+    if node not in SERVICE_NODES:
+        raise ProofFailure("service_postgres_identity")
     expected = {
         "node": node,
         "dialect": "postgresql",
@@ -639,7 +637,7 @@ def postgres_identity(value: object, node: str, *, revision: str = "0013") -> di
         "server_version_num": 180004,
         "server_encoding": "UTF8",
         "client_encoding": "UTF8",
-        "schema_revision": revision,
+        "schema_revision": SERVICE_FINAL_REVISIONS[SERVICE_NODES.index(node)],
         "probe_connection_closed": True,
     }
     if type(value) is not dict or set(value) != set(expected) | {"schema", "search_path"}:
@@ -654,23 +652,6 @@ def postgres_identity(value: object, node: str, *, revision: str = "0013") -> di
         or value["search_path"] != schema
     ):
         raise ProofFailure("service_postgres_identity")
-    return value
-
-
-def postgres_receipt(value: object, node: str) -> dict[str, object]:
-    if type(value) is not dict or "upgrade_revisions" not in value or node not in SERVICE_NODES:
-        raise ProofFailure("service_postgres_identity")
-    revisions = value["upgrade_revisions"]
-    expected = list(SERVICE_REVISIONS[SERVICE_NODES.index(node)])
-    if (
-        type(revisions) is not list
-        or any(type(revision) is not str for revision in revisions)
-        or revisions != expected
-    ):
-        raise ProofFailure("service_postgres_identity")
-    postgres_identity(
-        {key: item for key, item in value.items() if key != "upgrade_revisions"}, node
-    )
     return value
 
 
@@ -707,43 +688,15 @@ def probe_postgres_identity(engine: object, node: str) -> dict[str, object]:
     }
 
 
-def observe_postgres(database: object, request: object, monkeypatch: object) -> Iterator[None]:
-    """Observe only test-requested upgrades; never initiate or advance a migration."""
-    from alembic import command
-
-    config, engine = database
+def observe_postgres(database: object, request: object) -> Iterator[None]:
+    """Probe final state only; leave all expected migration failures untouched."""
+    _config, engine = database
     node = request.node.nodeid
     if node not in SERVICE_NODES:
         raise ProofFailure("service_selection")
-    expected = SERVICE_REVISIONS[SERVICE_NODES.index(node)]
-    observations: list[dict[str, object]] = []
-    attempts = 0
-    original = command.upgrade
-
-    def observed_upgrade(*args: object, **kwargs: object) -> object:
-        nonlocal attempts
-        supplied = args[0] if args else kwargs.get("config")
-        if supplied is not config or attempts >= len(expected):
-            raise ProofFailure("service_postgres_chronology")
-        attempts += 1
-        result = original(*args, **kwargs)
-        observed = probe_postgres_identity(engine, node)
-        postgres_identity(observed, node, revision=expected[len(observations)])
-        observations.append(observed)
-        return result
-
-    monkeypatch.setattr(command, "upgrade", observed_upgrade)
     yield
-    if len(observations) != len(expected):
-        raise ProofFailure("service_postgres_chronology")
-    final = postgres_identity(probe_postgres_identity(engine, node), node)
-    for observed in observations:
-        if any(observed[key] != final[key] for key in final if key != "schema_revision"):
-            raise ProofFailure("service_postgres_identity")
-    receipt = postgres_receipt(
-        final | {"upgrade_revisions": [row["schema_revision"] for row in observations]}, node
-    )
-    request.node.user_properties.append(("ocwp_postgres_identity", receipt))
+    identity = postgres_identity(probe_postgres_identity(engine, node), node)
+    request.node.user_properties.append(("ocwp_postgres_identity", identity))
 
 
 def postgres_observer_plugin() -> object:
@@ -751,20 +704,20 @@ def postgres_observer_plugin() -> object:
 
     class PostgresObserver:
         @pytest.fixture(autouse=True)
-        def ocwp_postgres_observer(self, identity_migration_database, request, monkeypatch):
-            yield from observe_postgres(identity_migration_database, request, monkeypatch)
+        def ocwp_postgres_observer(self, identity_migration_database, request):
+            yield from observe_postgres(identity_migration_database, request)
 
     return PostgresObserver()
 
 
 def service_result(raw: str) -> dict[str, object]:
-    """Accept four complete PostgreSQL protocols with committed migration observations."""
+    """Accept three complete migration-integrity protocols and exact final identities."""
     if len(raw.encode("utf-8")) >= LIMIT:
         raise ProofFailure("service_report_limit")
     value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
     expected = {
         "schema": 1,
-        "collection_count": 4,
+        "collection_count": 3,
         "collection_errors": 0,
         "unhandled_errors": 0,
         "protocol_errors": 0,
@@ -782,7 +735,7 @@ def service_result(raw: str) -> dict[str, object]:
     if value["nodes"] != list(SERVICE_NODES):
         raise ProofFailure("service_selection")
     reports = value["reports"]
-    if type(reports) is not list or len(reports) != 12:
+    if type(reports) is not list or len(reports) != 9:
         raise ProofFailure("service_report_count")
     wanted = [(node, when) for node in SERVICE_NODES for when in ("setup", "call", "teardown")]
     for row, (node, when) in zip(reports, wanted, strict=True):
@@ -794,12 +747,12 @@ def service_result(raw: str) -> dict[str, object]:
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
             raise ProofFailure("service_report_duration")
     identities = value["postgres_identities"]
-    if type(identities) is not list or len(identities) != 4:
+    if type(identities) is not list or len(identities) != 3:
         raise ProofFailure("service_postgres_identity")
     schemas = set()
     for identity, node in zip(identities, SERVICE_NODES, strict=True):
-        schemas.add(postgres_receipt(identity, node)["schema"])
-    if len(schemas) != 4:
+        schemas.add(postgres_identity(identity, node)["schema"])
+    if len(schemas) != 3:
         raise ProofFailure("service_postgres_identity")
     return value
 
@@ -1008,7 +961,7 @@ class ServiceReportHook:
             node not in self.value["nodes"]
             or when not in {"setup", "call", "teardown"}
             or outcome not in {"passed", "failed", "skipped"}
-            or len(rows) >= 12
+            or len(rows) >= 9
             or type(seconds) not in (int, float)
             or not math.isfinite(seconds)
             or not 0 <= seconds < 20
@@ -1035,7 +988,7 @@ class ServiceReportHook:
                     or any(identity["node"] == node for identity in identities)
                 ):
                     raise ProofFailure("service_postgres_identity")
-                identities.append(postgres_receipt(pair[1], node))
+                identities.append(postgres_identity(pair[1], node))
             except ProofFailure:
                 self.bump("protocol_errors")
 
@@ -1431,7 +1384,7 @@ def supervise(
             report["environment_overhead_before_workload_cpu_usec"] = {
                 role: data["cpu_usec"] for role, data in snapshots.items()
             }
-            report["database_role"] = "postgresql18_4_four_fresh_schemas_observed_0012_to_0013"
+            report["database_role"] = "postgresql18_4_three_fresh_schemas_final_revision_observed"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
         report["command_stage"] = "service_initial" if service_initial else "microfixture"
         report["phase"] = (
@@ -1588,7 +1541,7 @@ def supervise(
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("final_readback_deadline")
             report["phase"] = "service_complete"
-            report["status"] = "postgresql0013_four_passed_not_capacity"
+            report["status"] = "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
         else:
             micro = micro_result(
                 execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
@@ -1663,7 +1616,7 @@ def supervise(
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
     wanted_status = (
-        "postgresql0013_four_passed_not_capacity"
+        "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
         if service_initial
         else "micro_passed_not_capacity"
     )

@@ -7,8 +7,10 @@
 - [x] Implement and independently review versioning, admission and full payload validation.
 - [x] Verify all six static/contract commands in run 39061922896.
 - [x] Verify eighteen pure boundary cases and 54 phases in run 39063614879.
-- [ ] Execute remaining pure/guard regressions and finite genuine PostgreSQL 0013 cases.
-- [ ] Verify valid historical 0012 migration/replay and refusal of unsupported old effects.
+- [x] Verify four genuine PostgreSQL 0013 cases in corrected run 39065290465.
+- [ ] Execute remaining pure/guard regressions and migration integrity/rollback cases.
+- [x] Verify valid historical 0012 migration/replay in run 39065290465.
+- [ ] Verify refusal of unsupported old effects.
 - [ ] Separately prove DDL rollback and logical restore with exact retained effects.
 - [ ] Complete broader integration, concurrency and capacity gates before activation.
 - [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).

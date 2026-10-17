@@ -1,7 +1,31 @@
 schema: 1
 
-bounded_effects_null_correction_20261017:
+quote_migration_integrity_20261017:
   status: prepared_pending_exact_review_and_run
+  expected_cases: 3
+  expected_phases: 9
+  final_revisions: ["0012", "0013", "0013"]
+  shared_workload_seconds: 20
+  observer: final_only_no_upgrade_interception
+  restore_concurrency_capacity: unqualified
+  evidence: docs/10-spec-development/2026-10-17-quote-migration-integrity.md
+
+bounded_effects_null_correction_20261017:
+  status: passed_independently_reviewed_after_exact_recovery
+  run_id: 39065290465
+  source_commit: 8a627dcffaaee5d63c5bf67436d2d534463b4eb7
+  source_tree: d67ebe171d893ca87eff568ada80d2a8c221994a
+  artifact_id: 12112758073
+  artifact_sha256: 6d967e5a95bc8ec230915da3e526a82097a403a21b329d20af676ec9291a303c
+  actual_postgresql_schemas: 4
+  server_version: "18.4"
+  driver: psycopg_3_3_4
+  schema_revision: "0013"
+  measured_workload_seconds: 6.98
+  final_worker_peak_bytes: 101507072
+  final_database_peak_bytes: 108875776
+  cleanup: verified_absent
+  source_recovery: all_775_blobs_and_original_six_path_manifest_verified
   preserved_failed_run: 39064719886
   change: test_only_implicit_null_shape_and_actual_guarded_null_results
   expected_cases: 4

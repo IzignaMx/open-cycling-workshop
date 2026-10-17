@@ -640,7 +640,9 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 
 # The service guard delta below is authored but unexecuted. Run only in the
 # separately reviewed bootstrap container, never via the service business mode.
-def postgres_identity(node, index=0, revision="0013"):
+def postgres_identity(node, index=0, revision=None):
+    if revision is None:
+        revision = module.SERVICE_FINAL_REVISIONS[module.SERVICE_NODES.index(node)]
     schema = "ocwp_identity_migration_" + f"{index:032x}"
     return dict(
         node=node,
@@ -656,12 +658,6 @@ def postgres_identity(node, index=0, revision="0013"):
         schema_revision=revision,
         probe_connection_closed=True,
     )
-
-
-def postgres_receipt(node, index=0):
-    return postgres_identity(node, index) | {
-        "upgrade_revisions": list(module.SERVICE_REVISIONS[module.SERVICE_NODES.index(node)])
-    }
 
 
 def service_items():
@@ -683,9 +679,9 @@ def service_report():
         schema=1,
         nodes=list(module.SERVICE_NODES),
         postgres_identities=[
-            postgres_receipt(node, index) for index, node in enumerate(module.SERVICE_NODES)
+            postgres_identity(node, index) for index, node in enumerate(module.SERVICE_NODES)
         ],
-        collection_count=4,
+        collection_count=3,
         collection_errors=0,
         unhandled_errors=0,
         protocol_errors=0,
@@ -704,8 +700,8 @@ def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
     monkeypatch.setenv("PGHOST", "untrusted.invalid")
     args = module.service_argv("a" * 64)
     assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
-    assert args[-4:] == list(module.SERVICE_NODES)
-    assert len(set(args[-4:])) == 4
+    assert args[-3:] == list(module.SERVICE_NODES)
+    assert len(set(args[-3:])) == 3
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
@@ -732,7 +728,7 @@ def test_service_report_requires_every_protocol_and_finish():
     assert module.service_result(json.dumps(good)) == good
     for field, wrong in (
         ("schema", True),
-        ("collection_count", 3),
+        ("collection_count", 4),
         ("collection_errors", 1),
         ("unhandled_errors", 1),
         ("protocol_errors", 1),
@@ -756,7 +752,7 @@ def test_service_report_requires_every_protocol_and_finish():
     ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"reports": rows}))
-    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 4):
+    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 3):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"nodes": nodes}))
 
@@ -794,7 +790,7 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
     hook = module.ServiceReportHook()
     hook.pytest_collection_finish(SimpleNamespace(items=good))
     assert hook.value["nodes"] == list(module.SERVICE_NODES)
-    for bad in (good[:-1], list(reversed(good)), good[:1] * 4, good + good[:1]):
+    for bad in (good[:-1], list(reversed(good)), good[:1] * 3, good + good[:1]):
         hook = module.ServiceReportHook()
         with pytest.raises(pytest.UsageError, match="service_selection"):
             hook.pytest_collection_finish(SimpleNamespace(items=bad))
@@ -854,18 +850,21 @@ def test_postgres_report_requires_exact_closed_ordered_distinct_identities():
         {"server_version_num": True},
         {"server_encoding": "LATIN1"},
         {"client_encoding": "LATIN1"},
-        {"schema_revision": "0012"},
+        {"schema_revision": "0013"},
         {"probe_connection_closed": False},
         {"probe_connection_closed": 1},
-        {"upgrade_revisions": ["0013"]},
-        {"upgrade_revisions": ["0013", "0012"]},
-        {"upgrade_revisions": ["0012", "0013", "0013"]},
-        {"upgrade_revisions": [12, 13]},
-        {"upgrade_revisions": None},
+        {"upgrade_revisions": ["0012", "0013"]},
         {"url": "private"},
     ):
         bad = copy.deepcopy(good)
         bad["postgres_identities"][0].update(change)
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    for index, expected in enumerate(module.SERVICE_FINAL_REVISIONS):
+        bad = copy.deepcopy(good)
+        bad["postgres_identities"][index]["schema_revision"] = (
+            "0013" if expected == "0012" else "0012"
+        )
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(bad))
     for field in identities[0]:
@@ -888,8 +887,6 @@ def test_postgres_report_fits_unchanged_cap_and_refuses_exact_limit():
     assert module.service_result(raw + " " * (module.LIMIT - len(raw) - 1)) == good
     with pytest.raises(module.ProofFailure, match="service_report_limit"):
         module.service_result(raw + " " * (module.LIMIT - len(raw)))
-    # All four exact IDs exceed the prior pure-only 128-byte allowance.
-    assert all(128 < len(node) <= 155 for node in module.SERVICE_NODES)
     upper = good | {
         "reports": [
             dict(node=row["node"], when="teardown", outcome="passed", seconds="x" * 32)
@@ -952,7 +949,7 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     result = json.loads(target.read_text())
     assert result["protocol_errors"] == 4
     assert result["collection_errors"] == result["unhandled_errors"] == 2
-    assert len(result["reports"]) == 12
+    assert len(result["reports"]) == 9
     assert "private" not in target.read_text()
     with pytest.raises(module.ProofFailure):
         module.service_result(target.read_text())
@@ -963,7 +960,7 @@ def test_postgres_hook_rejects_bad_teardown_properties(fault):
     from types import SimpleNamespace
 
     node = module.SERVICE_NODES[0]
-    pair = ("ocwp_postgres_identity", postgres_receipt(node))
+    pair = ("ocwp_postgres_identity", postgres_identity(node))
     properties = [pair]
     if fault == "missing":
         properties = []
@@ -972,7 +969,7 @@ def test_postgres_hook_rejects_bad_teardown_properties(fault):
     elif fault == "name":
         properties = [("other", pair[1])]
     elif fault == "foreign":
-        properties = [(pair[0], postgres_receipt(module.SERVICE_NODES[1]))]
+        properties = [(pair[0], postgres_identity(module.SERVICE_NODES[1]))]
     elif fault == "extra":
         properties = [(pair[0], pair[1] | {"payload": "private"})]
     hook = module.ServiceReportHook()
@@ -987,117 +984,84 @@ def test_postgres_hook_rejects_bad_teardown_properties(fault):
     assert hook.failure_stage == 4
 
 
-@pytest.mark.parametrize("index", range(4))
-def test_postgres_observer_never_migrates_and_preserves_forwarding(index, monkeypatch):
+@pytest.mark.parametrize("index", range(3))
+def test_postgres_final_observer_does_not_intercept_migration_failures(index, monkeypatch):
     import sys
     from types import SimpleNamespace
 
     node = module.SERVICE_NODES[index]
-    config, engine, result = object(), object(), object()
+    config, engine = object(), object()
+    failure = RuntimeError("synthetic expected migration failure")
     request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
     calls, probes = [], []
-    committed = [None]
 
     def upgrade(*args, **kwargs):
-        calls.append((args, kwargs))
-        committed[0] = "0013" if args[1] == "head" else args[1]
-        return result
+        calls.append(("upgrade", args, kwargs))
+        raise failure
 
-    command = SimpleNamespace(upgrade=upgrade)
+    def downgrade(*args, **kwargs):
+        calls.append(("downgrade", args, kwargs))
+        raise failure
+
+    command = SimpleNamespace(upgrade=upgrade, downgrade=downgrade)
     monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
 
     def observe(actual_engine, actual_node):
         assert actual_engine is engine and actual_node == node
-        assert committed[0] is not None
-        probes.append(committed[0])
-        return postgres_identity(node, index, committed[0])
+        probes.append(node)
+        return postgres_identity(node, index)
 
     monkeypatch.setattr(module, "probe_postgres_identity", observe)
-    fixture = module.observe_postgres((config, engine), request, monkeypatch)
+    fixture = module.observe_postgres((config, engine), request)
     next(fixture)
     assert calls == probes == []
-    revisions = module.SERVICE_REVISIONS[index]
-    requested = ["0012", "head"] if len(revisions) == 2 else ["head"]
-    for revision in requested:
-        assert command.upgrade(config, revision, sql=False, tag="synthetic") is result
-        assert len(probes) == len(calls)
+    assert command.upgrade is upgrade and command.downgrade is downgrade
+    with pytest.raises(RuntimeError) as caught:
+        command.upgrade(config, "head", sql=False)
+    assert caught.value is failure
+    with pytest.raises(RuntimeError) as caught:
+        command.downgrade(config=config, revision="0012")
+    assert caught.value is failure
+    assert probes == []
     with pytest.raises(StopIteration):
         next(fixture)
+    assert command.upgrade is upgrade and command.downgrade is downgrade
     assert calls == [
-        ((config, revision), {"sql": False, "tag": "synthetic"}) for revision in requested
+        ("upgrade", (config, "head"), {"sql": False}),
+        ("downgrade", (), {"config": config, "revision": "0012"}),
     ]
-    assert probes == [*revisions, "0013"]
+    assert probes == [node]
     assert request.node.user_properties == [
-        ("ocwp_postgres_identity", postgres_receipt(node, index))
+        ("ocwp_postgres_identity", postgres_identity(node, index))
     ]
 
 
-def test_postgres_observer_propagates_original_exception_without_probe(monkeypatch):
-    import sys
+@pytest.mark.parametrize("fault", ["revision", "database", "open", "foreign_node", "probe"])
+def test_postgres_final_observer_refuses_wrong_identity(fault, monkeypatch):
     from types import SimpleNamespace
 
-    failure = RuntimeError("synthetic original")
-    config, engine = object(), object()
-    calls = []
-
-    def upgrade(*args, **kwargs):
-        calls.append((args, kwargs))
-        raise failure
-
-    command = SimpleNamespace(upgrade=upgrade)
-    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
-    monkeypatch.setattr(
-        module, "probe_postgres_identity", lambda *_: pytest.fail("probe after failed upgrade")
-    )
-    request = SimpleNamespace(
-        node=SimpleNamespace(nodeid=module.SERVICE_NODES[1], user_properties=[])
-    )
-    fixture = module.observe_postgres((config, engine), request, monkeypatch)
-    next(fixture)
-    with pytest.raises(RuntimeError) as caught:
-        command.upgrade(config=config, revision="head", sql=False)
-    assert caught.value is failure
-    with pytest.raises(module.ProofFailure, match="service_postgres_chronology"):
-        command.upgrade(config, "head")
-    assert calls == [((), {"config": config, "revision": "head", "sql": False})]
-    fixture.close()
-    assert request.node.user_properties == []
-
-
-@pytest.mark.parametrize("fault", ["foreign", "extra", "missing", "revision", "schema", "final"])
-def test_postgres_observer_refuses_wrong_chronology_or_target(fault, monkeypatch):
-    import sys
-    from types import SimpleNamespace
-
-    node = module.SERVICE_NODES[1]
-    config, engine = object(), object()
-    calls = []
-    command = SimpleNamespace(upgrade=lambda *args, **kwargs: calls.append((args, kwargs)))
-    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
-    probes = [postgres_identity(node), postgres_identity(node)]
+    node = module.SERVICE_NODES[0]
+    observed = postgres_identity(node)
     if fault == "revision":
-        probes[0]["schema_revision"] = "0012"
-    elif fault == "schema":
-        probes[1] = postgres_identity(node, 1)
-    elif fault == "final":
-        probes[1]["schema_revision"] = "0012"
-    monkeypatch.setattr(module, "probe_postgres_identity", lambda *_: probes.pop(0))
+        observed["schema_revision"] = "0013"
+    elif fault == "database":
+        observed["database"] = "other_test"
+    elif fault == "open":
+        observed["probe_connection_closed"] = False
+    elif fault == "foreign_node":
+        observed["node"] = module.SERVICE_NODES[1]
+
+    def probe(*_):
+        if fault == "probe":
+            raise module.ProofFailure("synthetic_probe_failure")
+        return observed
+
+    monkeypatch.setattr(module, "probe_postgres_identity", probe)
     request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
-    fixture = module.observe_postgres((config, engine), request, monkeypatch)
+    fixture = module.observe_postgres((object(), object()), request)
     next(fixture)
     with pytest.raises(module.ProofFailure):
-        if fault == "foreign":
-            command.upgrade(object(), "head")
-        elif fault == "missing":
-            next(fixture)
-        else:
-            command.upgrade(config, "head")
-            if fault == "extra":
-                command.upgrade(config, "head")
-            else:
-                next(fixture)
-    assert len(calls) == (0 if fault in {"foreign", "missing"} else 1)
-    fixture.close()
+        next(fixture)
     assert request.node.user_properties == []
 
 
@@ -1148,7 +1112,7 @@ def test_postgres_probe_closes_its_independent_connection(failure, monkeypatch):
     engine = SimpleNamespace(
         dialect=SimpleNamespace(name="postgresql", driver="psycopg"), connect=Connection
     )
-    node = module.SERVICE_NODES[0]
+    node = module.SERVICE_NODES[1]
     if failure:
         with pytest.raises(RuntimeError, match="synthetic query failure"):
             module.probe_postgres_identity(engine, node)
@@ -1508,7 +1472,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "postgresql0013_four_passed_not_capacity"
+                "postgresql_migration_integrity_three_passed_not_restore_or_capacity"
                 if fault == "success"
                 else "failed"
             ), fault

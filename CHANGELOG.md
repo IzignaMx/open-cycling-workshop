@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · PostgreSQL 0013 finite closure and migration integrity preparation
+
+- Verify four PostgreSQL cases and twelve phases in run 39065290465, including guarded NULLs and historical replay.
+- Recover exact published source/artifact after workspace replacement; preserve the earlier failed run.
+- Prepare three existing refusal, version/reference-integrity and DDL-rollback cases under unchanged limits.
+- [Scope](docs/10-spec-development/2026-10-17-quote-migration-integrity.md); restore, concurrency and capacity remain pending.
+
 ## Unreleased · PostgreSQL NULL guard assertion correction
 
 - Preserve failed run 39064719886: two cases passed, third SQL-spelling assertion failed, historical case unrun.
