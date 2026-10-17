@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Static contract subtimeout adjustment
+
+- Record repository, lint, format and strict-mypy passes in run `39051546208`.
+  OpenAPI exceeded its three-second subprocess ceiling; client was unrun.
+- Allocate OpenAPI six seconds inside the unchanged 20-second workload budget;
+  preserve all execution resources, checks and the prior timeout evidence.
+- No drift or product latency claim follows from the timeout.
+  [Evidence and rationale](docs/10-spec-development/2026-10-17-static-contract-subtimeout.md).
+
 ## Unreleased · Observed formatter corrections
 
 - Preserve complete 10,420-byte formatter output from run `39051023447`,

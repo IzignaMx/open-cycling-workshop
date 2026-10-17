@@ -1,0 +1,145 @@
+name: Quote service bounded contract scheduling
+
+on:
+  push:
+    branches: [codex/quote-service-static-contract-budget]
+
+permissions:
+  contents: read
+
+jobs:
+  quote-service-static-contract-budget:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/codex/quote-service-static-contract-budget' &&
+      github.run_number == 1 && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Refuse any other event, branch, workflow, run or attempt before preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/codex/quote-service-static-contract-budget
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/quote-service-static-contract-budget.yml@$GITHUB_REF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Build exact archived source with bounded quiet preparation output
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/quote-service-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          export QUOTE_SERVICE_CONTEXT="$context"
+          cat > "$RUNNER_TEMP/quote-service-proof.Dockerfile" <<'DOCKERFILE'
+          FROM ocwp-quote-service-base
+          RUN uv sync --all-packages --group dev --locked
+          COPY tests /app/tests
+          COPY scripts /app/scripts
+          COPY ruff.toml mypy.ini LICENSE README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md GOVERNANCE.md MAINTAINERS.md ARCHITECTURE.md package.json pnpm-workspace.yaml tsconfig.base.json .python-version .nvmrc /app/
+          COPY packages/api-client/openapi.json /app/packages/api-client/openapi.json
+          COPY packages/api-client/src/generated.ts /app/packages/api-client/src/generated.ts
+          COPY apps/web/package.json /app/apps/web/package.json
+          COPY packages/ui/package.json /app/packages/ui/package.json
+          COPY packages/plugin-sdk/package.json /app/packages/plugin-sdk/package.json
+          COPY packages/branding/package.json /app/packages/branding/package.json
+          COPY infra/compose/docker-compose.dev.yml /app/infra/compose/docker-compose.dev.yml
+          COPY fixtures/minimal/fixture.json /app/fixtures/minimal/fixture.json
+          COPY fixtures/demo-workshop/fixture.json /app/fixtures/demo-workshop/fixture.json
+          COPY fixtures/load/fixture.json /app/fixtures/load/fixture.json
+          ARG SOURCE_TREE
+          LABEL ocwp.source-tree=$SOURCE_TREE
+          ENV PYTHONDONTWRITEBYTECODE=1
+          DOCKERFILE
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import ProofFailure, run, source_query
+          context = os.environ['QUOTE_SERVICE_CONTEXT']
+          root = Path(os.environ['RUNNER_TEMP'])
+          try:
+              tree = source_query('tree')
+              commands = [
+                  (300, ['docker', 'build', '--quiet', '--target', 'build', '-f',
+                         f'{context}/infra/docker/platform.local.Dockerfile',
+                         '-t', 'ocwp-quote-service-base', context]),
+                  (300, ['docker', 'build', '--quiet', '-f',
+                         str(root / 'quote-service-proof.Dockerfile'),
+                         '--build-arg', f'SOURCE_TREE={tree}',
+                         '-t', 'ocwp-quote-service-initial', context]),
+                  (60, ['docker', 'pull', '--quiet', 'postgres:18.4-trixie']),
+              ]
+              for seconds, command in commands:
+                  run(['timeout', '--signal=TERM', '--kill-after=5s', f'{seconds}s',
+                       *command], timeout=seconds + 5)
+          except (ProofFailure, OSError, ValueError):
+              raise SystemExit('Image preparation unqualified; no specimen launch') from None
+          PY
+      - name: Verify containment then run six fixed static and contract commands once
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+            --worker-image ocwp-quote-service-initial --pg-image postgres:18.4-trixie \
+            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-service-owned.json" \
+            --evidence artifacts/quote-service-contained.json --service-initial
+      - name: Independently reconcile, remove and prove owned containers absent
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
+          deadline = time.monotonic() + 55
+          def execute(args, *, timeout=5):
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  raise ProofFailure('independent_cleanup_deadline')
+              result = run(args, timeout=min(timeout, remaining), deadline=deadline)
+              if time.monotonic() >= deadline:
+                  raise ProofFailure('independent_cleanup_deadline')
+              return result
+          result = {'schema': 1, 'cleanup': 'failed', 'commit': os.environ['GITHUB_SHA'],
+                    'run_id': os.environ['GITHUB_RUN_ID'], 'run_number': os.environ['GITHUB_RUN_NUMBER'],
+                    'run_attempt': os.environ['GITHUB_RUN_ATTEMPT']}
+          try:
+              root = Path(os.environ['RUNNER_TEMP'])
+              owned = root / 'quote-service-owned.json'
+              ids = [identifier(path.read_text().strip()) for path in root.glob('quote-service-owned.*.cid')]
+              present = execute(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
+              for cid in present:
+                  identifier(cid)
+              discovered = reconcile_owned(owned, execute) if owned.with_suffix('.owner.json').exists() else []
+              if not set(ids).intersection(present).issubset(discovered):
+                  raise ProofFailure('owned_identity_reconciliation')
+              remove_owned(discovered, execute)
+              result['cleanup'] = 'verified_absent'
+          except (ProofFailure, ValueError, OSError):
+              pass
+          finally:
+              Path('artifacts').mkdir(exist_ok=True)
+              Path('artifacts/quote-service-independent-cleanup.json').write_text(json.dumps(result) + '\n')
+          if result['cleanup'] != 'verified_absent':
+              raise SystemExit('Owned-container cleanup unverified')
+          PY
+      - name: Upload closed static evidence and independent absence result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-service-static-contract-budget-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            artifacts/quote-service-contained.json
+            artifacts/quote-service-independent-cleanup.json
+          if-no-files-found: error

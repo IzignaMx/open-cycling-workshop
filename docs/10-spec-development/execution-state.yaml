@@ -1,7 +1,23 @@
 schema: 1
 
-observed_formatter_correction_20261017:
+static_contract_subtimeout_20261017:
   status: prepared_pending_review_and_qualification
+  source_commit: 512df3d47132f9c14c1e33ce4fac9efe03d35fac
+  source_tree: c1eda35969f1ec78831a5a455a7b3d5388700836
+  failed_run: 39051546208
+  artifact: 12107922284
+  repository_lint_format_strict_mypy: passed
+  openapi: subprocess_timeout_three_seconds_no_output
+  generated_client: unrun
+  proposed_tool_ceilings_seconds: [2, 3, 3, 12, 6, 2]
+  unchanged_shared_workload_seconds: 20
+  product_latency_qualification: none
+  evidence: docs/10-spec-development/2026-10-17-static-contract-subtimeout.md
+
+observed_formatter_correction_20261017:
+  status: format_verified_openapi_subtimeout_client_unrun
+  qualification_run: 39051546208
+  qualification_artifact: 12107922284
   source_commit: d15b3ae5f2d45e9a0e22d8b42997218a68427057
   source_tree: 848f2ca1eac996265a9eb4de645285825d203e49
   failed_run: 39051023447

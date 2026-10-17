@@ -1,5 +1,13 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Static contract subtimeout · 2026-10-17
+
+- [x] Retain first-four-command passes and OpenAPI timeout from run `39051546208`.
+- [ ] Review six-second OpenAPI allowance within unchanged global 20 seconds.
+- [ ] Obtain complete six-command result, then continue finite PostgreSQL semantics.
+- [Rationale and pending scope](docs/10-spec-development/2026-10-17-static-contract-subtimeout.md).
+  Previous preparation sections remain historical checkpoints.
+
 ## Formatter correction · 2026-10-17
 
 - [x] Recover complete formatter output from run `39051023447`.

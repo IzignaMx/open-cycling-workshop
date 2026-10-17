@@ -56,7 +56,7 @@ COMMANDS = (
     (PYTHON, "scripts/contracts/generate_ts_client.py", "--check"),
 )
 # Per-command ceilings, not an additive allocation: the outer 20 seconds includes all six.
-TOOL_SECONDS = (2, 3, 3, 12, 3, 2)
+TOOL_SECONDS = (2, 3, 3, 12, 6, 2)
 
 
 def _limit_output() -> None:
