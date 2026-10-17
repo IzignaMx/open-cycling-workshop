@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased · Bounded-effects remaining line and formatter diagnostics
+
+- Preserve run 39057515145 and its single remaining line-length diagnostic.
+- Wrap that select expression and request formatter diff through existing bounded output.
+- Corrected-source static and functional verification remain pending.
+
 ## Unreleased · Bounded-effects source diagnostic corrections
 
 - Preserve failed static run 39056889116 and its complete 35-issue Ruff output.

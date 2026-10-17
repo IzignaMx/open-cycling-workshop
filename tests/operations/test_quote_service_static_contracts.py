@@ -37,7 +37,7 @@ COMMANDS = (
         "concise",
         *STATIC_PATHS,
     ),
-    (RUFF, "format", "--config", "ruff.toml", "--check", "--no-cache", *STATIC_PATHS),
+    (RUFF, "format", "--config", "ruff.toml", "--check", "--diff", "--no-cache", *STATIC_PATHS),
     (
         MYPY,
         "--config-file",

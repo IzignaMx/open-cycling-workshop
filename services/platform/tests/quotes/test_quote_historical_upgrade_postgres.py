@@ -311,7 +311,9 @@ def test_valid_quote_only_0012_upgrade_replays_without_inventing_transition(
         ).all()
         assert versions == [None, None]
         persisted = connection.execute(
-            select(users.c.session_version, users.c.capabilities, organizations.c.dataset_incarnation)
+            select(
+                users.c.session_version, users.c.capabilities, organizations.c.dataset_incarnation
+            )
             .select_from(
                 users.join(organizations, users.c.organization_id == organizations.c.id)
             )
