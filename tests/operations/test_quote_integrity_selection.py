@@ -18,6 +18,19 @@ METADATA = "services/platform/tests/quotes/test_quote_effect_metadata.py"
 BRIDGE = "services/platform/tests/quotes/test_quote_application_service_postgres.py"
 WRITER = "services/platform/tests/sync/test_prepared_order_change.py"
 BOUNDED = "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py"
+DECISIONS = "services/platform/tests/quotes/test_quote_service_decisions_postgres.py"
+PAYLOAD = "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py"
+ATOMICITY = "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py"
+RACES = "services/platform/tests/quotes/test_quote_service_races_postgres.py"
+SETUP_IDENTITY_GROUPS = {
+    "service_bridge",
+    "decision7",
+    "mismatch_a7",
+    "mismatch_b7",
+    "storage6",
+    "atomic8",
+    "races5",
+}
 MALFORMED = "test_runtime_count_verifier_refuses_malformed_postgres_metadata"
 RELATIONS = "test_runtime_count_verifier_refuses_nonordinary_relations"
 SHADOWS = "test_runtime_count_verifier_refuses_shadowed_generated_dependencies"
@@ -81,6 +94,51 @@ PG_SELECTIONS = {
         ),
         "not sqlite",
     ),
+    "decision7": (
+        DECISIONS,
+        (
+            ("test_service_decision_and_fresh_exact_replay", 2),
+            ("test_service_enrollment_refuses_and_preserves_baseline", 3),
+            ("test_service_post_consent_refuses_current_cas_without_writes", 2),
+        ),
+        "not sqlite",
+    ),
+    "mismatch_a7": (
+        PAYLOAD,
+        (("test_pg_derived_detached_identity_projection_mismatch", 7),),
+        "not sqlite",
+    ),
+    "mismatch_b7": (
+        PAYLOAD,
+        (("test_pg_derived_detached_content_projection_mismatch", 7),),
+        "not sqlite",
+    ),
+    "storage6": (
+        PAYLOAD,
+        (
+            ("test_pg_derived_detached_note_nullness_requires_exact_true", 2),
+            ("test_external_text_sql_preflight_refuses_without_hydration", 1),
+            ("test_compressed_json_sql_pair_refuses_with_both_guarded_values_null", 1),
+            ("test_asymmetric_sql_count_guard_nulls_both_raw_values", 2),
+        ),
+        "not sqlite",
+    ),
+    "atomic8": (
+        ATOMICITY,
+        (
+            ("test_reached_write_failure_rolls_back_and_fresh_same_id_applies_once", 7),
+            ("test_synthetic_commit_success_ack_loss_is_unknown_and_fresh_replay_is_exact", 1),
+        ),
+        "not sqlite",
+    ),
+    "races5": (
+        RACES,
+        (
+            ("test_two_service_decisions_serialize_one_complete_effect_set", 3),
+            ("test_waiting_service_rechecks_revoked_quote_grant_for_new_and_exact_replay", 2),
+        ),
+        "not sqlite",
+    ),
 }
 PG_COUNTS = {
     "metadata_sync": 7,
@@ -91,6 +149,12 @@ PG_COUNTS = {
     "admission9": 9,
     "history9": 9,
     "guards9": 9,
+    "decision7": 7,
+    "mismatch_a7": 7,
+    "mismatch_b7": 7,
+    "storage6": 6,
+    "atomic8": 8,
+    "races5": 5,
 }
 JUNIT_COUNTS = {
     "service27": 27,
@@ -289,6 +353,64 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
         fixture | {"field": "canonical_utf8", "value": b"{}"},
         fixture | {"field": "payload", "value": {"version": True}},
     ]
+    expected["decision7"] = [
+        fixture
+        | {
+            "outcome": "APPROVE",
+            "selected": (10, 11),
+            "state": "AUTHORIZED",
+            "action": "authorize",
+        },
+        fixture | {"outcome": "REJECT", "selected": (), "state": "REJECTED", "action": "reject"},
+        fixture | {"reason": "prior_inventory"},
+        fixture | {"reason": "progressed_history"},
+        fixture | {"reason": "non_diagnosis"},
+        fixture | {"kind": "revision"},
+        fixture | {"kind": "decision"},
+    ]
+    expected["mismatch_a7"] = [
+        fixture | {"field": "order_id", "value": "other-order"},
+        fixture | {"field": "customer_id", "value": "other-customer"},
+        fixture | {"field": "bicycle_id", "value": "other-bicycle"},
+        fixture | {"field": "organization_id", "value": "other-organization"},
+        fixture | {"field": "location_id", "value": "other-location"},
+        fixture | {"field": "state", "value": "REJECTED"},
+        fixture | {"field": "version", "value": 3},
+    ]
+    expected["mismatch_b7"] = [
+        fixture | {"field": "reported_problem", "value": "Other reported problem"},
+        fixture | {"field": "intake_condition", "value": "Other intake condition"},
+        fixture | {"field": "accessories", "value": "Other accessories"},
+        fixture | {"field": "priority", "value": "high"},
+        fixture | {"field": "diagnosis", "value": "Other diagnosis"},
+        fixture | {"field": "created_at", "value": "2026-10-14T00:00:00+00:00"},
+        fixture | {"field": "updated_at", "value": "2026-10-15T12:00:01+00:00"},
+    ]
+    expected["storage6"] = [
+        fixture | {"note_is_null": False},
+        fixture | {"note_is_null": 1},
+        fixture,
+        fixture,
+        fixture | {"oversized_side": "change"},
+        fixture | {"oversized_side": "outbox"},
+    ]
+    expected["atomic8"] = [
+        fixture | {"stage": "decision_flush"},
+        fixture | {"stage": "lineage_cas"},
+        fixture | {"stage": "order_cas"},
+        fixture | {"stage": "order_event_flush"},
+        fixture | {"stage": "quote_outbox_flush"},
+        fixture | {"stage": "receipt_flush"},
+        fixture | {"stage": "response_serialization"},
+        fixture,
+    ]
+    expected["races5"] = [
+        fixture | {"contender": "same_proof"},
+        fixture | {"contender": "changed_proof"},
+        fixture | {"contender": "distinct_decision"},
+        fixture | {"replay": False},
+        fixture | {"replay": True},
+    ]
     for group, selection in PG_SELECTIONS.items():
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         source, functions, expression = selection
@@ -300,6 +422,9 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
             assert all(type(key) is str for key in actual)
             for key, value in wanted.items():
                 assert type(actual[key]) is type(value)
+                if type(value) is tuple:
+                    assert len(actual[key]) == len(value)
+                    assert all(type(item) is int for item in actual[key])
                 if type(value) is dict:
                     assert list(actual[key]) == ["version"]
                     assert type(next(iter(actual[key]))) is str
@@ -456,6 +581,29 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
         ("guards9", 8, "value", {OtherString("version"): True}),
         ("guards9", 8, "value", {"version": True, "extra": True}),
         ("guards9", 8, "value", []),
+        ("decision7", 0, "selected", [10, 11]),
+        ("decision7", 0, "selected", (10.0, 11)),
+        ("decision7", 0, "selected", (True, 11)),
+        ("decision7", 0, "selected", (10,)),
+        ("decision7", 0, "selected", (10, 12)),
+        ("decision7", 1, "selected", []),
+        ("decision7", 0, "action", "reject"),
+        ("decision7", 0, "state", "REJECTED"),
+        ("decision7", 0, "outcome", "REJECT"),
+        ("decision7", 2, "reason", "unknown"),
+        ("decision7", 5, "kind", True),
+        ("mismatch_a7", 0, "value", "other-customer"),
+        ("mismatch_a7", 6, "value", 3.0),
+        ("mismatch_a7", 6, "value", True),
+        ("mismatch_b7", 0, "value", "Other intake condition"),
+        ("mismatch_b7", 5, "value", b"2026-10-14T00:00:00+00:00"),
+        ("storage6", 0, "note_is_null", 0),
+        ("storage6", 1, "note_is_null", True),
+        ("storage6", 4, "oversized_side", "unknown"),
+        ("atomic8", 0, "stage", "unknown"),
+        ("races5", 0, "contender", "unknown"),
+        ("races5", 3, "replay", 0),
+        ("races5", 4, "replay", 1),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         items = pg_items(pg)
@@ -476,6 +624,16 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
         ("guards9", 6, 7),
         ("guards9", 6, 8),
         ("guards9", 7, 8),
+        ("decision7", 0, 1),
+        ("decision7", 2, 3),
+        ("decision7", 5, 6),
+        ("mismatch_a7", 0, 1),
+        ("mismatch_b7", 5, 6),
+        ("storage6", 0, 1),
+        ("storage6", 4, 5),
+        ("atomic8", 0, 1),
+        ("races5", 0, 1),
+        ("races5", 3, 4),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         items = pg_items(pg)
@@ -488,7 +646,16 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
             left["value"], right["value"] = right["value"], left["value"]
             with pytest.raises(pytest.UsageError, match="service_selection"):
                 pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=items))
-    for group in ("writer5", "admission9", "history9", "guards9"):
+    for group in (
+        "writer5",
+        "admission9",
+        "history9",
+        "guards9",
+        "decision7",
+        "storage6",
+        "atomic8",
+        "races5",
+    ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         for fault in ("function_order", "extra_key", "missing_key"):
             items = pg_items(pg)
@@ -633,7 +800,7 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
 
     monkeypatch.setattr(pg, "probe_postgres_identity", probe)
     for group in PG_SELECTIONS:
-        if group == "service_bridge":
+        if group in SETUP_IDENTITY_GROUPS:
             continue
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         node = pg_items(pg)[0].nodeid
@@ -678,15 +845,15 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
         assert isinstance(calls[0][0], pg.ServiceReportHook)
         assert calls[0][1] == "quote-service-closed-report"
         expected = (
-            [] if group == "service_bridge" else [(observer_plugin, "quote-postgres-observer")]
+            [] if group in SETUP_IDENTITY_GROUPS else [(observer_plugin, "quote-postgres-observer")]
         )
         assert calls[1:] == expected
-    monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "service_bridge")
-    bridge_node = pg_items(pg)[0].nodeid
-    request.node.nodeid = bridge_node
-    with pytest.raises(pg.ProofFailure, match="service_selection"):
-        next(pg.observe_postgres((object(), engine), request))
-    assert request.node.user_properties == []
+    for group in SETUP_IDENTITY_GROUPS:
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        request.node.nodeid = pg_items(pg)[0].nodeid
+        with pytest.raises(pg.ProofFailure, match="service_selection"):
+            next(pg.observe_postgres((object(), engine), request))
+        assert request.node.user_properties == []
 
 
 def test_numeric_failure_bounds_and_static_exactness(pg, monkeypatch):
@@ -700,6 +867,12 @@ def test_numeric_failure_bounds_and_static_exactness(pg, monkeypatch):
         ("admission9", 27),
         ("history9", 27),
         ("guards9", 27),
+        ("decision7", 21),
+        ("mismatch_a7", 21),
+        ("mismatch_b7", 21),
+        ("storage6", 18),
+        ("atomic8", 24),
+        ("races5", 18),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         boundary = failure_summary(ceiling // 3) | {"collection_count": PG_COUNTS[group]}
@@ -932,7 +1105,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
     assert response_counts["test_service_projector_preserves_four_digit_receipt_year"] == 8
     for left, right in (("response50", "response64"), ("atomic18_corruption", "atomic18_other")):
         assert set(modules[left].NODES).isdisjoint(modules[right].NODES)
-    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 254
+    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 294
     assert (
         sum(PG_COUNTS[group] for group in ("writer5", "admission9", "history9", "guards9"))
         + JUNIT_COUNTS["selection_static12"]
@@ -951,6 +1124,23 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         )
         == 210
     )
+    assert (
+        sum(
+            PG_COUNTS[group]
+            for group in (
+                "decision7",
+                "mismatch_a7",
+                "mismatch_b7",
+                "storage6",
+                "atomic8",
+                "races5",
+            )
+        )
+        + JUNIT_COUNTS["selection_static12"]
+        == 52
+    )
+    assert combined.SEMANTIC_BRANCH == "refs/heads/codex/quote-semantic-closure-checks"
+    assert combined.SEMANTIC_WORKFLOW == ".github/workflows/quote-semantic-closure-checks.yml"
     assert combined.LOADER_BRANCH == "refs/heads/codex/quote-loader-writer-checks"
     assert combined.LOADER_WORKFLOW == ".github/workflows/quote-loader-writer-checks.yml"
     monkeypatch.chdir(ROOT)
@@ -969,6 +1159,9 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         (combined.STYLE_BRANCH, combined.STYLE_WORKFLOW),
         (combined.FORMAT_BRANCH, combined.FORMAT_WORKFLOW),
         (combined.LOADER_BRANCH, combined.LOADER_WORKFLOW),
+        (combined.LOADER_STATIC_BRANCH, combined.LOADER_STATIC_WORKFLOW),
+        (combined.LOADER_FORMAT_BRANCH, combined.LOADER_FORMAT_WORKFLOW),
+        (combined.SEMANTIC_BRANCH, combined.SEMANTIC_WORKFLOW),
     )
     for group, module in modules.items():
         for branch, workflow in branches:
@@ -977,9 +1170,19 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
             accepted = (
                 (branch == combined.BRANCH and group != "selection_static12")
                 or (
-                    branch in (combined.STYLE_BRANCH, combined.FORMAT_BRANCH) and group == "static6"
+                    branch
+                    in (
+                        combined.STYLE_BRANCH,
+                        combined.FORMAT_BRANCH,
+                        combined.LOADER_STATIC_BRANCH,
+                        combined.LOADER_FORMAT_BRANCH,
+                    )
+                    and group == "static6"
                 )
-                or (branch == combined.LOADER_BRANCH and group == "selection_static12")
+                or (
+                    branch in (combined.LOADER_BRANCH, combined.SEMANTIC_BRANCH)
+                    and group == "selection_static12"
+                )
             )
             if accepted:
                 module.gate()

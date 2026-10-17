@@ -1,5 +1,15 @@
 # Changelog
 
+## Quote semantic closure preparation · 2026-10-17
+
+- Prepare 40 finite service decision, retained-payload, reached-write atomicity and small PostgreSQL race cases with reviewed designs and unchanged resource limits. Product and schema behavior remain unchanged.
+- Exact implementation review is complete; collection and execution remain pending. [Scope and remaining gates](docs/10-spec-development/2026-10-17-quote-semantic-closure.md).
+
+## Quote loader static closure · 2026-10-17
+
+- Verify all six static commands on 4b0a19b6 in run 39076298550, with independent source, resource and cleanup review. Workload 13.499 seconds under the unchanged 20-second cap.
+- Preserve both preceding failed static runs and the separately verified 32 PostgreSQL cases. Broader service integration and activation remain pending.
+
 ## Quote selection layout correction · 2026-10-17
 
 - Preserve run 39075919485: repository and Ruff passed, then formatter requested one exact continuation-line join; types and both contracts were unrun. Apply that retained line only and prepare the existing static-six scope under unchanged limits.

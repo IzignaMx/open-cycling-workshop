@@ -35,7 +35,7 @@ CANDIDATE_SHA = {
         "39f60d861187048878b32b55f3834168ca19f199c1e090d38bffb37fe9db0d6b"
     ),
     "tests/operations/test_quote_integrity_static_contracts.py": (
-        "7de6e6403edb75542645cd414f509567ebb4c7df09e17d467c31294e4dd8a7f3"
+        "f9b40338f3cbec87b6a5d04d4d415cfc2964609212c01db4e0889cfce6f8c440"
     ),
     "services/platform/src/cycling_workshop/quotes/repository.py": (
         "8a672931a4b5a8cff831f1466e7bd97bd1b31d2991f77b6160ebce69501bbe91"
@@ -59,10 +59,10 @@ CANDIDATE_SHA = {
         "52aca207fc09a15aae626947d622a32085533d7ed4225d988dce32541630a877"
     ),
     "scripts/ci/quote_integrity_postgres.py": (
-        "ef69f56cbae3b32ce60aae4bdbfc41884dadb57206c60485ac093222f40bc9cf"
+        "f3ccf930302e424830dd6346f2cc112778bffb88d4393fd795da65b1da27da7c"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "a3dae5a52edd20c42d5467f84d347b123ba794a7c2d07ada41fed6f99c45d0f1"
+        "646227a427036e1b3debf136841a6c92a6204b534cb9815248425864c7400c5a"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -88,6 +88,21 @@ CANDIDATE_SHA = {
     ".github/workflows/quote-loader-format-checks.yml": (
         "27bb6de03bcfec349f18076363c16bcec0e1d624369c03b12d7a3a8b8fce814b"
     ),
+    "services/platform/tests/quotes/test_quote_service_decisions_postgres.py": (
+        "e6ef7431067f34d20dc6404c3517e8cafc25657f6136b9f3020ec38dbd3b0d9f"
+    ),
+    "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py": (
+        "2f69a3fd8ce6d3f1532821377bf144c5e16ba4177c3ea1318785a1723f9655c4"
+    ),
+    "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py": (
+        "159d746b433864c50070fa41d26e73cec134df98451d4707caa491a7f5fa83f9"
+    ),
+    "services/platform/tests/quotes/test_quote_service_races_postgres.py": (
+        "c6252e19159b2b0e0045fd471303a3826734b750f662e32425959b3fa9606405"
+    ),
+    ".github/workflows/quote-semantic-closure-checks.yml": (
+        "229704b528b71cc7f9a27b3a53aff9d4f50fd6188a27efa79f0062b6913e1c6e"
+    ),
 }
 LOCKED_INPUT_SHA = {
     "pyproject.toml": "fd9f19fdeea77c028552a7f9aaeaa3adb42358fa4859c7d7229ae27d6e859be5",
@@ -110,6 +125,8 @@ LOADER_STATIC_BRANCH = "refs/heads/codex/quote-loader-static-checks"
 LOADER_STATIC_WORKFLOW = ".github/workflows/quote-loader-static-checks.yml"
 LOADER_FORMAT_BRANCH = "refs/heads/codex/quote-loader-format-checks"
 LOADER_FORMAT_WORKFLOW = ".github/workflows/quote-loader-format-checks.yml"
+SEMANTIC_BRANCH = "refs/heads/codex/quote-semantic-closure-checks"
+SEMANTIC_WORKFLOW = ".github/workflows/quote-semantic-closure-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -371,6 +388,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == LOADER_BRANCH:
         require(GROUP_KEY == "selection_static12")
         branch, workflow = LOADER_BRANCH, LOADER_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == SEMANTIC_BRANCH:
+        require(GROUP_KEY == "selection_static12")
+        branch, workflow = SEMANTIC_BRANCH, SEMANTIC_WORKFLOW
     else:
         require(GROUP_KEY != "selection_static12")
     require(os.environ.get("GITHUB_REF") == branch)

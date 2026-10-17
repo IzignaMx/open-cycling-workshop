@@ -1,4 +1,4 @@
-"""Eight fixed PostgreSQL integrity groups; reviewed containment, no capacity mode."""
+"""Fourteen fixed PostgreSQL integrity groups; reviewed containment, no capacity mode."""
 
 from __future__ import annotations
 
@@ -520,6 +520,11 @@ BRIDGE_TEST = "services/platform/tests/quotes/test_quote_application_service_pos
 WRITER_TEST = "services/platform/tests/sync/test_prepared_order_change.py"
 BOUNDED_TEST = "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py"
 BYPASS = "test_bypassed_prepared_projection_refuses_before_any_write"
+DECISIONS_TEST = "services/platform/tests/quotes/test_quote_service_decisions_postgres.py"
+PAYLOAD_TEST = "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py"
+ATOMICITY_TEST = "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py"
+RACES_TEST = "services/platform/tests/quotes/test_quote_service_races_postgres.py"
+DECISION_REPLAY = "test_service_decision_and_fresh_exact_replay"
 MALFORMED = "test_runtime_count_verifier_refuses_malformed_postgres_metadata"
 RELATIONS = "test_runtime_count_verifier_refuses_nonordinary_relations"
 SHADOWS = "test_runtime_count_verifier_refuses_shadowed_generated_dependencies"
@@ -590,6 +595,51 @@ PG_GROUPS = {
             ("test_order_row_lock_is_retained_during_prepare_and_persist", 1),
             ("test_small_compressed_text_is_refused_by_length_without_hydration", 1),
             (BYPASS, 4),
+        ),
+        "not sqlite",
+    ),
+    "decision7": (
+        DECISIONS_TEST,
+        (
+            (DECISION_REPLAY, 2),
+            ("test_service_enrollment_refuses_and_preserves_baseline", 3),
+            ("test_service_post_consent_refuses_current_cas_without_writes", 2),
+        ),
+        "not sqlite",
+    ),
+    "mismatch_a7": (
+        PAYLOAD_TEST,
+        (("test_pg_derived_detached_identity_projection_mismatch", 7),),
+        "not sqlite",
+    ),
+    "mismatch_b7": (
+        PAYLOAD_TEST,
+        (("test_pg_derived_detached_content_projection_mismatch", 7),),
+        "not sqlite",
+    ),
+    "storage6": (
+        PAYLOAD_TEST,
+        (
+            ("test_pg_derived_detached_note_nullness_requires_exact_true", 2),
+            ("test_external_text_sql_preflight_refuses_without_hydration", 1),
+            ("test_compressed_json_sql_pair_refuses_with_both_guarded_values_null", 1),
+            ("test_asymmetric_sql_count_guard_nulls_both_raw_values", 2),
+        ),
+        "not sqlite",
+    ),
+    "atomic8": (
+        ATOMICITY_TEST,
+        (
+            ("test_reached_write_failure_rolls_back_and_fresh_same_id_applies_once", 7),
+            ("test_synthetic_commit_success_ack_loss_is_unknown_and_fresh_replay_is_exact", 1),
+        ),
+        "not sqlite",
+    ),
+    "races5": (
+        RACES_TEST,
+        (
+            ("test_two_service_decisions_serialize_one_complete_effect_set", 3),
+            ("test_waiting_service_rechecks_revoked_quote_grant_for_new_and_exact_replay", 2),
         ),
         "not sqlite",
     ),
@@ -697,6 +747,80 @@ def expected_parameters() -> list[dict[str, object]]:
                     ("payload", {"version": True}),
                 )
             ),
+        ]
+    if group == "decision7":
+        return [
+            fixture
+            | dict(
+                outcome="APPROVE",
+                selected=(10, 11),
+                state="AUTHORIZED",
+                action="authorize",
+            ),
+            fixture | dict(outcome="REJECT", selected=(), state="REJECTED", action="reject"),
+            *(
+                fixture | {"reason": reason}
+                for reason in ("prior_inventory", "progressed_history", "non_diagnosis")
+            ),
+            *(fixture | {"kind": kind} for kind in ("revision", "decision")),
+        ]
+    if group == "mismatch_a7":
+        return [
+            fixture | {"field": field, "value": value}
+            for field, value in (
+                ("order_id", "other-order"),
+                ("customer_id", "other-customer"),
+                ("bicycle_id", "other-bicycle"),
+                ("organization_id", "other-organization"),
+                ("location_id", "other-location"),
+                ("state", "REJECTED"),
+                ("version", 3),
+            )
+        ]
+    if group == "mismatch_b7":
+        return [
+            fixture | {"field": field, "value": value}
+            for field, value in (
+                ("reported_problem", "Other reported problem"),
+                ("intake_condition", "Other intake condition"),
+                ("accessories", "Other accessories"),
+                ("priority", "high"),
+                ("diagnosis", "Other diagnosis"),
+                ("created_at", "2026-10-14T00:00:00+00:00"),
+                ("updated_at", "2026-10-15T12:00:01+00:00"),
+            )
+        ]
+    if group == "storage6":
+        return [
+            fixture | {"note_is_null": False},
+            fixture | {"note_is_null": 1},
+            fixture.copy(),
+            fixture.copy(),
+            *(fixture | {"oversized_side": side} for side in ("change", "outbox")),
+        ]
+    if group == "atomic8":
+        return [
+            *(
+                fixture | {"stage": stage}
+                for stage in (
+                    "decision_flush",
+                    "lineage_cas",
+                    "order_cas",
+                    "order_event_flush",
+                    "quote_outbox_flush",
+                    "receipt_flush",
+                    "response_serialization",
+                )
+            ),
+            fixture.copy(),
+        ]
+    if group == "races5":
+        return [
+            *(
+                fixture | {"contender": contender}
+                for contender in ("same_proof", "changed_proof", "distinct_decision")
+            ),
+            *(fixture | {"replay": replay} for replay in (False, True)),
         ]
     return [fixture.copy() for _ in range(4)]
 
@@ -1134,8 +1258,14 @@ class ServiceReportHook:
                         continue
                     if any(type(params[key]) is not type(value) for key, value in wanted.items()):
                         continue
-                    # Only one reviewed row contains a nested value. Keep its exact
-                    # finite shape, including bool versus int, before dictionary equality.
+                    # Only these fixed rows contain nested values. Validate their
+                    # finite element types before the final dictionary equality.
+                    if name == DECISION_REPLAY:
+                        selected = params["selected"]
+                        if len(selected) != len(wanted["selected"]) or any(
+                            type(value) is not int for value in selected
+                        ):
+                            continue
                     if name == BYPASS and wanted["field"] == "payload":
                         value = params["value"]
                         if (

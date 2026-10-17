@@ -1,6 +1,6 @@
 # Remaining PostgreSQL quote loader and writer checks
 
-Status: all 32 PostgreSQL cases and six selection mocks passed. The latest static-only run passed repository and Ruff, then failed on one formatting line; types and both contracts remain unrun. Prior failed runs and independently checked functional evidence are preserved.
+Status: all 32 PostgreSQL cases and six selection mocks passed. The corrected static-only run passed all six commands with independent evidence review. Prior failed runs and their narrower results remain preserved. Broader service integration and activation are still pending.
 
 The corrected service candidate has [204 functional/mock checks and six static commands verified](2026-10-17-quote-integrity-edges.md). The following historical preparation plan selected existing PostgreSQL prepared-writer and bounded-loader coverage. It introduces no product behavior or schema change.
 
@@ -47,4 +47,12 @@ Independent artifact checks verified all five ZIP/source bindings, the 96 ordere
 
 [Run 39075919485](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39075919485), first run/attempt, tested commit `0009343af1c56ffc8477d0b31efeba41a1a9fc74`, tree `5bb38a73cafd43948dfa8ae67979b31cb82f7543`. Repository and Ruff checks passed, then formatter requested one continuation-line join in `test_quote_integrity_selection.py`. Its complete 662-byte diff reports one file requiring formatting and 43 already formatted. Types, OpenAPI and generated client were unrun. Artifact `12117355365` retains the failed output and cleanup receipts; no final worker counters or workload duration are claimed for that failed run.
 
-Apply only that exact formatting hunk, refresh the selection-test pin and add the literal `codex/quote-loader-format-checks` / `.github/workflows/quote-loader-format-checks.yml` pair restricted to static6 in the existing controller. All consumed workflows, production and PostgreSQL test bodies, selectors and resource budgets remain unchanged. Exact review and the new static execution remain pending. This performs no PostgreSQL or mock rerun and does not qualify capacity or activation.
+Apply only that exact formatting hunk, refresh the selection-test pin and add the literal `codex/quote-loader-format-checks` / `.github/workflows/quote-loader-format-checks.yml` pair restricted to static6 in the existing controller. All consumed workflows, production and PostgreSQL test bodies, selectors and resource budgets remain unchanged. Exact review and the new static execution completed as recorded below. This performs no PostgreSQL or mock rerun and does not qualify capacity or activation.
+
+## Corrected static closure
+
+[Run 39076298550](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39076298550), first run/attempt, passed all six commands on commit `4b0a19b64d346e9322d343f460069aebf145ccfb`, tree `0d5cbb2e03eb7601db1eb7935c21d7e15480ef2a`: repository contract, Ruff, formatter, strict production types, OpenAPI and generated client. Artifact `12117062612` has SHA-256 `7f30c4ded1d0fc4d33cf221be3f7dc176e55529283a7b0ebfe9f9d415bb00013`. There were no failures, errors or skips.
+
+Independent review verified all 19 source pins and four locked inputs, exact image/ZIP identity, accepted JUnit counts, the real cancellation canary, whole-worker stop before bounded client reap, and primary plus independent absence. The workload took 13.499 seconds under the unchanged 20-second limit. The final pretermination worker reading reported 276,119,552 bytes peak memory and 13,544,030 microseconds CPU delta. These readings precede termination and do not establish posttermination totals or product performance.
+
+The passed PostgreSQL cases remain bound to run 39075248467 and their unchanged test/product sources. This static closure does not turn that earlier failed workflow green or add functional execution. Complete service decisions, reached-write atomicity, small authority/idempotency races and remaining integration checks are separate work. Capacity, recovery reopening and activation gates remain open.

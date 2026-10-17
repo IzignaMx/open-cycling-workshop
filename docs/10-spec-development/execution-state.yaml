@@ -1,7 +1,29 @@
 schema: 1
 
+quote_semantic_closure_20261017:
+  status: implemented_pending_evidence
+  design: independently_reviewed
+  exact_implementation_review: independently_reviewed
+  runtime: unexecuted
+  postgres_group_cases: [7, 7, 7, 6, 8, 5]
+  combined_mock_static_cases: 12
+  total_selected_checks: 52
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 140
+  production_change: none
+  scope: finite_service_semantics_payload_atomicity_and_authority_races
+  evidence: docs/10-spec-development/2026-10-17-quote-semantic-closure.md
+
 quote_loader_format_20261017:
-  status: single_line_formatter_correction_pending_execution
+  status: six_static_commands_passed_independently_reviewed
+  qualification_run: 39076298550
+  source_commit: 4b0a19b64d346e9322d343f460069aebf145ccfb
+  source_tree: 0d5cbb2e03eb7601db1eb7935c21d7e15480ef2a
+  artifact: 12117062612
+  passed_commands: 6
+  failures_errors_skips: 0
+  measured_workload_seconds: 13.499080871
+  final_pretermination_worker_peak_bytes: 276119552
   prior_run: 39075919485
   prior_source: 0009343af1c56ffc8477d0b31efeba41a1a9fc74
   prior_tree: 5bb38a73cafd43948dfa8ae67979b31cb82f7543

@@ -41,6 +41,10 @@ COMMANDS = (
         "scripts/ci/quote_integrity_postgres.py",
         "tests/operations/test_quote_integrity_static_contracts.py",
         "tests/operations/test_quote_integrity_selection.py",
+        "services/platform/tests/quotes/test_quote_service_decisions_postgres.py",
+        "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py",
+        "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py",
+        "services/platform/tests/quotes/test_quote_service_races_postgres.py",
     ),
     (
         RUFF,
@@ -56,6 +60,10 @@ COMMANDS = (
         "scripts/ci/quote_integrity_postgres.py",
         "tests/operations/test_quote_integrity_static_contracts.py",
         "tests/operations/test_quote_integrity_selection.py",
+        "services/platform/tests/quotes/test_quote_service_decisions_postgres.py",
+        "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py",
+        "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py",
+        "services/platform/tests/quotes/test_quote_service_races_postgres.py",
     ),
     (
         MYPY,
