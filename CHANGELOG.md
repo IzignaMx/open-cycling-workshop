@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · Bounded-effects PostgreSQL 0013 qualification preparation
+
+- Close eighteen pure cases and all 54 phases on 0b8e3ea9, run 39063614879.
+- Prepare four existing PostgreSQL cases with migration chronology observed without implicit upgrades.
+- Preserve the same resource budget; actual PostgreSQL result, restore and capacity remain pending.
+- [Scope](docs/10-spec-development/2026-10-17-bounded-effects-postgresql.md).
+
 ## Unreleased · Pure bounded-effects boundary qualification preparation
 
 - Prepare eighteen existing pure/offline cases with exact collection identity and unchanged limits.

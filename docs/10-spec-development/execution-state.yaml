@@ -1,7 +1,27 @@
 schema: 1
 
-bounded_effects_pure_20261017:
+bounded_effects_postgresql_20261017:
   status: prepared_pending_exact_review_and_run
+  expected_cases: 4
+  expected_phases: 12
+  database_schemas: 4
+  selected_revision: "0013"
+  shared_workload_seconds: 20
+  migration_identity: observation_only_no_implicit_upgrade
+  restore_concurrency_capacity: unqualified
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-postgresql.md
+
+bounded_effects_pure_20261017:
+  status: passed_independently_reviewed
+  run_id: 39063614879
+  source_commit: 0b8e3ea96d11362b7d65477bb57038727691b818
+  source_tree: ea1c25d9320b548f78e656e4afd8f5d0443b1d13
+  artifact_id: 12112502333
+  artifact_sha256: 64cca88e845b79f0f0df45420f4641579bc457306f4113ddda7b34e7e6805a55
+  measured_workload_seconds: 2.394
+  final_worker_peak_bytes: 90959872
+  cleanup: verified_absent
+  negative_guard_regressions: unrun
   expected_cases: 18
   expected_phases: 54
   source_functions: 10

@@ -640,49 +640,52 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 
 # The service guard delta below is authored but unexecuted. Run only in the
 # separately reviewed bootstrap container, never via the service business mode.
-def service_cases():
-    cases = [(node, []) for node in module.SERVICE_NODES[:7]]
-    cases.extend(
-        (module.SERVICE_NODES[7] + f"[opaque-{limit}-{offset}]", [limit, offset])
-        for limit in range(3)
-        for offset in range(3)
+def postgres_identity(node, index=0, revision="0013"):
+    schema = "ocwp_identity_migration_" + f"{index:032x}"
+    return dict(
+        node=node,
+        dialect="postgresql",
+        driver="psycopg",
+        driver_version="3.3.4",
+        database="ocwp_quote_micro_test",
+        schema=schema,
+        search_path=schema,
+        server_version_num=180004,
+        server_encoding="UTF8",
+        client_encoding="UTF8",
+        schema_revision=revision,
+        probe_connection_closed=True,
     )
-    cases.extend((node, []) for node in module.SERVICE_NODES[8:])
-    return cases
+
+
+def postgres_receipt(node, index=0):
+    return postgres_identity(node, index) | {
+        "upgrade_revisions": list(module.SERVICE_REVISIONS[module.SERVICE_NODES.index(node)])
+    }
 
 
 def service_items():
     from types import SimpleNamespace
 
-    limits = ("ORDER_SOURCE_MAX_BYTES", "ORDER_CANONICAL_MAX_BYTES", "ORDER_RAW_MAX_BYTES")
-    items = []
-    for node, indices in service_cases():
-        source, name = node.split("[", 1)[0].split("::")
-        item = SimpleNamespace(
+    return [
+        SimpleNamespace(
             nodeid=node,
-            path=PATH.parents[2] / source,
-            originalname=name,
+            path=PATH.parents[2] / node.split("::")[0],
+            originalname=node.split("::")[1].removesuffix("[postgres]"),
+            callspec=SimpleNamespace(params={"identity_migration_database": "postgres"}),
         )
-        if indices:
-            limit, offset = indices
-            # pytest 9.1.1 recomputes both direct-param indices to the same
-            # flattened case ordinal; these are not per-parameter positions.
-            ordinal = len(items) - 7
-            item.callspec = SimpleNamespace(
-                indices={"limit_name": ordinal, "offset": ordinal},
-                params={"limit_name": limits[limit], "offset": (-1, 0, 1)[offset]},
-            )
-        items.append(item)
-    return items
+        for node in module.SERVICE_NODES
+    ]
 
 
 def service_report():
-    cases = service_cases()
     return dict(
         schema=1,
-        nodes=[node for node, _ in cases],
-        case_indices=[indices for _, indices in cases],
-        collection_count=18,
+        nodes=list(module.SERVICE_NODES),
+        postgres_identities=[
+            postgres_receipt(node, index) for index, node in enumerate(module.SERVICE_NODES)
+        ],
+        collection_count=4,
         collection_errors=0,
         unhandled_errors=0,
         protocol_errors=0,
@@ -690,7 +693,7 @@ def service_report():
         session_exitstatus=0,
         reports=[
             dict(node=node, when=when, outcome="passed", seconds=0.001)
-            for node, _ in cases
+            for node in module.SERVICE_NODES
             for when in ("setup", "call", "teardown")
         ],
     )
@@ -701,15 +704,19 @@ def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
     monkeypatch.setenv("PGHOST", "untrusted.invalid")
     args = module.service_argv("a" * 64)
     assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
-    assert args[-10:] == list(module.SERVICE_NODES)
-    assert len(set(args[-10:])) == 10
+    assert args[-4:] == list(module.SERVICE_NODES)
+    assert len(set(args[-4:])) == 4
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
     assert "--tb=short" in args and "--no-showlocals" in args
     assert "--show-capture=no" in args and "--tb=no" not in args
+    assert [arg for arg in args if arg.startswith("OCWP_TEST_DATABASE_URL=")] == [
+        "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
+        "@127.0.0.1:5432/ocwp_quote_micro_test"
+    ]
     assert not any(
-        any(value in arg for value in ("DATABASE", "PASSWORD", "PYTEST_ADDOPTS", "PGHOST"))
+        any(value in arg for value in ("PASSWORD", "PYTEST_ADDOPTS", "PGHOST"))
         or "untrusted" in arg
         for arg in args
     )
@@ -725,7 +732,7 @@ def test_service_report_requires_every_protocol_and_finish():
     assert module.service_result(json.dumps(good)) == good
     for field, wrong in (
         ("schema", True),
-        ("collection_count", 17),
+        ("collection_count", 3),
         ("collection_errors", 1),
         ("unhandled_errors", 1),
         ("protocol_errors", 1),
@@ -749,7 +756,7 @@ def test_service_report_requires_every_protocol_and_finish():
     ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"reports": rows}))
-    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 18):
+    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 4):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"nodes": nodes}))
 
@@ -786,9 +793,8 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
     good = service_items()
     hook = module.ServiceReportHook()
     hook.pytest_collection_finish(SimpleNamespace(items=good))
-    assert hook.value["nodes"] == service_report()["nodes"]
-    assert hook.value["case_indices"] == service_report()["case_indices"]
-    for bad in (good[:-1], list(reversed(good)), good[:1] * 18, good + good[:1]):
+    assert hook.value["nodes"] == list(module.SERVICE_NODES)
+    for bad in (good[:-1], list(reversed(good)), good[:1] * 4, good + good[:1]):
         hook = module.ServiceReportHook()
         with pytest.raises(pytest.UsageError, match="service_selection"):
             hook.pytest_collection_finish(SimpleNamespace(items=bad))
@@ -796,133 +802,85 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
         assert hook.value["nodes"] == []
 
 
-def test_pure_selection_accepts_actual_parameter_order_without_guessing_ids():
-    import json
-    from types import SimpleNamespace
-
-    items = service_items()
-    assert [item.callspec.indices for item in items[7:16]] == [
-        {"limit_name": ordinal, "offset": ordinal} for ordinal in range(9)
-    ]
-    items[7:16] = reversed(items[7:16])
-    hook = module.ServiceReportHook()
-    hook.pytest_collection_finish(SimpleNamespace(items=items))
-    good = service_report()
-    good["nodes"][7:16] = reversed(good["nodes"][7:16])
-    good["case_indices"][7:16] = reversed(good["case_indices"][7:16])
-    good["reports"] = [
-        dict(node=node, when=when, outcome="passed", seconds=0.001)
-        for node in good["nodes"]
-        for when in ("setup", "call", "teardown")
-    ]
-    assert hook.value["nodes"] == good["nodes"]
-    assert hook.value["case_indices"] == good["case_indices"]
-    assert module.service_result(json.dumps(good)) == good
-
-
 @pytest.mark.parametrize(
-    "fault",
-    [
-        "path",
-        "name",
-        "single_callspec",
-        "missing_callspec",
-        "extra_param",
-        "missing_param",
-        "bool_offset",
-        "wrong_offset",
-        "unsupported_offset",
-        "wrong_limit",
-        "unknown_limit",
-        "nonstring_limit",
-        "params_type",
-    ],
+    "fault", ["path", "name", "missing_callspec", "extra", "missing", "sqlite", "bool", "type"]
 )
-def test_pure_collection_rejects_wrong_source_or_actual_parameters(fault):
+def test_postgres_collection_rejects_wrong_source_or_actual_parameters(fault):
     from types import SimpleNamespace
 
     items = service_items()
-    item = items[7]
+    item = items[0]
     if fault == "path":
         item.path = PATH
     elif fault == "name":
         item.originalname = "test_substituted"
-    elif fault == "single_callspec":
-        items[0].callspec = None
     elif fault == "missing_callspec":
         del item.callspec
-    elif fault == "extra_param":
+    elif fault == "extra":
         item.callspec.params["other"] = 0
-    elif fault == "missing_param":
-        del item.callspec.params["offset"]
-    elif fault == "bool_offset":
-        items[8].callspec.params["offset"] = False
-    elif fault == "wrong_offset":
-        item.callspec.params["offset"] = 1
-    elif fault == "unsupported_offset":
-        item.callspec.params["offset"] = 2
-    elif fault == "wrong_limit":
-        item.callspec.params["limit_name"] = "ORDER_RAW_MAX_BYTES"
-    elif fault == "unknown_limit":
-        item.callspec.params["limit_name"] = "ORDER_OTHER_MAX_BYTES"
-    elif fault == "nonstring_limit":
-        item.callspec.params["limit_name"] = 0
-    elif fault == "params_type":
+    elif fault == "missing":
+        item.callspec.params = {}
+    elif fault == "sqlite":
+        item.callspec.params["identity_migration_database"] = "sqlite"
+    elif fault == "bool":
+        item.callspec.params["identity_migration_database"] = True
+    elif fault == "type":
         item.callspec.params = []
     hook = module.ServiceReportHook()
     with pytest.raises(pytest.UsageError, match="service_selection"):
         hook.pytest_collection_finish(SimpleNamespace(items=items))
     assert hook.value["protocol_errors"] == 1
-    assert hook.value["nodes"] == hook.value["case_indices"] == []
+    assert hook.value["nodes"] == []
 
 
-def test_pure_report_rejects_case_receipt_and_node_identity_mutations():
+def test_postgres_report_requires_exact_closed_ordered_distinct_identities():
     import copy
     import json
 
     good = service_report()
-    missing = {key: value for key, value in good.items() if key != "case_indices"}
+    identities = good["postgres_identities"]
+    for wrong in (None, identities[:-1], identities + identities[:1], list(reversed(identities))):
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(good | {"postgres_identities": wrong}))
+    for change in (
+        {"node": module.SERVICE_NODES[1]},
+        {"dialect": "sqlite"},
+        {"driver": "psycopg2"},
+        {"driver_version": "3.3.3"},
+        {"database": "other_test"},
+        {"schema": "public", "search_path": "public"},
+        {"search_path": "pg_catalog"},
+        {"server_version_num": 180003},
+        {"server_version_num": True},
+        {"server_encoding": "LATIN1"},
+        {"client_encoding": "LATIN1"},
+        {"schema_revision": "0012"},
+        {"probe_connection_closed": False},
+        {"probe_connection_closed": 1},
+        {"upgrade_revisions": ["0013"]},
+        {"upgrade_revisions": ["0013", "0012"]},
+        {"upgrade_revisions": ["0012", "0013", "0013"]},
+        {"upgrade_revisions": [12, 13]},
+        {"upgrade_revisions": None},
+        {"url": "private"},
+    ):
+        bad = copy.deepcopy(good)
+        bad["postgres_identities"][0].update(change)
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    for field in identities[0]:
+        bad = copy.deepcopy(good)
+        del bad["postgres_identities"][0][field]
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    bad = copy.deepcopy(good)
+    for field in ("schema", "search_path"):
+        bad["postgres_identities"][1][field] = bad["postgres_identities"][0][field]
     with pytest.raises(module.ProofFailure):
-        module.service_result(json.dumps(missing))
-    for indices in (None, good["case_indices"][:-1], good["case_indices"] + [[]]):
-        with pytest.raises(module.ProofFailure):
-            module.service_result(json.dumps(good | {"case_indices": indices}))
-    for index, wrong in (
-        (0, [0, 0]),
-        (7, []),
-        (7, [0]),
-        (7, [0, 0, 0]),
-        (7, [False, 0]),
-        (7, [0, 0.0]),
-        (7, [-1, 0]),
-        (7, [3, 0]),
-        (7, ["0", 0]),
-        (8, [0, 0]),
-    ):
-        bad = copy.deepcopy(good)
-        bad["case_indices"][index] = wrong
-        with pytest.raises(module.ProofFailure):
-            module.service_result(json.dumps(bad))
-    for node in (
-        module.SERVICE_NODES[7],
-        module.SERVICE_NODES[7] + "[]",
-        module.SERVICE_NODES[7] + "[[opaque]]",
-        module.SERVICE_NODES[7] + '["opaque"]',
-        module.SERVICE_NODES[7] + "[\\opaque]",
-        module.SERVICE_NODES[7] + "[é]",
-        module.SERVICE_NODES[7] + "[line\nbreak]",
-        module.SERVICE_NODES[7] + "[" + "x" * 128 + "]",
-        module.SERVICE_NODES[7] + "_other[opaque]",
-        good["nodes"][8],
-        None,
-    ):
-        bad = copy.deepcopy(good)
-        bad["nodes"][7] = node
-        with pytest.raises(module.ProofFailure):
-            module.service_result(json.dumps(bad))
+        module.service_result(json.dumps(bad))
 
 
-def test_pure_report_fits_unchanged_cap_and_refuses_exact_limit():
+def test_postgres_report_fits_unchanged_cap_and_refuses_exact_limit():
     import json
 
     good = service_report()
@@ -930,17 +888,16 @@ def test_pure_report_fits_unchanged_cap_and_refuses_exact_limit():
     assert module.service_result(raw + " " * (module.LIMIT - len(raw) - 1)) == good
     with pytest.raises(module.ProofFailure, match="service_report_limit"):
         module.service_result(raw + " " * (module.LIMIT - len(raw)))
-    # Deliberately overestimate every node and numeric duration in the unchanged
-    # JSON shape; this data-only accounting specimen is not a valid selection.
+    # All four exact IDs exceed the prior pure-only 128-byte allowance.
+    assert all(128 < len(node) <= 155 for node in module.SERVICE_NODES)
     upper = good | {
-        "nodes": ["x" * 128] * 18,
         "reports": [
-            dict(node="x" * 128, when="teardown", outcome="passed", seconds="x" * 32)
-            for _ in range(54)
+            dict(node=row["node"], when="teardown", outcome="passed", seconds="x" * 32)
+            for row in good["reports"]
         ],
     }
-    assert len(json.dumps(upper, sort_keys=True, allow_nan=False).encode("ascii")) == 15103
-    assert 15103 < module.LIMIT == 16 * 1024
+    assert len(json.dumps(upper, sort_keys=True, allow_nan=False).encode("ascii")) < 8 * 1024
+    assert module.LIMIT == 16 * 1024
     assert module.STATIC_FAILURE_LIMIT == 24 * 1024
     assert module.SERVICE_OUTPUT_LIMIT == 32 * 1024
 
@@ -951,13 +908,16 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
 
     hook = module.ServiceReportHook()
     hook.pytest_collection_finish(SimpleNamespace(items=service_items()))
-    for row in service_report()["reports"]:
+    good = service_report()
+    for row in good["reports"]:
+        identity = good["postgres_identities"][module.SERVICE_NODES.index(row["node"])]
         hook.pytest_runtest_logreport(
             SimpleNamespace(
                 nodeid=row["node"],
                 when=row["when"],
                 outcome=row["outcome"],
                 duration=row["seconds"],
+                user_properties=[("ocwp_postgres_identity", identity)],
                 longrepr="private",
                 capstdout="private",
             )
@@ -965,7 +925,7 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     target = tmp_path / "closed.json"
     monkeypatch.setattr(module, "SERVICE_REPORT", str(target))
     hook.pytest_sessionfinish(SimpleNamespace(), 0)
-    assert module.service_result(target.read_text()) == service_report()
+    assert module.service_result(target.read_text()) == good
     assert "private" not in target.read_text()
     assert len(target.read_bytes()) < module.LIMIT
     for change in (
@@ -992,10 +952,209 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     result = json.loads(target.read_text())
     assert result["protocol_errors"] == 4
     assert result["collection_errors"] == result["unhandled_errors"] == 2
-    assert len(result["reports"]) == 54
+    assert len(result["reports"]) == 12
     assert "private" not in target.read_text()
     with pytest.raises(module.ProofFailure):
         module.service_result(target.read_text())
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "name", "foreign", "extra", "repeat"])
+def test_postgres_hook_rejects_bad_teardown_properties(fault):
+    from types import SimpleNamespace
+
+    node = module.SERVICE_NODES[0]
+    pair = ("ocwp_postgres_identity", postgres_receipt(node))
+    properties = [pair]
+    if fault == "missing":
+        properties = []
+    elif fault == "duplicate":
+        properties = [pair, pair]
+    elif fault == "name":
+        properties = [("other", pair[1])]
+    elif fault == "foreign":
+        properties = [(pair[0], postgres_receipt(module.SERVICE_NODES[1]))]
+    elif fault == "extra":
+        properties = [(pair[0], pair[1] | {"payload": "private"})]
+    hook = module.ServiceReportHook()
+    hook.pytest_collection_finish(SimpleNamespace(items=service_items()))
+    row = SimpleNamespace(
+        nodeid=node, when="teardown", outcome="failed", duration=0.1, user_properties=properties
+    )
+    hook.pytest_runtest_logreport(row)
+    if fault == "repeat":
+        hook.pytest_runtest_logreport(row)
+    assert hook.value["protocol_errors"] == 1
+    assert hook.failure_stage == 4
+
+
+@pytest.mark.parametrize("index", range(4))
+def test_postgres_observer_never_migrates_and_preserves_forwarding(index, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    node = module.SERVICE_NODES[index]
+    config, engine, result = object(), object(), object()
+    request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
+    calls, probes = [], []
+    committed = [None]
+
+    def upgrade(*args, **kwargs):
+        calls.append((args, kwargs))
+        committed[0] = "0013" if args[1] == "head" else args[1]
+        return result
+
+    command = SimpleNamespace(upgrade=upgrade)
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
+
+    def observe(actual_engine, actual_node):
+        assert actual_engine is engine and actual_node == node
+        assert committed[0] is not None
+        probes.append(committed[0])
+        return postgres_identity(node, index, committed[0])
+
+    monkeypatch.setattr(module, "probe_postgres_identity", observe)
+    fixture = module.observe_postgres((config, engine), request, monkeypatch)
+    next(fixture)
+    assert calls == probes == []
+    revisions = module.SERVICE_REVISIONS[index]
+    requested = ["0012", "head"] if len(revisions) == 2 else ["head"]
+    for revision in requested:
+        assert command.upgrade(config, revision, sql=False, tag="synthetic") is result
+        assert len(probes) == len(calls)
+    with pytest.raises(StopIteration):
+        next(fixture)
+    assert calls == [
+        ((config, revision), {"sql": False, "tag": "synthetic"}) for revision in requested
+    ]
+    assert probes == [*revisions, "0013"]
+    assert request.node.user_properties == [
+        ("ocwp_postgres_identity", postgres_receipt(node, index))
+    ]
+
+
+def test_postgres_observer_propagates_original_exception_without_probe(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    failure = RuntimeError("synthetic original")
+    config, engine = object(), object()
+    calls = []
+
+    def upgrade(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise failure
+
+    command = SimpleNamespace(upgrade=upgrade)
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
+    monkeypatch.setattr(
+        module, "probe_postgres_identity", lambda *_: pytest.fail("probe after failed upgrade")
+    )
+    request = SimpleNamespace(
+        node=SimpleNamespace(nodeid=module.SERVICE_NODES[1], user_properties=[])
+    )
+    fixture = module.observe_postgres((config, engine), request, monkeypatch)
+    next(fixture)
+    with pytest.raises(RuntimeError) as caught:
+        command.upgrade(config=config, revision="head", sql=False)
+    assert caught.value is failure
+    with pytest.raises(module.ProofFailure, match="service_postgres_chronology"):
+        command.upgrade(config, "head")
+    assert calls == [((), {"config": config, "revision": "head", "sql": False})]
+    fixture.close()
+    assert request.node.user_properties == []
+
+
+@pytest.mark.parametrize("fault", ["foreign", "extra", "missing", "revision", "schema", "final"])
+def test_postgres_observer_refuses_wrong_chronology_or_target(fault, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    node = module.SERVICE_NODES[1]
+    config, engine = object(), object()
+    calls = []
+    command = SimpleNamespace(upgrade=lambda *args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(command=command))
+    probes = [postgres_identity(node), postgres_identity(node)]
+    if fault == "revision":
+        probes[0]["schema_revision"] = "0012"
+    elif fault == "schema":
+        probes[1] = postgres_identity(node, 1)
+    elif fault == "final":
+        probes[1]["schema_revision"] = "0012"
+    monkeypatch.setattr(module, "probe_postgres_identity", lambda *_: probes.pop(0))
+    request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
+    fixture = module.observe_postgres((config, engine), request, monkeypatch)
+    next(fixture)
+    with pytest.raises(module.ProofFailure):
+        if fault == "foreign":
+            command.upgrade(object(), "head")
+        elif fault == "missing":
+            next(fixture)
+        else:
+            command.upgrade(config, "head")
+            if fault == "extra":
+                command.upgrade(config, "head")
+            else:
+                next(fixture)
+    assert len(calls) == (0 if fault in {"foreign", "missing"} else 1)
+    fixture.close()
+    assert request.node.user_properties == []
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_postgres_probe_closes_its_independent_connection(failure, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    class DriverConnection:
+        pass
+
+    closed = []
+
+    class Connection:
+        def __init__(self):
+            self.closed = False
+            self.connection = SimpleNamespace(driver_connection=DriverConnection())
+
+        def __enter__(self):
+            assert not self.closed
+            return self
+
+        def __exit__(self, *_):
+            self.closed = True
+            closed.append(True)
+
+        def execute(self, _statement):
+            if failure:
+                raise RuntimeError("synthetic query failure")
+            return SimpleNamespace(
+                one=lambda: (
+                    "ocwp_quote_micro_test",
+                    "ocwp_identity_migration_" + "0" * 32,
+                    "ocwp_identity_migration_" + "0" * 32,
+                    180004,
+                    "UTF8",
+                    "UTF8",
+                    "0013",
+                )
+            )
+
+    monkeypatch.setitem(
+        sys.modules, "psycopg", SimpleNamespace(Connection=DriverConnection, __version__="3.3.4")
+    )
+    monkeypatch.setitem(
+        sys.modules, "sqlalchemy", SimpleNamespace(text=lambda statement: statement)
+    )
+    engine = SimpleNamespace(
+        dialect=SimpleNamespace(name="postgresql", driver="psycopg"), connect=Connection
+    )
+    node = module.SERVICE_NODES[0]
+    if failure:
+        with pytest.raises(RuntimeError, match="synthetic query failure"):
+            module.probe_postgres_identity(engine, node)
+    else:
+        assert module.probe_postgres_identity(engine, node) == postgres_identity(node)
+    assert closed == [True]
 
 
 def test_service_hook_requires_explicit_contained_context(monkeypatch):
@@ -1011,7 +1170,8 @@ def test_service_hook_requires_explicit_contained_context(monkeypatch):
     assert calls == []
     monkeypatch.setenv("OCWP_QUOTE_SERVICE_INITIAL", "contained")
     module.pytest_configure(config)
-    assert len(calls) == 1 and isinstance(calls[0][0], module.ServiceReportHook)
+    assert len(calls) == 2 and isinstance(calls[0][0], module.ServiceReportHook)
+    assert calls[1][1] == "quote-postgres-observer"
 
 
 def test_service_cancellation_signals_both_before_stopped_state_readback():
@@ -1348,7 +1508,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "pure18_passed_not_postgresql_or_capacity"
+                "postgresql0013_four_passed_not_capacity"
                 if fault == "success"
                 else "failed"
             ), fault
@@ -1566,11 +1726,11 @@ def test_service_failure_diagnostic_retains_only_closed_numbers():
         "collection_errors": 100,
         "unhandled_errors": 100,
         "protocol_errors": 100,
-        "report_count": 54,
-        "setup_reports": 18,
-        "call_reports": 18,
-        "teardown_reports": 18,
-        "failed_reports": 53,
+        "report_count": 18,
+        "setup_reports": 6,
+        "call_reports": 6,
+        "teardown_reports": 6,
+        "failed_reports": 17,
         "skipped_reports": 1,
     }
     assert (
@@ -1596,10 +1756,10 @@ def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
         {"collection_errors": 101},
         {"unhandled_errors": 0.0},
         {"protocol_errors": None},
-        {"report_count": 55},
+        {"report_count": 19},
         {"setup_reports": 1},
         {"call_reports": -1},
-        {"teardown_reports": 55},
+        {"teardown_reports": 19},
         {"failed_reports": 1},
         {"skipped_reports": 1},
         {"nodes": ["private"]},

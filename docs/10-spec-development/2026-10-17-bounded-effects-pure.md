@@ -10,4 +10,12 @@ Use the proven containment and fixed one-shot workflow with the same 20-second a
 
 Reuse the previously reviewed short-trace capture from fe30964b: --tb=short, --no-showlocals, --show-capture=no; retain only bounded synthetic test output after verified stop and client reap, before parsing the numeric failure marker. Keep the 16 KiB diagnostic, 24 KiB marker and 32 KiB specimen spool limits. Preserve failure and truncation explicitly; no retry or budget expansion makes a failed run qualified.
 
-The exact source and guard changes require independent review. The operation is a new fixed small functional workload, not a repeat of the consumed maximum/profile experiments. Execution results are pending.
+The exact source and guard changes require independent review. The operation is a new fixed small functional workload, not a repeat of the consumed maximum/profile experiments. The initial preparation status is superseded by the exact result below.
+
+## Verified finite result
+
+[Run 39063614879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39063614879), number 1 / attempt 1, passed all 18 cases and 54 ordered phases with zero errors or skips. Exact source commit 0b8e3ea96d11362b7d65477bb57038727691b818, tree ea1c25d9320b548f78e656e4afd8f5d0443b1d13. Artifact 12112502333 has SHA-256 64cca88e845b79f0f0df45420f4641579bc457306f4113ddda7b34e7e6805a55.
+
+Independent evidence review confirmed collection identity, all nine boundary pairs, the 13,106-byte inner report, source identity, resource limits, cancellation canary, client reap and both container-absence receipts. Measured workload was 2.394 seconds, setup 1.959 seconds and supervisor elapsed time 4.692 seconds. Final worker peak was 90,959,872 bytes. Final worker/database CPU usage was 2,404,262 / 1,002,785 microseconds; those are lifetime totals, not solely test CPU. PostgreSQL was unused environment overhead.
+
+The other 47 pure cases and new negative guard regressions remain unexecuted. This result does not prove live PostgreSQL 0013 migration, runtime, rollback, restore, concurrency or capacity. No product routes or real installation are activated.

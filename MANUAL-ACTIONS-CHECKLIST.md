@@ -5,7 +5,9 @@
 - [x] Independently verify six corrected PostgreSQL 0012 cases in run 39053813148.
 - [x] Review the joint bounded full-integrity design and exact raw-bind seam.
 - [x] Implement and independently review versioning, admission and full payload validation.
-- [ ] Execute focused regressions, static checks and finite genuine PostgreSQL 0013 cases.
+- [x] Verify all six static/contract commands in run 39061922896.
+- [x] Verify eighteen pure boundary cases and 54 phases in run 39063614879.
+- [ ] Execute remaining pure/guard regressions and finite genuine PostgreSQL 0013 cases.
 - [ ] Verify valid historical 0012 migration/replay and refusal of unsupported old effects.
 - [ ] Separately prove DDL rollback and logical restore with exact retained effects.
 - [ ] Complete broader integration, concurrency and capacity gates before activation.
