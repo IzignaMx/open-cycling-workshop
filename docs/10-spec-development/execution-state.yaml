@@ -1,7 +1,28 @@
 schema: 1
 
+quote_service_postgresql_0012_20261017:
+  status: prepared_pending_review_and_actual_qualification
+  source_commit: 559f9f311fe6c4aedf303063df5e697a461c64a7
+  source_tree: e0505482124317ec8190cd7f0a3985543b30ebc2
+  prior_static_run: 39052034132
+  prior_static_result: six_commands_eighteen_phases_passed
+  selector: two_existing_dto_four_existing_service_cases_on_postgresql
+  expected_isolated_postgresql_schemas: 4
+  database_revision: "0012"
+  shared_workload_seconds: 20
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_cpu: 1
+  database_memory_mib: 768
+  original_sqlite_fixtures: unchanged
+  schema_0013: excluded_pending_version_adaptation
+  actual_pg_service_result: not_run
+  evidence: docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md
+
 static_contract_subtimeout_20261017:
-  status: prepared_pending_review_and_qualification
+  status: verified_six_static_commands_under_global_budget
+  qualification_run: 39052034132
+  qualification_artifact: 12108166920
   source_commit: 512df3d47132f9c14c1e33ce4fac9efe03d35fac
   source_tree: c1eda35969f1ec78831a5a455a7b3d5388700836
   failed_run: 39051546208

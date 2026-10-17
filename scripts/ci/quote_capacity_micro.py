@@ -516,12 +516,21 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 
 SERVICE_NODES = (
-    "tests/operations/test_quote_service_static_contracts.py::test_repository_contract",
-    "tests/operations/test_quote_service_static_contracts.py::test_python_lint",
-    "tests/operations/test_quote_service_static_contracts.py::test_python_format",
-    "tests/operations/test_quote_service_static_contracts.py::test_production_types",
-    "tests/operations/test_quote_service_static_contracts.py::test_openapi_contract",
-    "tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract",
+    "services/platform/tests/quotes/test_quote_command_response.py::"
+    "test_create_and_applied_decision_round_trip_exact_closed_fields",
+    "services/platform/tests/quotes/test_quote_command_response.py::"
+    "test_encoder_revalidates_nested_bypasses_and_checks_actual_utf8_bytes",
+    "services/platform/tests/quotes/test_quote_application_service_postgres.py::"
+    "test_create_decide_replay_commits_one_complete_tuple[postgres]",
+    "services/platform/tests/quotes/test_quote_application_service_postgres.py::"
+    "test_response_failure_rolls_back_all_decision_effects[postgres]",
+    "services/platform/tests/quotes/test_quote_application_service_postgres.py::"
+    "test_expired_deadline_refuses_before_writer_or_effects[postgres]",
+    "services/platform/tests/quotes/test_quote_application_service_postgres.py::"
+    "test_historical_quote_only_decision_replay_does_not_invent_transition[postgres]",
+)
+SERVICE_POSTGRES_URL = (
+    "postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_micro_test"
 )
 
 # Fixed public source scope for the six static/contracts commands.
@@ -566,6 +575,7 @@ def service_argv(cid: str) -> list[str]:
         "PYTHONDONTWRITEBYTECODE=1",
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
         "OCWP_QUOTE_SERVICE_INITIAL=contained",
+        f"OCWP_TEST_DATABASE_URL={SERVICE_POSTGRES_URL}",
         "/app/.venv/bin/python",
         "-m",
         "pytest",
@@ -602,6 +612,35 @@ def reject_constant(_value: str) -> None:
     raise ProofFailure("service_nonfinite")
 
 
+def postgres_identity(value: object, node: str) -> dict[str, object]:
+    """One closed observed identity; never retain URLs, SQL or arbitrary properties."""
+    expected = {
+        "node": node,
+        "dialect": "postgresql",
+        "driver": "psycopg",
+        "driver_version": "3.3.4",
+        "database": "ocwp_quote_micro_test",
+        "server_version_num": 180004,
+        "server_encoding": "UTF8",
+        "client_encoding": "UTF8",
+        "schema_revision": "0012",
+        "probe_connection_closed": True,
+    }
+    if type(value) is not dict or set(value) != set(expected) | {"schema", "search_path"}:
+        raise ProofFailure("service_postgres_identity")
+    if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
+        raise ProofFailure("service_postgres_identity")
+    schema = value["schema"]
+    if (
+        type(schema) is not str
+        or re.fullmatch(r"ocwp_identity_migration_[0-9a-f]{32}", schema) is None
+        or type(value["search_path"]) is not str
+        or value["search_path"] != schema
+    ):
+        raise ProofFailure("service_postgres_identity")
+    return value
+
+
 def service_result(raw: str) -> dict[str, object]:
     """Accept only six complete successful protocols, never six call-only passes."""
     if len(raw.encode("utf-8")) >= LIMIT:
@@ -616,7 +655,11 @@ def service_result(raw: str) -> dict[str, object]:
         "session_finished": True,
         "session_exitstatus": 0,
     }
-    if type(value) is not dict or set(value) != set(expected) | {"nodes", "reports"}:
+    if type(value) is not dict or set(value) != set(expected) | {
+        "nodes",
+        "reports",
+        "postgres_identities",
+    }:
         raise ProofFailure("service_report_shape")
     if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
         raise ProofFailure("service_report_outcome")
@@ -634,6 +677,14 @@ def service_result(raw: str) -> dict[str, object]:
         seconds = row["seconds"]
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
             raise ProofFailure("service_report_duration")
+    identities = value["postgres_identities"]
+    if type(identities) is not list or len(identities) != 4:
+        raise ProofFailure("service_postgres_identity")
+    schemas = set()
+    for identity, node in zip(identities, SERVICE_NODES[2:], strict=True):
+        schemas.add(postgres_identity(identity, node)["schema"])
+    if len(schemas) != 4:
+        raise ProofFailure("service_postgres_identity")
     return value
 
 
@@ -791,6 +842,7 @@ class ServiceReportHook:
             "session_finished": False,
             "session_exitstatus": -1,
             "reports": [],
+            "postgres_identities": [],
         }
 
     def bump(self, field: str) -> None:
@@ -834,6 +886,27 @@ class ServiceReportHook:
         if outcome != "passed" and self.failure_stage is None:
             self.failure_stage = self.stage
         rows.append({"node": node, "when": when, "outcome": outcome, "seconds": seconds})
+        if when == "teardown":
+            identities = cast(list[dict[str, object]], self.value["postgres_identities"])
+            properties = getattr(report, "user_properties", [])
+            if type(properties) is not list or len(properties) != (
+                1 if node in SERVICE_NODES[2:] else 0
+            ):
+                self.bump("protocol_errors")
+                return
+            if node in SERVICE_NODES[2:]:
+                try:
+                    pair = properties[0]
+                    if (
+                        type(pair) not in (list, tuple)
+                        or len(pair) != 2
+                        or pair[0] != "ocwp_postgres_identity"
+                        or any(identity["node"] == node for identity in identities)
+                    ):
+                        raise ProofFailure("service_postgres_identity")
+                    identities.append(postgres_identity(pair[1], node))
+                except ProofFailure:
+                    self.bump("protocol_errors")
 
     def pytest_internalerror(self) -> None:
         self.bump("unhandled_errors")
@@ -1129,8 +1202,7 @@ def supervise(
                     "--env",
                     "OCWP_QUOTE_MICRO=contained",
                     "--env",
-                    "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
-                    "@127.0.0.1:5432/ocwp_quote_micro_test",
+                    f"OCWP_TEST_DATABASE_URL={SERVICE_POSTGRES_URL}",
                     "--entrypoint",
                     "/app/.venv/bin/python",
                 ]
@@ -1208,7 +1280,7 @@ def supervise(
                     raise ProofFailure("database_readiness") from None
                 time.sleep(0.2)
         if service_initial:
-            # Fresh baseline separates PostgreSQL startup from the SQLite workload.
+            # Fresh baseline separates PostgreSQL startup from the finite service workload.
             snapshots = {
                 role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
                 for cid, role, memory, pids in [
@@ -1226,7 +1298,7 @@ def supervise(
             report["environment_overhead_before_workload_cpu_usec"] = {
                 role: data["cpu_usec"] for role, data in snapshots.items()
             }
-            report["database_role"] = "unused_postgresql_environment_overhead_sqlite_tests_only"
+            report["database_role"] = "postgresql_18_4_schema_0012_four_sequential_service_cases"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
         report["command_stage"] = "service_initial" if service_initial else "microfixture"
         report["phase"] = (
@@ -1374,7 +1446,7 @@ def supervise(
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("final_readback_deadline")
             report["phase"] = "service_complete"
-            report["status"] = "service_initial_passed_not_postgresql_or_capacity"
+            report["status"] = "service_postgresql_0012_passed_not_concurrency_restore_or_capacity"
         else:
             micro = micro_result(
                 execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
@@ -1449,7 +1521,7 @@ def supervise(
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
     wanted_status = (
-        "service_initial_passed_not_postgresql_or_capacity"
+        "service_postgresql_0012_passed_not_concurrency_restore_or_capacity"
         if service_initial
         else "micro_passed_not_capacity"
     )

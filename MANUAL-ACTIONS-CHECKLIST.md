@@ -1,5 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## PostgreSQL-0012 service qualification · 2026-10-17
+
+- [x] Close all six static/contract commands on `559f9f31`, run `39052034132`.
+- [ ] Review the finite PG bridge, actual identity evidence and exact candidate.
+- [ ] Run its six-case workload once under the existing verified limits.
+- [ ] Verify source, migration, protocol, resource and cleanup receipts.
+- [ ] Integrate schema 0013 only after receipt-version and payload-admission adaptation.
+- [Scope and exclusions](docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md).
+  Earlier preparation sections are historical checkpoints.
+
 ## Static contract subtimeout · 2026-10-17
 
 - [x] Retain first-four-command passes and OpenAPI timeout from run `39051546208`.

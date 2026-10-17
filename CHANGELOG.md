@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · PostgreSQL-0012 service qualification preparation
+
+- Record six static/contract command passes on `559f9f31` in run `39052034132`.
+- Prepare the existing two DTO and four service cases for genuine PostgreSQL
+  with isolated schemas and source-bound driver/database/migration evidence.
+- Preserve original SQLite fixtures, schema 0012 and containment limits; actual
+  PostgreSQL service evidence is pending.
+- Scope: [finite PG qualification](docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md).
+
 ## Unreleased · Static contract subtimeout adjustment
 
 - Record repository, lint, format and strict-mypy passes in run `39051546208`.

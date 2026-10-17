@@ -640,6 +640,24 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 
 # The service guard delta below is authored but unexecuted. Run only in the
 # separately reviewed bootstrap container, never via the service business mode.
+def postgres_identity(node):
+    schema = f"ocwp_identity_migration_{module.SERVICE_NODES.index(node):032x}"
+    return dict(
+        node=node,
+        dialect="postgresql",
+        driver="psycopg",
+        driver_version="3.3.4",
+        database="ocwp_quote_micro_test",
+        schema=schema,
+        search_path=schema,
+        server_version_num=180004,
+        server_encoding="UTF8",
+        client_encoding="UTF8",
+        schema_revision="0012",
+        probe_connection_closed=True,
+    )
+
+
 def service_report():
     return dict(
         schema=1,
@@ -655,10 +673,13 @@ def service_report():
             for node in module.SERVICE_NODES
             for when in ("setup", "call", "teardown")
         ],
+        postgres_identities=[postgres_identity(node) for node in module.SERVICE_NODES[2:]],
     )
 
 
-def test_service_selection_is_closed_and_environment_is_empty():
+def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
+    monkeypatch.setenv("OCWP_TEST_DATABASE_URL", "postgresql://untrusted.invalid/ordinary")
+    monkeypatch.setenv("PGHOST", "untrusted.invalid")
     args = module.service_argv("a" * 64)
     assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
     assert args[-6:] == list(module.SERVICE_NODES)
@@ -666,9 +687,12 @@ def test_service_selection_is_closed_and_environment_is_empty():
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
-    assert not any(
-        "DATABASE" in arg or "PASSWORD" in arg or "PYTEST_ADDOPTS" in arg for arg in args
-    )
+    assert [arg for arg in args if "DATABASE" in arg] == [
+        "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
+        "@127.0.0.1:5432/ocwp_quote_micro_test"
+    ]
+    assert not any("PGHOST" in arg or "PYTEST_ADDOPTS" in arg or "untrusted" in arg for arg in args)
+    assert all("[postgres]" in node for node in args[-4:])
     with pytest.raises(module.ProofFailure):
         module.service_argv("arbitrary-name")
 
@@ -735,6 +759,48 @@ def test_service_report_rejects_duplicate_unknown_nonfinite_and_oversize_fields(
             module.service_result(json.dumps(bad))
 
 
+def test_service_report_requires_four_distinct_closed_postgres_identities():
+    import copy
+    import json
+
+    good = service_report()
+    identities = good["postgres_identities"]
+    for bad in ([], identities[:-1], identities + identities[:1], list(reversed(identities))):
+        with pytest.raises(module.ProofFailure, match="service_postgres_identity"):
+            module.service_result(json.dumps(good | {"postgres_identities": bad}))
+    for field, value in (
+        ("node", module.SERVICE_NODES[0]),
+        ("dialect", "sqlite"),
+        ("driver", "psycopg2"),
+        ("driver_version", "3.3.3"),
+        ("database", "ordinary"),
+        ("schema", "public"),
+        ("search_path", "public"),
+        ("server_version_num", 180005),
+        ("server_version_num", True),
+        ("server_encoding", "SQL_ASCII"),
+        ("client_encoding", "LATIN1"),
+        ("schema_revision", "0013"),
+        ("probe_connection_closed", False),
+        ("probe_connection_closed", 1),
+        ("dsn", "private"),
+    ):
+        bad = copy.deepcopy(good)
+        bad["postgres_identities"][0][field] = value
+        with pytest.raises(module.ProofFailure, match="service_postgres_identity"):
+            module.service_result(json.dumps(bad))
+    for field in identities[0]:
+        bad = copy.deepcopy(good)
+        del bad["postgres_identities"][0][field]
+        with pytest.raises(module.ProofFailure, match="service_postgres_identity"):
+            module.service_result(json.dumps(bad))
+    bad = copy.deepcopy(good)
+    for field in ("schema", "search_path"):
+        bad["postgres_identities"][1][field] = identities[0][field]
+    with pytest.raises(module.ProofFailure, match="service_postgres_identity"):
+        module.service_result(json.dumps(bad))
+
+
 def test_service_hook_refuses_collection_mismatch_before_fixtures():
     from types import SimpleNamespace
 
@@ -765,6 +831,11 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
                 when=row["when"],
                 outcome=row["outcome"],
                 duration=row["seconds"],
+                user_properties=(
+                    [("ocwp_postgres_identity", postgres_identity(row["node"]))]
+                    if row["node"] in module.SERVICE_NODES[2:]
+                    else []
+                ),
                 longrepr="private",
                 capstdout="private",
             )
@@ -803,6 +874,46 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     assert "private" not in target.read_text()
     with pytest.raises(module.ProofFailure):
         module.service_result(target.read_text())
+
+
+def test_service_hook_refuses_missing_duplicate_or_mismatched_postgres_receipts():
+    from types import SimpleNamespace
+
+    node = module.SERVICE_NODES[2]
+    identity = postgres_identity(node)
+    for properties in (
+        [],
+        [("ocwp_postgres_identity", identity)] * 2,
+        [("other", identity)],
+        [("ocwp_postgres_identity", identity | {"node": module.SERVICE_NODES[3]})],
+        [("ocwp_postgres_identity", identity | {"dsn": "private"})],
+        [("ocwp_postgres_identity",)],
+    ):
+        hook = module.ServiceReportHook()
+        hook.pytest_runtest_logreport(
+            SimpleNamespace(
+                nodeid=node,
+                when="teardown",
+                outcome="passed",
+                duration=0.001,
+                user_properties=properties,
+            )
+        )
+        assert hook.value["protocol_errors"] == 1
+        assert hook.value["postgres_identities"] == []
+        assert "private" not in repr(hook.value)
+    hook = module.ServiceReportHook()
+    report = SimpleNamespace(
+        nodeid=node,
+        when="teardown",
+        outcome="passed",
+        duration=0.001,
+        user_properties=[("ocwp_postgres_identity", identity)],
+    )
+    hook.pytest_runtest_logreport(report)
+    hook.pytest_runtest_logreport(report)
+    assert hook.value["protocol_errors"] == 1
+    assert hook.value["postgres_identities"] == [identity]
 
 
 def test_service_hook_requires_explicit_contained_context(monkeypatch):
@@ -1150,7 +1261,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "service_initial_passed_not_postgresql_or_capacity"
+                "service_postgresql_0012_passed_not_concurrency_restore_or_capacity"
                 if fault == "success"
                 else "failed"
             ), fault
