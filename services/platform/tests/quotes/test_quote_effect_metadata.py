@@ -619,20 +619,18 @@ def test_postgres_generated_dependency_rows_are_exact(identity_migration_databas
     command.upgrade(config, "head")
     with engine.connect() as connection:
         for table, discriminator in PAIRS:
-            rows = connection.execute(
-                text(
-                    "SELECT dep.objsubid, dep.refclassid='pg_catalog.pg_class'::regclass, "
-                    "dep.refobjid=d.adrelid, referenced.attname, dep.deptype "
-                    "FROM pg_catalog.pg_attrdef d "
-                    "JOIN pg_catalog.pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum "
-                    "JOIN pg_catalog.pg_depend dep ON dep.classid='pg_catalog.pg_attrdef'::regclass "
-                    "AND dep.objid=d.oid LEFT JOIN pg_catalog.pg_attribute referenced "
-                    "ON referenced.attrelid=dep.refobjid AND referenced.attnum=dep.refobjsubid "
-                    "WHERE d.adrelid=pg_catalog.to_regclass(:table) "
-                    "AND a.attname='order_payload_raw_octets'"
-                ),
-                {"table": table},
-            ).all()
+            query = text(
+                "SELECT dep.objsubid, dep.refclassid='pg_catalog.pg_class'::regclass, "
+                "dep.refobjid=d.adrelid, referenced.attname, dep.deptype "
+                "FROM pg_catalog.pg_attrdef d "
+                "JOIN pg_catalog.pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum "
+                "JOIN pg_catalog.pg_depend dep ON dep.classid='pg_catalog.pg_attrdef'::regclass "
+                "AND dep.objid=d.oid LEFT JOIN pg_catalog.pg_attribute referenced "
+                "ON referenced.attrelid=dep.refobjid AND referenced.attnum=dep.refobjsubid "
+                "WHERE d.adrelid=pg_catalog.to_regclass(:table) "
+                "AND a.attname='order_payload_raw_octets'"
+            )
+            rows = connection.execute(query, {"table": table}).all()
             assert set(rows) == {
                 (0, True, True, "order_payload_raw_octets", "i"),
                 (0, True, True, "payload", "n"),

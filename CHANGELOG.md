@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased · Stable metadata query layout
+
+- Preserve run 39060563945 and its formatter-produced long SQL test line.
+- Name the unchanged query locally to satisfy both layout and lint; verification pending.
+
 ## Unreleased · Remaining retained formatter sections
 
 - Preserve run 39060197021 and apply its 19 complete reviewed formatting hunks.
