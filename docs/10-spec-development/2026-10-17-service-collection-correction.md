@@ -1,5 +1,48 @@
 # Initial service collection correction
 
+## Verified correction regressions and next service gate
+
+[Correction run 39041234055](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041234055)
+passed once (run 1/attempt 1) on commit `54fe65bee87f615a78c771507515ab95e6ef247e`,
+tree `b480a2aaf641f7dd12c7bc22fa73ffceef436185`. All eight exact identities passed
+with zero errors, failures or skips. Workload time was 1.803724695 seconds;
+worker lifetime was 2.286161421 seconds and total supervisor time 3.417525785 seconds.
+Final worker CPU was 1,872,811 microseconds and peak memory 67,121,152 bytes.
+Actual source/image/cgroup/privilege identity, three-generation canary,
+whole-worker cancellation, bounded client reap and both final absence receipts
+were independently reviewed. Artifact `12104072554` SHA-256:
+`0bff116ef047cecee132989c92453b2f906ad1bd725e4d35ba226087af4e4fee`.
+
+The synthetic negative/positive collection regression passed. Diagnostic
+fault-path scenarios are mocked; this result does not recover the original
+discarded error or qualify actual service behavior. The dated preparation text
+below is preserved as history and is superseded only by this exact evidence.
+
+The next fixed gate is `quote-service-corrected-collection.yml`, accepting only
+`codex/quote-service-corrected-collection`, run 1/attempt 1. It runs exactly the
+six original DTO/SQLite service nodes through the now regression-tested guard
+SHA-256 `a8c92710682204575b7affa26fccd263f9ab2325a3033bf8aff4f03b000dd11a`.
+The only changes from the failed source are the reviewed pure-test separation
+and closed diagnostics already qualified above. Product code, fixtures, selected
+node IDs, schema 0012 and all service success/resource/cleanup budgets remain
+unchanged. No previous workflow is modified; the correction is a demonstrated
+technical reason for a distinct qualification, not a blind retry.
+
+The new workflow mirrors the original service recipe, changing only its fixed
+identity and artifact name, and disabling checkout credential persistence.
+The workload ceiling remains 20 seconds including imports through teardown;
+worker 1 CPU/512 MiB/swap zero/64 PIDs and idle PostgreSQL overhead
+1 CPU/768 MiB/swap zero/128 PIDs remain separately bounded. No extra workload,
+capacity/profile, schema 0013, endpoint, account or activation is included.
+Fresh exact-source review and remote branch/run/trigger preflight precede the
+single push. A failed or skipped run stops; no automatic retry is implied.
+
+This service qualification is still pending. Full setup/call/teardown protocols,
+source/image/resource identity, cancellation and both absence receipts are
+required. Passing it would cover only the six original tiny cases. The two moved
+pure tests, broader semantic coverage, PostgreSQL, hard service deadlines,
+payload/version policy, API/UI, capacity and activation remain open.
+
 ## Failed evidence remains authoritative
 
 [Run 39039629649](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39039629649)

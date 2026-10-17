@@ -1,5 +1,18 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Corrected-source service qualification · 2026-10-17
+
+- [x] Independently verify [correction run 39041234055](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041234055):
+      eight exact passes, zero errors/failures/skips, actual controls and both final absence receipts.
+- [ ] Review the minimal new corrected-service workflow and exact unchanged
+      six-node source/fixture/guard binding before its unique publication.
+- [ ] Execute and qualify the six original service protocols under unchanged
+      limits, retaining failure diagnostics and both final absence checks.
+- [ ] Keep the two moved pure tests, wider service semantics, PostgreSQL,
+      capacity, versioned payload admission and activation gates pending.
+- No prior consumed workflow is altered or retried. Earlier preparation blocks
+  below remain historical checkpoints; the latest evidence is in this section.
+
 ## Initial service collection failure and correction · 2026-10-17
 
 - [x] Preserve [failed run 39039629649](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39039629649),

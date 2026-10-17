@@ -1,5 +1,26 @@
 schema: 1
 
+quote_service_corrected_collection_gate_20261017:
+  status: prepared_pending_exact_review_and_single_execution
+  base_commit: 54fe65bee87f615a78c771507515ab95e6ef247e
+  base_tree: b480a2aaf641f7dd12c7bc22fa73ffceef436185
+  regression_run: 39041234055
+  regression_artifact: 12104072554
+  regression_artifact_sha256: 0bff116ef047cecee132989c92453b2f906ad1bd725e4d35ba226087af4e4fee
+  regression_nodes_passed: 8
+  regression_failures_errors_skips: 0
+  regression_workload_seconds: 1.8037246949999997
+  regression_actual_controls_cancellation_both_absence_receipts: independently_verified
+  service_guard_sha256: a8c92710682204575b7affa26fccd263f9ab2325a3033bf8aff4f03b000dd11a
+  selector: six_original_DTO_SQLite_nodes_unchanged
+  service_workload_seconds: 20
+  branch: codex/quote-service-corrected-collection
+  original_failed_run: 39039629649
+  original_workflow: preserved_consumed_not_retried
+  service_qualified: false
+  postgresql_capacity_activation_qualified: false
+  evidence: docs/10-spec-development/2026-10-17-service-collection-correction.md
+
 quote_service_initial_failure_20261017:
   status: failed_initial_qualification_correction_prepared_unexecuted
   run: 39039629649

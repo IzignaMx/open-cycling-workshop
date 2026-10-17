@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Corrected collection service qualification pending
+
+- Record correction gate `39041234055` on `54fe65be`: eight exact regressions
+  passed with zero errors/failures/skips, 1.804-second workload, actual controls,
+  cancellation and both final absence receipts independently verified.
+- Preserve initial service failure `39039629649`; the synthetic reproduction
+  confirms the collection defect but does not recover its discarded runtime error.
+- Prepare one separately gated corrected-source qualification of the six original
+  service nodes with unchanged guard, fixtures and limits. No application source,
+  schema, dependency, selector or prior consumed workflow is changed.
+- Service behavior, PostgreSQL, capacity and activation remain unqualified until
+  their own evidence exists. The two moved pure driver tests remain unexecuted.
+
 ## Unreleased · Initial service collection correction (verification pending)
 
 - Preserve failed single run `39039629649` on `49a6f9d8`: exit 4 during pytest
