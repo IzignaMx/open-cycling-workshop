@@ -13,7 +13,8 @@
 - [x] Close the four SIM300 findings: repository and Ruff passed in run 39073762410.
 - [x] Close all six corrected-source static commands in run 39074239970.
 - [x] Execute all 32 selected PostgreSQL loader/writer cases successfully in run 39075248467, with independent artifact checks.
-- [ ] Close the four new SIM300 findings and later static commands on the final source.
+- [x] Close the four new SIM300 findings: repository and Ruff passed in run 39075919485.
+- [ ] Verify the retained single-line formatting correction and remaining static commands.
 - [ ] Close remaining service and broader integration coverage.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.

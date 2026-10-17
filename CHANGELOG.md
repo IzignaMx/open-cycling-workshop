@@ -1,5 +1,9 @@
 # Changelog
 
+## Quote selection layout correction · 2026-10-17
+
+- Preserve run 39075919485: repository and Ruff passed, then formatter requested one exact continuation-line join; types and both contracts were unrun. Apply that retained line only and prepare the existing static-six scope under unchanged limits.
+
 ## Quote PostgreSQL loader/writer evidence · 2026-10-17
 
 - Run 39075248467 passed all 32 real PostgreSQL cases and six selection mocks. The repository check passed; Ruff failed four new SIM300 comparisons and four later static commands were unrun.

@@ -1,5 +1,17 @@
 schema: 1
 
+quote_loader_format_20261017:
+  status: single_line_formatter_correction_pending_execution
+  prior_run: 39075919485
+  prior_source: 0009343af1c56ffc8477d0b31efeba41a1a9fc74
+  prior_tree: 5bb38a73cafd43948dfa8ae67979b31cb82f7543
+  prior_artifact: 12117355365
+  prior_repository_and_ruff: passed
+  prior_formatter: failed_one_complete_hunk_662_bytes
+  prior_types_openapi_client: unrun
+  workload_seconds: 20
+  evidence: docs/10-spec-development/2026-10-17-quote-loader-writer-checks.md
+
 quote_loader_writer_checks_20261017:
   status: postgres_and_mock_passed_static_failed_independently_checked
   run_id: 39075248467

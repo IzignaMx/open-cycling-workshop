@@ -62,7 +62,7 @@ CANDIDATE_SHA = {
         "ef69f56cbae3b32ce60aae4bdbfc41884dadb57206c60485ac093222f40bc9cf"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "f86561ff780f67dac299e36a12cada0078c58f9087e19a332abb8faa3a705c34"
+        "a3dae5a52edd20c42d5467f84d347b123ba794a7c2d07ada41fed6f99c45d0f1"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -85,6 +85,9 @@ CANDIDATE_SHA = {
     ".github/workflows/quote-loader-static-checks.yml": (
         "a4b6dbc53b4a35162271823715e6e2c89fee9ce291d8bc0e530043d1b50d9e07"
     ),
+    ".github/workflows/quote-loader-format-checks.yml": (
+        "27bb6de03bcfec349f18076363c16bcec0e1d624369c03b12d7a3a8b8fce814b"
+    ),
 }
 LOCKED_INPUT_SHA = {
     "pyproject.toml": "fd9f19fdeea77c028552a7f9aaeaa3adb42358fa4859c7d7229ae27d6e859be5",
@@ -105,6 +108,8 @@ LOADER_BRANCH = "refs/heads/codex/quote-loader-writer-checks"
 LOADER_WORKFLOW = ".github/workflows/quote-loader-writer-checks.yml"
 LOADER_STATIC_BRANCH = "refs/heads/codex/quote-loader-static-checks"
 LOADER_STATIC_WORKFLOW = ".github/workflows/quote-loader-static-checks.yml"
+LOADER_FORMAT_BRANCH = "refs/heads/codex/quote-loader-format-checks"
+LOADER_FORMAT_WORKFLOW = ".github/workflows/quote-loader-format-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -360,6 +365,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == LOADER_STATIC_BRANCH:
         require(GROUP_KEY == "static6")
         branch, workflow = LOADER_STATIC_BRANCH, LOADER_STATIC_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == LOADER_FORMAT_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = LOADER_FORMAT_BRANCH, LOADER_FORMAT_WORKFLOW
     elif os.environ.get("GITHUB_REF") == LOADER_BRANCH:
         require(GROUP_KEY == "selection_static12")
         branch, workflow = LOADER_BRANCH, LOADER_WORKFLOW

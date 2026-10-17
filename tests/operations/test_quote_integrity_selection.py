@@ -977,8 +977,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
             accepted = (
                 (branch == combined.BRANCH and group != "selection_static12")
                 or (
-                    branch in (combined.STYLE_BRANCH, combined.FORMAT_BRANCH)
-                    and group == "static6"
+                    branch in (combined.STYLE_BRANCH, combined.FORMAT_BRANCH) and group == "static6"
                 )
                 or (branch == combined.LOADER_BRANCH and group == "selection_static12")
             )
