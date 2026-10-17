@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased · Pure bounded-effects boundary qualification preparation
+
+- Prepare eighteen existing pure/offline cases with exact collection identity and unchanged limits.
+- Preserve static closure; actual functional results and remaining forty-seven cases are pending.
+- [Scope](docs/10-spec-development/2026-10-17-bounded-effects-pure.md).
+
+## Unreleased · Bounded-effects static closure
+
+- Independently verify all six static/contract commands on 2460fbc1, run 39061922896.
+- Preserve every earlier failure; workload 14.729 s within 20 s, cleanup verified.
+- Functional 0013, migration/restore, concurrency and capacity remain pending.
+
 ## Unreleased · Typed computed-column adapter
 
 - Record repository/lint/format passes and six strict typing diagnostics in run 39061333413.

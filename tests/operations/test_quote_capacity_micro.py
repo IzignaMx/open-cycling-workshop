@@ -640,11 +640,49 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 
 # The service guard delta below is authored but unexecuted. Run only in the
 # separately reviewed bootstrap container, never via the service business mode.
+def service_cases():
+    cases = [(node, []) for node in module.SERVICE_NODES[:7]]
+    cases.extend(
+        (module.SERVICE_NODES[7] + f"[opaque-{limit}-{offset}]", [limit, offset])
+        for limit in range(3)
+        for offset in range(3)
+    )
+    cases.extend((node, []) for node in module.SERVICE_NODES[8:])
+    return cases
+
+
+def service_items():
+    from types import SimpleNamespace
+
+    limits = ("ORDER_SOURCE_MAX_BYTES", "ORDER_CANONICAL_MAX_BYTES", "ORDER_RAW_MAX_BYTES")
+    items = []
+    for node, indices in service_cases():
+        source, name = node.split("[", 1)[0].split("::")
+        item = SimpleNamespace(
+            nodeid=node,
+            path=PATH.parents[2] / source,
+            originalname=name,
+        )
+        if indices:
+            limit, offset = indices
+            # pytest 9.1.1 recomputes both direct-param indices to the same
+            # flattened case ordinal; these are not per-parameter positions.
+            ordinal = len(items) - 7
+            item.callspec = SimpleNamespace(
+                indices={"limit_name": ordinal, "offset": ordinal},
+                params={"limit_name": limits[limit], "offset": (-1, 0, 1)[offset]},
+            )
+        items.append(item)
+    return items
+
+
 def service_report():
+    cases = service_cases()
     return dict(
         schema=1,
-        nodes=list(module.SERVICE_NODES),
-        collection_count=6,
+        nodes=[node for node, _ in cases],
+        case_indices=[indices for _, indices in cases],
+        collection_count=18,
         collection_errors=0,
         unhandled_errors=0,
         protocol_errors=0,
@@ -652,22 +690,28 @@ def service_report():
         session_exitstatus=0,
         reports=[
             dict(node=node, when=when, outcome="passed", seconds=0.001)
-            for node in module.SERVICE_NODES
+            for node, _ in cases
             for when in ("setup", "call", "teardown")
         ],
     )
 
 
-def test_service_selection_is_closed_and_environment_is_empty():
+def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
+    monkeypatch.setenv("OCWP_TEST_DATABASE_URL", "untrusted")
+    monkeypatch.setenv("PGHOST", "untrusted.invalid")
     args = module.service_argv("a" * 64)
     assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
-    assert args[-6:] == list(module.SERVICE_NODES)
-    assert len(set(args[-6:])) == 6
+    assert args[-10:] == list(module.SERVICE_NODES)
+    assert len(set(args[-10:])) == 10
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
+    assert "--tb=short" in args and "--no-showlocals" in args
+    assert "--show-capture=no" in args and "--tb=no" not in args
     assert not any(
-        "DATABASE" in arg or "PASSWORD" in arg or "PYTEST_ADDOPTS" in arg for arg in args
+        any(value in arg for value in ("DATABASE", "PASSWORD", "PYTEST_ADDOPTS", "PGHOST"))
+        or "untrusted" in arg
+        for arg in args
     )
     with pytest.raises(module.ProofFailure):
         module.service_argv("arbitrary-name")
@@ -681,7 +725,7 @@ def test_service_report_requires_every_protocol_and_finish():
     assert module.service_result(json.dumps(good)) == good
     for field, wrong in (
         ("schema", True),
-        ("collection_count", 5),
+        ("collection_count", 17),
         ("collection_errors", 1),
         ("unhandled_errors", 1),
         ("protocol_errors", 1),
@@ -699,12 +743,13 @@ def test_service_report_requires_every_protocol_and_finish():
     for rows in (
         good["reports"][:-1],
         [*good["reports"], good["reports"][0]],
+        [good["reports"][0], good["reports"][0], *good["reports"][2:]],
         good["reports"][::3],
         list(reversed(good["reports"])),
     ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"reports": rows}))
-    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 6):
+    for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 18):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"nodes": nodes}))
 
@@ -738,11 +783,12 @@ def test_service_report_rejects_duplicate_unknown_nonfinite_and_oversize_fields(
 def test_service_hook_refuses_collection_mismatch_before_fixtures():
     from types import SimpleNamespace
 
-    good = [SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES]
+    good = service_items()
     hook = module.ServiceReportHook()
     hook.pytest_collection_finish(SimpleNamespace(items=good))
-    assert hook.value["nodes"] == list(module.SERVICE_NODES)
-    for bad in (good[:-1], list(reversed(good)), good[:1] * 6, good + good[:1]):
+    assert hook.value["nodes"] == service_report()["nodes"]
+    assert hook.value["case_indices"] == service_report()["case_indices"]
+    for bad in (good[:-1], list(reversed(good)), good[:1] * 18, good + good[:1]):
         hook = module.ServiceReportHook()
         with pytest.raises(pytest.UsageError, match="service_selection"):
             hook.pytest_collection_finish(SimpleNamespace(items=bad))
@@ -750,14 +796,161 @@ def test_service_hook_refuses_collection_mismatch_before_fixtures():
         assert hook.value["nodes"] == []
 
 
+def test_pure_selection_accepts_actual_parameter_order_without_guessing_ids():
+    import json
+    from types import SimpleNamespace
+
+    items = service_items()
+    assert [item.callspec.indices for item in items[7:16]] == [
+        {"limit_name": ordinal, "offset": ordinal} for ordinal in range(9)
+    ]
+    items[7:16] = reversed(items[7:16])
+    hook = module.ServiceReportHook()
+    hook.pytest_collection_finish(SimpleNamespace(items=items))
+    good = service_report()
+    good["nodes"][7:16] = reversed(good["nodes"][7:16])
+    good["case_indices"][7:16] = reversed(good["case_indices"][7:16])
+    good["reports"] = [
+        dict(node=node, when=when, outcome="passed", seconds=0.001)
+        for node in good["nodes"]
+        for when in ("setup", "call", "teardown")
+    ]
+    assert hook.value["nodes"] == good["nodes"]
+    assert hook.value["case_indices"] == good["case_indices"]
+    assert module.service_result(json.dumps(good)) == good
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "path",
+        "name",
+        "single_callspec",
+        "missing_callspec",
+        "extra_param",
+        "missing_param",
+        "bool_offset",
+        "wrong_offset",
+        "unsupported_offset",
+        "wrong_limit",
+        "unknown_limit",
+        "nonstring_limit",
+        "params_type",
+    ],
+)
+def test_pure_collection_rejects_wrong_source_or_actual_parameters(fault):
+    from types import SimpleNamespace
+
+    items = service_items()
+    item = items[7]
+    if fault == "path":
+        item.path = PATH
+    elif fault == "name":
+        item.originalname = "test_substituted"
+    elif fault == "single_callspec":
+        items[0].callspec = None
+    elif fault == "missing_callspec":
+        del item.callspec
+    elif fault == "extra_param":
+        item.callspec.params["other"] = 0
+    elif fault == "missing_param":
+        del item.callspec.params["offset"]
+    elif fault == "bool_offset":
+        items[8].callspec.params["offset"] = False
+    elif fault == "wrong_offset":
+        item.callspec.params["offset"] = 1
+    elif fault == "unsupported_offset":
+        item.callspec.params["offset"] = 2
+    elif fault == "wrong_limit":
+        item.callspec.params["limit_name"] = "ORDER_RAW_MAX_BYTES"
+    elif fault == "unknown_limit":
+        item.callspec.params["limit_name"] = "ORDER_OTHER_MAX_BYTES"
+    elif fault == "nonstring_limit":
+        item.callspec.params["limit_name"] = 0
+    elif fault == "params_type":
+        item.callspec.params = []
+    hook = module.ServiceReportHook()
+    with pytest.raises(pytest.UsageError, match="service_selection"):
+        hook.pytest_collection_finish(SimpleNamespace(items=items))
+    assert hook.value["protocol_errors"] == 1
+    assert hook.value["nodes"] == hook.value["case_indices"] == []
+
+
+def test_pure_report_rejects_case_receipt_and_node_identity_mutations():
+    import copy
+    import json
+
+    good = service_report()
+    missing = {key: value for key, value in good.items() if key != "case_indices"}
+    with pytest.raises(module.ProofFailure):
+        module.service_result(json.dumps(missing))
+    for indices in (None, good["case_indices"][:-1], good["case_indices"] + [[]]):
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(good | {"case_indices": indices}))
+    for index, wrong in (
+        (0, [0, 0]),
+        (7, []),
+        (7, [0]),
+        (7, [0, 0, 0]),
+        (7, [False, 0]),
+        (7, [0, 0.0]),
+        (7, [-1, 0]),
+        (7, [3, 0]),
+        (7, ["0", 0]),
+        (8, [0, 0]),
+    ):
+        bad = copy.deepcopy(good)
+        bad["case_indices"][index] = wrong
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+    for node in (
+        module.SERVICE_NODES[7],
+        module.SERVICE_NODES[7] + "[]",
+        module.SERVICE_NODES[7] + "[[opaque]]",
+        module.SERVICE_NODES[7] + '["opaque"]',
+        module.SERVICE_NODES[7] + "[\\opaque]",
+        module.SERVICE_NODES[7] + "[é]",
+        module.SERVICE_NODES[7] + "[line\nbreak]",
+        module.SERVICE_NODES[7] + "[" + "x" * 128 + "]",
+        module.SERVICE_NODES[7] + "_other[opaque]",
+        good["nodes"][8],
+        None,
+    ):
+        bad = copy.deepcopy(good)
+        bad["nodes"][7] = node
+        with pytest.raises(module.ProofFailure):
+            module.service_result(json.dumps(bad))
+
+
+def test_pure_report_fits_unchanged_cap_and_refuses_exact_limit():
+    import json
+
+    good = service_report()
+    raw = json.dumps(good, sort_keys=True, allow_nan=False)
+    assert module.service_result(raw + " " * (module.LIMIT - len(raw) - 1)) == good
+    with pytest.raises(module.ProofFailure, match="service_report_limit"):
+        module.service_result(raw + " " * (module.LIMIT - len(raw)))
+    # Deliberately overestimate every node and numeric duration in the unchanged
+    # JSON shape; this data-only accounting specimen is not a valid selection.
+    upper = good | {
+        "nodes": ["x" * 128] * 18,
+        "reports": [
+            dict(node="x" * 128, when="teardown", outcome="passed", seconds="x" * 32)
+            for _ in range(54)
+        ],
+    }
+    assert len(json.dumps(upper, sort_keys=True, allow_nan=False).encode("ascii")) == 15103
+    assert 15103 < module.LIMIT == 16 * 1024
+    assert module.STATIC_FAILURE_LIMIT == 24 * 1024
+    assert module.SERVICE_OUTPUT_LIMIT == 32 * 1024
+
+
 def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     import json
     from types import SimpleNamespace
 
     hook = module.ServiceReportHook()
-    hook.pytest_collection_finish(
-        SimpleNamespace(items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES])
-    )
+    hook.pytest_collection_finish(SimpleNamespace(items=service_items()))
     for row in service_report()["reports"]:
         hook.pytest_runtest_logreport(
             SimpleNamespace(
@@ -799,7 +992,7 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     result = json.loads(target.read_text())
     assert result["protocol_errors"] == 4
     assert result["collection_errors"] == result["unhandled_errors"] == 2
-    assert len(result["reports"]) == 18
+    assert len(result["reports"]) == 54
     assert "private" not in target.read_text()
     with pytest.raises(module.ProofFailure):
         module.service_result(target.read_text())
@@ -935,6 +1128,8 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
         "diagnostic_duplicate",
         "diagnostic_invalid",
         "diagnostic_parser_error",
+        "diagnostic_exact_limit",
+        "diagnostic_truncated",
         "client_reap_unknown",
         "output_limit",
     )
@@ -991,11 +1186,14 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     marker *= 2
                 elif fault == "diagnostic_invalid":
                     marker = marker.replace(b'"stage":1', b'"stage":"private"')
-                kwargs["stdout"].write(
-                    b"private\xff\n" + marker
-                    if fault != "output_limit"
-                    else b"x" * module.SERVICE_OUTPUT_LIMIT
-                )
+                output = b"private\xff\n" + marker
+                if fault == "output_limit":
+                    output = b"x" * module.SERVICE_OUTPUT_LIMIT
+                elif fault == "diagnostic_exact_limit":
+                    output += b"x" * (module.LIMIT - len(output))
+                elif fault == "diagnostic_truncated":
+                    output += b"x" * module.LIMIT
+                kwargs["stdout"].write(output)
                 kwargs["stdout"].flush()
 
                 def wait(*, timeout):
@@ -1150,7 +1348,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "static_contracts_passed_not_service_or_capacity"
+                "pure18_passed_not_postgresql_or_capacity"
                 if fault == "success"
                 else "failed"
             ), fault
@@ -1188,16 +1386,25 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 assert result["client_returncode"] == result["specimen_returncode"] == 4
                 assert result["service_failure_diagnostic"] == (
                     service_failure_summary()
-                    if fault == "fixture_exit"
+                    if fault in {"fixture_exit", "diagnostic_exact_limit", "diagnostic_truncated"}
                     else "unavailable_or_invalid"
                 )
             if fault in {"cancellation_unknown", "client_reap_unknown", "output_limit"}:
                 assert result["service_failure_diagnostic"] == "unavailable_or_invalid"
             if fault in {"success", "cancellation_unknown", "client_reap_unknown"}:
+                assert "service_failure_output" not in result
                 assert ["diagnostic"] not in calls
                 assert ["spool_read"] not in calls
             if fault == "fixture_exit" or fault.startswith("diagnostic_"):
                 assert ["diagnostic"] in calls
+                retained = result["service_failure_output"]
+                decoded = module.base64.b64decode(retained["output_base64"], validate=True)
+                assert len(decoded) == retained["output_bytes"] <= module.LIMIT
+                assert type(retained["output_truncated"]) is bool
+                assert retained["output_truncated"] == (fault == "diagnostic_truncated")
+                assert decoded.startswith(b"private\xff\n")
+                if fault in {"diagnostic_exact_limit", "diagnostic_truncated"}:
+                    assert len(decoded) == module.LIMIT
             if ["spool_read"] in calls:
                 stopped = next(
                     i
@@ -1252,6 +1459,7 @@ def test_service_hook_rejects_each_untrusted_event_without_retaining_it():
         {"outcome": "xpassed"},
     ):
         hook = module.ServiceReportHook()
+        hook.pytest_collection_finish(SimpleNamespace(items=service_items()))
         hook.pytest_runtest_logreport(
             SimpleNamespace(
                 **(
@@ -1358,11 +1566,11 @@ def test_service_failure_diagnostic_retains_only_closed_numbers():
         "collection_errors": 100,
         "unhandled_errors": 100,
         "protocol_errors": 100,
-        "report_count": 18,
-        "setup_reports": 6,
-        "call_reports": 6,
-        "teardown_reports": 6,
-        "failed_reports": 17,
+        "report_count": 54,
+        "setup_reports": 18,
+        "call_reports": 18,
+        "teardown_reports": 18,
+        "failed_reports": 53,
         "skipped_reports": 1,
     }
     assert (
@@ -1388,10 +1596,10 @@ def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
         {"collection_errors": 101},
         {"unhandled_errors": 0.0},
         {"protocol_errors": None},
-        {"report_count": 19},
+        {"report_count": 55},
         {"setup_reports": 1},
         {"call_reports": -1},
-        {"teardown_reports": 19},
+        {"teardown_reports": 55},
         {"failed_reports": 1},
         {"skipped_reports": 1},
         {"nodes": ["private"]},
@@ -1493,11 +1701,7 @@ def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_err
     monkeypatch.setattr(module.os, "write", lambda fd, raw: emitted.append(raw) or len(raw))
     for when, stage in (("setup", 2), ("call", 3), ("teardown", 4)):
         hook = module.ServiceReportHook()
-        hook.pytest_collection_finish(
-            SimpleNamespace(
-                items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES],
-            )
-        )
+        hook.pytest_collection_finish(SimpleNamespace(items=service_items()))
         for phase in ("setup", "call", "teardown"):
             hook.pytest_runtest_logreport(
                 SimpleNamespace(

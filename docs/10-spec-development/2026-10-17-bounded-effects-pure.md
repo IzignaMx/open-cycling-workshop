@@ -1,0 +1,13 @@
+# Fixed pure bounded-effects qualification
+
+The product snapshot 2460fbc11577170ec7660bc75c237dfd5a905bcf/tree 326ff11ac86241c787ae8b0469b24968c867a748 passed the six static/contract commands in run 39061922896. Functional qualification remains separate.
+
+Select exactly eighteen existing cases: seven nonparametrized codec tests, all nine combinations of the three byte-limit names with offsets -1/0/+1, and the model-DDL plus offline-migration-refusal tests. No test body or product code changes in this increment. The other 47 pure parameter cases remain unrun; PostgreSQL 0013 migration/runtime, rollback/restore, concurrency and capacity also remain pending.
+
+Collection is bound to the ten fixed source functions, exact actual parameter values and canonical integer positions derived from those values. Do not predict pytest-generated IDs or treat pytest internal indices as semantic positions. Locked pytest 9.1.1 flattens direct parameter indices; the receipt instead derives each position from the fixed typed value lists. Captured IDs must be unique, bounded safe ASCII and attached to the correct fixed selector. The final report validates the same collection, the nine distinct index pairs and all 54 ordered setup/call/teardown phases, zero skips/errors, and closed fields. Bool indices are invalid. The unchanged 16 KiB success-report limit accommodates a conservative 15,103-byte bound including the new closed case_indices receipt; it remains a hard limit.
+
+Use the proven containment and fixed one-shot workflow with the same 20-second aggregate workload, 1 CPU / 512 MiB worker, canary, output limits and independent cleanup. The owned PostgreSQL container remains unused environment overhead. No database URL or schema identity is injected for this pure/offline selection. DDL is compiled in memory and the offline migration request must refuse before a database bind; neither is live migration evidence.
+
+Reuse the previously reviewed short-trace capture from fe30964b: --tb=short, --no-showlocals, --show-capture=no; retain only bounded synthetic test output after verified stop and client reap, before parsing the numeric failure marker. Keep the 16 KiB diagnostic, 24 KiB marker and 32 KiB specimen spool limits. Preserve failure and truncation explicitly; no retry or budget expansion makes a failed run qualified.
+
+The exact source and guard changes require independent review. The operation is a new fixed small functional workload, not a repeat of the consumed maximum/profile experiments. Execution results are pending.

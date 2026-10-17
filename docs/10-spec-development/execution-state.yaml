@@ -1,23 +1,35 @@
 schema: 1
 
+bounded_effects_pure_20261017:
+  status: prepared_pending_exact_review_and_run
+  expected_cases: 18
+  expected_phases: 54
+  source_functions: 10
+  remaining_pure_cases: 47
+  shared_workload_seconds: 20
+  maximum_success_report_bound_bytes: 15103
+  database_usage: unused_environment_overhead
+  genuine_postgresql_0013: unrun
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-pure.md
+
 bounded_effects_static_20261017:
-  status: strict_type_diagnostics_corrected_pending_checks
-  run_id: 39061333413
-  source_commit: d7e77aababba4161fd755cc33857be32053c1bc9
-  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945, 39060973460]
-  repository: passed_on_reported_source
-  lint: passed_on_reported_source
-  formatting: passed_on_reported_source
-  strict_type_diagnostics: 6
-  diagnostic_output_bytes: 880
-  diagnostic_output_truncated: false
-  generated_contracts: unrun
+  status: passed_independently_reviewed
+  run_id: 39061922896
+  source_commit: 2460fbc11577170ec7660bc75c237dfd5a905bcf
+  source_tree: 326ff11ac86241c787ae8b0469b24968c867a748
+  artifact_id: 12111533199
+  artifact_sha256: 0b0bd1250455acf53d18fde25abdf7adf6f50bd8fde6fb3cafeb3b7e91c5429d
   fixed_commands: 6
+  passed_phases: 18
   source_paths: 38
   production_type_roots: 13
   shared_workload_seconds: 20
+  measured_workload_seconds: 14.729
+  final_worker_peak_bytes: 274309120
+  cleanup: verified_absent
   database_usage: unused_environment_overhead
   runtime_tests: unrun
+  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945, 39060973460, 39061333413]
   evidence: docs/10-spec-development/2026-10-17-bounded-effects-source-repair.md
 
 bounded_quote_effects_joint_20261017:

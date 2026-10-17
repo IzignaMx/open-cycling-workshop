@@ -515,14 +515,27 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
+PROJECTION_TEST = "services/platform/tests/sync/test_order_projection_integrity.py"
+METADATA_TEST = "services/platform/tests/quotes/test_quote_effect_metadata.py"
 SERVICE_NODES = (
-    "tests/operations/test_quote_service_static_contracts.py::test_repository_contract",
-    "tests/operations/test_quote_service_static_contracts.py::test_python_lint",
-    "tests/operations/test_quote_service_static_contracts.py::test_python_format",
-    "tests/operations/test_quote_service_static_contracts.py::test_production_types",
-    "tests/operations/test_quote_service_static_contracts.py::test_openapi_contract",
-    "tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract",
+    f"{PROJECTION_TEST}::test_roundtrip_preserves_strings_and_freezes_snapshot",
+    f"{PROJECTION_TEST}::test_preflight_precedes_json_loads",
+    f"{PROJECTION_TEST}::test_stored_count_exact_and_raw_budget",
+    f"{PROJECTION_TEST}::test_extra_field_and_maximum_version",
+    f"{PROJECTION_TEST}::test_duplicate_key_in_otherwise_valid_projection",
+    f"{PROJECTION_TEST}::test_escaped_strings_are_not_number_or_depth_tokens",
+    f"{PROJECTION_TEST}::test_preflight_unicode_rejection_precedes_decoder",
+    f"{PROJECTION_TEST}::test_each_byte_boundary",
+    f"{METADATA_TEST}::test_model_ddl_has_explicit_dialect_generation",
+    f"{METADATA_TEST}::test_metadata_migration_rejects_offline_output",
 )
+SERVICE_GROUPS = (*SERVICE_NODES[:7], *((SERVICE_NODES[7],) * 9), *SERVICE_NODES[8:])
+SERVICE_LIMIT_NAMES = (
+    "ORDER_SOURCE_MAX_BYTES",
+    "ORDER_CANONICAL_MAX_BYTES",
+    "ORDER_RAW_MAX_BYTES",
+)
+SERVICE_OFFSETS = (-1, 0, 1)
 
 # Fixed public source scope for the six static/contracts commands.
 STATIC_PATHS = (
@@ -595,7 +608,8 @@ def service_argv(cid: str) -> list[str]:
         "no:cacheprovider",
         "-p",
         "scripts.ci.quote_capacity_micro",
-        "--tb=no",
+        "--tb=short",
+        "--no-showlocals",
         "--show-capture=no",
         "--capture=fd",
         "--maxfail=1",
@@ -621,30 +635,76 @@ def reject_constant(_value: str) -> None:
     raise ProofFailure("service_nonfinite")
 
 
+def service_selection(nodes: object, case_indices: object) -> list[str]:
+    """One fixed eighteen-case identity matrix, independent of pytest ID spelling."""
+    if (
+        type(nodes) is not list
+        or len(nodes) != 18
+        or type(case_indices) is not list
+        or len(case_indices) != 18
+    ):
+        raise ProofFailure("service_selection")
+    seen_nodes: set[str] = set()
+    seen_pairs: set[tuple[int, int]] = set()
+    for node, indices, selector in zip(nodes, case_indices, SERVICE_GROUPS, strict=True):
+        if (
+            type(node) is not str
+            or not 0 < len(node) <= 128
+            or re.fullmatch(r"[A-Za-z0-9_./:\[\]-]+", node) is None
+            or node in seen_nodes
+            or type(indices) is not list
+        ):
+            raise ProofFailure("service_selection")
+        seen_nodes.add(node)
+        if selector == SERVICE_NODES[7]:
+            if (
+                not node.startswith(selector + "[")
+                or not node.endswith("]")
+                or len(node) <= len(selector) + 2
+                or node.count("[") != 1
+                or node.count("]") != 1
+                or len(indices) != 2
+                or any(type(index) is not int or not 0 <= index < 3 for index in indices)
+            ):
+                raise ProofFailure("service_selection")
+            pair = (indices[0], indices[1])
+            if pair in seen_pairs:
+                raise ProofFailure("service_selection")
+            seen_pairs.add(pair)
+        elif node != selector or indices != []:
+            raise ProofFailure("service_selection")
+    if seen_pairs != {(limit, offset) for limit in range(3) for offset in range(3)}:
+        raise ProofFailure("service_selection")
+    return nodes
+
+
 def service_result(raw: str) -> dict[str, object]:
-    """Accept only six complete successful protocols, never six call-only passes."""
+    """Accept eighteen fixed pure protocols, never call-only passes or substitutions."""
     if len(raw.encode("utf-8")) >= LIMIT:
         raise ProofFailure("service_report_limit")
     value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
     expected = {
         "schema": 1,
-        "collection_count": 6,
+        "collection_count": 18,
         "collection_errors": 0,
         "unhandled_errors": 0,
         "protocol_errors": 0,
         "session_finished": True,
         "session_exitstatus": 0,
     }
-    if type(value) is not dict or set(value) != set(expected) | {"nodes", "reports"}:
+    if type(value) is not dict or set(value) != set(expected) | {
+        "nodes",
+        "case_indices",
+        "reports",
+    }:
         raise ProofFailure("service_report_shape")
     if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
         raise ProofFailure("service_report_outcome")
-    if value["nodes"] != list(SERVICE_NODES):
-        raise ProofFailure("service_selection")
+    nodes = service_selection(value["nodes"], value["case_indices"])
     reports = value["reports"]
-    if type(reports) is not list or len(reports) != 18:
+    if type(reports) is not list or len(reports) != 54:
         raise ProofFailure("service_report_count")
-    wanted = [(node, when) for node in SERVICE_NODES for when in ("setup", "call", "teardown")]
+    wanted = [(node, when) for node in nodes for when in ("setup", "call", "teardown")]
     for row, (node, when) in zip(reports, wanted, strict=True):
         if type(row) is not dict or set(row) != {"node", "when", "outcome", "seconds"}:
             raise ProofFailure("service_report_shape")
@@ -686,12 +746,12 @@ def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]
         "collection_errors": (0, 100),
         "unhandled_errors": (0, 100),
         "protocol_errors": (0, 100),
-        "report_count": (0, 18),
-        "setup_reports": (0, 18),
-        "call_reports": (0, 18),
-        "teardown_reports": (0, 18),
-        "failed_reports": (0, 18),
-        "skipped_reports": (0, 18),
+        "report_count": (0, 54),
+        "setup_reports": (0, 54),
+        "call_reports": (0, 54),
+        "teardown_reports": (0, 54),
+        "failed_reports": (0, 54),
+        "skipped_reports": (0, 54),
     }
     if type(value) is not dict or set(value) != set(bounds):
         raise ProofFailure("service_diagnostic_invalid")
@@ -803,6 +863,7 @@ class ServiceReportHook:
         self.value: dict[str, object] = {
             "schema": 1,
             "nodes": [],
+            "case_indices": [],
             "collection_count": 0,
             "collection_errors": 0,
             "unhandled_errors": 0,
@@ -828,20 +889,60 @@ class ServiceReportHook:
         self.stage = 1
         nodes = [getattr(item, "nodeid", None) for item in session.items]
         self.value["collection_count"] = min(100, len(nodes))
-        if nodes != list(SERVICE_NODES) or len(set(nodes)) != 6:
+        try:
+            if len(nodes) != 18:
+                raise ProofFailure("service_selection")
+            case_indices = []
+            root = Path(__file__).resolve().parents[2]
+            for item, selector in zip(session.items, SERVICE_GROUPS, strict=True):
+                source, name = selector.split("::")
+                path = getattr(item, "path", None)
+                if (
+                    not isinstance(path, Path)
+                    or path.resolve() != root / source
+                    or getattr(item, "originalname", None) != name
+                ):
+                    raise ProofFailure("service_selection")
+                if selector == SERVICE_NODES[7]:
+                    callspec = getattr(item, "callspec", None)
+                    params = getattr(callspec, "params", None)
+                    if (
+                        type(params) is not dict
+                        or set(params) != {"limit_name", "offset"}
+                        or type(params["limit_name"]) is not str
+                        or params["limit_name"] not in SERVICE_LIMIT_NAMES
+                        or type(params["offset"]) is not int
+                        or params["offset"] not in SERVICE_OFFSETS
+                    ):
+                        raise ProofFailure("service_selection")
+                    # Semantic positions come from exact values, not pytest's
+                    # internal direct-parameter indices (flattened in 9.1.1).
+                    case_indices.append(
+                        [
+                            SERVICE_LIMIT_NAMES.index(params["limit_name"]),
+                            SERVICE_OFFSETS.index(params["offset"]),
+                        ]
+                    )
+                else:
+                    if hasattr(item, "callspec"):
+                        raise ProofFailure("service_selection")
+                    case_indices.append([])
+            nodes = service_selection(nodes, case_indices)
+        except (OSError, RuntimeError, ValueError) as error:
             self.bump("protocol_errors")
-            raise pytest.UsageError("service_selection")
-        self.value["nodes"] = list(SERVICE_NODES)
+            raise pytest.UsageError("service_selection") from error
+        self.value["nodes"] = nodes
+        self.value["case_indices"] = case_indices
 
     def pytest_runtest_logreport(self, report: object) -> None:
         node, when = getattr(report, "nodeid", None), getattr(report, "when", None)
         outcome, seconds = getattr(report, "outcome", None), getattr(report, "duration", None)
         rows = cast(list[dict[str, object]], self.value["reports"])
         if (
-            node not in SERVICE_NODES
+            node not in self.value["nodes"]
             or when not in {"setup", "call", "teardown"}
             or outcome not in {"passed", "failed", "skipped"}
-            or len(rows) >= 18
+            or len(rows) >= 54
             or type(seconds) not in (int, float)
             or not math.isfinite(seconds)
             or not 0 <= seconds < 20
@@ -1245,7 +1346,7 @@ def supervise(
             report["environment_overhead_before_workload_cpu_usec"] = {
                 role: data["cpu_usec"] for role, data in snapshots.items()
             }
-            report["database_role"] = "unused_postgresql_environment_overhead_static_commands_only"
+            report["database_role"] = "unused_postgresql_environment_overhead_pure_offline_tests"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
         report["command_stage"] = "service_initial" if service_initial else "microfixture"
         report["phase"] = (
@@ -1343,6 +1444,15 @@ def supervise(
                             # reaping. No extra Docker read or deadline extension.
                             output.seek(0)
                             failure_output = output.read(SERVICE_OUTPUT_LIMIT)
+                            # Synthetic-only short traceback; no locals, captured
+                            # logs, environment dump or additional subprocess.
+                            retained = failure_output[:LIMIT]
+                            report["service_failure_output"] = {
+                                "output_bytes": len(retained),
+                                "output_truncated": len(failure_output) > LIMIT
+                                or len(failure_output) >= SERVICE_OUTPUT_LIMIT,
+                                "output_base64": base64.b64encode(retained).decode("ascii"),
+                            }
                             failure_summary = service_failure_diagnostic(
                                 failure_output,
                                 returncode=child.returncode,
@@ -1393,7 +1503,7 @@ def supervise(
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("final_readback_deadline")
             report["phase"] = "service_complete"
-            report["status"] = "static_contracts_passed_not_service_or_capacity"
+            report["status"] = "pure18_passed_not_postgresql_or_capacity"
         else:
             micro = micro_result(
                 execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
@@ -1468,7 +1578,7 @@ def supervise(
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
     wanted_status = (
-        "static_contracts_passed_not_service_or_capacity"
+        "pure18_passed_not_postgresql_or_capacity"
         if service_initial
         else "micro_passed_not_capacity"
     )
