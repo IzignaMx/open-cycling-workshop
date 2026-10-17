@@ -1,5 +1,13 @@
 # Changelog
 
+## Quote candidate integrity corrections · 2026-10-17
+
+- Prepare canonical four-digit receipt-year formatting and early scalar-order NUL refusal, with ten focused regressions. Exact source review is complete; hosted verification remains pending. Shared legacy-ID rules and chronology policy remain unchanged.
+
+## Quote candidate integration evidence · 2026-10-17
+
+- Verified run 39069601139 on 181579e9: 119 guard cases, 62 database-free product cases and six static/contracts, with zero failures or skips, independent evidence review and owned-container absence. Each workload remained below its unchanged 20-second limit. Broader service/schema integration and activation gates remain open.
+
 ## Unreleased · Service-effect logical restore verified
 
 - Verify one real PostgreSQL 18.4 dump/restore and fresh replay case, three phases, in run 39067901565.

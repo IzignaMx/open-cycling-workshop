@@ -208,9 +208,10 @@ class QuoteRepository:
             raise QuoteConflictError("scoped order not found")
         try:
             for value in (row.id, row.organization_id, row.location_id, row.customer_id):
-                _id(value)
-            if row.bicycle_id is not None:
-                _id(row.bicycle_id)
+                if "\x00" in _id(value):
+                    raise ValueError("stored order identity cannot contain NUL")
+            if row.bicycle_id is not None and "\x00" in _id(row.bicycle_id):
+                raise ValueError("stored order identity cannot contain NUL")
             OrderState(row.state)
             _integer(row.version, 1, 2147483647)
             return LockedQuoteOrder(

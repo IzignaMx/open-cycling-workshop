@@ -550,7 +550,9 @@ class QuoteService:
                 quote_version=receipt.quote_version,
                 decision_id=receipt.operation_id if decision is not None else None,
                 decision_sequence=receipt.decision_sequence,
-                recorded_at=receipt.recorded_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                recorded_at=receipt.recorded_at.astimezone(UTC)
+                .isoformat(timespec="microseconds")
+                .replace("+00:00", "Z"),
                 recorded_by_actor_id=command.actor_id,
                 totals=PricingSummary(
                     subtotal_minor=pricing.subtotal_minor,

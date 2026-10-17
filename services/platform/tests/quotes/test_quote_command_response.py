@@ -1,15 +1,21 @@
 """Prepared, unexecuted small DTO tests; no runtime or capacity evidence."""
 
 import json
+from datetime import UTC, datetime
 
 import pytest
+from cycling_workshop.quotes.commands import CreateQuoteCommand
+from cycling_workshop.quotes.domain import LaborLine
 from cycling_workshop.quotes.reads import QuoteReadError
+from cycling_workshop.quotes.reconstruction import QuoteReceipt, advance
+from cycling_workshop.quotes.repository import QuoteOrderProjection, QuoteRepositoryResult
 from cycling_workshop.quotes.responses import (
     CommandResponse,
     OrderTransitionEffects,
     Receipt,
     encode_command_response,
 )
+from cycling_workshop.quotes.service import QuoteService
 from cycling_workshop.quotes.storage import MAX_SAFE_INTEGER
 from cycling_workshop.service_orders.domain import OrderState
 from pydantic import ValidationError
@@ -285,6 +291,47 @@ def test_recording_requires_canonical_calendar_valid_microsecond_utc(bad):
     value["receipt"]["recorded_at"] = bad
     with pytest.raises(ValidationError):
         CommandResponse.model_validate(value)
+
+
+@pytest.mark.parametrize("year", [1, 999, 1000, 9999])
+@pytest.mark.parametrize("replayed", [False, True])
+def test_service_projector_preserves_four_digit_receipt_year(year, replayed):
+    recorded_at = datetime(year, 1, 2, 3, 4, 5, 678901, tzinfo=UTC)
+    command = CreateQuoteCommand(
+        operation_id=uid(2),
+        quote_id=uid(1),
+        organization_id="org-a",
+        location_id="location-a",
+        order_id="order-a",
+        actor_id="actor-a",
+        expected_order_version=1,
+        currency="MXN",
+        lines=(LaborLine(uid(4), "Synthetic labor", 60, 1),),
+    )
+    ledger = advance(None, command, recorded_at)
+    receipt = QuoteReceipt(
+        command=command,
+        quote_id=command.quote_id,
+        quote_version=1,
+        decision_sequence=0,
+        ordinal=1,
+        recorded_at=recorded_at,
+        quote_outbox_id=uid(3),
+    )
+    result = QuoteRepositoryResult(
+        receipt=receipt,
+        ledger=ledger,
+        order=QuoteOrderProjection("order-a", "org-a", "location-a", "DIAGNOSIS", 1),
+        replayed=replayed,
+    )
+
+    response = QuoteService._response(result)
+    raw = encode_command_response(response)
+    value = json.loads(raw)
+    assert ledger.history.head.created_at == recorded_at
+    assert value["delivery"] == ("replayed" if replayed else "applied")
+    assert value["receipt"]["recorded_at"] == f"{year:04d}-01-02T03:04:05.678901Z"
+    assert CommandResponse.model_validate_json(raw) == response
 
 
 def test_scope_and_current_decision_must_match_current_head():

@@ -1,6 +1,6 @@
 # Fixed quote candidate integration checks
 
-Status: preparation; exact source review and hosted results pending.
+Status: the exact finite selection passed and was independently reviewed; consolidated service/schema integration remains pending.
 
 The [tiny service-effect restore](2026-10-17-quote-service-restore.md#verified-tiny-service-effect-restore-result)
 passed independently. This next finite check closes specific remaining unit and
@@ -78,3 +78,29 @@ receipt's fixed owned-database requirement remains unchanged.
 This is a source-demonstrated integration mismatch, not a previously executed
 failure. Static checks alone cannot qualify the corrected fixture; current
 revision-0013 PG service execution remains an explicit integration requirement.
+
+
+## Verified fixed integration selection
+
+Run: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39069601139
+
+Commit: 181579e9a76fabb8af72ec4cc343d85ecbfde55b
+Tree: 71adc27482ce823e062d055ae9bf911c9a12d0ee
+Run number/attempt: 1/1. All four sequential jobs completed successfully.
+
+| Group | Passed | Workload seconds | Final-read worker peak bytes | Artifact |
+| --- | ---: | ---: | ---: | ---: |
+| Guard foundation | 51 | 0.791 | 49,504,256 | 12114437035 |
+| Guard protocol | 68 | 2.190 | 60,678,144 | 12114538048 |
+| Database-free product | 62 | 3.488 | 93,605,888 | 12114712400 |
+| Static/contracts | 6 | 9.632 | 274,591,744 | 12114547961 |
+
+All 187 selected cases/commands passed with zero failures, errors or skips. Exact source hashes, observed case identities/counts, real cancellation canary, whole-worker stop before client reap, primary absence and independent absence were reviewed. CPU/memory samples are final-read counters before worker termination, not post-termination totals. Each distinct workload stayed within its own 20-second cap; no retries occurred.
+
+Artifact SHA-256 values:
+- 12114437035: c41e5c97f4d7528a7f3a32fb72d50a5c31294a936d855ae1450149e9ee3d481a
+- 12114538048: 8a4b0696bf56998744d9e105f0f2b87b1141d65eb657bc355dd830df453a474a
+- 12114712400: 63a04aab9aa678d8964b6ae5b861967cd92582ac1328aae0f75f061cf41cad8d
+- 12114547961: 9095c4f276f09d4deaddfcf2b82009535c781bed8d72694ad00098231b1fe32f
+
+This selection does not qualify the current PostgreSQL service fixture, the complete service/schema integrity matrix, actual service concurrency, capacity, production deadlines or activation. The consolidated application diff remains subject to independent review and applicable current-tree integration. Earlier failed capacity/profile evidence remains unchanged. No API was activated or installation deployed.

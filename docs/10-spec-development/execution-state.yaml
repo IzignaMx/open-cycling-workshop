@@ -1,7 +1,21 @@
 schema: 1
 
+quote_integrity_edges_20261017:
+  status: implemented_pending_evidence
+  prepared_regression_cases: 10
+  observed_red_green: false
+  scope: canonical_receipt_year_and_scalar_order_nul_prehydration
+  evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md
+
 quote_integration_checks_20261017:
-  status: prepared_pending_exact_review_and_run
+  status: passed_independently_reviewed
+  run_id: 39069601139
+  source_commit: 181579e9a76fabb8af72ec4cc343d85ecbfde55b
+  source_tree: 71adc27482ce823e062d055ae9bf911c9a12d0ee
+  artifact_ids: [12114437035, 12114538048, 12114712400, 12114547961]
+  measured_workload_seconds: [0.791, 2.190, 3.488, 9.632]
+  failures_errors_skips: 0
+  cleanup: primary_and_independent_absence_verified
   fixed_group_cases: [51, 68, 62, 6]
   workload_seconds_per_group: 20
   total_group_workload_allocation_seconds: 80

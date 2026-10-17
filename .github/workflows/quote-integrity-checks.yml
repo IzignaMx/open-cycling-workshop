@@ -1,0 +1,261 @@
+name: Fixed quote integrity checks
+
+on:
+  push:
+    branches: [codex/quote-integrity-checks]
+
+permissions:
+  contents: read
+
+jobs:
+  quote-integrity-checks:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/codex/quote-integrity-checks' &&
+      github.run_number == 1 && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        # 210 source-bound checks; each group keeps its own 20-second workload.
+        include:
+          - {group: service27, postgres: false}
+          - {group: atomic18_corruption, postgres: false}
+          - {group: atomic18_other, postgres: false}
+          - {group: response50, postgres: false}
+          - {group: response64, postgres: false}
+          - {group: metadata_sync, postgres: true}
+          - {group: metadata_outbox, postgres: true}
+          - {group: metadata_relations, postgres: true}
+          - {group: service_bridge, postgres: true}
+          - {group: static6, postgres: false}
+    env:
+      OCWP_INTEGRITY_GROUP: ${{ matrix.group }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Refuse any other event, branch, workflow, run or attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/codex/quote-integrity-checks
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_WORKFLOW_REF" = "$GITHUB_REPOSITORY/.github/workflows/quote-integrity-checks.yml@$GITHUB_REF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Prepare the fixed JUnit image from exact tracked source and locked dependencies
+        if: ${{ !matrix.postgres }}
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 660s \
+            python3 -I scripts/ci/quote_integrity_checks.py prepare
+      - name: Prepare the fixed PostgreSQL image with bounded tracked source and quiet logs
+        if: ${{ matrix.postgres }}
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 660s python3 - <<'PY'
+          import os
+          import re
+          import signal
+          import subprocess
+          import tarfile
+          import tempfile
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_integrity_postgres import ProofFailure, output_limit, run, source_query
+
+          def require(condition):
+              if not condition:
+                  raise ProofFailure('preparation_unqualified')
+
+          def interrupted(_signum, _frame):
+              raise ProofFailure('preparation_interrupted')
+
+          signal.signal(signal.SIGTERM, interrupted)
+          signal.signal(signal.SIGINT, interrupted)
+          group = os.environ['OCWP_INTEGRITY_GROUP']
+          root = Path(os.environ['RUNNER_TEMP'])
+          try:
+              require(group in ('metadata_sync', 'metadata_outbox', 'metadata_relations', 'service_bridge'))
+              require(source_query('head') == os.environ['GITHUB_SHA'])
+              require(source_query('status') == '')
+              tree = source_query('tree')
+              require(re.fullmatch(r'[0-9a-f]{40}', tree) is not None)
+              with tempfile.TemporaryDirectory(prefix=f'quote-integrity-{group}-source-', dir=root) as tmp:
+                  source_root = Path(tmp)
+                  context = source_root / 'source'
+                  context.mkdir()
+                  archive_path = source_root / 'source.tar'
+                  # Same bounded tracked-archive mechanism as the fixed JUnit recipe.
+                  # Archive data uses a pipe; only stderr receives the 16 KiB file limit.
+                  deadline = time.monotonic() + 20
+                  with tempfile.TemporaryFile() as errors, archive_path.open('xb') as archive:
+                      child = subprocess.Popen(
+                          ['git', 'archive', '--format=tar', 'HEAD'],
+                          stdout=subprocess.PIPE, stderr=errors,
+                          start_new_session=True, preexec_fn=output_limit,
+                      )
+                      total = 0
+                      try:
+                          require(child.stdout is not None)
+                          os.set_blocking(child.stdout.fileno(), False)
+                          while True:
+                              require(time.monotonic() < deadline and os.fstat(errors.fileno()).st_size < 16384)
+                              try:
+                                  data = os.read(child.stdout.fileno(), 65536)
+                              except BlockingIOError:
+                                  time.sleep(0.02)
+                                  continue
+                              if not data:
+                                  break
+                              total += len(data)
+                              require(total <= 64 * 1024 * 1024)
+                              archive.write(data)
+                          child.wait(timeout=min(2, max(0.001, deadline - time.monotonic())))
+                          require(child.returncode == 0 and total > 0)
+                          require(os.fstat(errors.fileno()).st_size < 16384)
+                      finally:
+                          if child.poll() is None:
+                              os.killpg(child.pid, signal.SIGKILL)
+                              child.wait(timeout=2)
+                          if child.stdout is not None:
+                              child.stdout.close()
+                  with tarfile.open(archive_path, mode='r:') as source_tar:
+                      for member in source_tar.getmembers():
+                          require(member.isfile() or member.isdir())
+                          require(not member.name.startswith('/') and '..' not in Path(member.name).parts)
+                      source_tar.extractall(context, filter='data')
+                  dockerfile = source_root / 'integrity-postgres.Dockerfile'
+                  dockerfile.write_text(
+                      f'FROM ocwp-quote-integrity-{group}-base\n'
+                      'COPY . /app/\n'
+                      'RUN uv sync --all-packages --group dev --locked\n'
+                      'ARG SOURCE_TREE\n'
+                      'LABEL ocwp.source-tree=$SOURCE_TREE\n'
+                      'ENV PYTHONDONTWRITEBYTECODE=1\n'
+                  )
+                  commands = [
+                      (300, ['docker', 'build', '--quiet', '--target', 'build', '-f',
+                             str(context / 'infra/docker/platform.local.Dockerfile'),
+                             '-t', f'ocwp-quote-integrity-{group}-base', str(context)]),
+                      (300, ['docker', 'build', '--quiet', '-f', str(dockerfile),
+                             '--build-arg', f'SOURCE_TREE={tree}',
+                             '-t', f'ocwp-quote-integrity-{group}-initial', str(context)]),
+                      (60, ['docker', 'pull', '--quiet', 'postgres:18.4-trixie']),
+                  ]
+                  artifacts = Path('artifacts')
+                  artifacts.mkdir(exist_ok=True)
+                  for index, (seconds, command) in enumerate(commands, start=1):
+                      log = artifacts / f'quote-integrity-{group}-preparation-{index}.txt'
+                      # Copied restore preparation seam: each retained log is <=16 KiB.
+                      os.environ['QUOTE_PREPARATION_LOG'] = str(log.resolve())
+                      try:
+                          run(['bash', '-c', '"$@" > "$QUOTE_PREPARATION_LOG" 2>&1', '--',
+                               'timeout', '--signal=TERM', '--kill-after=5s', f'{seconds}s',
+                               *command], timeout=seconds + 5)
+                      finally:
+                          size = log.stat().st_size if log.exists() else 0
+                          print(f'Preparation step {index}: retained_bytes={size}; '
+                                f'truncated_or_at_cap={size >= 16384}', flush=True)
+                          if log.exists():
+                              print(log.read_bytes()[:16384].decode('utf-8', errors='replace'), flush=True)
+          except (ProofFailure, OSError, ValueError, subprocess.TimeoutExpired, tarfile.TarError):
+              raise SystemExit('Image preparation unqualified; no specimen launch') from None
+          PY
+      - name: Prove real containment and run the fixed JUnit group once
+        if: ${{ !matrix.postgres }}
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s \
+            python3 -I scripts/ci/quote_integrity_checks.py run
+      - name: Prove real containment and run the fixed PostgreSQL group once
+        if: ${{ matrix.postgres }}
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_integrity_postgres.py \
+            --worker-image "ocwp-quote-integrity-$OCWP_INTEGRITY_GROUP-initial" \
+            --pg-image postgres:18.4-trixie --commit "$(git rev-parse HEAD)" \
+            --owned "$RUNNER_TEMP/quote-integrity-$OCWP_INTEGRITY_GROUP-owned.json" \
+            --evidence "artifacts/quote-integrity-$OCWP_INTEGRITY_GROUP.json" --service-initial
+      - name: Independently reconcile JUnit ownership and prove final absence
+        if: ${{ always() && !matrix.postgres }}
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s \
+            python3 -I scripts/ci/quote_integrity_checks.py cleanup
+      - name: Independently reconcile PostgreSQL ownership and prove final absence
+        if: ${{ always() && matrix.postgres }}
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s python3 - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_integrity_postgres import ProofFailure, identifier, reconcile_owned, remove_owned, run
+          deadline = time.monotonic() + 55
+          def execute(args, *, timeout=5):
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  raise ProofFailure('independent_cleanup_deadline')
+              result = run(args, timeout=min(timeout, remaining), deadline=deadline)
+              if time.monotonic() >= deadline:
+                  raise ProofFailure('independent_cleanup_deadline')
+              return result
+          group = os.environ['OCWP_INTEGRITY_GROUP']
+          result = {'schema': 1, 'cleanup': 'failed', 'group': group,
+                    'commit': os.environ['GITHUB_SHA'], 'run_id': os.environ['GITHUB_RUN_ID'],
+                    'run_number': os.environ['GITHUB_RUN_NUMBER'],
+                    'run_attempt': os.environ['GITHUB_RUN_ATTEMPT']}
+          try:
+              if group not in ('metadata_sync', 'metadata_outbox', 'metadata_relations', 'service_bridge'):
+                  raise ProofFailure('service_selection')
+              root = Path(os.environ['RUNNER_TEMP'])
+              owned = root / f'quote-integrity-{group}-owned.json'
+              ids = [identifier(path.read_text().strip())
+                     for path in root.glob(f'quote-integrity-{group}-owned.*.cid')]
+              present = execute(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
+              for cid in present:
+                  identifier(cid)
+              discovered = reconcile_owned(owned, execute) if owned.with_suffix('.owner.json').exists() else []
+              if not set(ids).intersection(present).issubset(discovered):
+                  raise ProofFailure('owned_identity_reconciliation')
+              remove_owned(discovered, execute)
+              result['cleanup'] = 'verified_absent'
+          except (ProofFailure, ValueError, OSError):
+              pass
+          finally:
+              Path('artifacts').mkdir(exist_ok=True)
+              Path(f'artifacts/quote-integrity-{group}-independent-cleanup.json').write_text(json.dumps(result) + '\n')
+          if result['cleanup'] != 'verified_absent':
+              raise SystemExit('Owned-container cleanup unverified')
+          PY
+      - name: Upload group evidence, bounded diagnostics and independent absence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-integrity-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            artifacts/quote-integrity-${{ matrix.group }}.json
+            artifacts/quote-integrity-${{ matrix.group }}-independent-cleanup.json
+            artifacts/quote-integrity-${{ matrix.group }}-diagnostic.txt
+            artifacts/quote-integrity-${{ matrix.group }}-preparation-*.txt
+          if-no-files-found: error

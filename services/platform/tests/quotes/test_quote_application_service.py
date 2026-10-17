@@ -18,11 +18,12 @@ from cycling_workshop.quotes.service import QuoteDeadline, QuoteService, QuoteSe
 from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
 from cycling_workshop.sync.models import ChangeRecord
 from cycling_workshop.sync.writes import lock_writer
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 from test_identity_migration import identity_migration_database as identity_migration_database
-from test_quote_repository import creation, decision, revision
+from test_quote_repository import counts, creation, decision, revision
 from test_quote_repository import database as database
+from test_quote_schema import insert
 from test_quote_storage import NOW
 
 pytestmark = pytest.mark.parametrize("identity_migration_database", ["sqlite"], indirect=True)
@@ -182,6 +183,59 @@ def test_foreign_actor_and_noncustomer_decision_are_refused(database, actors):
         with pytest.raises(QuoteServiceError, match="quote_conflict"):
             execute(session, actors, command)
         assert totals(session) == (1, 0, 0, 1)
+
+
+@pytest.mark.parametrize(
+    "field,table,details",
+    [
+        ("customer_id", "customers", {"display_name": "Synthetic"}),
+        ("bicycle_id", "bicycles", {"customer_id": "customer-a", "brand": "Synthetic"}),
+    ],
+)
+def test_nul_order_reference_refuses_before_text_hydration(
+    database, actors, monkeypatch, field, table, details
+):
+    reference_id = "reference\x00a"
+    column = getattr(ServiceOrderRecord, field)
+    with database.begin() as connection:
+        insert(
+            connection,
+            table,
+            id=reference_id,
+            organization_id="a",
+            location_id="location-a",
+            created_at=NOW,
+            updated_at=NOW,
+            **details,
+        )
+        connection.execute(
+            update(ServiceOrderRecord)
+            .where(ServiceOrderRecord.id == "order-a")
+            .values({field: reference_id})
+        )
+        assert connection.scalar(text("PRAGMA foreign_keys")) == 1
+        assert connection.execute(text("PRAGMA foreign_key_check")).all() == []
+        assert (
+            connection.scalar(select(column).where(ServiceOrderRecord.id == "order-a"))
+            == reference_id
+        )
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("NUL scalar order metadata reached Text hydration")
+
+    monkeypatch.setattr(QuoteRepository, "_load_bounded_order", forbidden)
+    with Session(database) as session:
+        with pytest.raises(QuoteServiceError) as error:
+            execute(session, actors, creation())
+        assert error.value.code == "quote_integrity_failed"
+        assert error.value.outcome_unknown is False
+    with Session(database) as session:
+        assert counts(session) == (0, 0, 0, 0)
+        assert totals(session) == (0, 0, 0, 0)
+        assert (
+            session.scalar(select(column).where(ServiceOrderRecord.id == "order-a"))
+            == reference_id
+        )
 
 
 def test_service_does_not_take_ownership_of_existing_transaction(database, actors):
