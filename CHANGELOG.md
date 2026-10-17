@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · PostgreSQL settings-result correction
+
+- Preserve failed PostgreSQL run `39053071575`: two DTO passes, first PG call
+  failure and three PG cases unrun; cancellation and cleanup verified.
+- Replace mapping conversion of SQLAlchemy Result with explicit row iteration.
+- Retain bounded short pytest diagnostics for synthetic fixtures without locals.
+- Corrected-source qualification remains pending; [scope and evidence](docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md).
+
 ## Unreleased · PostgreSQL-0012 service qualification preparation
 
 - Record six static/contract command passes on `559f9f31` in run `39052034132`.

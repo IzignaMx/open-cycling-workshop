@@ -586,7 +586,8 @@ def service_argv(cid: str) -> list[str]:
         "no:cacheprovider",
         "-p",
         "scripts.ci.quote_capacity_micro",
-        "--tb=no",
+        "--tb=short",
+        "--no-showlocals",
         "--show-capture=no",
         "--capture=fd",
         "--maxfail=1",
@@ -1396,6 +1397,15 @@ def supervise(
                             # reaping. No extra Docker read or deadline extension.
                             output.seek(0)
                             failure_output = output.read(SERVICE_OUTPUT_LIMIT)
+                            # Synthetic-only short traceback; no locals, captured
+                            # logs, environment dump or additional subprocess.
+                            retained = failure_output[:LIMIT]
+                            report["service_failure_output"] = {
+                                "output_bytes": len(retained),
+                                "output_truncated": len(failure_output) > LIMIT
+                                or len(failure_output) >= SERVICE_OUTPUT_LIMIT,
+                                "output_base64": base64.b64encode(retained).decode("ascii"),
+                            }
                             failure_summary = service_failure_diagnostic(
                                 failure_output,
                                 returncode=child.returncode,

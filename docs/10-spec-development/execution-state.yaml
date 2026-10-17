@@ -1,7 +1,21 @@
 schema: 1
 
+quote_postgresql_settings_result_correction_20261017:
+  status: prepared_pending_exact_review_and_execution
+  preserved_failed_run: 39053071575
+  preserved_artifact: 12108915032
+  preserved_source: d79eeed8dd9afbc493162b1c85769dcae526625e
+  observed_result: two_dto_passed_first_pg_call_failed_three_pg_cases_unrun
+  original_exception: not_retained
+  cancellation_cleanup: independently_verified
+  correction: explicit_iteration_of_same_three_settings_rows
+  workload_seconds: 20
+  schema_revision: "0012"
+  new_regression_tests: prepared_unrun
+  evidence: docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md
+
 quote_service_postgresql_0012_20261017:
-  status: prepared_pending_review_and_actual_qualification
+  status: failed_first_pg_call_evidence_preserved
   source_commit: 559f9f311fe6c4aedf303063df5e697a461c64a7
   source_tree: e0505482124317ec8190cd7f0a3985543b30ebc2
   prior_static_run: 39052034132
@@ -16,7 +30,7 @@ quote_service_postgresql_0012_20261017:
   database_memory_mib: 768
   original_sqlite_fixtures: unchanged
   schema_0013: excluded_pending_version_adaptation
-  actual_pg_service_result: not_run
+  actual_pg_service_result: first_case_failed_remaining_three_unrun
   evidence: docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md
 
 static_contract_subtimeout_20261017:

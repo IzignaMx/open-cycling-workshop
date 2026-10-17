@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## PostgreSQL settings-result correction · 2026-10-17
+
+- [x] Preserve and independently review failed run `39053071575` and cleanup.
+- [ ] Review the minimal Result conversion and bounded traceback patch.
+- [ ] Qualify the corrected source against all six existing PostgreSQL/DTO cases.
+- [ ] Run new focused regressions and the broader integration suite.
+- [Evidence and limits](docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md).
+
+
 ## PostgreSQL-0012 service qualification · 2026-10-17
 
 - [x] Close all six static/contract commands on `559f9f31`, run `39052034132`.

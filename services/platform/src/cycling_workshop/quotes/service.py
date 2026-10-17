@@ -195,15 +195,16 @@ class QuoteService:
 
                 budget_hook = budgets
                 event.listen(connection, "before_cursor_execute", budget_hook)
-                observed = dict(
-                    connection.execute(
+                observed = {
+                    name: setting
+                    for name, setting in connection.execute(
                         text(
                             "SELECT name, setting FROM pg_settings "
                             "WHERE name IN ('transaction_timeout', 'lock_timeout', "
                             "'statement_timeout')"
                         )
                     ).tuples()
-                )
+                }
                 expected = {
                     "transaction_timeout": remaining,
                     "lock_timeout": min(2000, remaining),

@@ -687,6 +687,8 @@ def test_service_selection_is_closed_and_environment_is_empty(monkeypatch):
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
+    assert "--tb=short" in args and "--no-showlocals" in args
+    assert "--show-capture=no" in args and "--tb=no" not in args
     assert [arg for arg in args if "DATABASE" in arg] == [
         "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
         "@127.0.0.1:5432/ocwp_quote_micro_test"
@@ -1305,10 +1307,15 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             if fault in {"cancellation_unknown", "client_reap_unknown", "output_limit"}:
                 assert result["service_failure_diagnostic"] == "unavailable_or_invalid"
             if fault in {"success", "cancellation_unknown", "client_reap_unknown"}:
+                assert "service_failure_output" not in result
                 assert ["diagnostic"] not in calls
                 assert ["spool_read"] not in calls
             if fault == "fixture_exit" or fault.startswith("diagnostic_"):
                 assert ["diagnostic"] in calls
+                retained = result["service_failure_output"]
+                decoded = module.base64.b64decode(retained["output_base64"], validate=True)
+                assert len(decoded) == retained["output_bytes"] <= module.LIMIT
+                assert type(retained["output_truncated"]) is bool
             if ["spool_read"] in calls:
                 stopped = next(
                     i
