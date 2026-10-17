@@ -1,7 +1,63 @@
 schema: 1
 
-quote_service_static_contracts_20261017:
+quote_static_repair_proposal_20261017:
   status: prepared_pending_exact_independent_review_unexecuted_unpublished
+  qualification_scope: repair_proposal_only
+  target_commit: dff067af840b8e83d87d17ae6fa36cfd10e75653
+  target_tree: c3ba32738c5996badcf575bc47dfac9b9499fb4f
+  controller_tree: distinct_frozen_in_external_review_manifest
+  local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  workflow: .github/workflows/quote-service-static-repair.yml
+  branch: codex/quote-service-static-repair
+  required_run_number: 1
+  required_run_attempt: 1
+  required_parent: exact_target_commit_and_tree
+  archived_parent_paths: 20
+  archived_parent_bytes: 363424
+  copied_python_paths: 19
+  fixed_phases: 6
+  fixed_Ruff_commands: 4
+  unsafe_fixes_or_suppression: forbidden
+  tool_time_ceiling_seconds: 3
+  shared_workload_ceiling_seconds: 20
+  tool_captured_output_limit_bytes: 16384
+  copied_source_per_file_write_limit_bytes: 131072
+  copied_source_total_limit_bytes: 524288
+  patch_limit_bytes: 196608
+  expanded_receipt_limit_bytes: 262144
+  compressed_receipt_limit_bytes: 10240
+  transport_limit_bytes: 14336
+  host_spool_limit_bytes: unchanged_16384
+  diagnostic_rows_per_tool_maximum: 512
+  final_lint_and_format_zero_exits: both_mandatory_after_export
+  host_patch_application: none
+  controller_code_local_execution: none
+  negative_receipt_test_source: prepared_unrun_not_selected
+  evidence: docs/10-spec-development/2026-10-17-quote-static-repair-proposal.md
+
+quote_service_static_failure_verified_20261017:
+  status: verified_failure_evidence_only
+  run: 39044828140
+  job: 117431363455
+  artifact: 12105845250
+  commit: dff067af840b8e83d87d17ae6fa36cfd10e75653
+  tree: c3ba32738c5996badcf575bc47dfac9b9499fb4f
+  repository_contract: passed
+  Ruff_check: failed
+  later_format_mypy_OpenAPI_generated_client: unrun
+  raw_tool_output_bytes: 15754
+  supported_unique_diagnostics: 146
+  retained_diagnostics: 12
+  omitted_diagnostics: 134
+  discarded_unparsed_lines: 7
+  actual_containment_cancellation_client_reap_both_absence_receipts: independently_verified
+  final_success_resource_census: unavailable_failure_path
+  full_static_contracts_qualified: false
+  evidence: docs/10-spec-development/2026-10-17-quote-static-repair-proposal.md
+
+quote_service_static_contracts_20261017:
+  current_closure: quote_service_static_failure_verified_20261017
+  checkpoint_status: prepared_pending_exact_independent_review_unexecuted_unpublished
   base_commit: a945039247decaec4f00fe3a04d125ba2d238208
   base_tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
   local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9

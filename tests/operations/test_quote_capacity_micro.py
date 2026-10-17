@@ -967,6 +967,22 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     if args[3] == "pg_isready":
                         return ""
                     if args[3] == "cat":
+                        if args[4] == module.static_repair.REPORT_PATH:
+                            repair = module.static_repair
+                            return repair.encode_receipt({
+                                "schema": 1, "scope": "repair_proposal_only",
+                                "target_commit": repair.TARGET_COMMIT, "target_tree": repair.TARGET_TREE,
+                                "before_sha256": list(repair.BEFORE_HASHES),
+                                "after_sha256": list(repair.BEFORE_HASHES),
+                                "after_bytes": list(repair.BEFORE_SIZES),
+                                "patch": "", "patch_sha256": repair.digest(b""),
+                                "tools": [
+                                    {"tool": i, "returncode": 0, "output_bytes": 0, "diagnostics": [],
+                                     "unsupported_lines": 0, "unparsed_lines": 0,
+                                     "diagnostics_complete": True, "reported_remaining": 0}
+                                    for i in range(4)
+                                ],
+                            }).decode("ascii")
                         return "{}" if fault == "invalid_report" else json.dumps(service_report())
                     if fault == "preflight":
                         return "missing"

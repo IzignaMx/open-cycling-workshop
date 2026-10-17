@@ -1,5 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Fixed source-only Ruff repair proposal · 2026-10-17
+
+- [x] Independently accept static failure run `39044828140`, its exact failed
+      source, containment/cancellation and both final absence receipts.
+- [ ] Review the new controller, exact-parent 20-file archive, fixed six phases,
+      bounded pipe/receipt and unchanged outer resource and workload limits.
+- [ ] After acceptance, make a fresh parent/trigger preflight and separate
+      one-shot publication decision for `codex/quote-service-static-repair`.
+- [ ] Retain actual statuses and any bounded proposed patch, including a failed
+      final Ruff check. `repair_proposal_only` never means full static success.
+- [ ] Independently review/reconstruct the exact proposed patch against tree
+      `c3ba3273` before applying it to a fresh candidate. No host patch is applied.
+- [ ] Qualify a repaired candidate through the remaining static/contracts gate
+      before PostgreSQL. Schema 0013, broader release and activation stay open.
+- No local runtime check occurred. [Exact proposal scope](docs/10-spec-development/2026-10-17-quote-static-repair-proposal.md).
+  The following preparation checklists are preserved historical checkpoints.
+
 ## Fixed service static and contract gate · 2026-10-17
 
 - [x] Independently accept [semantic run 39043072145](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39043072145)

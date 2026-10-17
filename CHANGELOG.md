@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased · Fixed source-only Ruff repair proposal preparation
+
+- Preserve accepted static failure `39044828140`: repository check passed,
+  Ruff failed, and four later static/contracts tools remained unrun.
+- Prepare one bounded safe-fix/format proposal from the exact failed parent:
+  19 source copies, four real Ruff statuses, source-only bounded patch receipt
+  and mandatory final lint/format assertions. No patch is applied here.
+- Keep the 20-second contained workload and existing spool/resource ceilings;
+  separate the 128 KiB copied-file write ceiling from 16 KiB captured tool output.
+- Scope is explicitly `repair_proposal_only`; exact source review and execution
+  remain pending. All consumed workflows and product/schema bytes are preserved.
+- Scope: [fixed repair proposal](docs/10-spec-development/2026-10-17-quote-static-repair-proposal.md).
+
 ## Unreleased · Fixed service static and contract preparation
 
 - Record independently accepted semantic run `39043072145` on `a9450392`: six

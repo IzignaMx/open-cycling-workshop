@@ -18,6 +18,13 @@ from types import FrameType
 from typing import cast
 from uuid import uuid4
 
+# Package/plugin and the existing file-spec tests have the repository root;
+# direct CLI execution instead has this script's directory on sys.path.
+if __package__ or __name__ != "__main__":
+    from scripts.ci import quote_static_repair as static_repair
+else:
+    import quote_static_repair as static_repair
+
 LIMIT = 16 * 1024
 FIELDS = (
     "memory.max",
@@ -500,12 +507,12 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 
 SERVICE_NODES = (
-    'tests/operations/test_quote_service_static_contracts.py::test_repository_contract',
-    'tests/operations/test_quote_service_static_contracts.py::test_python_lint',
-    'tests/operations/test_quote_service_static_contracts.py::test_python_format',
-    'tests/operations/test_quote_service_static_contracts.py::test_production_types',
-    'tests/operations/test_quote_service_static_contracts.py::test_openapi_contract',
-    'tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract',
+    "tests/operations/test_quote_static_repair.py::test_copy_frozen_sources",
+    "tests/operations/test_quote_static_repair.py::test_record_safe_ruff_fixes",
+    "tests/operations/test_quote_static_repair.py::test_record_ruff_formatting",
+    "tests/operations/test_quote_static_repair.py::test_record_post_repair_lint",
+    "tests/operations/test_quote_static_repair.py::test_record_post_repair_format",
+    "tests/operations/test_quote_static_repair.py::test_export_patch_then_require_clean_final_checks",
 )
 
 # Closed diagnostic vocabulary for this fixed static/contracts batch only.
@@ -947,6 +954,7 @@ def supervise(
     report: dict[str, object] = {
         "schema": 2 if service_initial else 1,
         "commit": commit,
+        "qualification_scope": "repair_proposal_only" if service_initial else "microfixture",
         "mode": "service_initial" if service_initial else (
             "single_record_feasibility" if single_record else "micro_only"
         ),
@@ -1290,6 +1298,13 @@ def supervise(
                             )
                             report["service_failure_diagnostic"] = failure_summary
                             try:
+                                report["repair_proposal"] = static_repair.retain_proposal(
+                                    static_repair.decode_failure_marker(failure_output, failure=failure_summary),
+                                    evidence,
+                                )
+                            except Exception:
+                                report["repair_proposal"] = "unavailable_or_invalid"
+                            try:
                                 report["static_failure_diagnostic"] = static_failure_diagnostic(
                                     failure_output, failure=failure_summary,
                                 )
@@ -1322,6 +1337,12 @@ def supervise(
             }
             report["service"] = service_result(
                 execute(["docker", "exec", ids[1], "cat", SERVICE_REPORT])
+            )
+            report["repair_proposal"] = static_repair.retain_proposal(
+                static_repair.decode_receipt(
+                    execute(["docker", "exec", ids[1], "cat", static_repair.REPORT_PATH]).encode("ascii"),
+                    failed=False,
+                ), evidence,
             )
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("final_readback_deadline")
