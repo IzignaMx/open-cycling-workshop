@@ -82,8 +82,7 @@ def test_additive_quote_migration_and_forward_only_retention(identity_migration_
             current = list(connection.execute(text(f"SELECT * FROM {table}")).mappings())
             assert len(current) == len(rows)
             assert [
-                {key: row[key] for key in old}
-                for old, row in zip(rows, current, strict=True)
+                {key: row[key] for key in old} for old, row in zip(rows, current, strict=True)
             ] == rows
         assert (
             connection.scalar(text("SELECT name FROM organizations WHERE id='preserved'"))

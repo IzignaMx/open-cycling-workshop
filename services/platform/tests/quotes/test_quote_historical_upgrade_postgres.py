@@ -105,9 +105,7 @@ def legacy_snapshot(connection, tables):
     result = {}
     for name, table in tables.items():
         columns = [
-            sql_cast(column, Text).label(column.name)
-            if isinstance(column.type, JSON)
-            else column
+            sql_cast(column, Text).label(column.name) if isinstance(column.type, JSON) else column
             for column in table.columns
         ]
         result[name] = [
@@ -141,7 +139,9 @@ def seed_valid_0012_history(connection, tables):
     }
 
     connection.execute(
-        tables["quote_lineages"].insert().values(
+        tables["quote_lineages"]
+        .insert()
+        .values(
             lineage_id=created.lineage_id,
             organization_id=created.organization_id,
             location_id=created.location_id,
@@ -154,7 +154,9 @@ def seed_valid_0012_history(connection, tables):
         )
     )
     connection.execute(
-        tables["quote_revisions"].insert().values(
+        tables["quote_revisions"]
+        .insert()
+        .values(
             quote_id=head.quote_id,
             lineage_id=created.lineage_id,
             organization_id=head.organization_id,
@@ -170,7 +172,9 @@ def seed_valid_0012_history(connection, tables):
         )
     )
     connection.execute(
-        tables["quote_lines"].insert().values(
+        tables["quote_lines"]
+        .insert()
+        .values(
             revision_id=head.quote_id,
             lineage_id=created.lineage_id,
             organization_id=head.organization_id,
@@ -179,7 +183,9 @@ def seed_valid_0012_history(connection, tables):
         )
     )
     connection.execute(
-        tables["quote_decisions"].insert().values(
+        tables["quote_decisions"]
+        .insert()
+        .values(
             decision_id=decided.operation_id,
             lineage_id=decided.lineage_id,
             organization_id=decided.organization_id,
@@ -198,7 +204,9 @@ def seed_valid_0012_history(connection, tables):
         (created, decided), (first, final), logical, (uid(300), uid(301)), strict=True
     ):
         connection.execute(
-            tables["outbox_events"].insert().values(
+            tables["outbox_events"]
+            .insert()
+            .values(
                 event_id=outbox_id,
                 event_type=event_type(operation),
                 aggregate_type="quote",
@@ -212,7 +220,9 @@ def seed_valid_0012_history(connection, tables):
             )
         )
         connection.execute(
-            tables["quote_operations"].insert().values(
+            tables["quote_operations"]
+            .insert()
+            .values(
                 organization_id=operation.organization_id,
                 operation_id=operation.operation_id,
                 lineage_id=operation.lineage_id,
@@ -314,9 +324,7 @@ def test_valid_quote_only_0012_upgrade_replays_without_inventing_transition(
             select(
                 users.c.session_version, users.c.capabilities, organizations.c.dataset_incarnation
             )
-            .select_from(
-                users.join(organizations, users.c.organization_id == organizations.c.id)
-            )
+            .select_from(users.join(organizations, users.c.organization_id == organizations.c.id))
             .where(users.c.id == "actor-a", organizations.c.id == "a")
         ).one()
         assert frozenset(persisted.capabilities) == GRANTS

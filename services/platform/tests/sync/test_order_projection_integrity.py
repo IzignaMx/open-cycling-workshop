@@ -8,12 +8,20 @@ from cycling_workshop.sync import order_projection_integrity as codec
 
 def projection():
     return dict(
-        order_id="order", customer_id="customer", bicycle_id=None,
-        organization_id="org", location_id="location", state="AUTHORIZED",
-        reported_problem="  é🚲\\\"\n  ", intake_condition=None, accessories="",
-        priority="normal", diagnosis="preserve  spaces",
+        order_id="order",
+        customer_id="customer",
+        bicycle_id=None,
+        organization_id="org",
+        location_id="location",
+        state="AUTHORIZED",
+        reported_problem='  é🚲\\"\n  ',
+        intake_condition=None,
+        accessories="",
+        priority="normal",
+        diagnosis="preserve  spaces",
         created_at="2026-10-17T00:00:00+00:00",
-        updated_at="2026-10-17T00:00:00.000001+00:00", version=2,
+        updated_at="2026-10-17T00:00:00.000001+00:00",
+        version=2,
     )
 
 
@@ -43,15 +51,29 @@ def test_every_field_is_required(key):
         codec.encode_order_projection(value)
 
 
-@pytest.mark.parametrize("field,value", [
-    ("order_id", "a b"), ("customer_id", ""), ("bicycle_id", 1),
-    ("organization_id", "a" * 37), ("location_id", "\t"), ("state", "unknown"),
-    ("reported_problem", None), ("priority", False), ("intake_condition", []),
-    ("accessories", {}), ("diagnosis", 3), ("created_at", "2026-10-17T00:00:00Z"),
-    ("updated_at", "2026-10-17T00:00:00.0+00:00"), ("version", True),
-    ("version", 0), ("version", 2147483648), ("diagnosis", "\x00"),
-    ("diagnosis", "\ud800"),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("order_id", "a b"),
+        ("customer_id", ""),
+        ("bicycle_id", 1),
+        ("organization_id", "a" * 37),
+        ("location_id", "\t"),
+        ("state", "unknown"),
+        ("reported_problem", None),
+        ("priority", False),
+        ("intake_condition", []),
+        ("accessories", {}),
+        ("diagnosis", 3),
+        ("created_at", "2026-10-17T00:00:00Z"),
+        ("updated_at", "2026-10-17T00:00:00.0+00:00"),
+        ("version", True),
+        ("version", 0),
+        ("version", 2147483648),
+        ("diagnosis", "\x00"),
+        ("diagnosis", "\ud800"),
+    ],
+)
 def test_full_field_domains(field, value):
     payload = projection() | {field: value}
     with pytest.raises(codec.OrderProjectionIntegrityError):
@@ -68,10 +90,17 @@ def test_numeric_lexemes_rejected_before_decode(token):
         decode(raw)
 
 
-@pytest.mark.parametrize("raw", [
-    '{"version":1,"version":2}', '{"x":"\\u0000"}', '{"x":"\\ud800"}',
-    '[' * 13 + '0' + ']' * 13, '{"x": [1,2}', '{"x": tru}',
-])
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '{"version":1,"version":2}',
+        '{"x":"\\u0000"}',
+        '{"x":"\\ud800"}',
+        "[" * 13 + "0" + "]" * 13,
+        '{"x": [1,2}',
+        '{"x": tru}',
+    ],
+)
 def test_duplicate_unicode_depth_and_malformed_rejection(raw):
     with pytest.raises(codec.OrderProjectionIntegrityError):
         decode(raw)

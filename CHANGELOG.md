@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased · Remaining retained formatter sections
+
+- Preserve run 39060197021 and apply its 19 complete reviewed formatting hunks.
+- Exclude the truncated codec tail; retain limits and pending verification status.
+
 ## Unreleased · Retained bounded-effects test formatting
 
 - Preserve run 39059789509 and apply its next 18 complete reviewed test-format hunks.

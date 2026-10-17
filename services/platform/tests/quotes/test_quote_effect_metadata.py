@@ -464,9 +464,9 @@ def test_runtime_count_verifier_refuses_malformed_postgres_metadata(
                 f"{kind} GENERATED ALWAYS AS (CASE WHEN {discriminator} = '{scope}' "
                 f"THEN {expression} ELSE NULL END) {storage}"
             )
-        connection.execute(text(
-            f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets {declaration}"
-        ))
+        connection.execute(
+            text(f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets {declaration}")
+        )
         if fault == "inherited":
             connection.execute(text(f"CREATE TABLE inherited_count_child () INHERITS ({table})"))
         with pytest.raises(OrderPayloadCountSchemaError):
@@ -485,7 +485,10 @@ def test_runtime_count_verifier_accepts_fresh_metadata(identity_migration_databa
 @pytest.mark.parametrize("table,discriminator", PAIRS)
 @pytest.mark.parametrize("replacement", ["partitioned", "view", "missing"])
 def test_runtime_count_verifier_refuses_nonordinary_relations(
-    identity_migration_database, table, discriminator, replacement,
+    identity_migration_database,
+    table,
+    discriminator,
+    replacement,
 ):
     from cycling_workshop.db.order_payload_size import (
         OrderPayloadCountSchemaError,
@@ -500,10 +503,12 @@ def test_runtime_count_verifier_refuses_nonordinary_relations(
         require_order_payload_count_schema(connection)
         connection.execute(text(f"ALTER TABLE {table} RENAME TO preserved_relation"))
         if replacement == "partitioned":
-            connection.execute(text(
-                f"CREATE TABLE {table} (LIKE preserved_relation INCLUDING GENERATED) "
-                f"PARTITION BY LIST ({discriminator})"
-            ))
+            connection.execute(
+                text(
+                    f"CREATE TABLE {table} (LIKE preserved_relation INCLUDING GENERATED) "
+                    f"PARTITION BY LIST ({discriminator})"
+                )
+            )
         elif replacement == "view":
             connection.execute(text(f"CREATE VIEW {table} AS SELECT * FROM preserved_relation"))
         with pytest.raises(OrderPayloadCountSchemaError):
@@ -512,7 +517,8 @@ def test_runtime_count_verifier_refuses_nonordinary_relations(
 
 @pytest.mark.parametrize("shadow", ["function", "operator"])
 def test_runtime_count_verifier_refuses_shadowed_generated_dependencies(
-    identity_migration_database, shadow,
+    identity_migration_database,
+    shadow,
 ):
     from cycling_workshop.db.order_payload_size import (
         OrderPayloadCountSchemaError,
@@ -529,41 +535,51 @@ def test_runtime_count_verifier_refuses_shadowed_generated_dependencies(
         schema = connection.scalar(text("SELECT pg_catalog.current_schema()"))
         quoted = connection.dialect.identifier_preparer.quote(schema)
         if shadow == "function":
-            connection.execute(text(
-                f"CREATE FUNCTION {quoted}.octet_length(pg_catalog.text) "
-                "RETURNS pg_catalog.int4 LANGUAGE SQL IMMUTABLE AS 'SELECT 1'"
-            ))
+            connection.execute(
+                text(
+                    f"CREATE FUNCTION {quoted}.octet_length(pg_catalog.text) "
+                    "RETURNS pg_catalog.int4 LANGUAGE SQL IMMUTABLE AS 'SELECT 1'"
+                )
+            )
         else:
-            connection.execute(text(
-                f"CREATE FUNCTION {quoted}.wrong_equal(pg_catalog.text,pg_catalog.text) "
-                "RETURNS pg_catalog.bool LANGUAGE SQL IMMUTABLE AS 'SELECT false'"
-            ))
-            connection.execute(text(
-                f"CREATE OPERATOR {quoted}.= (FUNCTION = {quoted}.wrong_equal, "
-                "LEFTARG = pg_catalog.text, RIGHTARG = pg_catalog.text)"
-            ))
-        connection.execute(text(
-            "SELECT pg_catalog.set_config('search_path', :path, true)"
-        ), {"path": f"{quoted}, pg_catalog"})
+            connection.execute(
+                text(
+                    f"CREATE FUNCTION {quoted}.wrong_equal(pg_catalog.text,pg_catalog.text) "
+                    "RETURNS pg_catalog.bool LANGUAGE SQL IMMUTABLE AS 'SELECT false'"
+                )
+            )
+            connection.execute(
+                text(
+                    f"CREATE OPERATOR {quoted}.= (FUNCTION = {quoted}.wrong_equal, "
+                    "LEFTARG = pg_catalog.text, RIGHTARG = pg_catalog.text)"
+                )
+            )
+        connection.execute(
+            text("SELECT pg_catalog.set_config('search_path', :path, true)"),
+            {"path": f"{quoted}, pg_catalog"},
+        )
         # Corrupt BOTH tables, so the old string-only verifier cannot refuse
         # merely because an untouched builtin now deparses with qualification.
         for table, discriminator in PAIRS:
-            connection.execute(text(
-                f"ALTER TABLE {table} DROP COLUMN order_payload_raw_octets"
-            ))
-            connection.execute(text(
-                f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets BIGINT "
-                f"GENERATED ALWAYS AS (CASE WHEN {discriminator}::text = 'service_order'::text "
-                "THEN octet_length(payload::text)::bigint ELSE NULL END) STORED"
-            ))
-            expression = connection.scalar(text(
-                "SELECT pg_catalog.pg_get_expr(d.adbin,d.adrelid,false) "
-                "FROM pg_catalog.pg_attrdef d JOIN pg_catalog.pg_attribute a "
-                "ON a.attrelid OPERATOR(pg_catalog.=) d.adrelid "
-                "AND a.attnum OPERATOR(pg_catalog.=) d.adnum "
-                "WHERE d.adrelid OPERATOR(pg_catalog.=) pg_catalog.to_regclass(:table) "
-                "AND a.attname OPERATOR(pg_catalog.=) 'order_payload_raw_octets'"
-            ), {"table": table})
+            connection.execute(text(f"ALTER TABLE {table} DROP COLUMN order_payload_raw_octets"))
+            connection.execute(
+                text(
+                    f"ALTER TABLE {table} ADD COLUMN order_payload_raw_octets BIGINT "
+                    f"GENERATED ALWAYS AS (CASE WHEN {discriminator}::text = 'service_order'::text "
+                    "THEN octet_length(payload::text)::bigint ELSE NULL END) STORED"
+                )
+            )
+            expression = connection.scalar(
+                text(
+                    "SELECT pg_catalog.pg_get_expr(d.adbin,d.adrelid,false) "
+                    "FROM pg_catalog.pg_attrdef d JOIN pg_catalog.pg_attribute a "
+                    "ON a.attrelid OPERATOR(pg_catalog.=) d.adrelid "
+                    "AND a.attnum OPERATOR(pg_catalog.=) d.adnum "
+                    "WHERE d.adrelid OPERATOR(pg_catalog.=) pg_catalog.to_regclass(:table) "
+                    "AND a.attname OPERATOR(pg_catalog.=) 'order_payload_raw_octets'"
+                ),
+                {"table": table},
+            )
             assert " ".join(expression.split()) == _pg_expression(discriminator)
         with pytest.raises(OrderPayloadCountSchemaError):
             require_order_payload_count_schema(connection)
@@ -573,7 +589,11 @@ def test_runtime_count_verifier_refuses_shadowed_generated_dependencies(
 @pytest.mark.parametrize("kind", ["TABLE", "VIEW"])
 @pytest.mark.parametrize("uppercase", [False, True])
 def test_sqlite_temp_shadow_refused(
-    identity_migration_database, table, discriminator, kind, uppercase,
+    identity_migration_database,
+    table,
+    discriminator,
+    kind,
+    uppercase,
 ):
     from cycling_workshop.db.order_payload_size import (
         OrderPayloadCountSchemaError,
@@ -599,17 +619,20 @@ def test_postgres_generated_dependency_rows_are_exact(identity_migration_databas
     command.upgrade(config, "head")
     with engine.connect() as connection:
         for table, discriminator in PAIRS:
-            rows = connection.execute(text(
-                "SELECT dep.objsubid, dep.refclassid='pg_catalog.pg_class'::regclass, "
-                "dep.refobjid=d.adrelid, referenced.attname, dep.deptype "
-                "FROM pg_catalog.pg_attrdef d "
-                "JOIN pg_catalog.pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum "
-                "JOIN pg_catalog.pg_depend dep ON dep.classid='pg_catalog.pg_attrdef'::regclass "
-                "AND dep.objid=d.oid LEFT JOIN pg_catalog.pg_attribute referenced "
-                "ON referenced.attrelid=dep.refobjid AND referenced.attnum=dep.refobjsubid "
-                "WHERE d.adrelid=pg_catalog.to_regclass(:table) "
-                "AND a.attname='order_payload_raw_octets'"
-            ), {"table": table}).all()
+            rows = connection.execute(
+                text(
+                    "SELECT dep.objsubid, dep.refclassid='pg_catalog.pg_class'::regclass, "
+                    "dep.refobjid=d.adrelid, referenced.attname, dep.deptype "
+                    "FROM pg_catalog.pg_attrdef d "
+                    "JOIN pg_catalog.pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum "
+                    "JOIN pg_catalog.pg_depend dep ON dep.classid='pg_catalog.pg_attrdef'::regclass "
+                    "AND dep.objid=d.oid LEFT JOIN pg_catalog.pg_attribute referenced "
+                    "ON referenced.attrelid=dep.refobjid AND referenced.attnum=dep.refobjsubid "
+                    "WHERE d.adrelid=pg_catalog.to_regclass(:table) "
+                    "AND a.attname='order_payload_raw_octets'"
+                ),
+                {"table": table},
+            ).all()
             assert set(rows) == {
                 (0, True, True, "order_payload_raw_octets", "i"),
                 (0, True, True, "payload", "n"),
