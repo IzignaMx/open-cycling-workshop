@@ -2,7 +2,9 @@
 
 ## Quote candidate integrity corrections · 2026-10-17
 
-- Prepare canonical four-digit receipt-year formatting and early scalar-order NUL refusal, with ten focused regressions. Exact source review is complete; hosted verification remains pending. Shared legacy-ID rules and chronology policy remain unchanged.
+- Verify 204 functional/mock checks across nine groups in run 39072574166, including ten canonical-year and NUL-prehydration regressions and 27 actual PostgreSQL cases. Independent identity, result and cleanup review passed.
+- Preserve the static job failure: repository check passed, Ruff reported four SIM300 findings, and four later commands were unrun. Correct only the reported comparison ordering and prepare the existing six-command static scope on a new exact branch/workflow pair; execution remains pending.
+- Shared legacy-ID rules and chronology policy remain unchanged. [Results and remaining gates](docs/10-spec-development/2026-10-17-quote-integrity-edges.md).
 
 ## Quote candidate integration evidence · 2026-10-17
 

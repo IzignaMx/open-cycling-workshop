@@ -604,15 +604,15 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
         modules[group] = module
         assert module.GROUP_COUNTS == JUNIT_COUNTS
         assert set(module.GROUPS) == set(JUNIT_COUNTS)
-        assert module.GROUP_KEY == group and module.CASE_COUNT == count
+        assert group == module.GROUP_KEY and count == module.CASE_COUNT
         assert sum(module.EXPECTED_COUNTS.values()) == count
         assert tuple(path for path, _ in module.SELECTION) == sources[group]
-        assert module.CLASS_NAMES == [
+        assert [
             path.removesuffix(".py").replace("/", ".") for path in sources[group]
-        ]
-        assert module.NODES == tuple(
+        ] == module.CLASS_NAMES
+        assert tuple(
             f"{path}::{name}" for path, cases in module.SELECTION for name, _, _ in cases
-        )
+        ) == module.NODES
         assert module.PYTEST[-len(module.NODES) :] == list(module.NODES)
         assert module.PYTEST[:2] == ["env", "-i"] and "-k" not in module.PYTEST
         assert not any(

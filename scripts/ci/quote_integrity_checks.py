@@ -62,10 +62,13 @@ CANDIDATE_SHA = {
         "c3a7bd71c1dd21194569f5993f6ce88cc0d7c7cf89f6b76b2496ef93236e4eb0"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "d0c2f2fd9b0fe1dba3055fd98eaeba40cb7a2d8a8c2389f8ce1c6c5d57047791"
+        "8c816c13a5bcf1cf1f667c41ec7b3d6f3eb319887dddd6738cea8d439e53274d"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
+    ),
+    ".github/workflows/quote-integrity-style-checks.yml": (
+        "7023b418b4fd6061f2b10fb82a1446deb9d1d33ffc93ee11339476d9137be20b"
     ),
 }
 LOCKED_INPUT_SHA = {
@@ -79,6 +82,8 @@ LOCKED_INPUT_SHA = {
 LIMIT = 16 * 1024
 BRANCH = "refs/heads/codex/quote-integrity-checks"
 WORKFLOW = ".github/workflows/quote-integrity-checks.yml"
+STYLE_BRANCH = "refs/heads/codex/quote-integrity-style-checks"
+STYLE_WORKFLOW = ".github/workflows/quote-integrity-style-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -297,12 +302,16 @@ def gate() -> None:
     require(GROUP_KEY in GROUPS and sum(EXPECTED_COUNTS.values()) == CASE_COUNT)
     require(Path.cwd().resolve() == ROOT)
     require(os.environ.get("GITHUB_EVENT_NAME") == "push")
-    require(os.environ.get("GITHUB_REF") == BRANCH)
+    branch, workflow = BRANCH, WORKFLOW
+    if os.environ.get("GITHUB_REF") == STYLE_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = STYLE_BRANCH, STYLE_WORKFLOW
+    require(os.environ.get("GITHUB_REF") == branch)
     require(os.environ.get("GITHUB_RUN_NUMBER") == "1")
     require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1")
     require(
         os.environ.get("GITHUB_WORKFLOW_REF")
-        == f"{os.environ.get('GITHUB_REPOSITORY')}/{WORKFLOW}@{BRANCH}"
+        == f"{os.environ.get('GITHUB_REPOSITORY')}/{workflow}@{branch}"
     )
     for key in ("GITHUB_RUN_ID", "GITHUB_RUN_NUMBER", "GITHUB_RUN_ATTEMPT"):
         require(re.fullmatch(r"[1-9][0-9]*", os.environ.get(key, "")) is not None)

@@ -1,8 +1,17 @@
 schema: 1
 
 quote_integrity_edges_20261017:
-  status: implemented_pending_evidence
-  prepared_regression_cases: 10
+  status: functional_selection_passed_static_failed
+  run_id: 39072574166
+  source_commit: 20f1d06d07898a89195c65d5c2143894bec1f6b0
+  source_tree: 5e25b34c56b16e5871d2367ea375880c963e2c9e
+  functional_mock_cases_passed: 204
+  actual_postgresql_cases: 27
+  regression_cases_passed: 10
+  static: repository_pass_ruff_four_SIM300_format_types_openapi_client_unrun
+  cleanup: all_ten_primary_and_independent_absence_verified
+  failed_static_final_resource_counters: not_retained
+  static_style_correction: reviewed_prepared_execution_pending
   observed_red_green: false
   scope: canonical_receipt_year_and_scalar_order_nul_prehydration
   evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md
