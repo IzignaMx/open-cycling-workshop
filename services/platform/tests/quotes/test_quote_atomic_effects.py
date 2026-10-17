@@ -135,8 +135,11 @@ def test_actual_fresh_result_and_complete_receipt_exist_on_first_insert(database
         admitted(session)
         repository = QuoteRepository(session)
         replay = repository._apply_application(
-            decision(), recorded_at=NOW + timedelta(days=1), admit_new=refuse,
-            prepare_effects=refuse, persist_effects=refuse,
+            decision(),
+            recorded_at=NOW + timedelta(days=1),
+            admit_new=refuse,
+            prepare_effects=refuse,
+            persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == receipt
         assert effect_counts(session) == (1, 1, 1, 3)
@@ -149,8 +152,11 @@ def test_historical_null_effect_replay_never_creates_transition(database):
         repository.apply(creation(), recorded_at=NOW)
         historical = repository.apply(decision(), recorded_at=NOW)
         replay = repository._apply_application(
-            decision(), recorded_at=NOW, admit_new=refuse,
-            prepare_effects=refuse, persist_effects=refuse,
+            decision(),
+            recorded_at=NOW,
+            admit_new=refuse,
+            prepare_effects=refuse,
+            persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == historical.receipt
         assert replay.receipt.order_effects is None
@@ -202,7 +208,9 @@ def effect_records(database):
         data = collect_rows(session)
         data[6] = [row for row in data[6] if row.aggregate_type == "quote"]
         order_event, change, outbox = QuoteRepository(session)._load_order_effect_sources(
-            applied.receipt.order_effects, organization_id="a", location_id="location-a",
+            applied.receipt.order_effects,
+            organization_id="a",
+            location_id="location-a",
             order_id="order-a",
         )
         effects = dict(order_events=[order_event], changes=[change], order_outboxes=[outbox])
@@ -399,8 +407,11 @@ def test_replay_after_later_cancellation_retains_original_transition(database):
     with Session(database) as session:
         admitted(session)
         replay = QuoteRepository(session)._apply_application(
-            decision(), recorded_at=NOW + timedelta(days=2), admit_new=refuse,
-            prepare_effects=refuse, persist_effects=refuse,
+            decision(),
+            recorded_at=NOW + timedelta(days=2),
+            admit_new=refuse,
+            prepare_effects=refuse,
+            persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == original.receipt
         assert (replay.order.state, replay.order.version) == ("CANCELLED", 3)

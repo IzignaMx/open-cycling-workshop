@@ -46,8 +46,7 @@ def upgrade() -> None:
             raise RuntimeError("Quote migration 0013 requires UTF8 server/client encodings")
         connection.execute(
             sa.text(
-                "LOCK TABLE quote_operations, sync_changes, outbox_events "
-                "IN ACCESS EXCLUSIVE MODE"
+                "LOCK TABLE quote_operations, sync_changes, outbox_events IN ACCESS EXCLUSIVE MODE"
             )
         )
     elif dialect == "sqlite" and connection.dialect.driver == "pysqlite":
@@ -60,9 +59,7 @@ def upgrade() -> None:
         # sqlite3 legacy transaction control; SQLAlchemy in_transaction alone
         # is insufficient. Preserve every revision/receipt byte and never commit
         # internally, disable FK checks, swallow BUSY or issue nested BEGIN.
-        connection.exec_driver_sql(
-            "UPDATE alembic_version SET version_num = version_num WHERE 0"
-        )
+        connection.exec_driver_sql("UPDATE alembic_version SET version_num = version_num WHERE 0")
         driver = connection.connection.driver_connection
         if getattr(driver, "in_transaction", False) is not True:
             raise RuntimeError("Quote migration 0013 requires a retained SQLite write transaction")

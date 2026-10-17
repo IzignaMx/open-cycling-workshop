@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased · Retained bounded-effects formatter changes
+
+- Record repository/lint passes and formatter output-cap failure in run 39057919833.
+- Apply six complete, independently reviewed formatter sections; exclude truncated remainder.
+- Preserve limits and failed evidence; complete static/runtime qualification remains pending.
+
 ## Unreleased · Bounded-effects remaining line and formatter diagnostics
 
 - Preserve run 39057515145 and its single remaining line-length diagnostic.

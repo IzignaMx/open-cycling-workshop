@@ -17,11 +17,24 @@ ORDER_CANONICAL_MAX_BYTES = 262_144
 ORDER_RAW_MAX_BYTES = 1_048_576
 ORDER_JSON_MAX_DEPTH = 12
 ORDER_VERSION_MAX = 2_147_483_647
-_FIELDS = frozenset({
-    "order_id", "customer_id", "bicycle_id", "organization_id", "location_id", "state",
-    "reported_problem", "intake_condition", "accessories", "priority", "diagnosis",
-    "created_at", "updated_at", "version",
-})
+_FIELDS = frozenset(
+    {
+        "order_id",
+        "customer_id",
+        "bicycle_id",
+        "organization_id",
+        "location_id",
+        "state",
+        "reported_problem",
+        "intake_condition",
+        "accessories",
+        "priority",
+        "diagnosis",
+        "created_at",
+        "updated_at",
+        "version",
+    }
+)
 _SOURCE_FIELDS = ("reported_problem", "intake_condition", "accessories", "priority", "diagnosis")
 _INTEGER = re.compile(r"-?(?:0|[1-9][0-9]*)\Z", re.ASCII)
 type Scalar = str | int | None

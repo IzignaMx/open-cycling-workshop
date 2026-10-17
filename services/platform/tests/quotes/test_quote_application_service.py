@@ -68,9 +68,13 @@ def test_create_decide_replay_commits_one_complete_tuple(database, actors):
         assert effects["kind"] == "order_transition"
         assert effects["resulting_order_version"] == 2
         assert effects["quote_outbox_id"] != effects["order_outbox_id"]
-        assert list(session.scalars(select(QuoteOperationRecord.order_effect_version).order_by(
-            QuoteOperationRecord.ordinal
-        ))) == [None, 1]
+        assert list(
+            session.scalars(
+                select(QuoteOperationRecord.order_effect_version).order_by(
+                    QuoteOperationRecord.ordinal
+                )
+            )
+        ) == [None, 1]
         assert applied["order"]["state"] == "AUTHORIZED"
         before = totals(session)
         session.rollback()

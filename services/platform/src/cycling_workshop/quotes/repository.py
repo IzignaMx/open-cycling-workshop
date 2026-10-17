@@ -185,28 +185,25 @@ class QuoteRepository:
     def _order(self, organization_id: str, location_id: str, order_id: str) -> LockedQuoteOrder:
         for value in (organization_id, location_id, order_id):
             _id(value)
-        row = (
-            self.session.execute(
-                select(
-                    ServiceOrderRecord.id,
-                    ServiceOrderRecord.organization_id,
-                    ServiceOrderRecord.location_id,
-                    ServiceOrderRecord.customer_id,
-                    ServiceOrderRecord.bicycle_id,
-                    ServiceOrderRecord.state,
-                    ServiceOrderRecord.version,
-                    self._safe_time(ServiceOrderRecord.created_at).label("created_at"),
-                    self._safe_time(ServiceOrderRecord.updated_at).label("updated_at"),
-                )
-                .where(
-                    ServiceOrderRecord.id == order_id,
-                    ServiceOrderRecord.organization_id == organization_id,
-                    ServiceOrderRecord.location_id == location_id,
-                )
-                .with_for_update()
+        row = self.session.execute(
+            select(
+                ServiceOrderRecord.id,
+                ServiceOrderRecord.organization_id,
+                ServiceOrderRecord.location_id,
+                ServiceOrderRecord.customer_id,
+                ServiceOrderRecord.bicycle_id,
+                ServiceOrderRecord.state,
+                ServiceOrderRecord.version,
+                self._safe_time(ServiceOrderRecord.created_at).label("created_at"),
+                self._safe_time(ServiceOrderRecord.updated_at).label("updated_at"),
             )
-            .one_or_none()
-        )
+            .where(
+                ServiceOrderRecord.id == order_id,
+                ServiceOrderRecord.organization_id == organization_id,
+                ServiceOrderRecord.location_id == location_id,
+            )
+            .with_for_update()
+        ).one_or_none()
         if row is None:
             raise QuoteConflictError("scoped order not found")
         try:
@@ -275,22 +272,17 @@ class QuoteRepository:
         size = self.session.scalar(select(total).where(*scope))
         if type(size) is not int or not 0 <= size <= ORDER_SOURCE_MAX_BYTES:
             raise QuoteConflictError("order_effect_payload_limit")
-        row = (
-            self.session.execute(
-                select(
-                    allowed.label("admitted"),
-                    *(case((allowed, field), else_=None).label(field.key) for field in fields),
-                ).where(*scope)
-            )
-            .one_or_none()
-        )
+        row = self.session.execute(
+            select(
+                allowed.label("admitted"),
+                *(case((allowed, field), else_=None).label(field.key) for field in fields),
+            ).where(*scope)
+        ).one_or_none()
         if row is None or row.admitted is not True:
             raise QuoteConflictError("order_effect_payload_limit")
         values = [row._mapping[field.key] for field in fields]
         try:
-            actual_bytes = sum(
-                len(value.encode("utf-8")) for value in values if value is not None
-            )
+            actual_bytes = sum(len(value.encode("utf-8")) for value in values if value is not None)
             if actual_bytes > ORDER_SOURCE_MAX_BYTES:
                 raise OrderProjectionLimitError("source byte limit")
             result = ServiceOrder(
@@ -400,7 +392,8 @@ class QuoteRepository:
                     OutboxRecord.aggregate_id == scope,
                     OutboxRecord.organization_id == lineage.organization_id,
                     OutboxRecord.location_id == lineage.location_id,
-                    OutboxRecord.event_type == case(
+                    OutboxRecord.event_type
+                    == case(
                         (QuoteOperationRecord.kind == "create", "quote.created"),
                         (QuoteOperationRecord.kind == "revise", "quote.revised"),
                         (QuoteOperationRecord.kind == "decision", "quote.decision_recorded"),
@@ -641,7 +634,8 @@ class QuoteRepository:
         admit_new: Callable[[LockedQuoteOrder, QuoteSnapshot | None], None] | None = None,
         prepare_effects: Callable[
             [ServiceOrder, QuoteDecisionLedger, QuoteDecisionResult], PreparedQuoteOrderEffect
-        ] | None = None,
+        ]
+        | None = None,
         persist_effects: Callable[[PreparedQuoteOrderEffect], QuoteOrderEffects] | None = None,
         checkpoint: Callable[[], None] = _noop,
     ) -> QuoteRepositoryResult:

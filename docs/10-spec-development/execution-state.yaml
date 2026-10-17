@@ -1,11 +1,14 @@
 schema: 1
 
 bounded_effects_static_20261017:
-  status: failed_lint_source_correction_pending
-  run_id: 39057515145
-  source_commit: b51d2164b2a0446952dd5acf5e12a98f1dbc4760
-  previous_failed_run: 39056889116
-  lint_diagnostics: 1
+  status: failed_formatter_output_cap_partial_correction_pending
+  run_id: 39057919833
+  source_commit: 3ef85d1947be9bf2f65e4f3440cf5b40633bf757
+  previous_failed_runs: [39056889116, 39057515145]
+  lint_diagnostics: 0
+  formatter_output_bytes: 16384
+  formatter_output_truncated: true
+  complete_retained_file_sections_applied: 6
   later_commands: unrun
   fixed_commands: 6
   source_paths: 38

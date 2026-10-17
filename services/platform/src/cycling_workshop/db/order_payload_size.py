@@ -151,16 +151,18 @@ def require_order_payload_count_schema(connection: Connection) -> None:
             raise OrderPayloadCountSchemaError("order payload surrogate requires UTF8")
         inspector = inspect(connection)
         for table, discriminator in _PAIRS:
-            if connection.execute(
-                text("SELECT 1 FROM sqlite_temp_master WHERE name COLLATE NOCASE = :table"),
-                {"table": table},
-            ).first() is not None:
+            if (
+                connection.execute(
+                    text("SELECT 1 FROM sqlite_temp_master WHERE name COLLATE NOCASE = :table"),
+                    {"table": table},
+                ).first()
+                is not None
+            ):
                 raise OrderPayloadCountSchemaError("order payload surrogate TEMP shadow")
             if table not in inspector.get_table_names(schema="main"):
                 raise OrderPayloadCountSchemaError("order payload surrogate table missing")
             columns = {
-                column["name"]: column
-                for column in inspector.get_columns(table, schema="main")
+                column["name"]: column for column in inspector.get_columns(table, schema="main")
             }
             payload = columns.get("payload", {})
             count = columns.get("order_payload_raw_octets", {})
