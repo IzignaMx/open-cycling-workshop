@@ -524,6 +524,15 @@ DECISIONS_TEST = "services/platform/tests/quotes/test_quote_service_decisions_po
 PAYLOAD_TEST = "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py"
 ATOMICITY_TEST = "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py"
 RACES_TEST = "services/platform/tests/quotes/test_quote_service_races_postgres.py"
+SCHEMA_TEST = "services/platform/tests/quotes/test_quote_schema.py"
+CUTOVER_TEST = "services/platform/tests/identity/test_cutover_migration.py"
+BRANDING_TEST = "services/platform/tests/branding/test_profile_migration.py"
+REPOSITORY_TEST = "services/platform/tests/quotes/test_quote_repository_postgres.py"
+OPERATION_COMPLETENESS = "test_operation_result_proof_and_effect_completeness"
+REPOSITORY_SINGLETONS = (
+    "test_two_first_creations_keep_exactly_one_lineage",
+    "test_rollback_releases_first_create_without_publishing_any_partial_effect",
+)
 DECISION_REPLAY = "test_service_decision_and_fresh_exact_replay"
 MALFORMED = "test_runtime_count_verifier_refuses_malformed_postgres_metadata"
 RELATIONS = "test_runtime_count_verifier_refuses_nonordinary_relations"
@@ -643,6 +652,71 @@ PG_GROUPS = {
         ),
         "not sqlite",
     ),
+    "pg_schema_immutable10": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_financial_history_update_delete_are_refused", 10),
+        ),
+        "not sqlite",
+    ),
+    "pg_schema_operations11": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_operation_result_proof_and_effect_completeness", 11),
+        ),
+        "not sqlite",
+    ),
+    "pg_schema_other5": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_additive_quote_migration_and_forward_only_retention", 1),
+            ("test_model_schema_and_migration_columns_match", 1),
+            ("test_downgrade_refuses_before_changes", 1),
+            (
+                "test_complete_order_effect_tuple_is_retained_but_delivery_bookkeeping_can_change",
+                1,
+            ),
+            ("test_postgres_truncate_guards", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_cutover_head1": (
+        "services/platform/tests/identity/test_cutover_migration.py",
+        (
+            ("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_branding_head1": (
+        "services/platform/tests/branding/test_profile_migration.py",
+        (
+            ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_create3": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_concurrent_same_operation_replays_once_or_refuses_changed_proof", 2),
+            ("test_two_first_creations_keep_exactly_one_lineage", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_append4": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_current_head_and_sequence_allow_only_one_competing_append", 4),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_rollback4": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_rollback_releases_first_create_without_publishing_any_partial_effect", 1),
+            ("test_late_failure_rolls_back_savepoint_even_if_caller_commits", 3),
+        ),
+        "not sqlite",
+    ),
 }
 
 
@@ -660,6 +734,8 @@ def case_count() -> int:
 def selected_node(node: object, function: str) -> bool:
     source, functions, _ = selection()
     prefix = f"{source}::{function}"
+    if source == REPOSITORY_TEST and function in REPOSITORY_SINGLETONS:
+        return type(node) is str and function in dict(functions) and node == prefix
     if (
         type(node) is not str
         or function not in dict(functions)
@@ -671,7 +747,8 @@ def selected_node(node: object, function: str) -> bool:
     suffix = node[len(prefix) :]
     if source == BRIDGE_TEST:
         return suffix == "[postgres]"
-    return len(json.dumps(suffix, ensure_ascii=True)) - 2 <= 64
+    limit = 32 if source == SCHEMA_TEST and function == OPERATION_COMPLETENESS else 64
+    return len(json.dumps(suffix, ensure_ascii=True)) - 2 <= limit
 
 
 def selected_nodes(value: object) -> list[str]:
@@ -822,7 +899,45 @@ def expected_parameters() -> list[dict[str, object]]:
             ),
             *(fixture | {"replay": replay} for replay in (False, True)),
         ]
-    return [fixture.copy() for _ in range(4)]
+    if group == "pg_schema_immutable10":
+        return [
+            fixture | {"table": table, "verb": verb}
+            for table in (
+                "quote_decisions",
+                "quote_line_targets",
+                "quote_lines",
+                "quote_operations",
+                "quote_revisions",
+            )
+            for verb in ("UPDATE", "DELETE")
+        ]
+    if group == "pg_schema_operations11":
+        return [
+            fixture | {"changes": changes}
+            for changes in (
+                {"kind": "unknown"},
+                {"proof_version": 2},
+                {"decision_id": "decision-b"},
+                {"actor_id": "actor-b"},
+                {"ordinal": 4},
+                {"resulting_decision_sequence": -1},
+                {"kind": "decision", "decision_id": None},
+                {"kind": "create", "quote_version": 2},
+                {"order_event_id": "event"},
+                {"change_cursor": 1},
+                {"quote_outbox_id": None},
+            )
+        ]
+    if group == "pg_repository_create3":
+        return [{"changed_proof": False}, {"changed_proof": True}, {}]
+    if group == "pg_repository_append4":
+        return [
+            {"contenders": value}
+            for value in ("revisions", "revision_decision", "decisions", "corrections")
+        ]
+    if group == "pg_repository_rollback4":
+        return [{}, *({"failure_stage": value} for value in ("outbox", "receipt", "after_flush"))]
+    return [fixture.copy() for _ in range(case_count())]
 
 
 # Fixed public source scope for the six static/contracts commands.
@@ -950,9 +1065,10 @@ def postgres_identity(value: object, node: str) -> dict[str, object]:
     if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
         raise ProofFailure("service_postgres_identity")
     schema = value["schema"]
+    prefix = "ocwp_access_" if selection()[0] == REPOSITORY_TEST else "ocwp_identity_migration_"
     if (
         type(schema) is not str
-        or re.fullmatch(r"ocwp_identity_migration_[0-9a-f]{32}", schema) is None
+        or re.fullmatch(prefix + r"[0-9a-f]{32}", schema) is None
         or type(value["search_path"]) is not str
         or value["search_path"] != schema
     ):
@@ -997,9 +1113,15 @@ def observe_postgres(database: object, request: object) -> Iterator[None]:
     """Probe final state only; leave all expected migration failures untouched."""
     _config, engine = database
     node = request.node.nodeid
-    if selection()[0] not in (METADATA_TEST, WRITER_TEST, BOUNDED_TEST) or not any(
-        selected_node(node, name) for name, _ in selection()[1]
-    ):
+    if selection()[0] not in (
+        METADATA_TEST,
+        WRITER_TEST,
+        BOUNDED_TEST,
+        SCHEMA_TEST,
+        CUTOVER_TEST,
+        BRANDING_TEST,
+        REPOSITORY_TEST,
+    ) or not any(selected_node(node, name) for name, _ in selection()[1]):
         raise ProofFailure("service_selection")
     yield
     identity = postgres_identity(probe_postgres_identity(engine, node), node)
@@ -1008,6 +1130,15 @@ def observe_postgres(database: object, request: object) -> Iterator[None]:
 
 def postgres_observer_plugin() -> object:
     import pytest
+
+    if selection()[0] == REPOSITORY_TEST:
+
+        class RepositoryPostgresObserver:
+            @pytest.fixture(autouse=True)
+            def ocwp_postgres_observer(self, administration_postgres, request):
+                yield from observe_postgres((None, administration_postgres.engine), request)
+
+        return RepositoryPostgresObserver()
 
     class PostgresObserver:
         @pytest.fixture(autouse=True)
@@ -1244,7 +1375,14 @@ class ServiceReportHook:
             remaining = list(zip(names, expected_parameters(), strict=True))
             for item, name in zip(session.items, names, strict=True):
                 path = getattr(item, "path", None)
-                params = getattr(getattr(item, "callspec", None), "params", None)
+                callspec = getattr(item, "callspec", None)
+                params = getattr(callspec, "params", None)
+                if (
+                    callspec is None
+                    and source == REPOSITORY_TEST
+                    and name in REPOSITORY_SINGLETONS
+                ):
+                    params = {}
                 if (
                     not isinstance(path, Path)
                     or path.resolve() != root / source
@@ -1274,6 +1412,18 @@ class ServiceReportHook:
                             or set(value) != {"version"}
                             or type(value["version"]) is not bool
                             or value["version"] is not True
+                        ):
+                            continue
+                    if source == SCHEMA_TEST and name == OPERATION_COMPLETENESS:
+                        changes = params["changes"]
+                        expected_changes = wanted["changes"]
+                        if (
+                            any(type(key) is not str for key in changes)
+                            or set(changes) != set(expected_changes)
+                            or any(
+                                type(changes[key]) is not type(value)
+                                for key, value in expected_changes.items()
+                            )
                         ):
                             continue
                     if params == wanted:
@@ -1398,7 +1548,15 @@ def pytest_configure(config: object) -> None:
         raise ProofFailure("service_hook_context")
     config.pluginmanager.register(ServiceReportHook(), "quote-service-closed-report")
     selection()
-    if selection()[0] in (METADATA_TEST, WRITER_TEST, BOUNDED_TEST):
+    if selection()[0] in (
+        METADATA_TEST,
+        WRITER_TEST,
+        BOUNDED_TEST,
+        SCHEMA_TEST,
+        CUTOVER_TEST,
+        BRANDING_TEST,
+        REPOSITORY_TEST,
+    ):
         config.pluginmanager.register(postgres_observer_plugin(), "quote-postgres-observer")
 
 

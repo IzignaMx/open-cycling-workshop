@@ -22,6 +22,8 @@ DECISIONS = "services/platform/tests/quotes/test_quote_service_decisions_postgre
 PAYLOAD = "services/platform/tests/quotes/test_quote_payload_integrity_postgres.py"
 ATOMICITY = "services/platform/tests/quotes/test_quote_service_atomicity_postgres.py"
 RACES = "services/platform/tests/quotes/test_quote_service_races_postgres.py"
+SCHEMA = "services/platform/tests/quotes/test_quote_schema.py"
+REPOSITORY = "services/platform/tests/quotes/test_quote_repository_postgres.py"
 SETUP_IDENTITY_GROUPS = {
     "service_bridge",
     "decision7",
@@ -139,6 +141,71 @@ PG_SELECTIONS = {
         ),
         "not sqlite",
     ),
+    "pg_schema_immutable10": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_financial_history_update_delete_are_refused", 10),
+        ),
+        "not sqlite",
+    ),
+    "pg_schema_operations11": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_operation_result_proof_and_effect_completeness", 11),
+        ),
+        "not sqlite",
+    ),
+    "pg_schema_other5": (
+        "services/platform/tests/quotes/test_quote_schema.py",
+        (
+            ("test_additive_quote_migration_and_forward_only_retention", 1),
+            ("test_model_schema_and_migration_columns_match", 1),
+            ("test_downgrade_refuses_before_changes", 1),
+            (
+                "test_complete_order_effect_tuple_is_retained_but_delivery_bookkeeping_can_change",
+                1,
+            ),
+            ("test_postgres_truncate_guards", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_cutover_head1": (
+        "services/platform/tests/identity/test_cutover_migration.py",
+        (
+            ("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_branding_head1": (
+        "services/platform/tests/branding/test_profile_migration.py",
+        (
+            ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_create3": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_concurrent_same_operation_replays_once_or_refuses_changed_proof", 2),
+            ("test_two_first_creations_keep_exactly_one_lineage", 1),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_append4": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_current_head_and_sequence_allow_only_one_competing_append", 4),
+        ),
+        "not sqlite",
+    ),
+    "pg_repository_rollback4": (
+        "services/platform/tests/quotes/test_quote_repository_postgres.py",
+        (
+            ("test_rollback_releases_first_create_without_publishing_any_partial_effect", 1),
+            ("test_late_failure_rolls_back_savepoint_even_if_caller_commits", 3),
+        ),
+        "not sqlite",
+    ),
 }
 PG_COUNTS = {
     "metadata_sync": 7,
@@ -155,6 +222,14 @@ PG_COUNTS = {
     "storage6": 6,
     "atomic8": 8,
     "races5": 5,
+    "pg_schema_immutable10": 10,
+    "pg_schema_operations11": 11,
+    "pg_schema_other5": 5,
+    "pg_cutover_head1": 1,
+    "pg_branding_head1": 1,
+    "pg_repository_create3": 3,
+    "pg_repository_append4": 4,
+    "pg_repository_rollback4": 4,
 }
 JUNIT_COUNTS = {
     "service27": 27,
@@ -164,6 +239,294 @@ JUNIT_COUNTS = {
     "response64": 64,
     "static6": 6,
     "selection_static12": 12,
+    "sqlite_repository24": 24,
+    "sqlite_reconstruction_corrupt37": 37,
+    "sqlite_reconstruction_other20": 20,
+    "sqlite_single_pass26": 26,
+    "sqlite_codec15": 15,
+    "sqlite_bytes_reads25": 25,
+    "sqlite_schema_constraints21": 21,
+    "sqlite_schema_other11": 11,
+    "sqlite_metadata_writer_heads21": 21,
+    "generic_callers17": 17,
+    "cutover_basics17": 17,
+    "cutover_preconditions16": 16,
+    "cutover_schema20": 20,
+    "cutover_cas_audit16": 16,
+}
+EXISTING_JUNIT_SELECTIONS = {
+    "sqlite_repository24": (
+        (
+            "services/platform/tests/quotes/test_quote_repository.py",
+            (
+                ("test_create_load_and_explicit_caller_commit", 1, 64),
+                (
+                    "test_restart_exact_replay_returns_original_receipt_and_current_projection",
+                    1,
+                    64,
+                ),
+                ("test_operation_id_reuse_with_changed_semantics_conflicts", 4, 64),
+                ("test_stale_or_missing_lineage_has_no_effect", 3, 64),
+                ("test_single_lineage_and_three_part_cas", 1, 64),
+                ("test_correction_withdrawal_retains_all_evidence_without_order_effects", 1, 64),
+                ("test_admission_required_and_transaction_scoped_even_on_replay", 1, 64),
+                ("test_narrow_actor_location_scope_and_wrong_order_refused", 1, 64),
+                ("test_new_part_reference_is_scoped_but_replay_keeps_original_snapshot", 1, 64),
+                ("test_published_outbox_delivery_metadata_does_not_change_receipt", 1, 64),
+                ("test_corrupt_outbox_content_fails_closed", 1, 64),
+                (
+                    "test_late_outbox_failure_rolls_back_entire_operation_"
+                    "and_keeps_outer_transaction",
+                    1,
+                    64,
+                ),
+                ("test_new_revision_and_correction_cannot_precede_history", 1, 64),
+                ("test_late_expiry_rolls_back_new_operation", 1, 64),
+                ("test_load_rechecks_admission_after_waits_and_reconstruction", 2, 64),
+                ("test_outbox_decision_contract_has_distinct_delivery_and_domain_identity", 1, 64),
+                ("test_receipt_collisions_outside_order_scope_do_not_read_foreign_proof", 2, 64),
+            ),
+        ),
+    ),
+    "sqlite_reconstruction_corrupt37": (
+        (
+            "services/platform/tests/quotes/test_quote_reconstruction.py",
+            (
+                ("test_corrupt_result_or_receipt_is_rejected", 37, 96),
+            ),
+        ),
+    ),
+    "sqlite_reconstruction_other20": (
+        (
+            "services/platform/tests/quotes/test_quote_reconstruction.py",
+            (
+                ("test_complete_rows_reconstruct_in_operation_order", 1, 48),
+                ("test_missing_financial_evidence_or_receipt_rows_are_rejected", 6, 48),
+                ("test_duplicate_financial_evidence_or_receipt_rows_are_rejected", 6, 48),
+                ("test_reordered_operations_are_not_sorted_into_a_different_history", 1, 48),
+                ("test_altered_proof_does_not_rewrite_financial_history", 1, 48),
+                ("test_unknown_proof_field_and_bool_result_are_refused", 1, 48),
+                ("test_boolean_operation_numbers_cannot_equal_integer_receipt_fields", 4, 48),
+            ),
+        ),
+    ),
+    "sqlite_single_pass26": (
+        (
+            "services/platform/tests/quotes/test_quote_single_pass.py",
+            (
+                ("test_no_complete_prefix_advance_and_exact_old_result", 1, 64),
+                ("test_corruption_rejection_matches_frozen_oracle", 7, 64),
+                ("test_constant_final_constructors_and_every_operation_checked", 1, 64),
+                ("test_later_revision_prefix_preconditions_cannot_be_repaired", 3, 64),
+                (
+                    "test_correction_updates_latest_customer_time_and_withdrawal_preserves_it",
+                    1,
+                    64,
+                ),
+                ("test_exact_and_one_byte_over_limits_match_old_path", 2, 64),
+                ("test_byte_failure_and_outer_rollback_on_both_paths", 2, 64),
+                ("test_oracle_and_new_formatters_are_not_shared", 2, 64),
+                ("test_frozen_advance_is_independent_of_new_path", 1, 64),
+                ("test_out_of_order_and_duplicate_commands_fail_closed", 4, 64),
+                ("test_correction_withdrawal_revision_and_new_initial_are_per_quote", 1, 64),
+                ("test_coherent_reordering_reaches_current_head_rejection", 1, 64),
+            ),
+        ),
+    ),
+    "sqlite_codec15": (
+        (
+            "services/platform/tests/quotes/test_quote_result_codec_once.py",
+            (
+                ("test_frozen_pr55_oracle_has_exact_reviewed_source_bytes", 1, 0),
+                ("test_one_codec_per_result_retains_predecessor_and_final_codecs", 1, 8),
+                ("test_exact_lowered_limits_and_one_byte_over_match_pr55", 2, 32),
+                ("test_malformed_prefixes_keep_public_error_and_inputs", 6, 32),
+                ("test_pr55_local_formatters_are_bidirectionally_independent", 2, 32),
+                ("test_unicode_mixed_correction_withdrawal_revision_and_initial", 1, 8),
+                ("test_corrupt_history_rejection_has_zero_database_writes", 2, 24),
+            ),
+        ),
+    ),
+    "sqlite_bytes_reads25": (
+        (
+            "services/platform/tests/quotes/test_quote_history_byte_reuse.py",
+            (
+                ("test_count_matches_canonical_array_and_exact_boundary", 3, 24),
+                ("test_public_snapshot_shape_is_unchanged", 1, 0),
+                ("test_locked_count_matches_operation_time_oracle_and_avoids_second_replay", 1, 8),
+                ("test_candidate_byte_boundary_preserves_error_and_rows", 1, 8),
+                ("test_private_and_public_reconstruction_normalize_same_errors", 5, 24),
+                ("test_decision_correction_withdrawal_count_matches_joined_oracle", 1, 8),
+                ("test_later_revision_does_not_replace_historical_decision_result", 1, 8),
+                ("test_candidate_keeps_history_array_nesting_validation", 1, 8),
+            ),
+        ),
+        (
+            "services/platform/tests/quotes/test_quote_reads.py",
+            (
+                ("test_detail_preserves_immutable_financial_revision_and_current_lineage", 1, 8),
+                ("test_metadata_pages_are_bounded_scoped_and_immutable", 1, 8),
+                ("test_repository_validates_corruption_outside_requested_page_or_detail", 6, 128),
+                ("test_load_requires_current_transaction_and_scope_before_projection", 1, 8),
+                (
+                    "test_decision_sequence_invalidates_cursor_without_changing_financial_revision",
+                    1,
+                    8,
+                ),
+                ("test_unicode_bytes_read_only_effects_and_incoming_principal_narrowing", 1, 8),
+            ),
+        ),
+    ),
+    "sqlite_schema_constraints21": (
+        (
+            "services/platform/tests/quotes/test_quote_schema.py",
+            (
+                ("test_financial_history_update_delete_are_refused", 10, 64),
+                ("test_operation_result_proof_and_effect_completeness", 11, 32),
+            ),
+        ),
+    ),
+    "sqlite_schema_other11": (
+        (
+            "services/platform/tests/quotes/test_quote_schema.py",
+            (
+                ("test_additive_quote_migration_and_forward_only_retention", 1, 8),
+                ("test_model_schema_and_migration_columns_match", 1, 8),
+                ("test_downgrade_refuses_before_changes", 1, 8),
+                (
+                    "test_complete_order_effect_tuple_is_retained_"
+                    "but_delivery_bookkeeping_can_change",
+                    1,
+                    8,
+                ),
+                ("test_sqlite_replace_cannot_erase_financial_evidence", 6, 32),
+                ("test_sqlite_replace_alternate_keys_cannot_discard_other_rows", 1, 8),
+            ),
+        ),
+    ),
+    "sqlite_metadata_writer_heads21": (
+        (
+            "services/platform/tests/quotes/test_quote_effect_metadata.py",
+            (
+                ("test_empty_upgrade_has_generated_dialect_schema", 1, 8),
+                ("test_seeded_upgrade_preserves_bytes_and_regenerates_counts", 1, 8),
+                ("test_legacy_populated_tuple_refuses_before_any_ddl", 1, 8),
+                ("test_effect_version_constraint_retains_dependencies_and_immutability", 1, 8),
+                ("test_upgrade_failure_rolls_back_all_added_columns", 1, 8),
+                ("test_runtime_count_verifier_accepts_fresh_metadata", 1, 8),
+                ("test_sqlite_temp_shadow_refused", 8, 64),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_prepared_order_change.py",
+            (
+                ("test_prepared_writer_retains_both_exact_raw_copies_and_generated_counts", 1, 8),
+                ("test_prepared_inserts_are_owned_by_caller_rollback", 3, 32),
+                ("test_ordinary_dictionary_writers_keep_payload_and_unbounded_contract", 1, 8),
+            ),
+        ),
+        (
+            "services/platform/tests/identity/test_cutover_migration.py",
+            (
+                (
+                    "test_cutover_initializes_unique_canonical_incarnations_"
+                    "without_changing_tenancy",
+                    1,
+                    8,
+                ),
+            ),
+        ),
+        (
+            "services/platform/tests/branding/test_profile_migration.py",
+            (
+                ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),
+            ),
+        ),
+    ),
+    "generic_callers17": (
+        (
+            "services/platform/tests/events/test_outbox.py",
+            (
+                ("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_rest_change_feed.py",
+            (
+                ("test_rest_writes_publish_complete_projections_and_outbox_once", 1, 0),
+                (
+                    "test_rest_failure_after_feed_append_rolls_back_domain_feed_outbox_and_event",
+                    1,
+                    0,
+                ),
+                ("test_rest_create_feed_failure_preserves_no_partial_domain_row", 3, 32),
+            ),
+        ),
+        (
+            "services/platform/tests/service_orders/test_order_sync_service.py",
+            (
+                ("test_order_create_starts_at_intake_and_feeds_change_record", 1, 0),
+                ("test_order_create_requires_existing_customer", 1, 0),
+                ("test_order_transition_applies_and_appends_timeline_event", 1, 0),
+                ("test_order_transition_refuses_payload_actor_without_trusted_context", 1, 0),
+                ("test_invalid_transition_is_a_permanent_sync_conflict", 1, 0),
+                ("test_order_transition_with_stale_base_version_conflicts", 1, 0),
+                ("test_update_without_transition_and_without_fields_is_rejected", 1, 0),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_sync_service.py",
+            (
+                ("test_duplicate_mutation_id_is_applied_exactly_once", 1, 0),
+                ("test_change_feed_cursor_is_incremental_and_tenant_scoped", 1, 0),
+                ("test_customer_mutation_writes_outbox_event_in_same_transaction", 1, 0),
+                ("test_workshop_core_entities_feed_entries_and_scope_isolation", 1, 0),
+            ),
+        ),
+    ),
+    "cutover_basics17": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_activation_is_explicit_enabled_and_idempotent_with_honest_audit", 4, 8),
+                ("test_recovery_requires_active_floor_and_exact_precondition", 4, 8),
+                ("test_recovery_audit_failure_rolls_back_rotation", 4, 8),
+                ("test_cli_reports_status_and_requires_recovery_precondition", 4, 8),
+                ("test_cutover_cli_refuses_fallback_database_configuration", 1, 0),
+            ),
+        ),
+    ),
+    "cutover_preconditions16": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),
+            ),
+        ),
+    ),
+    "cutover_schema20": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_operator_refuses_unqualified_schema_without_effects", 20, 24),
+            ),
+        ),
+    ),
+    "cutover_cas_audit16": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_recovery_uuid_collision_refuses_without_a_second_audit", 4, 8),
+                ("test_activation_audit_failure_rolls_back_floor", 4, 8),
+                (
+                    "test_activation_optional_incarnation_cas_is_checked_before_floor_or_audit",
+                    4,
+                    8,
+                ),
+                ("test_activation_cas_refuses_target_changed_after_snapshot_inspection", 4, 8),
+            ),
+        ),
+    ),
 }
 CHECK_NAMES = (
     "test_fixed_postgres_selection_and_argv",
@@ -204,6 +567,11 @@ def pg_items(module):
     items = []
     for index, (name, params) in enumerate(parameters):
         suffix = "[postgres]" if source == BRIDGE else f"[observed-{index}]"
+        if source == REPOSITORY and not params:
+            items.append(
+                SimpleNamespace(path=ROOT / source, originalname=name, nodeid=f"{source}::{name}")
+            )
+            continue
         items.append(
             SimpleNamespace(
                 path=ROOT / source,
@@ -216,7 +584,8 @@ def pg_items(module):
 
 
 def pg_identity(node, index=0):
-    schema = f"ocwp_identity_migration_{index:032x}"
+    prefix = "ocwp_access_" if node.startswith(REPOSITORY + "::") else "ocwp_identity_migration_"
+    schema = f"{prefix}{index:032x}"
     return {
         "node": node,
         "dialect": "postgresql",
@@ -411,6 +780,78 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
         fixture | {"replay": False},
         fixture | {"replay": True},
     ]
+    expected["pg_schema_immutable10"] = [
+        {"identity_migration_database": "postgres", "table": "quote_decisions", "verb": "UPDATE"},
+        {"identity_migration_database": "postgres", "table": "quote_decisions", "verb": "DELETE"},
+        {
+            "identity_migration_database": "postgres",
+            "table": "quote_line_targets",
+            "verb": "UPDATE",
+        },
+        {
+            "identity_migration_database": "postgres",
+            "table": "quote_line_targets",
+            "verb": "DELETE",
+        },
+        {"identity_migration_database": "postgres", "table": "quote_lines", "verb": "UPDATE"},
+        {"identity_migration_database": "postgres", "table": "quote_lines", "verb": "DELETE"},
+        {"identity_migration_database": "postgres", "table": "quote_operations", "verb": "UPDATE"},
+        {"identity_migration_database": "postgres", "table": "quote_operations", "verb": "DELETE"},
+        {"identity_migration_database": "postgres", "table": "quote_revisions", "verb": "UPDATE"},
+        {"identity_migration_database": "postgres", "table": "quote_revisions", "verb": "DELETE"},
+    ]
+    expected["pg_schema_operations11"] = [
+        {"identity_migration_database": "postgres", "changes": {"kind": "unknown"}},
+        {"identity_migration_database": "postgres", "changes": {"proof_version": 2}},
+        {"identity_migration_database": "postgres", "changes": {"decision_id": "decision-b"}},
+        {"identity_migration_database": "postgres", "changes": {"actor_id": "actor-b"}},
+        {"identity_migration_database": "postgres", "changes": {"ordinal": 4}},
+        {
+            "identity_migration_database": "postgres",
+            "changes": {"resulting_decision_sequence": -1},
+        },
+        {
+            "identity_migration_database": "postgres",
+            "changes": {"kind": "decision", "decision_id": None},
+        },
+        {
+            "identity_migration_database": "postgres",
+            "changes": {"kind": "create", "quote_version": 2},
+        },
+        {"identity_migration_database": "postgres", "changes": {"order_event_id": "event"}},
+        {"identity_migration_database": "postgres", "changes": {"change_cursor": 1}},
+        {"identity_migration_database": "postgres", "changes": {"quote_outbox_id": None}},
+    ]
+    expected["pg_schema_other5"] = [
+        {"identity_migration_database": "postgres"},
+        {"identity_migration_database": "postgres"},
+        {"identity_migration_database": "postgres"},
+        {"identity_migration_database": "postgres"},
+        {"identity_migration_database": "postgres"},
+    ]
+    expected["pg_cutover_head1"] = [
+        {"identity_migration_database": "postgres"},
+    ]
+    expected["pg_branding_head1"] = [
+        {"identity_migration_database": "postgres"},
+    ]
+    expected["pg_repository_create3"] = [
+        {"changed_proof": False},
+        {"changed_proof": True},
+        {},
+    ]
+    expected["pg_repository_append4"] = [
+        {"contenders": "revisions"},
+        {"contenders": "revision_decision"},
+        {"contenders": "decisions"},
+        {"contenders": "corrections"},
+    ]
+    expected["pg_repository_rollback4"] = [
+        {},
+        {"failure_stage": "outbox"},
+        {"failure_stage": "receipt"},
+        {"failure_stage": "after_flush"},
+    ]
     for group, selection in PG_SELECTIONS.items():
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         source, functions, expression = selection
@@ -426,9 +867,16 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
                     assert len(actual[key]) == len(value)
                     assert all(type(item) is int for item in actual[key])
                 if type(value) is dict:
-                    assert list(actual[key]) == ["version"]
-                    assert type(next(iter(actual[key]))) is str
-                    assert actual[key]["version"] is True
+                    if group == "pg_schema_operations11":
+                        assert actual[key].keys() == value.keys()
+                        assert all(type(field) is str for field in actual[key])
+                        assert all(
+                            type(actual[key][field]) is type(item) for field, item in value.items()
+                        )
+                    else:
+                        assert list(actual[key]) == ["version"]
+                        assert type(next(iter(actual[key]))) is str
+                        assert actual[key]["version"] is True
         args = pg.service_argv("a" * 64)
         assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
         assert args[-len(functions) :] == [f"{source}::{name}" for name, _ in functions]
@@ -604,6 +1052,22 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
         ("races5", 0, "contender", "unknown"),
         ("races5", 3, "replay", 0),
         ("races5", 4, "replay", 1),
+        ("pg_schema_immutable10", 0, "table", "quote_lineages"),
+        ("pg_schema_immutable10", 0, "verb", "TRUNCATE"),
+        ("pg_schema_operations11", 1, "changes", {"proof_version": True}),
+        ("pg_schema_operations11", 1, "changes", {"proof_version": 2.0}),
+        ("pg_schema_operations11", 1, "changes", {b"proof_version": 2}),
+        ("pg_schema_operations11", 1, "changes", {OtherString("proof_version"): 2}),
+        ("pg_schema_operations11", 1, "changes", {"proof_version": 2, "extra": None}),
+        ("pg_schema_operations11", 6, "changes", {"kind": "decision", "decision_id": "None"}),
+        ("pg_schema_operations11", 6, "changes", {"kind": "decision"}),
+        ("pg_schema_operations11", 0, "changes", {"kind": OtherString("unknown")}),
+        ("pg_schema_operations11", 10, "changes", {"quote_outbox_id": False}),
+        ("pg_schema_operations11", 0, "changes", []),
+        ("pg_repository_create3", 0, "changed_proof", 0),
+        ("pg_repository_create3", 1, "changed_proof", 1),
+        ("pg_repository_append4", 0, "contenders", "unknown"),
+        ("pg_repository_rollback4", 1, "failure_stage", "unknown"),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         items = pg_items(pg)
@@ -634,6 +1098,11 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
         ("atomic8", 0, 1),
         ("races5", 0, 1),
         ("races5", 3, 4),
+        ("pg_schema_immutable10", 0, 1),
+        ("pg_schema_operations11", 0, 1),
+        ("pg_repository_create3", 0, 1),
+        ("pg_repository_append4", 0, 1),
+        ("pg_repository_rollback4", 1, 2),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         items = pg_items(pg)
@@ -668,6 +1137,44 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
             with pytest.raises(pytest.UsageError, match="service_selection"):
                 pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=items))
 
+    for group in ("pg_repository_create3", "pg_repository_rollback4"):
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        items = pg_items(pg)
+        bare = next(item for item in items if not hasattr(item, "callspec"))
+        assert pg.selected_node(bare.nodeid, bare.originalname)
+        assert not pg.selected_node(bare.nodeid + "[postgres]", bare.originalname)
+        for fault in ("unexpected_params", "missing_parameterized_callspec", "foreign_function"):
+            bad = deepcopy(items)
+            if fault == "unexpected_params":
+                next(item for item in bad if not hasattr(item, "callspec")).callspec = (
+                    SimpleNamespace(params={"identity_migration_database": "postgres"})
+                )
+            elif fault == "missing_parameterized_callspec":
+                del next(item for item in bad if hasattr(item, "callspec")).callspec
+            else:
+                bad[0].originalname = "test_unselected_function"
+            with pytest.raises(pytest.UsageError, match="service_selection"):
+                pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=bad))
+    monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "pg_schema_operations11")
+    function = PG_SELECTIONS["pg_schema_operations11"][1][0][0]
+    prefix = f"{SCHEMA}::{function}"
+    assert pg.selected_node(prefix + "[" + "x" * 30 + "]", function)
+    assert not pg.selected_node(prefix + "[" + "x" * 31 + "]", function)
+    for value in ("[" + "x" * 30 + "]", "[" + "x" * 31 + "]"):
+        report = pg_report(pg)
+        old = report["nodes"][0]
+        new = prefix + value
+        report["nodes"][0] = new
+        report["postgres_identities"][0]["node"] = new
+        for phase in report["reports"]:
+            if phase["node"] == old:
+                phase["node"] = new
+        if len(value) == 32:
+            pg.service_result(json.dumps(report))
+        else:
+            with pytest.raises(pg.ProofFailure, match="service_selection"):
+                pg.service_result(json.dumps(report))
+
 
 def test_closed_postgres_reports_and_identities(pg, monkeypatch, tmp_path):
     assert pg.LIMIT == 16 * 1024
@@ -676,6 +1183,16 @@ def test_closed_postgres_reports_and_identities(pg, monkeypatch, tmp_path):
         good = pg_report(pg)
         assert pg.service_result(json.dumps(good)) == good
         assert len(good["reports"]) == PG_COUNTS[group] * 3
+    for group, prefix in (
+        ("pg_repository_create3", "ocwp_identity_migration_"),
+        ("pg_schema_immutable10", "ocwp_access_"),
+    ):
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        bad = pg_report(pg)
+        for field in ("schema", "search_path"):
+            bad["postgres_identities"][0][field] = prefix + "0" * 32
+        with pytest.raises(pg.ProofFailure, match="service_postgres_identity"):
+            pg.service_result(json.dumps(bad))
     monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "metadata_relations")
     good = pg_report(pg)
     for field, value in (
@@ -828,6 +1345,23 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
     with pytest.raises(pg.ProofFailure, match="service_postgres_identity"):
         next(observer)
     assert request.node.user_properties == []
+    monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "pg_repository_create3")
+    node = pg_items(pg)[0].nodeid
+    events.clear()
+    monkeypatch.setattr(pg, "probe_postgres_identity", probe)
+    request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
+    with monkeypatch.context() as local:
+        local.setattr(pytest, "fixture", lambda **_options: lambda function: function)
+        plugin = pg.postgres_observer_plugin()
+    observer = plugin.ocwp_postgres_observer(SimpleNamespace(engine=engine), request)
+    next(observer)
+    assert events == [] and request.node.user_properties == []
+    events.append("body_transaction_closed")
+    with pytest.raises(StopIteration):
+        next(observer)
+    assert events == ["body_transaction_closed", "final_probe"]
+    assert request.node.user_properties == [("ocwp_postgres_identity", pg_identity(node))]
+    request.node.user_properties.clear()
     for group in PG_SELECTIONS:
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         calls = []
@@ -873,6 +1407,14 @@ def test_numeric_failure_bounds_and_static_exactness(pg, monkeypatch):
         ("storage6", 18),
         ("atomic8", 24),
         ("races5", 18),
+        ("pg_schema_immutable10", 30),
+        ("pg_schema_operations11", 33),
+        ("pg_schema_other5", 18),
+        ("pg_cutover_head1", 18),
+        ("pg_branding_head1", 18),
+        ("pg_repository_create3", 18),
+        ("pg_repository_append4", 18),
+        ("pg_repository_rollback4", 18),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         boundary = failure_summary(ceiling // 3) | {"collection_count": PG_COUNTS[group]}
@@ -974,6 +1516,12 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
             "tests/operations/test_quote_integrity_static_contracts.py",
         ),
     }
+    sources.update(
+        {
+            group: tuple(path for path, _ in selection)
+            for group, selection in EXISTING_JUNIT_SELECTIONS.items()
+        }
+    )
     for group, count in JUNIT_COUNTS.items():
         # The JUnit recipe freezes group constants at import time.
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
@@ -992,7 +1540,13 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
             == module.NODES
         )
         assert module.PYTEST[-len(module.NODES) :] == list(module.NODES)
-        assert module.PYTEST[:2] == ["env", "-i"] and "-k" not in module.PYTEST
+        assert module.PYTEST[:2] == ["env", "-i"]
+        if group in EXISTING_JUNIT_SELECTIONS:
+            assert module.SELECTION == EXISTING_JUNIT_SELECTIONS[group]
+        if group.startswith("sqlite_"):
+            assert module.PYTEST[module.PYTEST.index("-k") + 1] == "not postgres"
+        else:
+            assert "-k" not in module.PYTEST
         static = group in ("static6", "selection_static12")
         assert module.LIMIT == 16 * 1024
         assert (32 * 1024 if static else 16 * 1024) == module.SPOOL_LIMIT
@@ -1105,14 +1659,50 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
     assert response_counts["test_service_projector_preserves_four_digit_receipt_year"] == 8
     for left, right in (("response50", "response64"), ("atomic18_corruption", "atomic18_other")):
         assert set(modules[left].NODES).isdisjoint(modules[right].NODES)
-    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 294
+    original_junit = (
+        "service27",
+        "atomic18_corruption",
+        "atomic18_other",
+        "response50",
+        "response64",
+        "static6",
+        "selection_static12",
+    )
+    original_pg = (
+        "metadata_sync",
+        "metadata_outbox",
+        "metadata_relations",
+        "service_bridge",
+        "writer5",
+        "admission9",
+        "history9",
+        "guards9",
+        "decision7",
+        "mismatch_a7",
+        "mismatch_b7",
+        "storage6",
+        "atomic8",
+        "races5",
+    )
+    assert (
+        sum(JUNIT_COUNTS[key] for key in original_junit)
+        + sum(PG_COUNTS[key] for key in original_pg)
+        == 294
+    )
+    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 619
+    assert (
+        sum(JUNIT_COUNTS[key] for key in EXISTING_JUNIT_SELECTIONS)
+        + sum(PG_COUNTS[key] for key in PG_COUNTS if key.startswith("pg_"))
+        + JUNIT_COUNTS["selection_static12"]
+        == 337
+    )
     assert (
         sum(PG_COUNTS[group] for group in ("writer5", "admission9", "history9", "guards9"))
         + JUNIT_COUNTS["selection_static12"]
         == 44
     )
     assert (
-        sum(count for group, count in JUNIT_COUNTS.items() if group != "selection_static12")
+        sum(JUNIT_COUNTS[group] for group in original_junit if group != "selection_static12")
         + sum(
             PG_COUNTS[group]
             for group in (
@@ -1138,6 +1728,12 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         )
         + JUNIT_COUNTS["selection_static12"]
         == 52
+    )
+    assert combined.EXISTING_BRANCH == "refs/heads/codex/quote-existing-integration-checks"
+    assert combined.EXISTING_WORKFLOW == ".github/workflows/quote-existing-integration-checks.yml"
+    assert combined.EXISTING_GROUPS == (*EXISTING_JUNIT_SELECTIONS, "selection_static12")
+    assert combined.SQLITE_GROUPS == tuple(
+        key for key in EXISTING_JUNIT_SELECTIONS if key.startswith("sqlite_")
     )
     assert combined.SEMANTIC_FORMAT_BRANCH == "refs/heads/codex/quote-semantic-format-checks"
     assert combined.SEMANTIC_FORMAT_WORKFLOW == ".github/workflows/quote-semantic-format-checks.yml"
@@ -1168,13 +1764,18 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         (combined.SEMANTIC_BRANCH, combined.SEMANTIC_WORKFLOW),
         (combined.SEMANTIC_STYLE_BRANCH, combined.SEMANTIC_STYLE_WORKFLOW),
         (combined.SEMANTIC_FORMAT_BRANCH, combined.SEMANTIC_FORMAT_WORKFLOW),
+        (combined.EXISTING_BRANCH, combined.EXISTING_WORKFLOW),
     )
     for group, module in modules.items():
         for branch, workflow in branches:
             monkeypatch.setenv("GITHUB_REF", branch)
             monkeypatch.setenv("GITHUB_WORKFLOW_REF", f"synthetic/ocwp/{workflow}@{branch}")
             accepted = (
-                (branch == combined.BRANCH and group != "selection_static12")
+                (
+                    branch == combined.BRANCH
+                    and group in original_junit
+                    and group != "selection_static12"
+                )
                 or (
                     branch
                     in (
@@ -1191,6 +1792,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
                     branch in (combined.LOADER_BRANCH, combined.SEMANTIC_BRANCH)
                     and group == "selection_static12"
                 )
+                or (branch == combined.EXISTING_BRANCH and group in combined.EXISTING_GROUPS)
             )
             if accepted:
                 module.gate()

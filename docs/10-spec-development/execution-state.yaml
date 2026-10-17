@@ -1,5 +1,25 @@
 schema: 1
 
+quote_existing_integration_checks_20261017:
+  status: independently_reviewed_pending_execution
+  selection_design: independently_reviewed
+  exact_implementation: independently_reviewed
+  source_base: 03e11cd8c0ea6e22955c748fc58abe00c90405b5
+  source_base_tree: f0ef88823094bc4e74bdfa8795e4d68597efb751
+  existing_functional_cases_planned: 325
+  existing_selection_mocks_planned: 6
+  existing_static_commands_planned: 6
+  total_checks_planned: 337
+  serialized_groups_planned: 23
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 460
+  runtime: unexecuted
+  product_change: none
+  test_data_correction: unsupported_cutover_revision_0013_to_0014
+  excluded_specimens: large_100_line_proof_and_26_revision_pagination
+  integration_gate: pending_final_source_equivalence_and_contained_execution_review
+  evidence: docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md
+
 quote_semantic_closure_20261017:
   status: postgres_and_mock_passed_static_failed_independently_reviewed
   run_id: 39077801165
@@ -12,7 +32,14 @@ quote_semantic_closure_20261017:
   static_result: Ruff_one_I001_later_four_commands_unrun
   cleanup: all_seven_primary_and_independent_absence_verified
   postgres_workload_seconds: [7.112, 6.844, 7.173, 4.708, 8.945, 6.950]
-  correction: import_passed_formatter_one_hunk_pending
+  correction: six_static_commands_passed_independently_reviewed
+  final_static_run: 39078898414
+  final_static_source: 03e11cd8c0ea6e22955c748fc58abe00c90405b5
+  final_static_tree: f0ef88823094bc4e74bdfa8795e4d68597efb751
+  final_static_artifact: 12118142126
+  final_static_commands_passed: 6
+  final_static_workload_seconds: 14.408
+  final_static_pretermination_worker_peak_bytes: 275771392
   correction_run: 39078500578
   correction_source: a047ca603697b76a2ccfe449412bcebda638206b
   correction_tree: 09669755bc4e57355f2635a152bb8a3aa505615c

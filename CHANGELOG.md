@@ -1,5 +1,16 @@
 # Changelog
 
+## Existing quote integration regression preparation · 2026-10-17
+
+- Prepare the selected existing repository/oracle, schema, sync/outbox and cutover regressions: 325 functional cases plus six existing mocks and six static commands, in 23 bounded groups. Execution is pending.
+- Correct the obsolete unsupported cutover revision specimen from 0013 to 0014; the production supported revisions and positive matrix remain unchanged. No observed failing-before result is claimed.
+- [Selection, evidence boundaries and pending integration gate](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md).
+
+## Quote semantic static closure · 2026-10-17
+
+- Verify all six static commands on 03e11cd8 in run 39078898414, with independent source/resource/cleanup review. Workload 14.408 seconds under the unchanged 20-second cap.
+- Retain the separately verified 40 PostgreSQL cases and six mocks plus both failed static runs. Broader existing integration regressions remain pending.
+
 ## Quote semantic formatting correction · 2026-10-17
 
 - Preserve run 39078500578: repository and Ruff passed; formatter requested one exact line join, with 47 other files formatted and types/contracts unrun.

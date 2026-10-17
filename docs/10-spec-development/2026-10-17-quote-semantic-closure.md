@@ -1,6 +1,6 @@
 # Finite quote service semantic closure
 
-Status: all 40 PostgreSQL cases and six selection mocks passed with independent evidence review. Repository contract passed; Ruff failed one import-order finding, and four later static commands were unrun. The import correction passed Ruff; the next static-only run found one formatting line, with types and both contracts still unrun. The exact formatting correction is pending verification. No product behavior or schema change is proposed.
+Status: all 40 finite PostgreSQL cases and six selection mocks passed with independent evidence review. The corrected static-only run also passed all six commands. Earlier failed static runs remain preserved. Broader existing integration regressions and activation gates remain open.
 
 ## Historical preparation plan: acceptance and bounded selection
 
@@ -46,4 +46,12 @@ The correction combines only the split ordinary imports from `test_quote_applica
 
 Independent review verified the full formatter output, exact source/pins, real canary, whole-worker stop before bounded client reap, and primary plus independent absence. The failed report has no final worker resource counters or successful workload measurement. Preserve the failed result rather than substituting earlier passing static evidence.
 
-Apply only the retained 655-byte unified hunk, whose conditional expression and operands remain unchanged, then refresh source pins and add the literal `codex/quote-semantic-format-checks` / `.github/workflows/quote-semantic-format-checks.yml` static-six pair. All consumed workflows and product sources remain unchanged. New branch mock vectors remain unexecuted in this static-only selection. Exact correction review is complete; execution remains pending. No functional or capacity workload is repeated.
+Apply only the retained 655-byte unified hunk, whose conditional expression and operands remain unchanged, then refresh source pins and add the literal `codex/quote-semantic-format-checks` / `.github/workflows/quote-semantic-format-checks.yml` static-six pair. All consumed workflows and product sources remain unchanged. New branch mock vectors remain unexecuted in this static-only selection. At that checkpoint, exact correction review was complete and execution was pending. No functional or capacity workload was repeated.
+
+## Corrected static closure
+
+[Run 39078898414](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39078898414), first run/attempt, passed all six commands on commit `03e11cd8c0ea6e22955c748fc58abe00c90405b5`, tree `f0ef88823094bc4e74bdfa8795e4d68597efb751`: repository contract, Ruff, format, strict production types, OpenAPI and generated client. The source scope includes 48 lint/format paths and 13 production type roots. Artifact `12118142126` has SHA-256 `803fc9193d153712e873aca0dd2421b466f28746bd828bf0c1d60ef5680b5b39`.
+
+Independent review verified exact source/image identity, 26 pinned sources, four locked inputs, ordered six-command success without failures/errors/skips, real cancellation canary, whole-worker stop before bounded client reap and primary plus independent absence. The workload took 14.408 seconds under its unchanged 20-second limit. Final pretermination worker peak was 275,771,392 bytes and CPU delta 14,509,335 microseconds; these are not posttermination counters or product performance measurements.
+
+The 40 PostgreSQL cases and six mocks remain bound to run 39077801165, followed only by the reviewed race-import merge and decisions-layout hunk. New branch mock vectors were prepared but not rerun by the static-only jobs. Earlier failed workflows remain failed. Existing affected regression suites, full-history recovery validation and the exposure/operations gates above remain separate work.

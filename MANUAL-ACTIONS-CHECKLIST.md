@@ -17,8 +17,10 @@
 - [x] Verify the retained single-line formatting correction and all six static commands in run 39076298550, with independent evidence review.
 - [x] Qualify all 40 finite PostgreSQL service/payload/atomicity/race cases and six selection mocks in run 39077801165.
 - [x] Close the import-order finding: repository and Ruff passed in run 39078500578.
-- [ ] Verify the retained formatter hunk and remaining static commands.
+- [x] Verify the retained formatter hunk and all six static commands in run 39078898414, with independent evidence review.
 - [ ] Close the remaining affected integration regressions on the final intended integration tree.
+- [ ] Verify the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md); preparation does not establish collection or runtime success.
+- [ ] Review ordinary pull-request CI workload containment before opening the clean integration PR; its full Python selection includes specimens excluded from the finite groups.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.
 - [x] Verify refusal of unsupported old effects in run 39066342042.

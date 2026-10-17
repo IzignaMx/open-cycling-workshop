@@ -59,10 +59,10 @@ CANDIDATE_SHA = {
         "52aca207fc09a15aae626947d622a32085533d7ed4225d988dce32541630a877"
     ),
     "scripts/ci/quote_integrity_postgres.py": (
-        "f3ccf930302e424830dd6346f2cc112778bffb88d4393fd795da65b1da27da7c"
+        "7cf77d3ac510e397c1c875b2e5c21edae4dcb105961e1ed1506f453bb44268d6"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "1f9434b49f370347611c83161cae00368f2c210bfa9af02c343245876ba3de23"
+        "b6a22a814f90048b532199a80bff690e8f339ca5cc639862ea8ed8aaa00fef76"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -109,6 +109,60 @@ CANDIDATE_SHA = {
     ".github/workflows/quote-semantic-format-checks.yml": (
         "353f4c0a5f178d1ecb00314ecb43c4cef9c92727624ffbcfda724f6a6ef2eda3"
     ),
+    ".github/workflows/quote-existing-integration-checks.yml": (
+        "754798da585c598a6c98ce615d412dd108490ac0debaf49581775a924211c682"
+    ),
+    "services/platform/tests/branding/test_profile_migration.py": (
+        "600410d91d8854f12c55231bf7678a95d7589a1dacfd0deaefa1862ed53d5f50"
+    ),
+    "services/platform/tests/events/test_outbox.py": (
+        "ff368c15ad67c1efdd3a74d6452ac048832bba80568f745f43d2b6d476f2b30f"
+    ),
+    "services/platform/tests/identity/test_administration_postgres.py": (
+        "f83323a05951d45d7c8450d08012c79006dd5a1de9bb980848d9e6fd23faf453"
+    ),
+    "services/platform/tests/identity/test_cutover_migration.py": (
+        "46bb5b4892605bce9d0177fca82f4d809b61ea54766d1710051d9dad5a20d142"
+    ),
+    "services/platform/tests/ops/test_cutover_cli.py": (
+        "a924e441518e7b130e3bcf83d3cf2a807931c5123034cd9b4fcfb0a360638493"
+    ),
+    "services/platform/tests/quotes/test_quote_effect_metadata.py": (
+        "a761699b2bf1e68fd18d8888a79717e2e9666fd0d1ed65e0b8f02bea46306157"
+    ),
+    "services/platform/tests/quotes/test_quote_history_byte_reuse.py": (
+        "a001241a760f52e16f355ab83d6cc7594174ecc2835c13154e3f95c201093d6b"
+    ),
+    "services/platform/tests/quotes/test_quote_reads.py": (
+        "4e37af395a2359c7c67127058925319011d3c97e8681fd51843239445a6c9aae"
+    ),
+    "services/platform/tests/quotes/test_quote_reconstruction.py": (
+        "0ff237606ffd5b7d24e89968e8f1a0cb43171c81c85098a8fe4433c2c6a3309b"
+    ),
+    "services/platform/tests/quotes/test_quote_repository.py": (
+        "87fdc1b03aa50d6db3050d1fdafd837ad3322eaa8d0b17b2c974ea9fc5b9b30a"
+    ),
+    "services/platform/tests/quotes/test_quote_repository_postgres.py": (
+        "f8be5679ceeb1879e3af245553401adbcbd68dd0bf3c5b1e86050037d919f57d"
+    ),
+    "services/platform/tests/quotes/test_quote_result_codec_once.py": (
+        "812bafe298b84962b7c467b4f3e7da61c02e3c9805e1d8ee1525e6e00b95373c"
+    ),
+    "services/platform/tests/quotes/test_quote_schema.py": (
+        "bd49accbfebf5f113277382a952060a777140c4f20ef493cb5578b424843285c"
+    ),
+    "services/platform/tests/quotes/test_quote_single_pass.py": (
+        "90c29644182e43b108b27ccb4731348e82794087c7426be882ffac3a0df44a97"
+    ),
+    "services/platform/tests/service_orders/test_order_sync_service.py": (
+        "9a56f33c030427f996d32d7e1494c97d4b3f952628b513b94ff8017daf78bb61"
+    ),
+    "services/platform/tests/sync/test_rest_change_feed.py": (
+        "aa188d7c23a3d17ac9787ae89eba8864b047f2302f345e21d31ed1f0a63ab924"
+    ),
+    "services/platform/tests/sync/test_sync_service.py": (
+        "0b069ad9dfd3dd62abfdb4ab17b3603e10fe0759130e7570b884c60f6fb4345d"
+    ),
 }
 LOCKED_INPUT_SHA = {
     "pyproject.toml": "fd9f19fdeea77c028552a7f9aaeaa3adb42358fa4859c7d7229ae27d6e859be5",
@@ -137,6 +191,8 @@ SEMANTIC_STYLE_BRANCH = "refs/heads/codex/quote-semantic-style-checks"
 SEMANTIC_STYLE_WORKFLOW = ".github/workflows/quote-semantic-style-checks.yml"
 SEMANTIC_FORMAT_BRANCH = "refs/heads/codex/quote-semantic-format-checks"
 SEMANTIC_FORMAT_WORKFLOW = ".github/workflows/quote-semantic-format-checks.yml"
+EXISTING_BRANCH = "refs/heads/codex/quote-existing-integration-checks"
+EXISTING_WORKFLOW = ".github/workflows/quote-existing-integration-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -149,6 +205,52 @@ SOURCE_CLASSES = {
     RESPONSE_PATH: "services.platform.tests.quotes.test_quote_command_response",
     STATIC_PATH: "tests.operations.test_quote_integrity_static_contracts",
     SELECTION_PATH: "tests.operations.test_quote_integrity_selection",
+    "services/platform/tests/branding/test_profile_migration.py": (
+        "services.platform.tests.branding.test_profile_migration"
+    ),
+    "services/platform/tests/events/test_outbox.py": "services.platform.tests.events.test_outbox",
+    "services/platform/tests/identity/test_cutover_migration.py": (
+        "services.platform.tests.identity.test_cutover_migration"
+    ),
+    "services/platform/tests/ops/test_cutover_cli.py": (
+        "services.platform.tests.ops.test_cutover_cli"
+    ),
+    "services/platform/tests/quotes/test_quote_effect_metadata.py": (
+        "services.platform.tests.quotes.test_quote_effect_metadata"
+    ),
+    "services/platform/tests/quotes/test_quote_history_byte_reuse.py": (
+        "services.platform.tests.quotes.test_quote_history_byte_reuse"
+    ),
+    "services/platform/tests/quotes/test_quote_reads.py": (
+        "services.platform.tests.quotes.test_quote_reads"
+    ),
+    "services/platform/tests/quotes/test_quote_reconstruction.py": (
+        "services.platform.tests.quotes.test_quote_reconstruction"
+    ),
+    "services/platform/tests/quotes/test_quote_repository.py": (
+        "services.platform.tests.quotes.test_quote_repository"
+    ),
+    "services/platform/tests/quotes/test_quote_result_codec_once.py": (
+        "services.platform.tests.quotes.test_quote_result_codec_once"
+    ),
+    "services/platform/tests/quotes/test_quote_schema.py": (
+        "services.platform.tests.quotes.test_quote_schema"
+    ),
+    "services/platform/tests/quotes/test_quote_single_pass.py": (
+        "services.platform.tests.quotes.test_quote_single_pass"
+    ),
+    "services/platform/tests/service_orders/test_order_sync_service.py": (
+        "services.platform.tests.service_orders.test_order_sync_service"
+    ),
+    "services/platform/tests/sync/test_prepared_order_change.py": (
+        "services.platform.tests.sync.test_prepared_order_change"
+    ),
+    "services/platform/tests/sync/test_rest_change_feed.py": (
+        "services.platform.tests.sync.test_rest_change_feed"
+    ),
+    "services/platform/tests/sync/test_sync_service.py": (
+        "services.platform.tests.sync.test_sync_service"
+    ),
 }
 # Complete fixed functions: count and maximum JSON-encoded parameter suffix bytes.
 GROUPS = {
@@ -287,6 +389,278 @@ GROUPS = {
             ),
         ),
     ),
+    "sqlite_repository24": (
+        (
+            "services/platform/tests/quotes/test_quote_repository.py",
+            (
+                ("test_create_load_and_explicit_caller_commit", 1, 64),
+                (
+                    "test_restart_exact_replay_returns_original_receipt_and_current_projection",
+                    1,
+                    64,
+                ),
+                ("test_operation_id_reuse_with_changed_semantics_conflicts", 4, 64),
+                ("test_stale_or_missing_lineage_has_no_effect", 3, 64),
+                ("test_single_lineage_and_three_part_cas", 1, 64),
+                ("test_correction_withdrawal_retains_all_evidence_without_order_effects", 1, 64),
+                ("test_admission_required_and_transaction_scoped_even_on_replay", 1, 64),
+                ("test_narrow_actor_location_scope_and_wrong_order_refused", 1, 64),
+                ("test_new_part_reference_is_scoped_but_replay_keeps_original_snapshot", 1, 64),
+                ("test_published_outbox_delivery_metadata_does_not_change_receipt", 1, 64),
+                ("test_corrupt_outbox_content_fails_closed", 1, 64),
+                (
+                    "test_late_outbox_failure_rolls_back_entire_operation_"
+                    "and_keeps_outer_transaction",
+                    1,
+                    64,
+                ),
+                ("test_new_revision_and_correction_cannot_precede_history", 1, 64),
+                ("test_late_expiry_rolls_back_new_operation", 1, 64),
+                ("test_load_rechecks_admission_after_waits_and_reconstruction", 2, 64),
+                ("test_outbox_decision_contract_has_distinct_delivery_and_domain_identity", 1, 64),
+                ("test_receipt_collisions_outside_order_scope_do_not_read_foreign_proof", 2, 64),
+            ),
+        ),
+    ),
+    "sqlite_reconstruction_corrupt37": (
+        (
+            "services/platform/tests/quotes/test_quote_reconstruction.py",
+            (
+                ("test_corrupt_result_or_receipt_is_rejected", 37, 96),
+            ),
+        ),
+    ),
+    "sqlite_reconstruction_other20": (
+        (
+            "services/platform/tests/quotes/test_quote_reconstruction.py",
+            (
+                ("test_complete_rows_reconstruct_in_operation_order", 1, 48),
+                ("test_missing_financial_evidence_or_receipt_rows_are_rejected", 6, 48),
+                ("test_duplicate_financial_evidence_or_receipt_rows_are_rejected", 6, 48),
+                ("test_reordered_operations_are_not_sorted_into_a_different_history", 1, 48),
+                ("test_altered_proof_does_not_rewrite_financial_history", 1, 48),
+                ("test_unknown_proof_field_and_bool_result_are_refused", 1, 48),
+                ("test_boolean_operation_numbers_cannot_equal_integer_receipt_fields", 4, 48),
+            ),
+        ),
+    ),
+    "sqlite_single_pass26": (
+        (
+            "services/platform/tests/quotes/test_quote_single_pass.py",
+            (
+                ("test_no_complete_prefix_advance_and_exact_old_result", 1, 64),
+                ("test_corruption_rejection_matches_frozen_oracle", 7, 64),
+                ("test_constant_final_constructors_and_every_operation_checked", 1, 64),
+                ("test_later_revision_prefix_preconditions_cannot_be_repaired", 3, 64),
+                (
+                    "test_correction_updates_latest_customer_time_and_withdrawal_preserves_it",
+                    1,
+                    64,
+                ),
+                ("test_exact_and_one_byte_over_limits_match_old_path", 2, 64),
+                ("test_byte_failure_and_outer_rollback_on_both_paths", 2, 64),
+                ("test_oracle_and_new_formatters_are_not_shared", 2, 64),
+                ("test_frozen_advance_is_independent_of_new_path", 1, 64),
+                ("test_out_of_order_and_duplicate_commands_fail_closed", 4, 64),
+                ("test_correction_withdrawal_revision_and_new_initial_are_per_quote", 1, 64),
+                ("test_coherent_reordering_reaches_current_head_rejection", 1, 64),
+            ),
+        ),
+    ),
+    "sqlite_codec15": (
+        (
+            "services/platform/tests/quotes/test_quote_result_codec_once.py",
+            (
+                ("test_frozen_pr55_oracle_has_exact_reviewed_source_bytes", 1, 0),
+                ("test_one_codec_per_result_retains_predecessor_and_final_codecs", 1, 8),
+                ("test_exact_lowered_limits_and_one_byte_over_match_pr55", 2, 32),
+                ("test_malformed_prefixes_keep_public_error_and_inputs", 6, 32),
+                ("test_pr55_local_formatters_are_bidirectionally_independent", 2, 32),
+                ("test_unicode_mixed_correction_withdrawal_revision_and_initial", 1, 8),
+                ("test_corrupt_history_rejection_has_zero_database_writes", 2, 24),
+            ),
+        ),
+    ),
+    "sqlite_bytes_reads25": (
+        (
+            "services/platform/tests/quotes/test_quote_history_byte_reuse.py",
+            (
+                ("test_count_matches_canonical_array_and_exact_boundary", 3, 24),
+                ("test_public_snapshot_shape_is_unchanged", 1, 0),
+                ("test_locked_count_matches_operation_time_oracle_and_avoids_second_replay", 1, 8),
+                ("test_candidate_byte_boundary_preserves_error_and_rows", 1, 8),
+                ("test_private_and_public_reconstruction_normalize_same_errors", 5, 24),
+                ("test_decision_correction_withdrawal_count_matches_joined_oracle", 1, 8),
+                ("test_later_revision_does_not_replace_historical_decision_result", 1, 8),
+                ("test_candidate_keeps_history_array_nesting_validation", 1, 8),
+            ),
+        ),
+        (
+            "services/platform/tests/quotes/test_quote_reads.py",
+            (
+                ("test_detail_preserves_immutable_financial_revision_and_current_lineage", 1, 8),
+                ("test_metadata_pages_are_bounded_scoped_and_immutable", 1, 8),
+                ("test_repository_validates_corruption_outside_requested_page_or_detail", 6, 128),
+                ("test_load_requires_current_transaction_and_scope_before_projection", 1, 8),
+                (
+                    "test_decision_sequence_invalidates_cursor_without_changing_financial_revision",
+                    1,
+                    8,
+                ),
+                ("test_unicode_bytes_read_only_effects_and_incoming_principal_narrowing", 1, 8),
+            ),
+        ),
+    ),
+    "sqlite_schema_constraints21": (
+        (
+            "services/platform/tests/quotes/test_quote_schema.py",
+            (
+                ("test_financial_history_update_delete_are_refused", 10, 64),
+                ("test_operation_result_proof_and_effect_completeness", 11, 32),
+            ),
+        ),
+    ),
+    "sqlite_schema_other11": (
+        (
+            "services/platform/tests/quotes/test_quote_schema.py",
+            (
+                ("test_additive_quote_migration_and_forward_only_retention", 1, 8),
+                ("test_model_schema_and_migration_columns_match", 1, 8),
+                ("test_downgrade_refuses_before_changes", 1, 8),
+                (
+                    "test_complete_order_effect_tuple_is_retained_"
+                    "but_delivery_bookkeeping_can_change",
+                    1,
+                    8,
+                ),
+                ("test_sqlite_replace_cannot_erase_financial_evidence", 6, 32),
+                ("test_sqlite_replace_alternate_keys_cannot_discard_other_rows", 1, 8),
+            ),
+        ),
+    ),
+    "sqlite_metadata_writer_heads21": (
+        (
+            "services/platform/tests/quotes/test_quote_effect_metadata.py",
+            (
+                ("test_empty_upgrade_has_generated_dialect_schema", 1, 8),
+                ("test_seeded_upgrade_preserves_bytes_and_regenerates_counts", 1, 8),
+                ("test_legacy_populated_tuple_refuses_before_any_ddl", 1, 8),
+                ("test_effect_version_constraint_retains_dependencies_and_immutability", 1, 8),
+                ("test_upgrade_failure_rolls_back_all_added_columns", 1, 8),
+                ("test_runtime_count_verifier_accepts_fresh_metadata", 1, 8),
+                ("test_sqlite_temp_shadow_refused", 8, 64),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_prepared_order_change.py",
+            (
+                ("test_prepared_writer_retains_both_exact_raw_copies_and_generated_counts", 1, 8),
+                ("test_prepared_inserts_are_owned_by_caller_rollback", 3, 32),
+                ("test_ordinary_dictionary_writers_keep_payload_and_unbounded_contract", 1, 8),
+            ),
+        ),
+        (
+            "services/platform/tests/identity/test_cutover_migration.py",
+            (
+                (
+                    "test_cutover_initializes_unique_canonical_incarnations_"
+                    "without_changing_tenancy",
+                    1,
+                    8,
+                ),
+            ),
+        ),
+        (
+            "services/platform/tests/branding/test_profile_migration.py",
+            (
+                ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),
+            ),
+        ),
+    ),
+    "generic_callers17": (
+        (
+            "services/platform/tests/events/test_outbox.py",
+            (
+                ("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_rest_change_feed.py",
+            (
+                ("test_rest_writes_publish_complete_projections_and_outbox_once", 1, 0),
+                (
+                    "test_rest_failure_after_feed_append_rolls_back_domain_feed_outbox_and_event",
+                    1,
+                    0,
+                ),
+                ("test_rest_create_feed_failure_preserves_no_partial_domain_row", 3, 32),
+            ),
+        ),
+        (
+            "services/platform/tests/service_orders/test_order_sync_service.py",
+            (
+                ("test_order_create_starts_at_intake_and_feeds_change_record", 1, 0),
+                ("test_order_create_requires_existing_customer", 1, 0),
+                ("test_order_transition_applies_and_appends_timeline_event", 1, 0),
+                ("test_order_transition_refuses_payload_actor_without_trusted_context", 1, 0),
+                ("test_invalid_transition_is_a_permanent_sync_conflict", 1, 0),
+                ("test_order_transition_with_stale_base_version_conflicts", 1, 0),
+                ("test_update_without_transition_and_without_fields_is_rejected", 1, 0),
+            ),
+        ),
+        (
+            "services/platform/tests/sync/test_sync_service.py",
+            (
+                ("test_duplicate_mutation_id_is_applied_exactly_once", 1, 0),
+                ("test_change_feed_cursor_is_incremental_and_tenant_scoped", 1, 0),
+                ("test_customer_mutation_writes_outbox_event_in_same_transaction", 1, 0),
+                ("test_workshop_core_entities_feed_entries_and_scope_isolation", 1, 0),
+            ),
+        ),
+    ),
+    "cutover_basics17": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_activation_is_explicit_enabled_and_idempotent_with_honest_audit", 4, 8),
+                ("test_recovery_requires_active_floor_and_exact_precondition", 4, 8),
+                ("test_recovery_audit_failure_rolls_back_rotation", 4, 8),
+                ("test_cli_reports_status_and_requires_recovery_precondition", 4, 8),
+                ("test_cutover_cli_refuses_fallback_database_configuration", 1, 0),
+            ),
+        ),
+    ),
+    "cutover_preconditions16": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),
+            ),
+        ),
+    ),
+    "cutover_schema20": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_operator_refuses_unqualified_schema_without_effects", 20, 24),
+            ),
+        ),
+    ),
+    "cutover_cas_audit16": (
+        (
+            "services/platform/tests/ops/test_cutover_cli.py",
+            (
+                ("test_recovery_uuid_collision_refuses_without_a_second_audit", 4, 8),
+                ("test_activation_audit_failure_rolls_back_floor", 4, 8),
+                (
+                    "test_activation_optional_incarnation_cas_is_checked_before_floor_or_audit",
+                    4,
+                    8,
+                ),
+                ("test_activation_cas_refuses_target_changed_after_snapshot_inspection", 4, 8),
+            ),
+        ),
+    ),
 }
 GROUP_COUNTS = {
     "service27": 27,
@@ -296,7 +670,49 @@ GROUP_COUNTS = {
     "response64": 64,
     "static6": 6,
     "selection_static12": 12,
+    "sqlite_repository24": 24,
+    "sqlite_reconstruction_corrupt37": 37,
+    "sqlite_reconstruction_other20": 20,
+    "sqlite_single_pass26": 26,
+    "sqlite_codec15": 15,
+    "sqlite_bytes_reads25": 25,
+    "sqlite_schema_constraints21": 21,
+    "sqlite_schema_other11": 11,
+    "sqlite_metadata_writer_heads21": 21,
+    "generic_callers17": 17,
+    "cutover_basics17": 17,
+    "cutover_preconditions16": 16,
+    "cutover_schema20": 20,
+    "cutover_cas_audit16": 16,
 }
+EXISTING_GROUPS = (
+    "sqlite_repository24",
+    "sqlite_reconstruction_corrupt37",
+    "sqlite_reconstruction_other20",
+    "sqlite_single_pass26",
+    "sqlite_codec15",
+    "sqlite_bytes_reads25",
+    "sqlite_schema_constraints21",
+    "sqlite_schema_other11",
+    "sqlite_metadata_writer_heads21",
+    "generic_callers17",
+    "cutover_basics17",
+    "cutover_preconditions16",
+    "cutover_schema20",
+    "cutover_cas_audit16",
+    "selection_static12",
+)
+SQLITE_GROUPS = (
+    "sqlite_repository24",
+    "sqlite_reconstruction_corrupt37",
+    "sqlite_reconstruction_other20",
+    "sqlite_single_pass26",
+    "sqlite_codec15",
+    "sqlite_bytes_reads25",
+    "sqlite_schema_constraints21",
+    "sqlite_schema_other11",
+    "sqlite_metadata_writer_heads21",
+)
 GROUP_KEY = os.environ.get("OCWP_INTEGRITY_GROUP", "")
 SELECTION = GROUPS.get(GROUP_KEY, ())
 NODES = tuple(f"{path}::{name}" for path, cases in SELECTION for name, _, _ in cases)
@@ -338,6 +754,7 @@ PYTEST = [
     "-W",
     "error::pytest.PytestUnraisableExceptionWarning",
     f"--junitxml={JUNIT_PATH}",
+    *(["-k", "not postgres"] if GROUP_KEY in SQLITE_GROUPS else []),
     *NODES,
 ]
 DOCKERFILE = (
@@ -407,8 +824,11 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == SEMANTIC_BRANCH:
         require(GROUP_KEY == "selection_static12")
         branch, workflow = SEMANTIC_BRANCH, SEMANTIC_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == EXISTING_BRANCH:
+        require(GROUP_KEY in EXISTING_GROUPS)
+        branch, workflow = EXISTING_BRANCH, EXISTING_WORKFLOW
     else:
-        require(GROUP_KEY != "selection_static12")
+        require(GROUP_KEY not in EXISTING_GROUPS)
     require(os.environ.get("GITHUB_REF") == branch)
     require(os.environ.get("GITHUB_RUN_NUMBER") == "1")
     require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1")
