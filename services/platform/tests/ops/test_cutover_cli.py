@@ -19,7 +19,7 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 
-@pytest.fixture(params=["0010", "0011", "0012"])
+@pytest.fixture(params=["0010", "0011", "0012", "0013"])
 def installation(tmp_path, monkeypatch, request):
     url = f"sqlite+pysqlite:///{tmp_path / 'cutover.sqlite3'}"
     engine = create_engine(url)

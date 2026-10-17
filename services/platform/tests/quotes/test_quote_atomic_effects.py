@@ -11,7 +11,7 @@ from datetime import timedelta
 import pytest
 from cycling_workshop.events.models import OutboxRecord
 from cycling_workshop.quotes.decisions import QuoteDecisionLedger, plan_initial_transition
-from cycling_workshop.quotes.effects import QuoteOrderEffects
+from cycling_workshop.quotes.effects import PreparedQuoteOrderEffect
 from cycling_workshop.quotes.models import QuoteDecisionRecord, QuoteOperationRecord
 from cycling_workshop.quotes.reconstruction import (
     QuoteIntegrityError,
@@ -19,10 +19,12 @@ from cycling_workshop.quotes.reconstruction import (
     reconstruct,
 )
 from cycling_workshop.quotes.repository import QuoteConflictError, QuoteRepository
+from cycling_workshop.quotes.service import _persist_order_effect
 from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
 from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
 from cycling_workshop.sync.models import ChangeRecord
 from cycling_workshop.sync.projections import order_payload
+from cycling_workshop.sync.order_projection_integrity import encode_order_projection
 from cycling_workshop.sync.writes import append_change
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
@@ -43,39 +45,26 @@ def accept(order, snapshot):
     assert order.state == "DIAGNOSIS"
 
 
-def transition_effects(session, order, ledger, fresh):
+def prepare_effects(order, ledger, fresh):
     assert fresh is not None and fresh.ledger is ledger and not fresh.replayed
-    repository = SqlAlchemyServiceOrderRepository(session)
-    domain = repository._to_domain(order)
-    plan = plan_initial_transition(ledger, domain, fresh)
-    result = domain.transition(
+    plan = plan_initial_transition(ledger, order, fresh)
+    result = order.transition(
         plan.action, actor_id="actor-a", event_id=fresh.entry.command.decision_id, now=NOW
     )
-    repository.save(result.order)
-    repository.add_event(result.event)
-    appended = append_change(
-        session,
-        organization_id=domain.organization_id,
-        location_id=domain.location_id,
-        entity_type="service_order",
-        entity_id=domain.order_id,
-        operation="update",
-        entity_version=result.order.version,
-        occurred_at=NOW,
-        payload=order_payload(result.order),
-    )
-    return QuoteOrderEffects(
-        result.event.event_id, result.order.version, appended.cursor, appended.outbox_event_id
-    )
+    return PreparedQuoteOrderEffect(result, encode_order_projection(order_payload(result.order)))
 
 
-def apply_decision(session, effects=None):
+def transition_effects(session, prepared):
+    return _persist_order_effect(session, prepared)
+
+
+def apply_decision(session, effects=None, prepare=prepare_effects):
     return QuoteRepository(session)._apply_application(
         decision(),
         recorded_at=NOW,
         admit_new=accept,
-        apply_effects=effects
-        or (lambda order, ledger, fresh: transition_effects(session, order, ledger, fresh)),
+        prepare_effects=prepare,
+        persist_effects=effects or (lambda prepared: transition_effects(session, prepared)),
     )
 
 
@@ -110,16 +99,17 @@ def test_actual_fresh_result_and_complete_receipt_exist_on_first_insert(database
                     target.change_cursor,
                     target.order_outbox_id,
                     target.quote_outbox_id,
+                    target.order_effect_version,
                 )
             )
 
-        def effects(order, ledger, fresh):
+        def prepare(order, ledger, fresh):
             assert fresh is fresh_results[-1]
-            return transition_effects(session, order, ledger, fresh)
+            return prepare_effects(order, ledger, fresh)
 
         event.listen(QuoteOperationRecord, "before_insert", inspect_insert)
         try:
-            result = apply_decision(session, effects)
+            result = apply_decision(session, prepare=prepare)
         finally:
             event.remove(QuoteOperationRecord, "before_insert", inspect_insert)
         receipt = result.receipt
@@ -132,6 +122,7 @@ def test_actual_fresh_result_and_complete_receipt_exist_on_first_insert(database
                 effect.change_cursor,
                 effect.order_outbox_id,
                 receipt.quote_outbox_id,
+                1,
             )
         ]
         assert effect.order_outbox_id != receipt.quote_outbox_id
@@ -144,7 +135,8 @@ def test_actual_fresh_result_and_complete_receipt_exist_on_first_insert(database
         admitted(session)
         repository = QuoteRepository(session)
         replay = repository._apply_application(
-            decision(), recorded_at=NOW + timedelta(days=1), admit_new=refuse, apply_effects=refuse
+            decision(), recorded_at=NOW + timedelta(days=1), admit_new=refuse,
+            prepare_effects=refuse, persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == receipt
         assert effect_counts(session) == (1, 1, 1, 3)
@@ -157,7 +149,8 @@ def test_historical_null_effect_replay_never_creates_transition(database):
         repository.apply(creation(), recorded_at=NOW)
         historical = repository.apply(decision(), recorded_at=NOW)
         replay = repository._apply_application(
-            decision(), recorded_at=NOW, admit_new=refuse, apply_effects=refuse
+            decision(), recorded_at=NOW, admit_new=refuse,
+            prepare_effects=refuse, persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == historical.receipt
         assert replay.receipt.order_effects is None
@@ -174,7 +167,8 @@ def test_absent_operation_policy_runs_before_stale_cas_and_any_effect(database):
                 creation(expected_order_version=99),
                 recorded_at=NOW,
                 admit_new=refuse,
-                apply_effects=refuse,
+                prepare_effects=refuse,
+                persist_effects=refuse,
             )
         assert counts(session) == before
 
@@ -186,8 +180,8 @@ def test_failure_after_order_effects_rolls_back_complete_operation(database):
         repository.apply(creation(), recorded_at=NOW)
         before = counts(session)
 
-        def effects(order, ledger, fresh):
-            transition_effects(session, order, ledger, fresh)
+        def effects(prepared):
+            transition_effects(session, prepared)
             raise RuntimeError("injected late failure")
 
         with pytest.raises(RuntimeError, match="injected late failure"):
@@ -207,13 +201,11 @@ def effect_records(database):
         applied = apply_decision(session)
         data = collect_rows(session)
         data[6] = [row for row in data[6] if row.aggregate_type == "quote"]
-        effects = dict(
-            order_events=list(session.scalars(select(ServiceOrderEventRecord))),
-            changes=list(session.scalars(select(ChangeRecord))),
-            order_outboxes=list(
-                session.scalars(select(OutboxRecord).where(OutboxRecord.aggregate_type != "quote"))
-            ),
+        order_event, change, outbox = QuoteRepository(session)._load_order_effect_sources(
+            applied.receipt.order_effects, organization_id="a", location_id="location-a",
+            order_id="order-a",
         )
+        effects = dict(order_events=[order_event], changes=[change], order_outboxes=[outbox])
         session.expunge_all()
     return data, effects, applied.receipt
 
@@ -230,12 +222,12 @@ def effect_records(database):
         ("changes", "organization_id", "b"),
         ("changes", "entity_id", "order-b"),
         ("changes", "entity_version", 3),
-        ("changes", "payload", {"state": "AUTHORIZED"}),
+        ("changes", "raw_json", '{"state":"AUTHORIZED"}'),
         ("order_outboxes", "event_type", "service_order.created"),
         ("order_outboxes", "organization_id", "b"),
         ("order_outboxes", "location_id", "other-location-a"),
         ("order_outboxes", "aggregate_id", "order-b"),
-        ("order_outboxes", "payload", {"unexpected": True}),
+        ("order_outboxes", "raw_json", '{"unexpected":true}'),
     ],
 )
 def test_corrupt_effect_association_has_normalized_integrity_error(
@@ -243,6 +235,8 @@ def test_corrupt_effect_association_has_normalized_integrity_error(
 ):
     data, effects, _receipt = effect_records
     setattr(effects[group][0], field, value)
+    if field == "raw_json":
+        effects[group][0].raw_octets = len(value.encode("utf-8"))
     with pytest.raises(QuoteIntegrityError, match=r"^stored quote history is invalid$"):
         reconstruct(*data, **effects)
 
@@ -254,6 +248,21 @@ def test_missing_or_boolean_tuple_field_is_not_treated_as_historical(effect_reco
     with pytest.raises(QuoteIntegrityError):
         reconstruct(*data, **effects)
     operation.change_cursor = None
+    with pytest.raises(QuoteIntegrityError):
+        reconstruct(*data, **effects)
+
+
+@pytest.mark.parametrize("version", [None, 0, 2, -1, True, "1"])
+def test_unsupported_effect_version_is_rejected(effect_records, version):
+    data, effects, _receipt = effect_records
+    data[5][-1].order_effect_version = version
+    with pytest.raises(QuoteIntegrityError):
+        reconstruct(*data, **effects)
+
+
+def test_version_on_historical_empty_tuple_is_rejected(effect_records):
+    data, effects, _receipt = effect_records
+    data[5][0].order_effect_version = 1
     with pytest.raises(QuoteIntegrityError):
         reconstruct(*data, **effects)
 
@@ -282,8 +291,8 @@ def test_foreign_cursor_is_refused_without_materializing_its_payload(database):
             if isinstance(instance, ChangeRecord) and instance.cursor == foreign_cursor:
                 materialized.append(instance)
 
-        def effects(order, ledger, fresh):
-            own = transition_effects(session, order, ledger, fresh)
+        def effects(prepared):
+            own = transition_effects(session, prepared)
             return replace(own, change_cursor=foreign_cursor)
 
         event.listen(session, "loaded_as_persistent", observe)
@@ -321,7 +330,7 @@ def test_application_decision_requires_complete_effects(database):
         admitted(session)
         QuoteRepository(session).apply(creation(), recorded_at=NOW)
         with pytest.raises(QuoteConflictError):
-            apply_decision(session, lambda order, ledger, fresh: None)
+            apply_decision(session, lambda prepared: None)
         assert effect_counts(session) == (0, 0, 0, 1)
 
 
@@ -336,9 +345,9 @@ def test_late_checkpoint_rolls_back_effects_without_integrity_normalization(data
         admitted(session)
         QuoteRepository(session).apply(creation(), recorded_at=NOW)
 
-        def effects(order, ledger, fresh):
+        def effects(prepared):
             nonlocal expired
-            result = transition_effects(session, order, ledger, fresh)
+            result = transition_effects(session, prepared)
             expired = True
             return result
 
@@ -347,7 +356,8 @@ def test_late_checkpoint_rolls_back_effects_without_integrity_normalization(data
                 decision(),
                 recorded_at=NOW,
                 admit_new=accept,
-                apply_effects=effects,
+                prepare_effects=prepare_effects,
+                persist_effects=effects,
                 checkpoint=checkpoint,
             )
         assert effect_counts(session) == (0, 0, 0, 1)
@@ -389,7 +399,8 @@ def test_replay_after_later_cancellation_retains_original_transition(database):
     with Session(database) as session:
         admitted(session)
         replay = QuoteRepository(session)._apply_application(
-            decision(), recorded_at=NOW + timedelta(days=2), admit_new=refuse, apply_effects=refuse
+            decision(), recorded_at=NOW + timedelta(days=2), admit_new=refuse,
+            prepare_effects=refuse, persist_effects=refuse,
         )
         assert replay.replayed and replay.receipt == original.receipt
         assert (replay.order.state, replay.order.version) == ("CANCELLED", 3)

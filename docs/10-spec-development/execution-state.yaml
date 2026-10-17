@@ -1,5 +1,52 @@
 schema: 1
 
+bounded_effects_static_20261017:
+  status: prepared_pending_exact_review_and_run
+  fixed_commands: 6
+  source_paths: 38
+  production_type_roots: 13
+  shared_workload_seconds: 20
+  product_snapshot_tree: 89b919583d2d0e60883898e973740abd42404be3
+  database_usage: unused_environment_overhead
+  runtime_tests: unrun
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-static.md
+
+bounded_quote_effects_joint_20261017:
+  status: source_reviewed_tests_unexecuted
+  base_commit: 9c07e2249fedd59462e00d9a1b44652709b05e2e
+  base_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
+  selected_schema_revision: "0013"
+  effect_version: 1
+  current_source_octet_limit: 262144
+  canonical_projection_octet_limit: 262144
+  each_raw_copy_octet_limit: 1048576
+  raw_submission: measured_text_bind_postgresql_json_cast
+  generic_legacy_payloads: preserved_without_global_cap
+  historical_quote_only: null_version_no_invented_effect
+  populated_old_receipts: refuse_before_migration_ddl
+  migration_rollback_restore: pending_separate_evidence
+  activation: unavailable
+  evidence: docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md
+
+postgresql_0012_verified_20261017:
+  qualification_run: 39053813148
+  qualification_artifact: 12108926137
+  artifact_sha256: 1914213c319edc078b6f34566b26c502d4e7eeb2f2632cdef75f938a26339e31
+  source_commit: 9c07e2249fedd59462e00d9a1b44652709b05e2e
+  source_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
+  result: six_cases_eighteen_ordered_phases_passed
+  actual_postgresql_schemas: 4
+  server_version: "18.4"
+  driver: psycopg_3_3_4
+  schema_revision: "0012"
+  workload_seconds: 4.316
+  worker_peak_bytes: 99504128
+  database_peak_bytes: 109645824
+  canary_and_both_absence_receipts: independently_verified
+  prior_failed_run_preserved: 39053071575
+  focused_fake_and_guard_regressions: not_selected_unrun
+  concurrency_restore_capacity: not_qualified
+
 quote_postgresql_settings_result_correction_20261017:
   status: prepared_pending_exact_review_and_execution
   preserved_failed_run: 39053071575

@@ -9,18 +9,66 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from cycling_workshop.events.models import OutboxRecord
 from cycling_workshop.quotes.commands import QuoteRepositoryCommand, RecordQuoteDecisionCommand
 from cycling_workshop.quotes.models import QuoteOperationRecord
 from cycling_workshop.quotes.storage import (
     _id,
     _integer,
-    _json,
-    _mapping,
     canonical_bytes,
 )
-from cycling_workshop.service_orders.models import ServiceOrderEventRecord
-from cycling_workshop.sync.models import ChangeRecord
+from cycling_workshop.service_orders.domain import TransitionResult
+from cycling_workshop.sync.order_projection_integrity import (
+    PreparedOrderProjection,
+    decode_order_projection,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedQuoteOrderEffect:
+    """Private pure result; created only inside the locked application call."""
+
+    transition: TransitionResult
+    projection: PreparedOrderProjection
+
+
+@dataclass
+class OrderEffectEvent:
+    event_id: str
+    organization_id: str
+    order_id: str
+    from_state: str
+    to_state: str
+    action: str
+    actor_id: str
+    note_is_null: bool
+    occurred_at: datetime
+
+
+@dataclass
+class OrderEffectChange:
+    cursor: int
+    organization_id: str
+    location_id: str
+    entity_type: str
+    entity_id: str
+    operation: str
+    entity_version: int
+    occurred_at: datetime
+    raw_json: str
+    raw_octets: int
+
+
+@dataclass
+class OrderEffectOutbox:
+    event_id: str
+    event_type: str
+    aggregate_type: str
+    aggregate_id: str
+    organization_id: str
+    location_id: str
+    occurred_at: datetime
+    raw_json: str
+    raw_octets: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +82,7 @@ class QuoteOrderEffects:
         for value in (self.order_event_id, self.order_outbox_id):
             canonical_bytes(value)
             _id(value)
-        _integer(self.resulting_order_version, 1)
+        _integer(self.resulting_order_version, 1, 2147483647)
         _integer(self.change_cursor, 1)
 
 
@@ -45,15 +93,19 @@ def _order_effects(operation: QuoteOperationRecord) -> QuoteOrderEffects | None:
         operation.change_cursor,
         operation.order_outbox_id,
     )
-    if all(value is None for value in values):
+    version = operation.order_effect_version
+    if all(value is None for value in values) and version is None:
         return None
     if (
-        operation.order_event_id is None
+        type(version) is not int
+        or version != 1
+        or operation.kind != "decision"
+        or operation.order_event_id is None
         or operation.resulting_order_version is None
         or operation.change_cursor is None
         or operation.order_outbox_id is None
     ):
-        raise ValueError("order effect receipt must be complete or absent")
+        raise ValueError("order effect receipt requires supported version and complete tuple")
     return QuoteOrderEffects(
         operation.order_event_id,
         operation.resulting_order_version,
@@ -84,9 +136,9 @@ def _validate_order_effects(
     command: QuoteRepositoryCommand,
     recorded_at: datetime,
     quote_outbox_id: str,
-    event: ServiceOrderEventRecord,
-    change: ChangeRecord,
-    outbox: OutboxRecord,
+    event: OrderEffectEvent,
+    change: OrderEffectChange,
+    outbox: OrderEffectOutbox,
 ) -> None:
     """Validate actual linked rows, independently of today's mutable order row."""
     # A typed value is not itself proof: recheck scalars even if a caller used
@@ -116,6 +168,8 @@ def _validate_order_effects(
     action, target = (
         ("reject", "REJECTED") if proof.outcome == "REJECT" else ("authorize", "AUTHORIZED")
     )
+    if type(event.note_is_null) is not bool:
+        raise ValueError("order event nullness requires an exact boolean")
     if (
         event.event_id,
         event.organization_id,
@@ -124,7 +178,7 @@ def _validate_order_effects(
         event.to_state,
         event.action,
         event.actor_id,
-        event.note,
+        event.note_is_null,
         _utc(event.occurred_at),
     ) != (
         effects.order_event_id,
@@ -134,7 +188,7 @@ def _validate_order_effects(
         target,
         action,
         command.actor_id,
-        None,
+        True,
         recorded_at,
     ):
         raise ValueError("order event disagrees with quote receipt")
@@ -160,19 +214,11 @@ def _validate_order_effects(
         recorded_at,
     ):
         raise ValueError("order change disagrees with quote receipt")
-    # This is the existing generic order projection, not a quote logical record.
-    # Preserve its strict strings/nullable strings and existing JSON shape;
-    # do not charge it to, or impose, the quote financial-record byte budget.
-    payload = _mapping(
-        _json(change.payload),
-        "order_id customer_id bicycle_id organization_id location_id state reported_problem "
-        "intake_condition accessories priority diagnosis created_at updated_at version",
-    )
-    for name in ("order_id", "customer_id", "organization_id", "location_id"):
-        _id(payload[name])
-    if payload["bicycle_id"] is not None:
-        _id(payload["bicycle_id"])
-    _integer(payload["version"], 1)
+    # The only linked-source representation is guarded raw Text. Never accept
+    # an ORM-decoded payload that has already lost duplicate keys/number lexemes.
+    change_projection = decode_order_projection(change.raw_json, stored_octets=change.raw_octets)
+    outbox_projection = decode_order_projection(outbox.raw_json, stored_octets=outbox.raw_octets)
+    payload = change_projection.payload
     if (
         payload["order_id"],
         payload["customer_id"],
@@ -191,12 +237,6 @@ def _validate_order_effects(
         recorded_at,
     ) or _projection_time(payload["created_at"]) > recorded_at:
         raise ValueError("order projection disagrees with initial transition")
-    for name in ("reported_problem", "priority"):
-        if type(payload[name]) is not str:
-            raise ValueError("order projection text required")
-    for name in ("intake_condition", "accessories", "diagnosis"):
-        if payload[name] is not None and type(payload[name]) is not str:
-            raise ValueError("order projection nullable text required")
     if (
         outbox.event_id,
         outbox.event_type,
@@ -213,5 +253,5 @@ def _validate_order_effects(
         command.organization_id,
         command.location_id,
         recorded_at,
-    ) or canonical_bytes(outbox.payload) != canonical_bytes(payload):
+    ) or outbox_projection.canonical_utf8 != change_projection.canonical_utf8:
         raise ValueError("order outbox disagrees with retained change")

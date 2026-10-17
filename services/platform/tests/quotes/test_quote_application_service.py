@@ -68,6 +68,9 @@ def test_create_decide_replay_commits_one_complete_tuple(database, actors):
         assert effects["kind"] == "order_transition"
         assert effects["resulting_order_version"] == 2
         assert effects["quote_outbox_id"] != effects["order_outbox_id"]
+        assert list(session.scalars(select(QuoteOperationRecord.order_effect_version).order_by(
+            QuoteOperationRecord.ordinal
+        ))) == [None, 1]
         assert applied["order"]["state"] == "AUTHORIZED"
         before = totals(session)
         session.rollback()
@@ -112,6 +115,7 @@ def test_historical_quote_only_decision_replay_does_not_invent_transition(databa
         assert replay["receipt"]["effects"]["kind"] == "quote_only"
         assert replay["order"]["state"] == "DIAGNOSIS"
         assert totals(session) == (2, 0, 0, 2)
+        assert list(session.scalars(select(QuoteOperationRecord.order_effect_version))) == [None, None]
 
 
 def test_response_failure_rolls_back_all_decision_effects(database, actors, monkeypatch):
@@ -212,14 +216,14 @@ def test_expiry_after_order_effect_flush_rolls_back_outer_transaction(
         before = totals(session)
         session.rollback()
         clock = [0.0]
-        original = service.append_change
+        original = service._append_prepared_order_change
 
         def append_then_expire(*args, **kwargs):
             result = original(*args, **kwargs)
             clock[0] = 9.0
             return result
 
-        monkeypatch.setattr(service, "append_change", append_then_expire)
+        monkeypatch.setattr(service, "_append_prepared_order_change", append_then_expire)
         with pytest.raises(QuoteServiceError, match="quote_request_unavailable"):
             execute(
                 session,

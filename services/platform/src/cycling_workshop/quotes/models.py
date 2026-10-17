@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
+    SmallInteger,
     String,
     UniqueConstraint,
 )
@@ -373,6 +374,15 @@ class QuoteOperationRecord(Base):
             name="ck_quote_operation_order_effects",
         ),
         CheckConstraint(
+            "(order_event_id IS NULL AND resulting_order_version IS NULL AND "
+            "change_cursor IS NULL AND order_outbox_id IS NULL AND order_effect_version IS NULL) "
+            "OR (kind = 'decision' AND order_event_id IS NOT NULL AND "
+            "resulting_order_version IS NOT NULL AND change_cursor IS NOT NULL AND "
+            "order_outbox_id IS NOT NULL AND order_effect_version IS NOT NULL AND "
+            "order_effect_version = 1)",
+            name="ck_quote_operation_effect_version",
+        ),
+        CheckConstraint(
             _range("resulting_order_version", 1), name="ck_quote_operation_order_version"
         ),
         CheckConstraint(_range("change_cursor", 1), name="ck_quote_operation_cursor"),
@@ -402,6 +412,7 @@ class QuoteOperationRecord(Base):
         String(36), ForeignKey("service_order_events.event_id", ondelete="RESTRICT"), nullable=True
     )
     resulting_order_version: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    order_effect_version: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     change_cursor: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("sync_changes.cursor", ondelete="RESTRICT"), nullable=True
     )

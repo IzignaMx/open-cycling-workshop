@@ -1,5 +1,18 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Joint bounded quote-effects candidate · 2026-10-17
+
+- [x] Independently verify six corrected PostgreSQL 0012 cases in run 39053813148.
+- [x] Review the joint bounded full-integrity design and exact raw-bind seam.
+- [x] Implement and independently review versioning, admission and full payload validation.
+- [ ] Execute focused regressions, static checks and finite genuine PostgreSQL 0013 cases.
+- [ ] Verify valid historical 0012 migration/replay and refusal of unsupported old effects.
+- [ ] Separately prove DDL rollback and logical restore with exact retained effects.
+- [ ] Complete broader integration, concurrency and capacity gates before activation.
+- [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
+  Earlier preparation entries are historical checkpoints, not current completion claims.
+
+
 ## PostgreSQL settings-result correction · 2026-10-17
 
 - [x] Preserve and independently review failed run `39053071575` and cleanup.

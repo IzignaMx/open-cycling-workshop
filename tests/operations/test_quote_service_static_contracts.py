@@ -50,7 +50,7 @@ COMMANDS = (
         "--show-column-numbers",
         "--no-error-summary",
         "--show-error-codes",
-        *STATIC_PATHS[:6],
+        *(path for path in STATIC_PATHS if path.startswith("services/platform/src/")),
     ),
     (PYTHON, "scripts/contracts/export_openapi.py", "--check"),
     (PYTHON, "scripts/contracts/generate_ts_client.py", "--check"),

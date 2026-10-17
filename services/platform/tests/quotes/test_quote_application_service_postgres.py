@@ -1,4 +1,4 @@
-"""Four unchanged service bodies on genuine, isolated PostgreSQL schema 0012.
+"""Four unchanged service bodies on genuine, isolated PostgreSQL schema 0013.
 
 This finite bridge does not qualify concurrency, restore or maximum capacity.
 """
@@ -50,7 +50,7 @@ def postgres_identity(database, request):
         assert search_path == schema
         assert type(version) is int and version == 180004
         assert server_encoding == client_encoding == "UTF8"
-        assert revision == "0012"
+        assert revision == "0013"
     assert connection.closed
     request.node.user_properties.append(
         (

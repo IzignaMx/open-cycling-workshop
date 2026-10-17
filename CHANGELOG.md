@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased · Joint bounded-effects static qualification preparation
+
+- Reuse the proven six-command contained profile across 38 Python paths and 13 type roots.
+- Product/migration/test sources match the separately reviewed joint snapshot;
+  actual checks and all new runtime evidence remain pending.
+- [Fixed scope](docs/10-spec-development/2026-10-17-bounded-effects-static.md).
+
+## Unreleased · Bounded versioned quote-order effects preparation
+
+- Close the corrected PostgreSQL-0012 workload on `9c07e224`, run `39053813148`:
+  six cases, 18 phases, four real schema identities and verified cleanup.
+- Reconcile schema0013 with complete effect reconstruction, bounded full order
+  projection validation and measured raw JSON persistence. Source implementation is independently reviewed; tests remain unexecuted.
+- Preserve legacy generic data and historical quote-only replay. Refuse unsupported
+  populated old receipts before migration DDL; no guessed provenance or truncation.
+- Migration, rollback, restore, broader checks and activation remain pending.
+  [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
+
 ## Unreleased · PostgreSQL settings-result correction
 
 - Preserve failed PostgreSQL run `39053071575`: two DTO passes, first PG call

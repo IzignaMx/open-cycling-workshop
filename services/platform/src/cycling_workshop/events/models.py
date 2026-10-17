@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Index, Integer, String
+from sqlalchemy import JSON, BigInteger, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cycling_workshop.db.base import Base
+from cycling_workshop.db.order_payload_size import OrderPayloadRawOctets
 
 
 class OutboxRecord(Base):
@@ -22,6 +23,9 @@ class OutboxRecord(Base):
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
     location_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    order_payload_raw_octets: Mapped[int | None] = mapped_column(
+        BigInteger, OrderPayloadRawOctets("aggregate_type"), nullable=True
+    )
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

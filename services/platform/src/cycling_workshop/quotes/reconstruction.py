@@ -32,6 +32,9 @@ from cycling_workshop.quotes.decisions import (
 )
 from cycling_workshop.quotes.domain import Quote
 from cycling_workshop.quotes.effects import (
+    OrderEffectChange,
+    OrderEffectEvent,
+    OrderEffectOutbox,
     QuoteOrderEffects,
     _order_effects,
     _validate_order_effects,
@@ -60,8 +63,6 @@ from cycling_workshop.quotes.storage import (
     encode_quote,
     validate_storage_ledger,
 )
-from cycling_workshop.service_orders.models import ServiceOrderEventRecord
-from cycling_workshop.sync.models import ChangeRecord
 
 
 class QuoteIntegrityError(ValueError):
@@ -335,9 +336,9 @@ def reconstruct(
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
     *,
-    order_events: Sequence[ServiceOrderEventRecord] = (),
-    changes: Sequence[ChangeRecord] = (),
-    order_outboxes: Sequence[OutboxRecord] = (),
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
 ) -> QuoteSnapshot:
     return _reconstruct_with_bytes(
         lineage,
@@ -362,9 +363,9 @@ def _reconstruct_with_bytes(
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
     *,
-    order_events: Sequence[ServiceOrderEventRecord] = (),
-    changes: Sequence[ChangeRecord] = (),
-    order_outboxes: Sequence[OutboxRecord] = (),
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
     checkpoint: Callable[[], None] = _noop,
 ) -> tuple[QuoteSnapshot, int]:
     try:
@@ -394,9 +395,9 @@ def _reconstruct(
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
     *,
-    order_events: Sequence[ServiceOrderEventRecord] = (),
-    changes: Sequence[ChangeRecord] = (),
-    order_outboxes: Sequence[OutboxRecord] = (),
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
     checkpoint: Callable[[], None] = _noop,
 ) -> tuple[QuoteSnapshot, int]:
     checkpoint()
@@ -412,6 +413,8 @@ def _reconstruct(
         raise ValueError("every result requires one operation and quote outbox")
     effects = [_order_effects(operation) for operation in operations]
     effect_count = sum(effect is not None for effect in effects)
+    if effect_count > 1:
+        raise ValueError("a lineage may own only one initial order transition")
     if any(len(rows) != effect_count for rows in (order_events, changes, order_outboxes)):
         raise ValueError("every order effect requires exactly one retained source row")
     order_event_map = {row.event_id: row for row in order_events}

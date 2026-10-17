@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import psycopg
-from sqlalchemy import event, select, text
+from sqlalchemy import event, select, text, update
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -37,10 +37,11 @@ from cycling_workshop.quotes.decisions import (
     plan_initial_transition,
 )
 from cycling_workshop.quotes.domain import LaborLine, PartLine
-from cycling_workshop.quotes.effects import QuoteOrderEffects
+from cycling_workshop.quotes.effects import PreparedQuoteOrderEffect, QuoteOrderEffects
 from cycling_workshop.quotes.reads import CurrentLineage, PricingSummary, QuoteReadError
 from cycling_workshop.quotes.reconstruction import QuoteIntegrityError, QuoteSnapshot
 from cycling_workshop.quotes.repository import (
+    LockedQuoteOrder,
     QuoteConflictError,
     QuoteRepository,
     QuoteRepositoryResult,
@@ -54,10 +55,52 @@ from cycling_workshop.quotes.responses import (
     Receipt,
     encode_command_response,
 )
+from cycling_workshop.service_orders.domain import ServiceOrder
 from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
 from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
+from cycling_workshop.sync.order_projection_integrity import encode_order_projection
 from cycling_workshop.sync.projections import order_payload
-from cycling_workshop.sync.writes import append_change, lock_writer
+from cycling_workshop.sync.writes import _append_prepared_order_change, lock_writer
+
+
+def _persist_order_effect(
+    session: Session, prepared: PreparedQuoteOrderEffect
+) -> QuoteOrderEffects:
+    """Persist a privately prepared transition without a full-row ORM fallback."""
+    transition = prepared.transition
+    order = transition.order
+    updated = session.execute(
+        update(ServiceOrderRecord)
+        .where(
+            ServiceOrderRecord.id == order.order_id,
+            ServiceOrderRecord.organization_id == order.organization_id,
+            ServiceOrderRecord.location_id == order.location_id,
+            ServiceOrderRecord.state == transition.event.from_state,
+            ServiceOrderRecord.version == order.version - 1,
+        )
+        .values(state=order.state, version=order.version, updated_at=order.updated_at)
+        .returning(ServiceOrderRecord.id)
+        .execution_options(synchronize_session=False)
+    ).scalar_one_or_none()
+    if updated != order.order_id:
+        raise QuoteConflictError("order cursor changed before transition")
+    # add_event has no order read; save()/session.get() are deliberately absent.
+    SqlAlchemyServiceOrderRepository(session).add_event(transition.event)
+    change = _append_prepared_order_change(
+        session,
+        organization_id=order.organization_id,
+        location_id=order.location_id,
+        entity_id=order.order_id,
+        entity_version=order.version,
+        occurred_at=order.updated_at,
+        projection=prepared.projection,
+    )
+    return QuoteOrderEffects(
+        transition.event.event_id,
+        order.version,
+        change.cursor,
+        change.outbox_event_id,
+    )
 
 
 class QuoteServiceError(Exception):
@@ -229,27 +272,21 @@ class QuoteService:
                 raise QuoteServiceError("quote_request_unavailable")
             recorded_at = recorded_at.astimezone(UTC)
 
-            def admit_new(order: ServiceOrderRecord, snapshot: QuoteSnapshot | None) -> None:
+            def admit_new(order: LockedQuoteOrder, snapshot: QuoteSnapshot | None) -> None:
                 deadline.check()
                 if not self.commands_enabled:
                     raise QuoteServiceError("quote_commands_unavailable")
                 self._admit_new(command, order, snapshot)
                 deadline.check()
 
-            def apply_effects(
-                order: ServiceOrderRecord,
+            def prepare_effects(
+                previous: ServiceOrder,
                 ledger: QuoteDecisionLedger,
-                decision: QuoteDecisionResult | None,
-            ) -> QuoteOrderEffects | None:
+                decision: QuoteDecisionResult,
+            ) -> PreparedQuoteOrderEffect:
                 deadline.check()
                 if not isinstance(command, RecordQuoteDecisionCommand):
-                    if decision is not None:
-                        raise QuoteIntegrityError("unexpected revision decision result")
-                    return None
-                if decision is None:
-                    raise QuoteIntegrityError("missing fresh decision result")
-                orders = SqlAlchemyServiceOrderRepository(self.session)
-                previous = orders._to_domain(order)
+                    raise QuoteIntegrityError("unexpected revision decision result")
                 plan = plan_initial_transition(ledger=ledger, order=previous, result=decision)
                 if (
                     plan.order_id,
@@ -276,32 +313,22 @@ class QuoteService:
                     now=recorded_at,
                 )
                 deadline.check()
-                orders.save(transition.order)
-                orders.add_event(transition.event)
-                change = append_change(
-                    self.session,
-                    organization_id=command.organization_id,
-                    location_id=command.location_id,
-                    entity_type="service_order",
-                    entity_id=command.order_id,
-                    operation="update",
-                    entity_version=transition.order.version,
-                    occurred_at=recorded_at,
-                    payload=order_payload(transition.order),
-                )
+                projection = encode_order_projection(order_payload(transition.order))
                 deadline.check()
-                return QuoteOrderEffects(
-                    transition.event.event_id,
-                    transition.order.version,
-                    change.cursor,
-                    change.outbox_event_id,
-                )
+                return PreparedQuoteOrderEffect(transition, projection)
+
+            def persist_effects(prepared: PreparedQuoteOrderEffect) -> QuoteOrderEffects:
+                deadline.check()
+                result = _persist_order_effect(self.session, prepared)
+                deadline.check()
+                return result
 
             result = QuoteRepository(self.session)._apply_application(
                 command,
                 recorded_at=recorded_at,
                 admit_new=admit_new,
-                apply_effects=apply_effects,
+                prepare_effects=prepare_effects,
+                persist_effects=persist_effects,
                 checkpoint=deadline.check,
             )
             deadline.check()
@@ -409,7 +436,7 @@ class QuoteService:
     def _admit_new(
         self,
         command: QuoteRepositoryCommand,
-        order: ServiceOrderRecord,
+        order: LockedQuoteOrder,
         snapshot: QuoteSnapshot | None,
     ) -> None:
         if order.state != "DIAGNOSIS" or (snapshot is not None and snapshot.ledger.entries):
