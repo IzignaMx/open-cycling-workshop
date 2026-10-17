@@ -1297,3 +1297,101 @@ def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_err
     monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "absent" / "report.json"))
     with pytest.raises(FileNotFoundError):
         module.ServiceReportHook().pytest_sessionfinish(session, 4)
+
+
+# Review-only additions for a future ordinary contained test selection. These are
+# deliberately not extra execution nodes in the six-tool static/contracts gate.
+def static_failure_summary():
+    return {
+        "schema": 1, "tool": 1, "kind": 1, "returncode": 1, "output_bytes": 100,
+        "omitted": 0, "unparsed_lines": 1,
+        "diagnostics": [{"path": module.STATIC_PATHS[0], "line": 12, "rule": "E501"}],
+    }
+
+
+def static_protocol_summary():
+    return {
+        "schema": 1, "stage": 3, "session_exitstatus": 1, "collection_count": 6,
+        "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
+        "report_count": 6, "setup_reports": 2, "call_reports": 2,
+        "teardown_reports": 2, "failed_reports": 1, "skipped_reports": 0,
+    }
+
+
+def static_failure_marker(value=None):
+    import json
+
+    value = static_failure_summary() if value is None else value
+    return module.STATIC_FAILURE_MARKER + json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("ascii") + b"\n"
+
+
+def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
+    good = static_failure_summary()
+    protocol = static_protocol_summary()
+    assert module.static_failure_diagnostic(static_failure_marker(), failure=protocol) == good
+    for change in (
+        {"stage": 2}, {"call_reports": 1}, {"teardown_reports": 1},
+        {"failed_reports": 2}, {"collection_count": 5}, {"session_exitstatus": 2},
+        {"protocol_errors": 1}, {"unhandled_errors": 1}, {"schema": True},
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(static_failure_marker(), failure=protocol | change)
+    for change in (
+        {"schema": True}, {"tool": -1}, {"tool": 6}, {"tool": True}, {"kind": 0},
+        {"kind": 5}, {"returncode": 0}, {"returncode": True}, {"returncode": None},
+        {"returncode": 256}, {"output_bytes": module.LIMIT}, {"output_bytes": -1},
+        {"output_bytes": True}, {"omitted": 1}, {"unparsed_lines": module.LIMIT + 1},
+        {"message": "private"}, {"diagnostics": good["diagnostics"] * 13},
+        {"diagnostics": good["diagnostics"] * 2},
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)
+    for change in (
+        {"path": "../secret"}, {"path": "/app/" + module.STATIC_PATHS[0]},
+        {"path": module.STATIC_PATHS[0] + "\n"}, {"path": "private"},
+        {"line": True}, {"line": -1}, {"line": 1_000_001},
+        {"rule": "E999999"}, {"rule": "private-word"}, {"rule": "E501\x00"},
+        {"message": "private"},
+    ):
+        bad = good | {"diagnostics": [good["diagnostics"][0] | change]}
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(static_failure_marker(bad), failure=protocol)
+
+
+def test_static_failure_marker_rejects_duplicate_nonfinite_truncated_and_oversize_bytes():
+    marker = static_failure_marker()
+    for bad in (
+        b"", marker + marker, marker[:-1], b"x" + marker,
+        marker.replace(b'"schema":1', b'"schema":1,"schema":1'),
+        marker.replace(b'"output_bytes":100', b'"output_bytes":NaN'),
+        marker.replace(b'"output_bytes":100', b'"output_bytes":Infinity'),
+        marker.replace(b'"output_bytes":100', b'"output_bytes":100.0'),
+        marker.replace(b'"schema":1', b'"schema": 1'),
+        module.STATIC_FAILURE_MARKER + b" " * module.STATIC_FAILURE_LIMIT + b"\n",
+        b" " * module.LIMIT + marker,
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(bad, failure=static_protocol_summary())
+
+
+def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
+    good = static_failure_summary()
+    protocol = static_protocol_summary()
+    for change in (
+        {"kind": 2, "returncode": -9},
+        {"kind": 3, "returncode": -25, "output_bytes": module.LIMIT},
+        {"kind": 4, "returncode": None, "output_bytes": 0,
+         "diagnostics": [], "unparsed_lines": 0},
+    ):
+        value = good | change
+        assert module.static_failure_diagnostic(
+            static_failure_marker(value), failure=protocol,
+        ) == value
+    for change in (
+        {"kind": 3}, {"kind": 4},
+        {"kind": 4, "returncode": None, "output_bytes": 0},
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased · Fixed service static and contract preparation
+
+- Record independently accepted semantic run `39043072145` on `a9450392`: six
+  exact tests, 18 ordered passing phases, zero errors/skips and both final
+  absence receipts; the post-append clock assertion executed successfully.
+- Prepare six real fixed tool commands: repository check, touched Python lint
+  and format, strict touched-production mypy, mounted OpenAPI freshness and
+  generated TypeScript-file freshness. Every tool remains unexecuted here.
+- Retain the same contained mechanism, 20-second workload and resource ceilings;
+  add only closed first-failure path/line/enumerated-rule diagnostics from the
+  existing post-stop/reap capped spool, fixed wrappers and explicit image inputs.
+- Preserve all product/schema/lock/config/contract bytes and consumed workflows.
+  Exact source review and separate publication remain pending; no deployment,
+  schema 0013, broad-suite, TypeScript-compilation or activation claim is made.
+- Scope: [static and contract preparation](docs/10-spec-development/2026-10-17-quote-service-static-contracts.md).
+
 ## Unreleased · Fixed service semantic qualification prepared
 
 - Record independently accepted corrected run `39041920516` on `65e2e69d`:

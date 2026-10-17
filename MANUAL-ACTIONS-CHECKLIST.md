@@ -1,5 +1,23 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Fixed service static and contract gate · 2026-10-17
+
+- [x] Independently accept [semantic run 39043072145](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39043072145)
+      on `a9450392`/tree `3f9b851f`: six tests, 18 passing ordered phases, zero
+      errors/skips, exact source/resource evidence and both absence receipts.
+- [ ] Review the new fixed six-tool source, strict failure-only marker/parser,
+      exact image additions, unchanged resource ceilings and wrapper assertions.
+- [ ] After acceptance, make a fresh remote-parent/trigger preflight and separate
+      one-shot publication decision for `codex/quote-service-static-contracts`.
+- [ ] Obtain actual static/contracts results for every exact command. A first
+      failed tool stops later nodes; report them as unrun. No local check ran.
+- [ ] Retain all broader semantics, PostgreSQL, schema/version, hard deadline,
+      exposed API/UI, capacity, restore, physical/operator and activation gates.
+- All prior consumed workflows and their source-bound results are preserved.
+  TypeScript freshness is not compilation; mounted OpenAPI freshness is not
+  new-service exposure qualification. [Exact prepared scope](docs/10-spec-development/2026-10-17-quote-service-static-contracts.md).
+  Earlier pending blocks below are historical preparation checkpoints.
+
 ## Fixed service semantic qualification · 2026-10-17
 
 - [x] Independently accept [corrected run 39041920516](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041920516):

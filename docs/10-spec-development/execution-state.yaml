@@ -1,7 +1,74 @@
 schema: 1
 
-quote_service_semantic_qualification_20261017:
+quote_service_static_contracts_20261017:
   status: prepared_pending_exact_independent_review_unexecuted_unpublished
+  base_commit: a945039247decaec4f00fe3a04d125ba2d238208
+  base_tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
+  local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  workflow: .github/workflows/quote-service-static-contracts.yml
+  branch: codex/quote-service-static-contracts
+  required_run_number: 1
+  required_run_attempt: 1
+  selector: fixed_six_real_static_and_contract_commands
+  lint_format_exact_paths: 19
+  strict_mypy_production_roots: 6
+  strict_mypy_import_following: unchanged_no_skip_or_ignored_errors
+  tool_time_ceiling_seconds: [2, 3, 3, 12, 3, 2]
+  shared_workload_ceiling_seconds: 20
+  tool_time_ceiling_sum_is_not_total_allocation: true
+  fail_fast: maxfail_1_later_nodes_unrun_after_first_failure
+  tool_output_limit_bytes: 16384
+  additional_failure_marker_limit_bytes: 4096
+  diagnostic_records_maximum: 12
+  diagnostic_contents: exact_source_path_line_and_enumerated_rule_only_no_messages
+  diagnostic_transport: existing_capped_host_spool_after_verified_stop_and_client_reap
+  numeric_failure_marker_and_failure_status: preserved
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_overhead_cpu: 1
+  database_overhead_memory_mib: 768
+  additional_archived_image_files: 25
+  additional_archived_image_bytes: 246220
+  application_SQLite_files: 0
+  application_PostgreSQL_protocols: 0
+  product_schema_fixtures_locks_configs_contracts: unchanged_schema_0012_no_0013
+  consumed_workflows: byte_identical_not_retried
+  local_import_compile_collection_tests_static_contracts: not_run
+  diagnostic_negative_source_cases: prepared_unrun_not_selected
+  actual_static_contract_results: unavailable_not_yet_executed
+  exposed_service_contract_TypeScript_compilation_broad_suite: not_qualified
+  evidence: docs/10-spec-development/2026-10-17-quote-service-static-contracts.md
+
+quote_service_semantic_verified_20261017:
+  status: verified_exact_six_semantic_cases_only
+  run: 39043072145
+  job: 117426303592
+  run_number: 1
+  run_attempt: 1
+  commit: a945039247decaec4f00fe3a04d125ba2d238208
+  tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
+  artifact: 12104344631
+  artifact_sha256: ce49d2c92a5c8d0d7b8824e55638d84be941145b37bd0b644cc9e0344b6ee424
+  tests_passed: 6
+  ordered_setup_call_teardown_phases_passed: 18
+  failures_skips_collection_protocol_unhandled_errors: 0
+  setup_seconds: 2.538
+  workload_seconds: 5.402
+  supervisor_seconds: 8.360
+  worker_peak_bytes: 103657472
+  database_peak_bytes: 86355968
+  combined_workload_cpu_usec: 5990638
+  actual_controls_canary_final_resources_client_reap_both_absence_receipts: independently_verified
+  late_expiry_post_append_clock_assertion: executed_passed
+  service_failure_path_cancellation_or_diagnostic_transport: not_exercised_by_success
+  broad_service_postgresql_capacity_activation_qualified: false
+  initial_failed_run_preserved: 39039629649
+  initial_failed_run_initiating_exception: unknown_not_recovered
+  evidence: docs/10-spec-development/2026-10-17-quote-service-static-contracts.md
+
+quote_service_semantic_qualification_20261017:
+  current_closure: quote_service_semantic_verified_20261017
+  checkpoint_status: prepared_pending_exact_independent_review_unexecuted_unpublished
   base_commit: 65e2e69df4c2ad134ff2256864e44256fc5d3b3a
   base_tree: 6c5d5d3f2af75f505262901f8099e89f5942f50f
   local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9

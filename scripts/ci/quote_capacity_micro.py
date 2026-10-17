@@ -500,19 +500,102 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 
 SERVICE_NODES = (
-    "services/platform/tests/quotes/test_quote_driver_budgets.py::"
-    "test_raw_driver_budget_failure_has_availability_category",
-    "services/platform/tests/quotes/test_quote_driver_budgets.py::"
-    "test_budget_first_round_trip_can_exhaust_original_deadline",
-    "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_false_flag_denies_new_but_preserves_exact_revision_replay[sqlite]",
-    "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_foreign_actor_and_noncustomer_decision_are_refused[sqlite]",
-    "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_commit_ack_loss_is_unknown_and_same_identity_replays[sqlite]",
-    "services/platform/tests/quotes/test_quote_application_service.py::"
-    "test_expiry_after_order_effect_flush_rolls_back_outer_transaction[sqlite]",
+    'tests/operations/test_quote_service_static_contracts.py::test_repository_contract',
+    'tests/operations/test_quote_service_static_contracts.py::test_python_lint',
+    'tests/operations/test_quote_service_static_contracts.py::test_python_format',
+    'tests/operations/test_quote_service_static_contracts.py::test_production_types',
+    'tests/operations/test_quote_service_static_contracts.py::test_openapi_contract',
+    'tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract',
 )
+
+# Closed diagnostic vocabulary for this fixed static/contracts batch only.
+STATIC_PATHS = (
+    'services/platform/src/cycling_workshop/quotes/effects.py',
+    'services/platform/src/cycling_workshop/quotes/reconstruction.py',
+    'services/platform/src/cycling_workshop/quotes/repository.py',
+    'services/platform/src/cycling_workshop/quotes/responses.py',
+    'services/platform/src/cycling_workshop/quotes/service.py',
+    'services/platform/src/cycling_workshop/sync/writes.py',
+    'services/platform/tests/quotes/test_quote_application_service.py',
+    'services/platform/tests/quotes/test_quote_atomic_effects.py',
+    'services/platform/tests/quotes/test_quote_command_response.py',
+    'services/platform/tests/quotes/test_quote_driver_budgets.py',
+    'services/platform/tests/quotes/test_quote_reconstruction.py',
+    'services/platform/tests/quotes/test_quote_result_codec_once.py',
+    'services/platform/tests/quotes/test_quote_single_pass.py',
+    'scripts/ci/quote_capacity_micro.py',
+    'scripts/ci/quote_collection_regression.py',
+    'scripts/ci/quote_guard_bootstrap.py',
+    'tests/operations/test_quote_capacity_micro.py',
+    'tests/operations/test_quote_service_collection.py',
+    'tests/operations/test_quote_service_static_contracts.py',
+)
+STATIC_REPOSITORY_PATHS = (
+    'LICENSE',
+    'README.md',
+    'CONTRIBUTING.md',
+    'CODE_OF_CONDUCT.md',
+    'SECURITY.md',
+    'GOVERNANCE.md',
+    'MAINTAINERS.md',
+    'ARCHITECTURE.md',
+    'package.json',
+    'pnpm-workspace.yaml',
+    'pyproject.toml',
+    'tsconfig.base.json',
+    '.python-version',
+    '.nvmrc',
+    'apps/web',
+    'services/platform',
+    'packages/ui',
+    'packages/api-client',
+    'packages/plugin-sdk',
+    'packages/branding',
+    'infra/compose',
+    'fixtures/minimal',
+    'fixtures/demo-workshop',
+    'fixtures/load',
+)
+STATIC_RUFF_RULES = frozenset(
+    (
+        "B006 B007 B008 B009 B010 B011 B017 B018 B023 B904 B905 E402 E501 E711 E712 E713 E714 "
+        "E721 E722 E731 F401 F402 F403 F405 F541 F601 F602 F621 F622 F631 F632 F633 F634 F701 "
+        "F702 F704 F706 F707 F811 F821 F822 F823 F841 F901 I001 I002 RUF005 RUF010 RUF012 "
+        "RUF013 RUF015 RUF019 RUF020 RUF022 RUF023 RUF100 SIM102 SIM103 SIM105 SIM108 SIM110 "
+        "SIM115 SIM117 SIM118 SIM201 SIM202 SIM208 SIM210 SIM211 SIM212 UP006 UP007 UP008 UP009 "
+        "UP010 UP015 UP017 UP018 UP024 UP031 UP032 UP034 UP035 UP037 UP038 UP039 UP040 UP041 "
+        "UP042 UP043 UP045"
+    ).split()
+)
+STATIC_MYPY_RULES = frozenset(
+    (
+        "abstract annotation-unchecked arg-type assert-type assignment attr-defined "
+        "await-not-async call-arg call-overload comparison-overlap deprecated dict-item "
+        "empty-body exhaustive-match exit-return explicit-any explicit-override "
+        "func-returns-value has-type ignore-without-code import import-not-found "
+        "import-untyped index list-item literal-required maybe-unrecognized-str-typeform "
+        "metaclass method-assign misc mutable-override name-defined name-match "
+        "narrowed-type-not-subtype no-any-return no-any-unimported no-overload-impl no-redef "
+        "no-untyped-call no-untyped-def nonetype-type operator overload-cannot-match "
+        "overload-overlap override possibly-undefined prop-decorator redundant-cast "
+        "redundant-expr redundant-self return return-value safe-super str-bytes-safe "
+        "str-format str-unpack syntax top-level-await truthy-bool truthy-function "
+        "truthy-iterable type-abstract type-arg type-var typeddict-item "
+        "typeddict-readonly-mutated typeddict-unknown-key unimported-reveal union-attr "
+        "unreachable untyped-decorator unused-awaitable unused-coroutine unused-ignore "
+        "used-before-def valid-newtype valid-type var-annotated"
+    ).split()
+)
+STATIC_ALLOWED_PATHS = (
+    STATIC_REPOSITORY_PATHS, STATIC_PATHS, STATIC_PATHS, STATIC_PATHS[:6],
+    ("packages/api-client/openapi.json",), ("packages/api-client/src/generated.ts",),
+)
+STATIC_ALLOWED_RULES = (
+    frozenset({"missing", "license"}), STATIC_RUFF_RULES, frozenset({"format"}),
+    STATIC_MYPY_RULES, frozenset({"contract"}), frozenset({"contract"}),
+)
+STATIC_FAILURE_MARKER = b"OCWP_STATIC_FAILURE_V1:"
+STATIC_FAILURE_LIMIT = 4096
 SERVICE_REPORT = "/tmp/quote-service-initial-result.json"
 SERVICE_FAILURE_MARKER = b"OCWP_SERVICE_FAILURE_V1:"
 SERVICE_FAILURE_LIMIT = 512
@@ -613,6 +696,76 @@ def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]
         or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
     ):
         raise ProofFailure("service_diagnostic_invalid")
+    return value
+
+
+def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[str, object]:
+    """One bounded source-path/rule summary, bound to the first failed tool protocol."""
+    if type(raw) is not bytes or len(raw) >= LIMIT or raw.count(STATIC_FAILURE_MARKER) != 1:
+        raise ProofFailure("static_diagnostic_invalid")
+    lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(STATIC_FAILURE_MARKER)]
+    if len(lines) != 1 or len(lines[0]) + 1 > STATIC_FAILURE_LIMIT:
+        raise ProofFailure("static_diagnostic_invalid")
+    payload = lines[0][len(STATIC_FAILURE_MARKER):]
+    try:
+        value = json.loads(
+            payload.decode("ascii"), object_pairs_hook=strict_object,
+            parse_constant=reject_constant,
+        )
+    except (ValueError, RecursionError) as error:
+        raise ProofFailure("static_diagnostic_invalid") from error
+    bounds = {
+        "schema": (1, 1), "tool": (0, 5), "kind": (1, 4),
+        "output_bytes": (0, LIMIT), "omitted": (0, LIMIT), "unparsed_lines": (0, LIMIT),
+    }
+    if type(value) is not dict or set(value) != set(bounds) | {"returncode", "diagnostics"}:
+        raise ProofFailure("static_diagnostic_invalid")
+    if any(type(value[k]) is not int or not low <= value[k] <= high
+           for k, (low, high) in bounds.items()):
+        raise ProofFailure("static_diagnostic_invalid")
+    tool, kind, returncode = value["tool"], value["kind"], value["returncode"]
+    if (returncode is not None and
+            (type(returncode) is not int or not -127 <= returncode <= 255)):
+        raise ProofFailure("static_diagnostic_invalid")
+    if (
+        (kind != 4 and returncode is None)
+        or (kind == 1 and (returncode == 0 or value["output_bytes"] == LIMIT))
+        or (kind == 3 and value["output_bytes"] != LIMIT)
+        or (kind == 4 and (returncode is not None or value["output_bytes"] != 0))
+    ):
+        raise ProofFailure("static_diagnostic_invalid")
+    protocols = tool + 1
+    expected = {
+        "schema": 1, "stage": 3, "session_exitstatus": 1, "collection_count": 6,
+        "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
+        "report_count": protocols * 3, "setup_reports": protocols,
+        "call_reports": protocols, "teardown_reports": protocols,
+        "failed_reports": 1, "skipped_reports": 0,
+    }
+    if failure != expected or any(type(v) is not int for v in failure.values()):
+        raise ProofFailure("static_diagnostic_protocol")
+    rows = value["diagnostics"]
+    if type(rows) is not list or len(rows) > 12:
+        raise ProofFailure("static_diagnostic_invalid")
+    seen: set[tuple[str, int, str]] = set()
+    for row in rows:
+        if (
+            type(row) is not dict or set(row) != {"path", "line", "rule"}
+            or type(row["path"]) is not str or row["path"] not in STATIC_ALLOWED_PATHS[tool]
+            or type(row["line"]) is not int or not 0 <= row["line"] <= 1_000_000
+            or type(row["rule"]) is not str or row["rule"] not in STATIC_ALLOWED_RULES[tool]
+        ):
+            raise ProofFailure("static_diagnostic_invalid")
+        key = (row["path"], row["line"], row["rule"])
+        if key in seen:
+            raise ProofFailure("static_diagnostic_invalid")
+        seen.add(key)
+    if (
+        (kind == 4 and (rows or value["omitted"] or value["unparsed_lines"]))
+        or (value["omitted"] and len(rows) != 12)
+        or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
+    ):
+        raise ProofFailure("static_diagnostic_invalid")
     return value
 
 
@@ -1131,9 +1284,17 @@ def supervise(
                             # Local spool only, after whole-workload stop and client
                             # reaping. No extra Docker read or deadline extension.
                             output.seek(0)
-                            report["service_failure_diagnostic"] = service_failure_diagnostic(
-                                output.read(LIMIT), returncode=child.returncode,
+                            failure_output = output.read(LIMIT)
+                            failure_summary = service_failure_diagnostic(
+                                failure_output, returncode=child.returncode,
                             )
+                            report["service_failure_diagnostic"] = failure_summary
+                            try:
+                                report["static_failure_diagnostic"] = static_failure_diagnostic(
+                                    failure_output, failure=failure_summary,
+                                )
+                            except Exception:
+                                report["static_failure_diagnostic"] = "unavailable_or_invalid"
                         except Exception:
                             report["service_failure_diagnostic"] = "unavailable_or_invalid"
         command_deadline = time.monotonic() + 5 if service_initial else started + 900
