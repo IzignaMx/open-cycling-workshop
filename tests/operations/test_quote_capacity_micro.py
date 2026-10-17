@@ -955,6 +955,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             @contextmanager
             def traced_spool(*, temporary_file=temporary_file, calls=calls):
                 with temporary_file() as output:
+
                     def read(limit):
                         calls.append(["spool_read"])
                         assert limit == module.SERVICE_OUTPUT_LIMIT
@@ -1027,9 +1028,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 calls.append(args)
                 if args[:3] == ["git", "--no-optional-locks", "rev-parse"]:
                     return (
-                        ("x" * 40 if fault == "source" else commit)
-                        if args[-1] == "HEAD"
-                        else tree
+                        ("x" * 40 if fault == "source" else commit) if args[-1] == "HEAD" else tree
                     )
                 if args[:3] == ["git", "--no-optional-locks", "status"]:
                     return ""
@@ -1048,7 +1047,7 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 if args[:2] == ["docker", "inspect"]:
                     if "State.Running" in args[3]:
                         return "\n".join(
-                            f'{cid}|{"true" if fault == "cancellation_unknown" else "false"}'
+                            f"{cid}|{'true' if fault == 'cancellation_unknown' else 'false'}"
                             for cid in args[4:]
                         )
                     if fault == "setup_deadline":
@@ -1056,8 +1055,11 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     if "range .Mounts" in args[3]:
                         return "tmpfs /tmp"
                     cid, role = args[-1], containers[args[-1]]
-                    token = next(row[row.index("--label") + 1].split("=")[1] for row in calls
-                                 if row[:2] == ["docker", "create"])
+                    token = next(
+                        row[row.index("--label") + 1].split("=")[1]
+                        for row in calls
+                        if row[:2] == ["docker", "create"]
+                    )
                     network = "container:" + "b" * 64 if role == "worker" else "none"
                     return "|".join((cid, image, token, network, "false", "1", "true"))
                 if args[:2] == ["docker", "kill"]:
@@ -1075,9 +1077,13 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     if launches and fault == "final_deadline":
                         clock[0] = 5.0
                     raw = probe()
-                    return raw.replace("536870912", "805306368").replace(
-                        "---pids.max---\n64", "---pids.max---\n128"
-                    ) if containers[args[2]] == "db" else raw
+                    return (
+                        raw.replace("536870912", "805306368").replace(
+                            "---pids.max---\n64", "---pids.max---\n128"
+                        )
+                        if containers[args[2]] == "db"
+                        else raw
+                    )
                 if args[:2] == ["docker", "rm"]:
                     if fault == "cleanup":
                         raise module.ProofFailure("command_failed")
@@ -1097,16 +1103,25 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
 
             patch.setattr(module, "run", execute)
             patch.setattr(module, "cancellation_canary", canary)
-            patch.setattr(module, "effective_privileges", lambda *a: {
-                "uid": 10001, "effective_capabilities": 0, "no_new_privileges": True,
-            })
+            patch.setattr(
+                module,
+                "effective_privileges",
+                lambda *a: {
+                    "uid": 10001,
+                    "effective_capabilities": 0,
+                    "no_new_privileges": True,
+                },
+            )
             patch.setattr(module, "reconcile_owned", reconcile)
             parser = module.service_failure_diagnostic
 
             def diagnostic(raw, *, returncode, calls=calls, fault=fault, parser=parser):
                 assert any(row[:2] == ["docker", "kill"] for row in calls)
-                stopped = [row for row in calls if row[:2] == ["docker", "inspect"]
-                           and "State.Running" in row[3]]
+                stopped = [
+                    row
+                    for row in calls
+                    if row[:2] == ["docker", "inspect"] and "State.Running" in row[3]
+                ]
                 assert stopped and fault != "cancellation_unknown"
                 if fault in {"workload_deadline", "mid_probe"}:
                     assert ["client_wait"] in calls
@@ -1142,8 +1157,14 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             assert result["cleanup"] == (
                 "failed" if fault in {"cleanup", "create_timeout"} else "verified_absent"
             )
-            if fault in {"fixture_exit", "workload_deadline", "mid_probe", "final_deadline",
-                         "invalid_report", "cancellation_unknown"}:
+            if fault in {
+                "fixture_exit",
+                "workload_deadline",
+                "mid_probe",
+                "final_deadline",
+                "invalid_report",
+                "cancellation_unknown",
+            }:
                 kill = next(i for i, row in enumerate(calls) if row[:2] == ["docker", "kill"])
                 assert calls[kill] == ["docker", "kill", "--signal", "KILL", "c" * 64, "b" * 64]
                 assert kill < calls.index(["reconcile"])
@@ -1156,7 +1177,8 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 assert result["observed_workload_cpu_usec"] == 0
                 assert result["lifetime_cpu_usec"] == 200
                 assert result["environment_overhead_before_workload_cpu_usec"] == {
-                    "db": 100, "worker": 100
+                    "db": 100,
+                    "worker": 100,
                 }
                 assert result["specimen_returncode"] == 0
                 assert not any(row[:2] == ["docker", "kill"] for row in calls)
@@ -1177,15 +1199,19 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             if fault == "fixture_exit" or fault.startswith("diagnostic_"):
                 assert ["diagnostic"] in calls
             if ["spool_read"] in calls:
-                stopped = next(i for i, row in enumerate(calls) if row[:2] == ["docker", "inspect"]
-                               and "State.Running" in row[3])
+                stopped = next(
+                    i
+                    for i, row in enumerate(calls)
+                    if row[:2] == ["docker", "inspect"] and "State.Running" in row[3]
+                )
                 assert stopped < calls.index(["spool_read"]) < calls.index(["diagnostic"])
                 if ["client_wait"] in calls:
                     assert calls.index(["client_wait"]) < calls.index(["spool_read"])
             if ["diagnostic"] in calls:
                 assert calls.index(["diagnostic"]) < calls.index(["reconcile"])
-                assert not any(row[:3] == ["docker", "exec", "c" * 64] and row[3] == "cat"
-                               for row in calls)
+                assert not any(
+                    row[:3] == ["docker", "exec", "c" * 64] and row[3] == "cat" for row in calls
+                )
             assert "private" not in evidence.read_text()
 
 

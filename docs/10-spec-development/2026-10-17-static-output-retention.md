@@ -1,5 +1,24 @@
 # Preserve bounded standard static-tool output
 
+## Actual output retention and observed formatting correction
+
+[Run 39051023447](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39051023447)
+on commit `d15b3ae5f2d45e9a0e22d8b42997218a68427057`, tree
+`848f2ca1eac996265a9eb4de645285825d203e49`, passed repository verification
+and Ruff lint. Format failed; the other three checks were unrun. Artifact
+`12107073435` is 5,785 bytes, SHA-256
+`7b2c0234b5ee2730e24610b95e44a51a6d18bb2699584cdbeb2cd3f0e6f1edf7`.
+
+The V2 receipt retains all 10,420 formatter bytes with `output_truncated=false`.
+It identifies two files requiring formatting and 17 already formatted. The next
+candidate applies only those observed changes in `quote_capacity_micro.py` and
+its operations test: expression wrapping, collection layout and equivalent
+quote spelling. No tool command, mechanism or production behavior changes.
+The exact correction still needs independent review and actual static results.
+
+The earlier preparation account below records the now-executed output mechanism;
+its successful retention is not a passing formatter or complete static gate.
+
 ## Observed formatter gate
 
 [Run 39050280067](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39050280067)

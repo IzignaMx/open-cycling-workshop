@@ -269,7 +269,10 @@ def effective_privileges(
 
 
 def cancellation_canary(
-    cid: str, execute: Callable[..., str] | None = None, *, aggregate_deadline: float | None = None,
+    cid: str,
+    execute: Callable[..., str] | None = None,
+    *,
+    aggregate_deadline: float | None = None,
 ) -> dict[str, int]:
     """Three sleeping Python generations; terminate client before container cleanup."""
     execute = execute or run
@@ -310,9 +313,11 @@ def cancellation_canary(
                 time.sleep(min(0.05, deadline - time.monotonic()))
         os.killpg(client.pid, signal.SIGKILL)
         try:
-            client.wait(timeout=2 if aggregate_deadline is None else max(
-                0, min(2, aggregate_deadline - time.monotonic())
-            ))
+            client.wait(
+                timeout=2
+                if aggregate_deadline is None
+                else max(0, min(2, aggregate_deadline - time.monotonic()))
+            )
         except subprocess.TimeoutExpired:
             raise ProofFailure("canary_client_reap_unverified") from None
         # Prove the exec client's death did not itself clean up the descendants.
@@ -338,9 +343,11 @@ def cancellation_canary(
         if client.poll() is None:
             os.killpg(client.pid, signal.SIGKILL)
             try:
-                client.wait(timeout=2 if aggregate_deadline is None else max(
-                    0, min(2, aggregate_deadline - time.monotonic())
-                ))
+                client.wait(
+                    timeout=2
+                    if aggregate_deadline is None
+                    else max(0, min(2, aggregate_deadline - time.monotonic()))
+                )
             except subprocess.TimeoutExpired:
                 raise ProofFailure("canary_client_reap_unverified") from None
 
@@ -937,9 +944,9 @@ def supervise(
         remaining = command_deadline - time.monotonic()
         if remaining <= 0:
             if service_initial and report["phase"] in {
-            "service_with_pytest_bootstrap",
-            "service_final_readback",
-        }:
+                "service_with_pytest_bootstrap",
+                "service_final_readback",
+            }:
                 cancel_workload()
             raise ProofFailure("wall_budget")
         if service_initial and report["phase"] in {
@@ -1164,7 +1171,8 @@ def supervise(
             if role == "canary":
                 canary_resources = (
                     cancellation_canary(cid, execute, aggregate_deadline=command_deadline)
-                    if service_initial else cancellation_canary(cid, execute)
+                    if service_initial
+                    else cancellation_canary(cid, execute)
                 )
                 report["canary_resources"] = canary_resources
                 cpu_delta(
@@ -1204,14 +1212,17 @@ def supervise(
             snapshots = {
                 role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
                 for cid, role, memory, pids in [
-                    (ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)
+                    (ids[0], "db", 768, 128),
+                    (ids[1], "worker", 512, 64),
                 ]
             }
             if time.monotonic() >= command_deadline:
                 raise ProofFailure("setup_deadline")
-            cpu_delta({"db": 0, "worker": 0}, {
-                role: data["cpu_usec"] for role, data in snapshots.items()
-            }, 60)
+            cpu_delta(
+                {"db": 0, "worker": 0},
+                {role: data["cpu_usec"] for role, data in snapshots.items()},
+                60,
+            )
             report["environment_overhead_before_workload_cpu_usec"] = {
                 role: data["cpu_usec"] for role, data in snapshots.items()
             }
@@ -1230,7 +1241,9 @@ def supervise(
             command_deadline = micro_deadline
             micro_started = time.monotonic()
             child = subprocess.Popen(
-                service_argv(ids[1]) if service_initial else [
+                service_argv(ids[1])
+                if service_initial
+                else [
                     "docker",
                     "exec",
                     ids[1],
@@ -1281,9 +1294,9 @@ def supervise(
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= spool_limit:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
-                report[
-                    "workload_wall_seconds" if service_initial else "micro_wall_seconds"
-                ] = round(time.monotonic() - micro_started, 3)
+                report["workload_wall_seconds" if service_initial else "micro_wall_seconds"] = (
+                    round(time.monotonic() - micro_started, 3)
+                )
             except (ProofFailure, ValueError, OSError):
                 if service_initial:
                     report["service_failure_diagnostic"] = "unavailable_or_invalid"

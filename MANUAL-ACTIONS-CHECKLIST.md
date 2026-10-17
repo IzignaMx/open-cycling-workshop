@@ -1,5 +1,12 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Formatter correction · 2026-10-17
+
+- [x] Recover complete formatter output from run `39051023447`.
+- [ ] Review exact observed changes to the two guard/test files.
+- [ ] Close all six static commands, then finite PostgreSQL-0012 semantics.
+- Earlier preparation sections are historical; no activation is qualified.
+
 ## Static output retention · 2026-10-17
 
 - [x] Preserve run `39050280067`: repository and Ruff lint passed, format failed.

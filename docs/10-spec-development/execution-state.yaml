@@ -1,7 +1,24 @@
 schema: 1
 
-static_output_retention_20261017:
+observed_formatter_correction_20261017:
   status: prepared_pending_review_and_qualification
+  source_commit: d15b3ae5f2d45e9a0e22d8b42997218a68427057
+  source_tree: 848f2ca1eac996265a9eb4de645285825d203e49
+  failed_run: 39051023447
+  artifact: 12107073435
+  repository_and_ruff_lint: passed
+  formatter: failed_two_files_require_layout_changes
+  already_formatted_files: 17
+  retained_output_bytes: 10420
+  output_truncated: false
+  mypy_openapi_client: unrun
+  change: exact_observed_guard_and_test_formatting_only
+  mechanism_and_execution_limits: unchanged
+
+static_output_retention_20261017:
+  status: verified_exact_formatter_output_static_checks_not_qualified
+  qualification_run: 39051023447
+  qualification_artifact: 12107073435
   source_commit: 603f7cd2878f616d34e78b0e825db983d064d1b2
   source_tree: 9c54a8b1b645eb046d540883bae82c3405dd3331
   failed_run: 39050280067

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · Observed formatter corrections
+
+- Preserve complete 10,420-byte formatter output from run `39051023447`,
+  with no truncation: two files require formatting, 17 already conform.
+- Apply only the observed guard/test layout changes. Repository and lint passed;
+  format failed and the three later type/contract checks were unrun.
+- Keep the bounded static mechanism and all previous results unchanged.
+
 ## Unreleased · Direct bounded static output retention
 
 - Record repository and Ruff-lint passes in run `39050280067`, followed by a
