@@ -642,12 +642,18 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
 # separately reviewed bootstrap container, never via the service business mode.
 def service_report():
     return dict(
-        schema=1, nodes=list(module.SERVICE_NODES), collection_count=6,
-        collection_errors=0, unhandled_errors=0, protocol_errors=0,
-        session_finished=True, session_exitstatus=0,
+        schema=1,
+        nodes=list(module.SERVICE_NODES),
+        collection_count=6,
+        collection_errors=0,
+        unhandled_errors=0,
+        protocol_errors=0,
+        session_finished=True,
+        session_exitstatus=0,
         reports=[
             dict(node=node, when=when, outcome="passed", seconds=0.001)
-            for node in module.SERVICE_NODES for when in ("setup", "call", "teardown")
+            for node in module.SERVICE_NODES
+            for when in ("setup", "call", "teardown")
         ],
     )
 
@@ -660,7 +666,9 @@ def test_service_selection_is_closed_and_environment_is_empty():
     assert "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1" in args
     assert "--maxfail=1" in args and "--capture=fd" in args and "addopts=" in args
     assert "no:cacheprovider" in args and "scripts.ci.quote_capacity_micro" in args
-    assert not any("DATABASE" in arg or "PASSWORD" in arg or "PYTEST_ADDOPTS" in arg for arg in args)
+    assert not any(
+        "DATABASE" in arg or "PASSWORD" in arg or "PYTEST_ADDOPTS" in arg for arg in args
+    )
     with pytest.raises(module.ProofFailure):
         module.service_argv("arbitrary-name")
 
@@ -672,9 +680,13 @@ def test_service_report_requires_every_protocol_and_finish():
     good = service_report()
     assert module.service_result(json.dumps(good)) == good
     for field, wrong in (
-        ("schema", True), ("collection_count", 5), ("collection_errors", 1),
-        ("unhandled_errors", 1), ("protocol_errors", 1),
-        ("session_finished", False), ("session_exitstatus", 1),
+        ("schema", True),
+        ("collection_count", 5),
+        ("collection_errors", 1),
+        ("unhandled_errors", 1),
+        ("protocol_errors", 1),
+        ("session_finished", False),
+        ("session_exitstatus", 1),
     ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {field: wrong}))
@@ -684,8 +696,12 @@ def test_service_report_requires_every_protocol_and_finish():
             bad["reports"][index]["outcome"] = outcome
             with pytest.raises(module.ProofFailure):
                 module.service_result(json.dumps(bad))
-    for rows in (good["reports"][:-1], good["reports"] + [good["reports"][0]],
-                 good["reports"][::3], list(reversed(good["reports"]))):
+    for rows in (
+        good["reports"][:-1],
+        [*good["reports"], good["reports"][0]],
+        good["reports"][::3],
+        list(reversed(good["reports"])),
+    ):
         with pytest.raises(module.ProofFailure):
             module.service_result(json.dumps(good | {"reports": rows}))
     for nodes in (good["nodes"][:-1], list(reversed(good["nodes"])), [good["nodes"][0]] * 6):
@@ -702,7 +718,8 @@ def test_service_report_rejects_duplicate_unknown_nonfinite_and_oversize_fields(
     for bad in (
         raw.replace('"schema": 1', '"schema": 1, "schema": 1'),
         raw.replace('"seconds": 0.001', '"seconds": 0.001, "seconds": 0.001', 1),
-        json.dumps(good | {"raw_error": "private"}), " " * module.LIMIT,
+        json.dumps(good | {"raw_error": "private"}),
+        " " * module.LIMIT,
     ):
         with pytest.raises((module.ProofFailure, ValueError)):
             module.service_result(bad)
@@ -738,26 +755,42 @@ def test_service_hook_only_retains_closed_bounded_fields(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
     hook = module.ServiceReportHook()
-    hook.pytest_collection_finish(SimpleNamespace(
-        items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES]
-    ))
+    hook.pytest_collection_finish(
+        SimpleNamespace(items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES])
+    )
     for row in service_report()["reports"]:
-        hook.pytest_runtest_logreport(SimpleNamespace(
-            nodeid=row["node"], when=row["when"], outcome=row["outcome"],
-            duration=row["seconds"], longrepr="private", capstdout="private",
-        ))
+        hook.pytest_runtest_logreport(
+            SimpleNamespace(
+                nodeid=row["node"],
+                when=row["when"],
+                outcome=row["outcome"],
+                duration=row["seconds"],
+                longrepr="private",
+                capstdout="private",
+            )
+        )
     target = tmp_path / "closed.json"
     monkeypatch.setattr(module, "SERVICE_REPORT", str(target))
     hook.pytest_sessionfinish(SimpleNamespace(), 0)
     assert module.service_result(target.read_text()) == service_report()
     assert "private" not in target.read_text()
     assert len(target.read_bytes()) < module.LIMIT
-    for change in ({"nodeid": "private"}, {"when": "private"}, {"duration": float("nan")},
-                   {"wasxfail": "private"}):
-        hook.pytest_runtest_logreport(SimpleNamespace(**(
-            dict(nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1)
-            | change
-        )))
+    for change in (
+        {"nodeid": "private"},
+        {"when": "private"},
+        {"duration": float("nan")},
+        {"wasxfail": "private"},
+    ):
+        hook.pytest_runtest_logreport(
+            SimpleNamespace(
+                **(
+                    dict(
+                        nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1
+                    )
+                    | change
+                )
+            )
+        )
     hook.pytest_collectreport(SimpleNamespace(outcome="failed", longrepr="private"))
     hook.pytest_collectreport(SimpleNamespace(outcome="skipped", longrepr="private"))
     hook.pytest_internalerror()
@@ -776,7 +809,9 @@ def test_service_hook_requires_explicit_contained_context(monkeypatch):
     from types import SimpleNamespace
 
     calls = []
-    config = SimpleNamespace(pluginmanager=SimpleNamespace(register=lambda *args: calls.append(args)))
+    config = SimpleNamespace(
+        pluginmanager=SimpleNamespace(register=lambda *args: calls.append(args))
+    )
     monkeypatch.delenv("OCWP_QUOTE_SERVICE_INITIAL", raising=False)
     with pytest.raises(module.ProofFailure, match="service_hook_context"):
         module.pytest_configure(config)
@@ -800,11 +835,15 @@ def test_service_cancellation_signals_both_before_stopped_state_readback():
     assert calls[0][0] == ["docker", "kill", "--signal", "KILL", *reversed(ids)]
     assert calls[0][1]["timeout"] == 2
     assert calls[1][0][1] == "inspect" and calls[1][1]["timeout"] == 3
-    for answer in ("", f'{ids[1]}|true\n{ids[0]}|false', f'{ids[1]}|false',
-                   f'{ids[0]}|false\n{ids[1]}|false'):
+    for answer in (
+        "",
+        f"{ids[1]}|true\n{ids[0]}|false",
+        f"{ids[1]}|false",
+        f"{ids[0]}|false\n{ids[1]}|false",
+    ):
         with pytest.raises(module.ProofFailure):
-            module.cancel_runtime(ids, lambda *args, **kwargs: answer)
-    for bad in ([], ["foreign"], ids + ["c" * 64], [ids[0], ids[0]]):
+            module.cancel_runtime(ids, lambda *args, answer=answer, **kwargs: answer)
+    for bad in ([], ["foreign"], [*ids, "c" * 64], [ids[0], ids[0]]):
         with pytest.raises(module.ProofFailure):
             module.cancel_runtime(bad, lambda *a, **kw: pytest.fail("docker called"))
 
@@ -815,16 +854,22 @@ def test_service_inspection_inherits_the_stage_executor():
 
     def execute(args, **kwargs):
         calls.append(args)
-        return "tmpfs /tmp" if "range .Mounts" in args[3] else "|".join(
-            (cid, image, token, "none", "false", "1", "true")
+        return (
+            "tmpfs /tmp"
+            if "range .Mounts" in args[3]
+            else "|".join((cid, image, token, "none", "false", "1", "true"))
         )
 
     module.inspect_owned(cid, image, token, "none", execute)
     assert len(calls) == 2
     with pytest.raises(module.ProofFailure, match="wall_budget"):
-        module.inspect_owned(cid, image, token, "none", lambda *a, **kw: (_ for _ in ()).throw(
-            module.ProofFailure("wall_budget")
-        ))
+        module.inspect_owned(
+            cid,
+            image,
+            token,
+            "none",
+            lambda *a, **kw: (_ for _ in ()).throw(module.ProofFailure("wall_budget")),
+        )
 
 
 def test_service_bounded_client_cancels_before_reap_and_respects_reap_deadline(monkeypatch):
@@ -844,16 +889,27 @@ def test_service_bounded_client_cancels_before_reap_and_respects_reap_deadline(m
     monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: child)
     monkeypatch.setattr(module.os, "killpg", lambda *a: calls.append("client_kill"))
     with pytest.raises(module.ProofFailure, match="client_reap_unverified"):
-        module.run(["synthetic"], timeout=0.1, deadline=0.1,
-                   before_reap=lambda: calls.append("container_kill"))
+        module.run(
+            ["synthetic"],
+            timeout=0.1,
+            deadline=0.1,
+            before_reap=lambda: calls.append("container_kill"),
+        )
     assert calls == ["container_kill", "client_kill", ("wait", 0)]
 
 
 def test_service_mode_conflict_refuses_before_tools(tmp_path, monkeypatch):
     monkeypatch.setattr(module, "run", lambda *a, **kw: pytest.fail("tool called"))
     with pytest.raises(module.ProofFailure, match="mode_conflict"):
-        module.supervise("worker", "pg", "c" * 40, tmp_path / "report.json",
-                         tmp_path / "owned.json", single_record=True, service_initial=True)
+        module.supervise(
+            "worker",
+            "pg",
+            "c" * 40,
+            tmp_path / "report.json",
+            tmp_path / "owned.json",
+            single_record=True,
+            service_initial=True,
+        )
 
 
 def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
@@ -863,10 +919,24 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
     scenarios = (
-        "success", "source", "preflight", "setup_deadline", "fixture_exit", "workload_deadline",
-        "mid_probe", "final_deadline", "invalid_report", "cancellation_unknown", "cleanup", "create_timeout",
-        "diagnostic_missing", "diagnostic_duplicate", "diagnostic_invalid", "diagnostic_parser_error",
-        "client_reap_unknown", "output_limit",
+        "success",
+        "source",
+        "preflight",
+        "setup_deadline",
+        "fixture_exit",
+        "workload_deadline",
+        "mid_probe",
+        "final_deadline",
+        "invalid_report",
+        "cancellation_unknown",
+        "cleanup",
+        "create_timeout",
+        "diagnostic_missing",
+        "diagnostic_duplicate",
+        "diagnostic_invalid",
+        "diagnostic_parser_error",
+        "client_reap_unknown",
+        "output_limit",
     )
     for fault in scenarios:
         with monkeypatch.context() as patch:
@@ -874,14 +944,16 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             folder.mkdir()
             clock, calls, containers, launches = [0.0], [], {}, []
             commit, tree, image = "c" * 40, "d" * 40, "sha256:" + "e" * 64
-            patch.setattr(module.time, "monotonic", lambda: clock[0])
+            patch.setattr(module.time, "monotonic", lambda clock=clock: clock[0])
             patch.setattr(module.time, "sleep", lambda seconds: None)
-            patch.setattr(module.os, "killpg", lambda *a: calls.append(["client_kill"]))
+            patch.setattr(
+                module.os, "killpg", lambda *a, calls=calls: calls.append(["client_kill"])
+            )
             patch.setattr(module.signal, "signal", lambda *a: None)
             temporary_file = module.tempfile.TemporaryFile
 
             @contextmanager
-            def traced_spool():
+            def traced_spool(*, temporary_file=temporary_file, calls=calls):
                 with temporary_file() as output:
                     def read(limit):
                         calls.append(["spool_read"])
@@ -889,17 +961,23 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                         return output.read(limit)
 
                     yield SimpleNamespace(
-                        fileno=output.fileno, write=output.write, flush=output.flush,
-                        seek=output.seek, read=read,
+                        fileno=output.fileno,
+                        write=output.write,
+                        flush=output.flush,
+                        seek=output.seek,
+                        read=read,
                     )
 
             patch.setattr(module.tempfile, "TemporaryFile", traced_spool)
 
-            def popen(args, **kwargs):
+            def popen(args, *, launches=launches, fault=fault, calls=calls, clock=clock, **kwargs):
                 launches.append(args)
                 child = SimpleNamespace(pid=123, returncode=0)
                 active = fault in {
-                    "workload_deadline", "mid_probe", "cancellation_unknown", "client_reap_unknown",
+                    "workload_deadline",
+                    "mid_probe",
+                    "cancellation_unknown",
+                    "client_reap_unknown",
                 }
                 failed = fault == "fixture_exit" or fault.startswith("diagnostic_")
                 child.returncode = None if active else (4 if failed else 0)
@@ -930,10 +1008,26 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
 
             patch.setattr(module.subprocess, "Popen", popen)
 
-            def execute(args, **kwargs):
+            def execute(
+                args,
+                *,
+                calls=calls,
+                fault=fault,
+                commit=commit,
+                tree=tree,
+                image=image,
+                containers=containers,
+                launches=launches,
+                clock=clock,
+                **kwargs,
+            ):
                 calls.append(args)
                 if args[:3] == ["git", "--no-optional-locks", "rev-parse"]:
-                    return ("x" * 40 if fault == "source" else commit) if args[-1] == "HEAD" else tree
+                    return (
+                        ("x" * 40 if fault == "source" else commit)
+                        if args[-1] == "HEAD"
+                        else tree
+                    )
                 if args[:3] == ["git", "--no-optional-locks", "status"]:
                     return ""
                 if args[:3] == ["docker", "image", "inspect"]:
@@ -950,8 +1044,10 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     return ""
                 if args[:2] == ["docker", "inspect"]:
                     if "State.Running" in args[3]:
-                        return "\n".join(f'{cid}|{"true" if fault == "cancellation_unknown" else "false"}'
-                                         for cid in args[4:])
+                        return "\n".join(
+                            f'{cid}|{"true" if fault == "cancellation_unknown" else "false"}'
+                            for cid in args[4:]
+                        )
                     if fault == "setup_deadline":
                         clock[0] = 30.0
                     if "range .Mounts" in args[3]:
@@ -988,11 +1084,11 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     return "\n".join(containers)
                 raise AssertionError(args)
 
-            def canary(cid, execute, **kwargs):
+            def canary(cid, execute, *, containers=containers, **kwargs):
                 containers.pop(cid)
                 return {"cpu_usec": 100, "memory_peak": 8192}
 
-            def reconcile(owned, execute):
+            def reconcile(owned, execute, *, calls=calls, containers=containers):
                 calls.append(["reconcile"])
                 return list(containers)
 
@@ -1004,12 +1100,12 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             patch.setattr(module, "reconcile_owned", reconcile)
             parser = module.service_failure_diagnostic
 
-            def diagnostic(raw, *, returncode):
+            def diagnostic(raw, *, returncode, calls=calls, fault=fault, parser=parser):
                 assert any(row[:2] == ["docker", "kill"] for row in calls)
                 stopped = [row for row in calls if row[:2] == ["docker", "inspect"]
                            and "State.Running" in row[3]]
                 assert stopped and fault != "cancellation_unknown"
-                if fault == "workload_deadline" or fault == "mid_probe":
+                if fault in {"workload_deadline", "mid_probe"}:
                     assert ["client_wait"] in calls
                 calls.append(["diagnostic"])
                 if fault == "diagnostic_parser_error":
@@ -1024,7 +1120,9 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 with pytest.raises(module.ProofFailure, match="service_unqualified"):
                     module.supervise("worker", "pg", commit, evidence, owned, service_initial=True)
             result = json.loads(evidence.read_text())
-            expected_launches = 0 if fault in {"source", "preflight", "setup_deadline", "create_timeout"} else 1
+            expected_launches = (
+                0 if fault in {"source", "preflight", "setup_deadline", "create_timeout"} else 1
+            )
             assert len(launches) == expected_launches, fault
             if launches:
                 assert launches[0] == module.service_argv("c" * 64)
@@ -1034,9 +1132,13 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                     assert type(result["specimen_returncode"]) is int
                     assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
-                "service_initial_passed_not_postgresql_or_capacity" if fault == "success" else "failed"
+                "service_initial_passed_not_postgresql_or_capacity"
+                if fault == "success"
+                else "failed"
             ), fault
-            assert result["cleanup"] == ("failed" if fault in {"cleanup", "create_timeout"} else "verified_absent")
+            assert result["cleanup"] == (
+                "failed" if fault in {"cleanup", "create_timeout"} else "verified_absent"
+            )
             if fault in {"fixture_exit", "workload_deadline", "mid_probe", "final_deadline",
                          "invalid_report", "cancellation_unknown"}:
                 kill = next(i for i, row in enumerate(calls) if row[:2] == ["docker", "kill"])
@@ -1044,11 +1146,15 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 assert kill < calls.index(["reconcile"])
                 if ["client_wait"] in calls:
                     assert kill < calls.index(["client_wait"])
-                assert result["cancellation"] == ("unverified" if fault == "cancellation_unknown" else "verified_stopped")
+                assert result["cancellation"] == (
+                    "unverified" if fault == "cancellation_unknown" else "verified_stopped"
+                )
             if fault == "success":
                 assert result["observed_workload_cpu_usec"] == 0
                 assert result["lifetime_cpu_usec"] == 200
-                assert result["environment_overhead_before_workload_cpu_usec"] == {"db": 100, "worker": 100}
+                assert result["environment_overhead_before_workload_cpu_usec"] == {
+                    "db": 100, "worker": 100
+                }
                 assert result["specimen_returncode"] == 0
                 assert not any(row[:2] == ["docker", "kill"] for row in calls)
                 assert "service_failure_diagnostic" not in result
@@ -1056,7 +1162,9 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 assert result["failure"] == "micro_failed"
                 assert result["client_returncode"] == result["specimen_returncode"] == 4
                 assert result["service_failure_diagnostic"] == (
-                    service_failure_summary() if fault == "fixture_exit" else "unavailable_or_invalid"
+                    service_failure_summary()
+                    if fault == "fixture_exit"
+                    else "unavailable_or_invalid"
                 )
             if fault in {"cancellation_unknown", "client_reap_unknown", "output_limit"}:
                 assert result["service_failure_diagnostic"] == "unavailable_or_invalid"
@@ -1085,9 +1193,13 @@ def test_service_canary_respects_remaining_setup_deadline(monkeypatch):
     monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(module.time, "sleep", lambda seconds: calls.append("slept"))
     monkeypatch.setattr(module.os, "killpg", lambda *args: calls.append("client_killed"))
-    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: SimpleNamespace(
-        pid=123, poll=lambda: -9, wait=lambda **kw: calls.append("client_reaped")
-    ))
+    monkeypatch.setattr(
+        module.subprocess,
+        "Popen",
+        lambda *a, **kw: SimpleNamespace(
+            pid=123, poll=lambda: -9, wait=lambda **kw: calls.append("client_reaped")
+        ),
+    )
 
     def execute(args, **kwargs):
         assert kwargs["timeout"] <= 0.101
@@ -1102,13 +1214,25 @@ def test_service_canary_respects_remaining_setup_deadline(monkeypatch):
 def test_service_hook_rejects_each_untrusted_event_without_retaining_it():
     from types import SimpleNamespace
 
-    for change in ({"nodeid": "private"}, {"when": "private"}, {"duration": float("nan")},
-                   {"duration": True}, {"wasxfail": "private"}, {"outcome": "xpassed"}):
+    for change in (
+        {"nodeid": "private"},
+        {"when": "private"},
+        {"duration": float("nan")},
+        {"duration": True},
+        {"wasxfail": "private"},
+        {"outcome": "xpassed"},
+    ):
         hook = module.ServiceReportHook()
-        hook.pytest_runtest_logreport(SimpleNamespace(**(
-            dict(nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1)
-            | change
-        )))
+        hook.pytest_runtest_logreport(
+            SimpleNamespace(
+                **(
+                    dict(
+                        nodeid=module.SERVICE_NODES[0], when="call", outcome="passed", duration=0.1
+                    )
+                    | change
+                )
+            )
+        )
         assert hook.value["protocol_errors"] == 1
         assert hook.value["reports"] == []
         assert "private" not in str(hook.value)
@@ -1124,8 +1248,16 @@ def test_service_workflow_is_one_fixed_push_and_one_business_invocation():
     assert "quote-service-contained.yml@$GITHUB_REF" in text
     assert text.count("--service-initial") == 1
     assert "--single-record-feasibility" not in text
-    for forbidden in ("pull_request:", "workflow_dispatch:", "workflow_run:", "schedule:",
-                      "workflow_call:", "matrix:", "--collect-only", "uv run pytest"):
+    for forbidden in (
+        "pull_request:",
+        "workflow_dispatch:",
+        "workflow_run:",
+        "schedule:",
+        "workflow_call:",
+        "matrix:",
+        "--collect-only",
+        "uv run pytest",
+    ):
         assert forbidden not in text
     assert "if: always()" in text and "quote-service-independent-cleanup.json" in text
     assert "--quiet" in text and "timeout=seconds + 5" in text
@@ -1134,12 +1266,17 @@ def test_service_workflow_is_one_fixed_push_and_one_business_invocation():
 
 def test_service_rejects_all_controller_pressure_boundaries():
     for old, new in (
-        ("0::/", "0::/other"), ("536870912", "max"),
-        ("100000 100000", "max 100000"), ("---pids.max---\n64", "---pids.max---\nmax"),
+        ("0::/", "0::/other"),
+        ("536870912", "max"),
+        ("100000 100000", "max 100000"),
+        ("---pids.max---\n64", "---pids.max---\nmax"),
         ("---memory.swap.max---\n0", "---memory.swap.max---\n1"),
-        ("usage_usec 100", "usage_usec -1"), ("usage_usec 100", "usage_usec nope"),
-        ("oom_kill 0", "oom_kill 1"), ("---cpu.stat---", "MISSING"),
-        ("8192", "536870913"), ("---pids.events---\nmax 0", "---pids.events---\nmax 1"),
+        ("usage_usec 100", "usage_usec -1"),
+        ("usage_usec 100", "usage_usec nope"),
+        ("oom_kill 0", "oom_kill 1"),
+        ("---cpu.stat---", "MISSING"),
+        ("8192", "536870913"),
+        ("---pids.events---\nmax 0", "---pids.events---\nmax 1"),
     ):
         with pytest.raises(module.ProofFailure):
             module.parse_probe(probe().replace(old, new), 512, 64)
@@ -1149,10 +1286,19 @@ def test_service_rejects_all_controller_pressure_boundaries():
 # are unexecuted; execute only in a separately reviewed bounded containment.
 def service_failure_summary():
     return dict(
-        schema=1, stage=1, session_exitstatus=4, collection_count=0,
-        collection_errors=1, unhandled_errors=0, protocol_errors=1,
-        report_count=0, setup_reports=0, call_reports=0, teardown_reports=0,
-        failed_reports=0, skipped_reports=0,
+        schema=1,
+        stage=1,
+        session_exitstatus=4,
+        collection_count=0,
+        collection_errors=1,
+        unhandled_errors=0,
+        protocol_errors=1,
+        report_count=0,
+        setup_reports=0,
+        call_reports=0,
+        teardown_reports=0,
+        failed_reports=0,
+        skipped_reports=0,
     )
 
 
@@ -1160,37 +1306,67 @@ def service_failure_marker(value=None):
     import json
 
     value = service_failure_summary() if value is None else value
-    return (b"OCWP_SERVICE_FAILURE_V1:" + json.dumps(
-        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
-    ).encode("ascii") + b"\n")
+    return (
+        b"OCWP_SERVICE_FAILURE_V1:"
+        + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("ascii")
+        + b"\n"
+    )
 
 
 def test_service_failure_diagnostic_retains_only_closed_numbers():
     good = service_failure_summary()
     marker = service_failure_marker(good)
     assert len(marker) <= 512
-    assert module.service_failure_diagnostic(
-        b"private\xff output\n" + marker + b"private exception\n", returncode=4,
-    ) == good
+    assert (
+        module.service_failure_diagnostic(
+            b"private\xff output\n" + marker + b"private exception\n", returncode=4
+        )
+        == good
+    )
     boundary = good | {
-        "stage": 4, "collection_count": 100, "collection_errors": 100,
-        "unhandled_errors": 100, "protocol_errors": 100,
-        "report_count": 18, "setup_reports": 6, "call_reports": 6,
-        "teardown_reports": 6, "failed_reports": 17, "skipped_reports": 1,
+        "stage": 4,
+        "collection_count": 100,
+        "collection_errors": 100,
+        "unhandled_errors": 100,
+        "protocol_errors": 100,
+        "report_count": 18,
+        "setup_reports": 6,
+        "call_reports": 6,
+        "teardown_reports": 6,
+        "failed_reports": 17,
+        "skipped_reports": 1,
     }
-    assert module.service_failure_diagnostic(service_failure_marker(boundary), returncode=4) == boundary
+    assert (
+        module.service_failure_diagnostic(service_failure_marker(boundary), returncode=4)
+        == boundary
+    )
 
 
 def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
     good = service_failure_summary()
     changes = (
-        {"schema": True}, {"schema": 2}, {"stage": "private"}, {"stage": -1}, {"stage": 5},
-        {"session_exitstatus": 0}, {"session_exitstatus": 6}, {"session_exitstatus": 1},
-        {"collection_count": True}, {"collection_count": -1}, {"collection_count": 101},
-        {"collection_errors": 101}, {"unhandled_errors": 0.0}, {"protocol_errors": None},
-        {"report_count": 19}, {"setup_reports": 1}, {"call_reports": -1},
-        {"teardown_reports": 19}, {"failed_reports": 1}, {"skipped_reports": 1},
-        {"nodes": ["private"]}, {"raw_error": "private"},
+        {"schema": True},
+        {"schema": 2},
+        {"stage": "private"},
+        {"stage": -1},
+        {"stage": 5},
+        {"session_exitstatus": 0},
+        {"session_exitstatus": 6},
+        {"session_exitstatus": 1},
+        {"collection_count": True},
+        {"collection_count": -1},
+        {"collection_count": 101},
+        {"collection_errors": 101},
+        {"unhandled_errors": 0.0},
+        {"protocol_errors": None},
+        {"report_count": 19},
+        {"setup_reports": 1},
+        {"call_reports": -1},
+        {"teardown_reports": 19},
+        {"failed_reports": 1},
+        {"skipped_reports": 1},
+        {"nodes": ["private"]},
+        {"raw_error": "private"},
     )
     for change in changes:
         with pytest.raises(module.ProofFailure):
@@ -1198,7 +1374,8 @@ def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
     for key in good:
         with pytest.raises(module.ProofFailure):
             module.service_failure_diagnostic(
-                service_failure_marker({k: v for k, v in good.items() if k != key}), returncode=4,
+                service_failure_marker({k: v for k, v in good.items() if k != key}),
+                returncode=4,
             )
     for returncode in (True, 0, -9, 1, 6, None):
         with pytest.raises(module.ProofFailure):
@@ -1208,17 +1385,23 @@ def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
 def test_service_failure_diagnostic_rejects_bad_framing_and_duplicate_keys():
     marker = service_failure_marker()
     for raw in (
-        b"", b"private", marker * 2, marker[:-1], b"prefix" + marker,
+        b"",
+        b"private",
+        marker * 2,
+        marker[:-1],
+        b"prefix" + marker,
         marker.replace(b'"stage":1', b'"stage":1,"stage":1'),
         marker.replace(b'"stage":1', b'"stage":NaN'),
         marker.replace(b'"stage":1', b'"stage":Infinity'),
         marker.replace(b'"stage":1', b'"stage":1e0'),
         marker.replace(b'"stage":1', b'"stage":true'),
         marker.replace(b'"stage":1', b'"stage":"\xff"'),
-        marker.replace(b'{', b'{ '), marker[:-1] + b" private\n",
+        marker.replace(b"{", b"{ "),
+        marker[:-1] + b" private\n",
         b"OCWP_SERVICE_FAILURE_V1:" + b" " * 512 + b"\n",
         marker + b"x" * module.LIMIT,
-        marker + b"OCWP_SERVICE_FAILURE_V1:incomplete", marker.decode("ascii"),
+        marker + b"OCWP_SERVICE_FAILURE_V1:incomplete",
+        marker.decode("ascii"),
     ):
         with pytest.raises(module.ProofFailure):
             module.service_failure_diagnostic(raw, returncode=4)
@@ -1242,9 +1425,13 @@ def test_service_failure_hook_emits_once_outside_capture_without_raw_text(tmp_pa
         return len(raw)
 
     capture = SimpleNamespace(global_and_fixture_disabled=disabled)
-    session = SimpleNamespace(config=SimpleNamespace(pluginmanager=SimpleNamespace(
-        getplugin=lambda name: capture if name == "capturemanager" else None,
-    )))
+    session = SimpleNamespace(
+        config=SimpleNamespace(
+            pluginmanager=SimpleNamespace(
+                getplugin=lambda name: capture if name == "capturemanager" else None,
+            )
+        )
+    )
     monkeypatch.setattr(module.os, "write", write)
     monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "report.json"))
     hook = module.ServiceReportHook()
@@ -1258,28 +1445,41 @@ def test_service_failure_hook_emits_once_outside_capture_without_raw_text(tmp_pa
     assert "private" not in repr(calls)
 
 
-def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_errors(tmp_path, monkeypatch):
+def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_errors(
+    tmp_path, monkeypatch
+):
     from contextlib import nullcontext
     from types import SimpleNamespace
 
     emitted = []
     capture = SimpleNamespace(global_and_fixture_disabled=nullcontext)
-    session = SimpleNamespace(config=SimpleNamespace(pluginmanager=SimpleNamespace(
-        getplugin=lambda name: capture,
-    )))
+    session = SimpleNamespace(
+        config=SimpleNamespace(
+            pluginmanager=SimpleNamespace(
+                getplugin=lambda name: capture,
+            )
+        )
+    )
     monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "report.json"))
     monkeypatch.setattr(module.os, "write", lambda fd, raw: emitted.append(raw) or len(raw))
     for when, stage in (("setup", 2), ("call", 3), ("teardown", 4)):
         hook = module.ServiceReportHook()
-        hook.pytest_collection_finish(SimpleNamespace(
-            items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES],
-        ))
+        hook.pytest_collection_finish(
+            SimpleNamespace(
+                items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES],
+            )
+        )
         for phase in ("setup", "call", "teardown"):
-            hook.pytest_runtest_logreport(SimpleNamespace(
-                nodeid=module.SERVICE_NODES[0], when=phase,
-                outcome="failed" if phase == when else "passed", duration=0.001,
-                capstdout="private", longrepr="private",
-            ))
+            hook.pytest_runtest_logreport(
+                SimpleNamespace(
+                    nodeid=module.SERVICE_NODES[0],
+                    when=phase,
+                    outcome="failed" if phase == when else "passed",
+                    duration=0.001,
+                    capstdout="private",
+                    longrepr="private",
+                )
+            )
         hook.pytest_sessionfinish(session, 1)
         value = module.service_failure_diagnostic(emitted[-1], returncode=1)
         assert value["stage"] == stage and value["failed_reports"] == 1
@@ -1303,18 +1503,32 @@ def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_err
 # deliberately not extra execution nodes in the six-tool static/contracts gate.
 def static_failure_summary():
     return {
-        "schema": 1, "tool": 1, "kind": 1, "returncode": 1, "output_bytes": 100,
-        "omitted": 0, "unparsed_lines": 1,
+        "schema": 1,
+        "tool": 1,
+        "kind": 1,
+        "returncode": 1,
+        "output_bytes": 100,
+        "omitted": 0,
+        "unparsed_lines": 1,
         "diagnostics": [{"path": module.STATIC_PATHS[0], "line": 12, "rule": "E501"}],
     }
 
 
 def static_protocol_summary():
     return {
-        "schema": 1, "stage": 3, "session_exitstatus": 1, "collection_count": 6,
-        "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
-        "report_count": 6, "setup_reports": 2, "call_reports": 2,
-        "teardown_reports": 2, "failed_reports": 1, "skipped_reports": 0,
+        "schema": 1,
+        "stage": 3,
+        "session_exitstatus": 1,
+        "collection_count": 6,
+        "collection_errors": 0,
+        "unhandled_errors": 0,
+        "protocol_errors": 0,
+        "report_count": 6,
+        "setup_reports": 2,
+        "call_reports": 2,
+        "teardown_reports": 2,
+        "failed_reports": 1,
+        "skipped_reports": 0,
     }
 
 
@@ -1322,9 +1536,11 @@ def static_failure_marker(value=None):
     import json
 
     value = static_failure_summary() if value is None else value
-    return module.STATIC_FAILURE_MARKER + json.dumps(
-        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
-    ).encode("ascii") + b"\n"
+    return (
+        module.STATIC_FAILURE_MARKER
+        + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("ascii")
+        + b"\n"
+    )
 
 
 def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
@@ -1332,27 +1548,51 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
     protocol = static_protocol_summary()
     assert module.static_failure_diagnostic(static_failure_marker(), failure=protocol) == good
     for change in (
-        {"stage": 2}, {"call_reports": 1}, {"teardown_reports": 1},
-        {"failed_reports": 2}, {"collection_count": 5}, {"session_exitstatus": 2},
-        {"protocol_errors": 1}, {"unhandled_errors": 1}, {"schema": True},
+        {"stage": 2},
+        {"call_reports": 1},
+        {"teardown_reports": 1},
+        {"failed_reports": 2},
+        {"collection_count": 5},
+        {"session_exitstatus": 2},
+        {"protocol_errors": 1},
+        {"unhandled_errors": 1},
+        {"schema": True},
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(static_failure_marker(), failure=protocol | change)
     for change in (
-        {"schema": True}, {"tool": -1}, {"tool": 6}, {"tool": True}, {"kind": 0},
-        {"kind": 5}, {"returncode": 0}, {"returncode": True}, {"returncode": None},
-        {"returncode": 256}, {"output_bytes": module.LIMIT}, {"output_bytes": -1},
-        {"output_bytes": True}, {"omitted": 1}, {"unparsed_lines": module.LIMIT + 1},
-        {"message": "private"}, {"diagnostics": good["diagnostics"] * 13},
+        {"schema": True},
+        {"tool": -1},
+        {"tool": 6},
+        {"tool": True},
+        {"kind": 0},
+        {"kind": 5},
+        {"returncode": 0},
+        {"returncode": True},
+        {"returncode": None},
+        {"returncode": 256},
+        {"output_bytes": module.LIMIT},
+        {"output_bytes": -1},
+        {"output_bytes": True},
+        {"omitted": 1},
+        {"unparsed_lines": module.LIMIT + 1},
+        {"message": "private"},
+        {"diagnostics": good["diagnostics"] * 13},
         {"diagnostics": good["diagnostics"] * 2},
     ):
         with pytest.raises(module.ProofFailure):
             module.static_failure_diagnostic(static_failure_marker(good | change), failure=protocol)
     for change in (
-        {"path": "../secret"}, {"path": "/app/" + module.STATIC_PATHS[0]},
-        {"path": module.STATIC_PATHS[0] + "\n"}, {"path": "private"},
-        {"line": True}, {"line": -1}, {"line": 1_000_001},
-        {"rule": "E999999"}, {"rule": "private-word"}, {"rule": "E501\x00"},
+        {"path": "../secret"},
+        {"path": "/app/" + module.STATIC_PATHS[0]},
+        {"path": module.STATIC_PATHS[0] + "\n"},
+        {"path": "private"},
+        {"line": True},
+        {"line": -1},
+        {"line": 1_000_001},
+        {"rule": "E999999"},
+        {"rule": "private-word"},
+        {"rule": "E501\x00"},
         {"message": "private"},
     ):
         bad = good | {"diagnostics": [good["diagnostics"][0] | change]}
@@ -1363,7 +1603,10 @@ def test_static_failure_marker_is_closed_and_matches_first_failed_protocol():
 def test_static_failure_marker_rejects_duplicate_nonfinite_truncated_and_oversize_bytes():
     marker = static_failure_marker()
     for bad in (
-        b"", marker + marker, marker[:-1], b"x" + marker,
+        b"",
+        marker + marker,
+        marker[:-1],
+        b"x" + marker,
         marker.replace(b'"schema":1', b'"schema":1,"schema":1'),
         marker.replace(b'"output_bytes":100', b'"output_bytes":NaN'),
         marker.replace(b'"output_bytes":100', b'"output_bytes":Infinity'),
@@ -1382,15 +1625,22 @@ def test_static_failure_marker_distinguishes_cap_timeout_and_launch_failure():
     for change in (
         {"kind": 2, "returncode": -9},
         {"kind": 3, "returncode": -25, "output_bytes": module.LIMIT},
-        {"kind": 4, "returncode": None, "output_bytes": 0,
-         "diagnostics": [], "unparsed_lines": 0},
+        {
+            "kind": 4,
+            "returncode": None,
+            "output_bytes": 0,
+            "diagnostics": [],
+            "unparsed_lines": 0,
+        },
     ):
         value = good | change
-        assert module.static_failure_diagnostic(
-            static_failure_marker(value), failure=protocol,
-        ) == value
+        assert (
+            module.static_failure_diagnostic(static_failure_marker(value), failure=protocol)
+            == value
+        )
     for change in (
-        {"kind": 3}, {"kind": 4},
+        {"kind": 3},
+        {"kind": 4},
         {"kind": 4, "returncode": None, "output_bytes": 0},
     ):
         with pytest.raises(module.ProofFailure):

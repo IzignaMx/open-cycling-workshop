@@ -9,6 +9,7 @@ import resource
 import signal
 import subprocess
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -28,12 +29,31 @@ RUFF = "/app/.venv/bin/ruff"
 MYPY = "/app/.venv/bin/mypy"
 COMMANDS = (
     (PYTHON, "scripts/ci/verify_repository.py"),
-    (RUFF, "check", "--config", "ruff.toml", "--no-cache", "--output-format", "concise",
-     *STATIC_PATHS),
+    (
+        RUFF,
+        "check",
+        "--config",
+        "ruff.toml",
+        "--no-cache",
+        "--output-format",
+        "concise",
+        *STATIC_PATHS,
+    ),
     (RUFF, "format", "--config", "ruff.toml", "--check", "--no-cache", *STATIC_PATHS),
-    (MYPY, "--config-file", "mypy.ini", "--cache-dir", "/dev/null", "--no-incremental",
-     "--no-pretty", "--no-color-output", "--show-column-numbers", "--no-error-summary",
-     "--show-error-codes", *STATIC_PATHS[:6]),
+    (
+        MYPY,
+        "--config-file",
+        "mypy.ini",
+        "--cache-dir",
+        "/dev/null",
+        "--no-incremental",
+        "--no-pretty",
+        "--no-color-output",
+        "--show-column-numbers",
+        "--no-error-summary",
+        "--show-error-codes",
+        *STATIC_PATHS[:6],
+    ),
     (PYTHON, "scripts/contracts/export_openapi.py", "--check"),
     (PYTHON, "scripts/contracts/generate_ts_client.py", "--check"),
 )
@@ -75,13 +95,14 @@ def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, 
             "OpenAPI drift detected: regenerate packages/api-client/openapi.json"
         ):
             path, rule = "packages/api-client/openapi.json", "contract"
-        elif tool == 5 and text == (
-            "TypeScript API client drift detected: regenerate generated.ts"
-        ):
+        elif tool == 5 and text == "TypeScript API client drift detected: regenerate generated.ts":
             path, rule = "packages/api-client/src/generated.ts", "contract"
         path = path.removeprefix("/app/")
-        if (path not in STATIC_ALLOWED_PATHS[tool] or rule not in STATIC_ALLOWED_RULES[tool]
-                or not 0 <= line <= 1_000_000):
+        if (
+            path not in STATIC_ALLOWED_PATHS[tool]
+            or rule not in STATIC_ALLOWED_RULES[tool]
+            or not 0 <= line <= 1_000_000
+        ):
             unparsed += 1
             continue
         key = (path, line, rule)
@@ -99,13 +120,19 @@ def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
     with tempfile.TemporaryFile() as output:
         try:
             child = subprocess.Popen(
-                COMMANDS[tool], cwd=ROOT, stdin=subprocess.DEVNULL,
-                stdout=output, stderr=output, start_new_session=True,
+                COMMANDS[tool],
+                cwd=ROOT,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=output,
+                start_new_session=True,
                 preexec_fn=_limit_output,
                 env={
                     "PATH": "/app/.venv/bin:/usr/local/bin:/usr/bin:/bin",
-                    "HOME": "/tmp", "PYTHONDONTWRITEBYTECODE": "1",
-                    "NO_COLOR": "1", "RAYON_NUM_THREADS": "1",
+                    "HOME": "/tmp",
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                    "NO_COLOR": "1",
+                    "RAYON_NUM_THREADS": "1",
                 },
             )
         except OSError:
@@ -115,10 +142,8 @@ def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
                 returncode = child.wait(timeout=TOOL_SECONDS[tool])
             except subprocess.TimeoutExpired:
                 kind = 2
-                try:
+                with suppress(ProcessLookupError):
                     os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
                 # A reap failure propagates as a failing protocol. The outer container
                 # guard still owns descendants, cancellation and absence verification.
                 returncode = child.wait(timeout=1)
@@ -131,20 +156,24 @@ def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
         return
     rows, omitted, unparsed = _summarize(tool, captured)
     value = {
-        "schema": 1, "tool": tool, "kind": kind, "returncode": returncode,
-        "output_bytes": min(size, LIMIT), "omitted": omitted,
-        "unparsed_lines": unparsed, "diagnostics": rows,
+        "schema": 1,
+        "tool": tool,
+        "kind": kind,
+        "returncode": returncode,
+        "output_bytes": min(size, LIMIT),
+        "omitted": omitted,
+        "unparsed_lines": unparsed,
+        "diagnostics": rows,
     }
-    marker = STATIC_FAILURE_MARKER + json.dumps(
-        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
-    ).encode("ascii") + b"\n"
+    marker = (
+        STATIC_FAILURE_MARKER
+        + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("ascii")
+        + b"\n"
+    )
     if len(marker) <= STATIC_FAILURE_LIMIT:
-        try:
-            # Emit this closed marker only. Never release captured tool/pytest output.
-            with capfd.disabled():
-                os.write(1, b"\n" + marker)
-        except OSError:
-            pass
+        # Emit this closed marker only. Never release captured tool/pytest output.
+        with suppress(OSError), capfd.disabled():
+            os.write(1, b"\n" + marker)
     pytest.fail("static_tool_failed", pytrace=False)
 
 

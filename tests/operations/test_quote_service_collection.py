@@ -17,7 +17,7 @@ def synthetic_pytester(pytester, monkeypatch):
 def test_indirect_module_mark_rejects_even_unselected_pure_test(synthetic_pytester):
     pytester = synthetic_pytester
     pytester.makepyfile(
-        test_synthetic='''
+        test_synthetic="""
 import pytest
 
 pytestmark = pytest.mark.parametrize("database", ["sqlite"], indirect=True)
@@ -31,7 +31,7 @@ def test_selected(database):
 
 def test_pure():
     assert True
-'''
+""",
     )
     result = pytester.runpytest_subprocess(
         "test_synthetic.py::test_selected[sqlite]", "--collect-only", "-q", timeout=5
@@ -43,7 +43,7 @@ def test_pure():
 def test_separated_pure_module_restores_exact_selected_collection(synthetic_pytester):
     pytester = synthetic_pytester
     pytester.makepyfile(
-        test_database='''
+        test_database="""
 import pytest
 
 pytestmark = pytest.mark.parametrize("database", ["sqlite"], indirect=True)
@@ -54,11 +54,11 @@ def database(request):
 
 def test_selected(database):
     assert database == "sqlite"
-''',
-        test_pure='''
+""",
+        test_pure="""
 def test_pure():
     assert True
-''',
+""",
     )
     result = pytester.runpytest_subprocess(
         "test_database.py::test_selected[sqlite]",

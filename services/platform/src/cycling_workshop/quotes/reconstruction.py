@@ -418,8 +418,7 @@ def _reconstruct(
     change_map = {row.cursor: row for row in changes}
     order_outbox_map = {row.event_id: row for row in order_outboxes}
     if any(
-        len(mapping) != effect_count
-        for mapping in (order_event_map, change_map, order_outbox_map)
+        len(mapping) != effect_count for mapping in (order_event_map, change_map, order_outbox_map)
     ):
         raise ValueError("duplicate stored order effect identities")
     revision_map = {row.quote_id: row for row in revisions}

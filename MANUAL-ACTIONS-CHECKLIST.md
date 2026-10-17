@@ -1,5 +1,16 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Direct static source repair · 2026-10-17
+
+- [x] Retain static run `39044828140`: repository passed, Ruff failed; later checks unrun.
+- [x] Retain repair run `39046578616`: export failed and no patch was retained.
+- [ ] Independently review direct source corrections and exact candidate.
+- [ ] Execute the unchanged bounded six-command static qualification once.
+- [ ] Close all actual static findings before the finite PostgreSQL-0012 gate.
+- No generated repair was applied; no complete static or PostgreSQL pass is claimed.
+  [Current scope and historical evidence](docs/10-spec-development/2026-10-17-direct-static-source-repair.md).
+  Older preparation checklists below are historical, not current results.
+
 ## Fixed service static and contract gate · 2026-10-17
 
 - [x] Independently accept [semantic run 39043072145](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39043072145)

@@ -36,7 +36,9 @@ def equivalent(rows):
     assert old_records == new_records
     assert len(new_records) == len(rows[5])
     assert old.ledger == new.ledger
-    assert [asdict(item) | {"order_effects": None} for item in old.receipts] == [asdict(item) for item in new.receipts]
+    assert [asdict(item) | {"order_effects": None} for item in old.receipts] == [
+        asdict(item) for item in new.receipts
+    ]
     assert old_bytes == new_bytes
     return new
 

@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from types import FrameType
 from typing import cast
@@ -109,7 +110,10 @@ def output_limit() -> None:
 
 
 def run(
-    args: list[str], *, timeout: float = 5, before_reap: Callable[[], None] | None = None,
+    args: list[str],
+    *,
+    timeout: float = 5,
+    before_reap: Callable[[], None] | None = None,
     deadline: float | None = None,
 ) -> str:
     """Bound output and client lifetime; service failure cancels containers before reaping."""
@@ -137,8 +141,8 @@ def run(
             finally:
                 if child.poll() is None:
                     os.killpg(child.pid, signal.SIGKILL)
-                    reap_seconds = 2 if deadline is None else max(
-                        0, min(2, deadline - time.monotonic())
+                    reap_seconds = (
+                        2 if deadline is None else max(0, min(2, deadline - time.monotonic()))
                     )
                     try:
                         child.wait(timeout=reap_seconds)
@@ -498,63 +502,62 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
-
 SERVICE_NODES = (
-    'tests/operations/test_quote_service_static_contracts.py::test_repository_contract',
-    'tests/operations/test_quote_service_static_contracts.py::test_python_lint',
-    'tests/operations/test_quote_service_static_contracts.py::test_python_format',
-    'tests/operations/test_quote_service_static_contracts.py::test_production_types',
-    'tests/operations/test_quote_service_static_contracts.py::test_openapi_contract',
-    'tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract',
+    "tests/operations/test_quote_service_static_contracts.py::test_repository_contract",
+    "tests/operations/test_quote_service_static_contracts.py::test_python_lint",
+    "tests/operations/test_quote_service_static_contracts.py::test_python_format",
+    "tests/operations/test_quote_service_static_contracts.py::test_production_types",
+    "tests/operations/test_quote_service_static_contracts.py::test_openapi_contract",
+    "tests/operations/test_quote_service_static_contracts.py::test_generated_client_contract",
 )
 
 # Closed diagnostic vocabulary for this fixed static/contracts batch only.
 STATIC_PATHS = (
-    'services/platform/src/cycling_workshop/quotes/effects.py',
-    'services/platform/src/cycling_workshop/quotes/reconstruction.py',
-    'services/platform/src/cycling_workshop/quotes/repository.py',
-    'services/platform/src/cycling_workshop/quotes/responses.py',
-    'services/platform/src/cycling_workshop/quotes/service.py',
-    'services/platform/src/cycling_workshop/sync/writes.py',
-    'services/platform/tests/quotes/test_quote_application_service.py',
-    'services/platform/tests/quotes/test_quote_atomic_effects.py',
-    'services/platform/tests/quotes/test_quote_command_response.py',
-    'services/platform/tests/quotes/test_quote_driver_budgets.py',
-    'services/platform/tests/quotes/test_quote_reconstruction.py',
-    'services/platform/tests/quotes/test_quote_result_codec_once.py',
-    'services/platform/tests/quotes/test_quote_single_pass.py',
-    'scripts/ci/quote_capacity_micro.py',
-    'scripts/ci/quote_collection_regression.py',
-    'scripts/ci/quote_guard_bootstrap.py',
-    'tests/operations/test_quote_capacity_micro.py',
-    'tests/operations/test_quote_service_collection.py',
-    'tests/operations/test_quote_service_static_contracts.py',
+    "services/platform/src/cycling_workshop/quotes/effects.py",
+    "services/platform/src/cycling_workshop/quotes/reconstruction.py",
+    "services/platform/src/cycling_workshop/quotes/repository.py",
+    "services/platform/src/cycling_workshop/quotes/responses.py",
+    "services/platform/src/cycling_workshop/quotes/service.py",
+    "services/platform/src/cycling_workshop/sync/writes.py",
+    "services/platform/tests/quotes/test_quote_application_service.py",
+    "services/platform/tests/quotes/test_quote_atomic_effects.py",
+    "services/platform/tests/quotes/test_quote_command_response.py",
+    "services/platform/tests/quotes/test_quote_driver_budgets.py",
+    "services/platform/tests/quotes/test_quote_reconstruction.py",
+    "services/platform/tests/quotes/test_quote_result_codec_once.py",
+    "services/platform/tests/quotes/test_quote_single_pass.py",
+    "scripts/ci/quote_capacity_micro.py",
+    "scripts/ci/quote_collection_regression.py",
+    "scripts/ci/quote_guard_bootstrap.py",
+    "tests/operations/test_quote_capacity_micro.py",
+    "tests/operations/test_quote_service_collection.py",
+    "tests/operations/test_quote_service_static_contracts.py",
 )
 STATIC_REPOSITORY_PATHS = (
-    'LICENSE',
-    'README.md',
-    'CONTRIBUTING.md',
-    'CODE_OF_CONDUCT.md',
-    'SECURITY.md',
-    'GOVERNANCE.md',
-    'MAINTAINERS.md',
-    'ARCHITECTURE.md',
-    'package.json',
-    'pnpm-workspace.yaml',
-    'pyproject.toml',
-    'tsconfig.base.json',
-    '.python-version',
-    '.nvmrc',
-    'apps/web',
-    'services/platform',
-    'packages/ui',
-    'packages/api-client',
-    'packages/plugin-sdk',
-    'packages/branding',
-    'infra/compose',
-    'fixtures/minimal',
-    'fixtures/demo-workshop',
-    'fixtures/load',
+    "LICENSE",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "GOVERNANCE.md",
+    "MAINTAINERS.md",
+    "ARCHITECTURE.md",
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pyproject.toml",
+    "tsconfig.base.json",
+    ".python-version",
+    ".nvmrc",
+    "apps/web",
+    "services/platform",
+    "packages/ui",
+    "packages/api-client",
+    "packages/plugin-sdk",
+    "packages/branding",
+    "infra/compose",
+    "fixtures/minimal",
+    "fixtures/demo-workshop",
+    "fixtures/load",
 )
 STATIC_RUFF_RULES = frozenset(
     (
@@ -587,12 +590,20 @@ STATIC_MYPY_RULES = frozenset(
     ).split()
 )
 STATIC_ALLOWED_PATHS = (
-    STATIC_REPOSITORY_PATHS, STATIC_PATHS, STATIC_PATHS, STATIC_PATHS[:6],
-    ("packages/api-client/openapi.json",), ("packages/api-client/src/generated.ts",),
+    STATIC_REPOSITORY_PATHS,
+    STATIC_PATHS,
+    STATIC_PATHS,
+    STATIC_PATHS[:6],
+    ("packages/api-client/openapi.json",),
+    ("packages/api-client/src/generated.ts",),
 )
 STATIC_ALLOWED_RULES = (
-    frozenset({"missing", "license"}), STATIC_RUFF_RULES, frozenset({"format"}),
-    STATIC_MYPY_RULES, frozenset({"contract"}), frozenset({"contract"}),
+    frozenset({"missing", "license"}),
+    STATIC_RUFF_RULES,
+    frozenset({"format"}),
+    STATIC_MYPY_RULES,
+    frozenset({"contract"}),
+    frozenset({"contract"}),
 )
 STATIC_FAILURE_MARKER = b"OCWP_STATIC_FAILURE_V1:"
 STATIC_FAILURE_LIMIT = 4096
@@ -604,15 +615,36 @@ SERVICE_FAILURE_LIMIT = 512
 def service_argv(cid: str) -> list[str]:
     """One closed selection; env -i drops inherited pytest/application/PG settings."""
     return [
-        "docker", "exec", identifier(cid), "env", "-i",
-        "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/tmp",
-        "PYTHONDONTWRITEBYTECODE=1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
-        "OCWP_QUOTE_SERVICE_INITIAL=contained", "/app/.venv/bin/python",
-        "-m", "pytest", "-q", "-o", "addopts=", "-p", "no:cacheprovider",
-        "-p", "scripts.ci.quote_capacity_micro", "--tb=no", "--show-capture=no",
-        "--capture=fd", "--maxfail=1", "--basetemp=/tmp/quote-service-initial",
-        "-W", "error::pytest.PytestUnhandledThreadExceptionWarning",
-        "-W", "error::pytest.PytestUnraisableExceptionWarning", *SERVICE_NODES,
+        "docker",
+        "exec",
+        identifier(cid),
+        "env",
+        "-i",
+        "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin",
+        "HOME=/tmp",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+        "OCWP_QUOTE_SERVICE_INITIAL=contained",
+        "/app/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-o",
+        "addopts=",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "scripts.ci.quote_capacity_micro",
+        "--tb=no",
+        "--show-capture=no",
+        "--capture=fd",
+        "--maxfail=1",
+        "--basetemp=/tmp/quote-service-initial",
+        "-W",
+        "error::pytest.PytestUnhandledThreadExceptionWarning",
+        "-W",
+        "error::pytest.PytestUnraisableExceptionWarning",
+        *SERVICE_NODES,
     ]
 
 
@@ -635,8 +667,12 @@ def service_result(raw: str) -> dict[str, object]:
         raise ProofFailure("service_report_limit")
     value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
     expected = {
-        "schema": 1, "collection_count": 6, "collection_errors": 0,
-        "unhandled_errors": 0, "protocol_errors": 0, "session_finished": True,
+        "schema": 1,
+        "collection_count": 6,
+        "collection_errors": 0,
+        "unhandled_errors": 0,
+        "protocol_errors": 0,
+        "session_finished": True,
         "session_exitstatus": 0,
     }
     if type(value) is not dict or set(value) != set(expected) | {"nodes", "reports"}:
@@ -663,35 +699,50 @@ def service_result(raw: str) -> dict[str, object]:
 def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]:
     """Validate a numeric marker; supervisor spool reads require verified stop/reap."""
     if (
-        type(raw) is not bytes or len(raw) >= LIMIT
-        or type(returncode) is not int or not 1 <= returncode <= 5
+        type(raw) is not bytes
+        or len(raw) >= LIMIT
+        or type(returncode) is not int
+        or not 1 <= returncode <= 5
         or raw.count(SERVICE_FAILURE_MARKER) != 1
     ):
         raise ProofFailure("service_diagnostic_invalid")
     lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(SERVICE_FAILURE_MARKER)]
     if len(lines) != 1 or len(lines[0]) + 1 > SERVICE_FAILURE_LIMIT:
         raise ProofFailure("service_diagnostic_invalid")
-    payload = lines[0][len(SERVICE_FAILURE_MARKER):]
+    payload = lines[0][len(SERVICE_FAILURE_MARKER) :]
     try:
         value = json.loads(
-            payload.decode("ascii"), object_pairs_hook=strict_object, parse_constant=reject_constant,
+            payload.decode("ascii"),
+            object_pairs_hook=strict_object,
+            parse_constant=reject_constant,
         )
     except (ValueError, RecursionError) as error:
         raise ProofFailure("service_diagnostic_invalid") from error
     bounds = {
-        "schema": (1, 1), "stage": (0, 4), "session_exitstatus": (returncode, returncode),
-        "collection_count": (0, 100), "collection_errors": (0, 100),
-        "unhandled_errors": (0, 100), "protocol_errors": (0, 100),
-        "report_count": (0, 18), "setup_reports": (0, 18), "call_reports": (0, 18),
-        "teardown_reports": (0, 18), "failed_reports": (0, 18), "skipped_reports": (0, 18),
+        "schema": (1, 1),
+        "stage": (0, 4),
+        "session_exitstatus": (returncode, returncode),
+        "collection_count": (0, 100),
+        "collection_errors": (0, 100),
+        "unhandled_errors": (0, 100),
+        "protocol_errors": (0, 100),
+        "report_count": (0, 18),
+        "setup_reports": (0, 18),
+        "call_reports": (0, 18),
+        "teardown_reports": (0, 18),
+        "failed_reports": (0, 18),
+        "skipped_reports": (0, 18),
     }
     if type(value) is not dict or set(value) != set(bounds):
         raise ProofFailure("service_diagnostic_invalid")
-    if any(type(value[k]) is not int or not low <= value[k] <= high
-           for k, (low, high) in bounds.items()):
+    if any(
+        type(value[k]) is not int or not low <= value[k] <= high
+        for k, (low, high) in bounds.items()
+    ):
         raise ProofFailure("service_diagnostic_invalid")
     if (
-        value["report_count"] != sum(value[f"{when}_reports"] for when in ("setup", "call", "teardown"))
+        value["report_count"]
+        != sum(value[f"{when}_reports"] for when in ("setup", "call", "teardown"))
         or value["failed_reports"] + value["skipped_reports"] > value["report_count"]
         or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
     ):
@@ -706,26 +757,32 @@ def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[st
     lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(STATIC_FAILURE_MARKER)]
     if len(lines) != 1 or len(lines[0]) + 1 > STATIC_FAILURE_LIMIT:
         raise ProofFailure("static_diagnostic_invalid")
-    payload = lines[0][len(STATIC_FAILURE_MARKER):]
+    payload = lines[0][len(STATIC_FAILURE_MARKER) :]
     try:
         value = json.loads(
-            payload.decode("ascii"), object_pairs_hook=strict_object,
+            payload.decode("ascii"),
+            object_pairs_hook=strict_object,
             parse_constant=reject_constant,
         )
     except (ValueError, RecursionError) as error:
         raise ProofFailure("static_diagnostic_invalid") from error
     bounds = {
-        "schema": (1, 1), "tool": (0, 5), "kind": (1, 4),
-        "output_bytes": (0, LIMIT), "omitted": (0, LIMIT), "unparsed_lines": (0, LIMIT),
+        "schema": (1, 1),
+        "tool": (0, 5),
+        "kind": (1, 4),
+        "output_bytes": (0, LIMIT),
+        "omitted": (0, LIMIT),
+        "unparsed_lines": (0, LIMIT),
     }
     if type(value) is not dict or set(value) != set(bounds) | {"returncode", "diagnostics"}:
         raise ProofFailure("static_diagnostic_invalid")
-    if any(type(value[k]) is not int or not low <= value[k] <= high
-           for k, (low, high) in bounds.items()):
+    if any(
+        type(value[k]) is not int or not low <= value[k] <= high
+        for k, (low, high) in bounds.items()
+    ):
         raise ProofFailure("static_diagnostic_invalid")
     tool, kind, returncode = value["tool"], value["kind"], value["returncode"]
-    if (returncode is not None and
-            (type(returncode) is not int or not -127 <= returncode <= 255)):
+    if returncode is not None and (type(returncode) is not int or not -127 <= returncode <= 255):
         raise ProofFailure("static_diagnostic_invalid")
     if (
         (kind != 4 and returncode is None)
@@ -736,11 +793,19 @@ def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[st
         raise ProofFailure("static_diagnostic_invalid")
     protocols = tool + 1
     expected = {
-        "schema": 1, "stage": 3, "session_exitstatus": 1, "collection_count": 6,
-        "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
-        "report_count": protocols * 3, "setup_reports": protocols,
-        "call_reports": protocols, "teardown_reports": protocols,
-        "failed_reports": 1, "skipped_reports": 0,
+        "schema": 1,
+        "stage": 3,
+        "session_exitstatus": 1,
+        "collection_count": 6,
+        "collection_errors": 0,
+        "unhandled_errors": 0,
+        "protocol_errors": 0,
+        "report_count": protocols * 3,
+        "setup_reports": protocols,
+        "call_reports": protocols,
+        "teardown_reports": protocols,
+        "failed_reports": 1,
+        "skipped_reports": 0,
     }
     if failure != expected or any(type(v) is not int for v in failure.values()):
         raise ProofFailure("static_diagnostic_protocol")
@@ -750,10 +815,14 @@ def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[st
     seen: set[tuple[str, int, str]] = set()
     for row in rows:
         if (
-            type(row) is not dict or set(row) != {"path", "line", "rule"}
-            or type(row["path"]) is not str or row["path"] not in STATIC_ALLOWED_PATHS[tool]
-            or type(row["line"]) is not int or not 0 <= row["line"] <= 1_000_000
-            or type(row["rule"]) is not str or row["rule"] not in STATIC_ALLOWED_RULES[tool]
+            type(row) is not dict
+            or set(row) != {"path", "line", "rule"}
+            or type(row["path"]) is not str
+            or row["path"] not in STATIC_ALLOWED_PATHS[tool]
+            or type(row["line"]) is not int
+            or not 0 <= row["line"] <= 1_000_000
+            or type(row["rule"]) is not str
+            or row["rule"] not in STATIC_ALLOWED_RULES[tool]
         ):
             raise ProofFailure("static_diagnostic_invalid")
         key = (row["path"], row["line"], row["rule"])
@@ -778,9 +847,15 @@ class ServiceReportHook:
         self.failure_stage: int | None = None
         self.failure_marker_attempted = False
         self.value: dict[str, object] = {
-            "schema": 1, "nodes": [], "collection_count": 0,
-            "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
-            "session_finished": False, "session_exitstatus": -1, "reports": [],
+            "schema": 1,
+            "nodes": [],
+            "collection_count": 0,
+            "collection_errors": 0,
+            "unhandled_errors": 0,
+            "protocol_errors": 0,
+            "session_finished": False,
+            "session_exitstatus": -1,
+            "reports": [],
         }
 
     def bump(self, field: str) -> None:
@@ -797,7 +872,7 @@ class ServiceReportHook:
         import pytest
 
         self.stage = 1
-        nodes = [getattr(item, "nodeid", None) for item in getattr(session, "items")]
+        nodes = [getattr(item, "nodeid", None) for item in session.items]
         self.value["collection_count"] = min(100, len(nodes))
         if nodes != list(SERVICE_NODES) or len(set(nodes)) != 6:
             self.bump("protocol_errors")
@@ -809,10 +884,14 @@ class ServiceReportHook:
         outcome, seconds = getattr(report, "outcome", None), getattr(report, "duration", None)
         rows = cast(list[dict[str, object]], self.value["reports"])
         if (
-            node not in SERVICE_NODES or when not in {"setup", "call", "teardown"}
-            or outcome not in {"passed", "failed", "skipped"} or len(rows) >= 18
-            or type(seconds) not in (int, float) or not math.isfinite(seconds)
-            or not 0 <= seconds < 20 or hasattr(report, "wasxfail")
+            node not in SERVICE_NODES
+            or when not in {"setup", "call", "teardown"}
+            or outcome not in {"passed", "failed", "skipped"}
+            or len(rows) >= 18
+            or type(seconds) not in (int, float)
+            or not math.isfinite(seconds)
+            or not 0 <= seconds < 20
+            or hasattr(report, "wasxfail")
         ):
             self.bump("protocol_errors")
             return
@@ -835,23 +914,36 @@ class ServiceReportHook:
         try:
             rows = cast(list[dict[str, object]], self.value["reports"])
             value = {
-                key: self.value[key] for key in (
-                    "schema", "session_exitstatus", "collection_count", "collection_errors",
-                    "unhandled_errors", "protocol_errors",
+                key: self.value[key]
+                for key in (
+                    "schema",
+                    "session_exitstatus",
+                    "collection_count",
+                    "collection_errors",
+                    "unhandled_errors",
+                    "protocol_errors",
                 )
             } | {
                 "stage": self.stage if self.failure_stage is None else self.failure_stage,
                 "report_count": len(rows),
-                **{f"{when}_reports": sum(row["when"] == when for row in rows)
-                   for when in ("setup", "call", "teardown")},
-                **{f"{outcome}_reports": sum(row["outcome"] == outcome for row in rows)
-                   for outcome in ("failed", "skipped")},
+                **{
+                    f"{when}_reports": sum(row["when"] == when for row in rows)
+                    for when in ("setup", "call", "teardown")
+                },
+                **{
+                    f"{outcome}_reports": sum(row["outcome"] == outcome for row in rows)
+                    for outcome in ("failed", "skipped")
+                },
             }
-            marker = SERVICE_FAILURE_MARKER + json.dumps(
-                value, sort_keys=True, separators=(",", ":"), allow_nan=False,
-            ).encode("ascii") + b"\n"
+            marker = (
+                SERVICE_FAILURE_MARKER
+                + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
+                    "ascii"
+                )
+                + b"\n"
+            )
             service_failure_diagnostic(marker, returncode=cast(int, value["session_exitstatus"]))
-            capture = getattr(session, "config").pluginmanager.getplugin("capturemanager")
+            capture = session.config.pluginmanager.getplugin("capturemanager")
             # --capture=fd otherwise hides a session hook's print. Suspend only
             # around this one bounded write; never read/release captured text.
             with capture.global_and_fixture_disabled():
@@ -877,7 +969,7 @@ def pytest_configure(config: object) -> None:
     # Only the explicitly loaded plugin participates; CLI imports never import pytest.
     if os.environ.get("OCWP_QUOTE_SERVICE_INITIAL") != "contained":
         raise ProofFailure("service_hook_context")
-    getattr(config, "pluginmanager").register(ServiceReportHook(), "quote-service-closed-report")
+    config.pluginmanager.register(ServiceReportHook(), "quote-service-closed-report")
 
 
 def cancel_runtime(ids: list[str], execute: Callable[..., str]) -> None:
@@ -887,14 +979,12 @@ def cancel_runtime(ids: list[str], execute: Callable[..., str]) -> None:
     for cid in ids:
         identifier(cid)
     targets = list(reversed(ids))
-    try:
+    # A concurrently stopped container can make kill fail. Only readback proves stopped.
+    with suppress(ProofFailure):
         execute(["docker", "kill", "--signal", "KILL", *targets], timeout=2)
-    except ProofFailure:
-        # A concurrently stopped container can make kill fail. Only readback proves stopped.
-        pass
-    rows = execute([
-        "docker", "inspect", "--format", "{{.Id}}|{{.State.Running}}", *targets,
-    ], timeout=3).splitlines()
+    rows = execute(
+        ["docker", "inspect", "--format", "{{.Id}}|{{.State.Running}}", *targets], timeout=3
+    ).splitlines()
     if rows != [f"{cid}|false" for cid in targets]:
         raise ProofFailure("cancellation_unverified")
 
@@ -919,15 +1009,19 @@ def supervise(
         remaining = command_deadline - time.monotonic()
         if remaining <= 0:
             if service_initial and report["phase"] in {
-                "service_with_pytest_bootstrap", "service_final_readback"
-            }:
+            "service_with_pytest_bootstrap",
+            "service_final_readback",
+        }:
                 cancel_workload()
             raise ProofFailure("wall_budget")
         if service_initial and report["phase"] in {
-                "service_with_pytest_bootstrap", "service_final_readback"
-            }:
+            "service_with_pytest_bootstrap",
+            "service_final_readback",
+        }:
             result = run(
-                args, timeout=min(timeout, remaining), before_reap=cancel_workload,
+                args,
+                timeout=min(timeout, remaining),
+                before_reap=cancel_workload,
                 deadline=command_deadline,
             )
         elif service_initial:
@@ -947,8 +1041,10 @@ def supervise(
     report: dict[str, object] = {
         "schema": 2 if service_initial else 1,
         "commit": commit,
-        "mode": "service_initial" if service_initial else (
-            "single_record_feasibility" if single_record else "micro_only"
+        "mode": (
+            "service_initial"
+            if service_initial
+            else ("single_record_feasibility" if single_record else "micro_only")
         ),
         "maximum_capacity_qualified": False,
         "status": "failed",
@@ -1098,7 +1194,8 @@ def supervise(
                     "--env",
                     "OCWP_QUOTE_MICRO=contained",
                     "--env",
-                    "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_micro_test",
+                    "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
+                    "@127.0.0.1:5432/ocwp_quote_micro_test",
                     "--entrypoint",
                     "/app/.venv/bin/python",
                 ]
@@ -1255,9 +1352,9 @@ def supervise(
                     raise ProofFailure("wall_budget")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
-                report["workload_wall_seconds" if service_initial else "micro_wall_seconds"] = round(
-                    time.monotonic() - micro_started, 3
-                )
+                report[
+                    "workload_wall_seconds" if service_initial else "micro_wall_seconds"
+                ] = round(time.monotonic() - micro_started, 3)
             except (ProofFailure, ValueError, OSError):
                 if service_initial:
                     report["service_failure_diagnostic"] = "unavailable_or_invalid"
@@ -1286,12 +1383,14 @@ def supervise(
                             output.seek(0)
                             failure_output = output.read(LIMIT)
                             failure_summary = service_failure_diagnostic(
-                                failure_output, returncode=child.returncode,
+                                failure_output,
+                                returncode=child.returncode,
                             )
                             report["service_failure_diagnostic"] = failure_summary
                             try:
                                 report["static_failure_diagnostic"] = static_failure_diagnostic(
-                                    failure_output, failure=failure_summary,
+                                    failure_output,
+                                    failure=failure_summary,
                                 )
                             except Exception:
                                 report["static_failure_diagnostic"] = "unavailable_or_invalid"
@@ -1306,15 +1405,22 @@ def supervise(
             for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
         }
         cpu_delta(
-            previous, {role: value["cpu_usec"] for role, value in final.items()},
+            previous,
+            {role: value["cpu_usec"] for role, value in final.items()},
             40 if service_initial else 600,
         )
         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 60 if service_initial else 600)
+        lifetime_cpu = cpu_delta(
+            dict.fromkeys(final_cpu, 0), final_cpu, 60 if service_initial else 600
+        )
         report["lifetime_cpu_usec"] = lifetime_cpu
-        if lifetime_cpu + canary_resources["cpu_usec"] > (70_000_000 if service_initial else 600_000_000):
+        if lifetime_cpu + canary_resources["cpu_usec"] > (
+            70_000_000 if service_initial else 600_000_000
+        ):
             raise ProofFailure("cpu_budget")
-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 40 if service_initial else 600)
+        report["observed_workload_cpu_usec"] = cpu_delta(
+            before, final_cpu, 40 if service_initial else 600
+        )
         report["containers"] = final
         if service_initial:
             report["workload_cpu_usec_by_role"] = {
@@ -1401,7 +1507,8 @@ def supervise(
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
     wanted_status = (
-        "service_initial_passed_not_postgresql_or_capacity" if service_initial
+        "service_initial_passed_not_postgresql_or_capacity"
+        if service_initial
         else "micro_passed_not_capacity"
     )
     if report["status"] != wanted_status:

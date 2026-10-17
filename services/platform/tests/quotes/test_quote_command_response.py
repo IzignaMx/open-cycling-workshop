@@ -141,9 +141,7 @@ def test_receipt_ordinal_is_the_safe_sum_of_revision_and_decision_sequence(
     quote_version, decision_sequence, ordinal
 ):
     value = document(decision=True, transition=True)["receipt"]
-    value.update(
-        quote_version=quote_version, decision_sequence=decision_sequence, ordinal=ordinal
-    )
+    value.update(quote_version=quote_version, decision_sequence=decision_sequence, ordinal=ordinal)
     with pytest.raises(ValidationError):
         Receipt.model_validate(value)
 

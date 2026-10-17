@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · Direct static source repair pending qualification
+
+- Preserve the bounded static failure: repository check passed, Ruff failed,
+  and format/types/contracts remained unrun. Retain the separate failed repair
+  export without claiming a generated patch or known initiating exception.
+- Prepare direct style/import repairs on the existing fixed source selection;
+  keep rules, product semantics, schema, resource limits and old workflows.
+- Reuse the six-command contained qualification on a new exact-source branch.
+  Manual inspection is not a passing lint/format/typecheck result.
+- Scope: [direct repair and retained evidence](docs/10-spec-development/2026-10-17-direct-static-source-repair.md).
+
 ## Unreleased · Fixed service static and contract preparation
 
 - Record independently accepted semantic run `39043072145` on `a9450392`: six

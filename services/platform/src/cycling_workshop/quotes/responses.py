@@ -164,7 +164,7 @@ def encode_command_response(response: CommandResponse) -> bytes:
         # model_copy/model_construct (including nested values) bypass validation.
         checked = CommandResponse.model_validate(response)
         encoded = checked.model_dump_json().encode("utf-8")
-    except (ValidationError, ValueError, TypeError, UnicodeError):
+    except (ValidationError, ValueError, TypeError):
         raise QuoteReadError("invalid_quote_projection") from None
     if len(encoded) > RESPONSE_LIMIT:
         raise QuoteReadError("quote_response_too_large")

@@ -1,7 +1,25 @@
 schema: 1
 
+quote_service_manual_static_repair_20261017:
+  status: prepared_pending_review_and_actual_qualification
+  base_commit: dff067af840b8e83d87d17ae6fa36cfd10e75653
+  base_tree: c3ba32738c5996badcf575bc47dfac9b9499fb4f
+  branch: codex/quote-service-static-manual-qualification
+  workflow: .github/workflows/quote-service-static-manual-qualification.yml
+  previous_static_run: 39044828140
+  previous_static_result: repository_passed_ruff_failed_four_checks_unrun
+  repair_proposal_run: 39046578616
+  repair_proposal_result: sixth_export_call_failed_no_patch_retained_cause_unknown
+  correction: direct_source_edits_no_generated_patch_applied
+  rules_product_schema_resource_limits: preserved
+  consumed_workflows: unchanged_not_retried
+  actual_new_static_checks: not_run
+  evidence: docs/10-spec-development/2026-10-17-direct-static-source-repair.md
+
 quote_service_static_contracts_20261017:
-  status: prepared_pending_exact_independent_review_unexecuted_unpublished
+  status: failed_ruff_after_repository_pass_later_checks_unrun
+  run: 39044828140
+  artifact: 12105845250
   base_commit: a945039247decaec4f00fe3a04d125ba2d238208
   base_tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
   local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
@@ -35,7 +53,7 @@ quote_service_static_contracts_20261017:
   consumed_workflows: byte_identical_not_retried
   local_import_compile_collection_tests_static_contracts: not_run
   diagnostic_negative_source_cases: prepared_unrun_not_selected
-  actual_static_contract_results: unavailable_not_yet_executed
+  actual_static_contract_results: repository_passed_ruff_failed_format_mypy_openapi_client_unrun
   exposed_service_contract_TypeScript_compilation_broad_suite: not_qualified
   evidence: docs/10-spec-development/2026-10-17-quote-service-static-contracts.md
 

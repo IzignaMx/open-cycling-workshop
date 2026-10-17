@@ -363,9 +363,7 @@ class QuoteService:
         return True
 
     @staticmethod
-    def _release_hook(
-        connection: Connection | None, hook: Callable[..., None] | None
-    ) -> None:
+    def _release_hook(connection: Connection | None, hook: Callable[..., None] | None) -> None:
         if connection is not None and hook is not None:
             event.remove(connection, "before_cursor_execute", hook)
 
@@ -395,7 +393,9 @@ class QuoteService:
     def _authorize(principal: Principal, command: QuoteRepositoryCommand) -> None:
         needed = {"orders.read", "orders.write", "quotes.read"}
         needed.add(
-            "quotes.authorize" if isinstance(command, RecordQuoteDecisionCommand) else "quotes.write"
+            "quotes.authorize"
+            if isinstance(command, RecordQuoteDecisionCommand)
+            else "quotes.write"
         )
         if (
             not needed <= principal.capabilities
@@ -418,7 +418,15 @@ class QuoteService:
                 InventoryMovementRecord.organization_id == command.organization_id,
                 InventoryMovementRecord.order_id == command.order_id,
             )
-            progressed = {"AUTHORIZED", "REJECTED", "IN_PROGRESS", "WAITING_FOR_PARTS", "READY", "CLOSED", "CANCELLED"}
+            progressed = {
+                "AUTHORIZED",
+                "REJECTED",
+                "IN_PROGRESS",
+                "WAITING_FOR_PARTS",
+                "READY",
+                "CLOSED",
+                "CANCELLED",
+            }
             history = select(ServiceOrderEventRecord.event_id).where(
                 ServiceOrderEventRecord.organization_id == command.organization_id,
                 ServiceOrderEventRecord.order_id == command.order_id,
@@ -464,7 +472,11 @@ class QuoteService:
         command = receipt.command
         head = result.ledger.history.head
         decision = next(
-            (entry for entry in result.ledger.entries if entry.command.decision_id == receipt.operation_id),
+            (
+                entry
+                for entry in result.ledger.entries
+                if entry.command.decision_id == receipt.operation_id
+            ),
             None,
         )
         historical_quote = next(
@@ -474,50 +486,78 @@ class QuoteService:
         effect = receipt.order_effects
         effects = (
             QuoteOnlyEffects(
-                kind="quote_only", quote_outbox_id=receipt.quote_outbox_id,
-                order_event_id=None, resulting_order_version=None, change_cursor=None,
+                kind="quote_only",
+                quote_outbox_id=receipt.quote_outbox_id,
+                order_event_id=None,
+                resulting_order_version=None,
+                change_cursor=None,
                 order_outbox_id=None,
             )
             if effect is None
             else OrderTransitionEffects(
-                kind="order_transition", quote_outbox_id=receipt.quote_outbox_id,
+                kind="order_transition",
+                quote_outbox_id=receipt.quote_outbox_id,
                 order_event_id=effect.order_event_id,
                 resulting_order_version=effect.resulting_order_version,
-                change_cursor=effect.change_cursor, order_outbox_id=effect.order_outbox_id,
+                change_cursor=effect.change_cursor,
+                order_outbox_id=effect.order_outbox_id,
             )
         )
         latest_id = result.ledger.projection.decision_id
         latest = next(
-            (entry for entry in result.ledger.entries if entry.command.decision_id == latest_id), None
+            (entry for entry in result.ledger.entries if entry.command.decision_id == latest_id),
+            None,
         )
         return CommandResponse(
             delivery="replayed" if result.replayed else "applied",
             receipt=Receipt(
                 operation_id=receipt.operation_id,
-                kind="decision" if isinstance(command, RecordQuoteDecisionCommand) else "create" if isinstance(command, CreateQuoteCommand) else "revise",
-                ordinal=receipt.ordinal, quote_id=receipt.quote_id,
+                kind="decision"
+                if isinstance(command, RecordQuoteDecisionCommand)
+                else "create"
+                if isinstance(command, CreateQuoteCommand)
+                else "revise",
+                ordinal=receipt.ordinal,
+                quote_id=receipt.quote_id,
                 quote_version=receipt.quote_version,
                 decision_id=receipt.operation_id if decision is not None else None,
                 decision_sequence=receipt.decision_sequence,
                 recorded_at=receipt.recorded_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 recorded_by_actor_id=command.actor_id,
                 totals=PricingSummary(
-                    subtotal_minor=pricing.subtotal_minor, discount_minor=pricing.discount_minor,
-                    tax_minor=pricing.tax_minor, total_minor=pricing.total_minor,
-                ), effects=effects,
+                    subtotal_minor=pricing.subtotal_minor,
+                    discount_minor=pricing.discount_minor,
+                    tax_minor=pricing.tax_minor,
+                    total_minor=pricing.total_minor,
+                ),
+                effects=effects,
             ),
             current=CurrentLineage(
-                organization_id=head.organization_id, location_id=head.location_id,
-                order_id=head.order_id, lineage_id=result.ledger.history.lineage_id,
-                head_quote_id=head.quote_id, head_version=head.version,
+                organization_id=head.organization_id,
+                location_id=head.location_id,
+                order_id=head.order_id,
+                lineage_id=result.ledger.history.lineage_id,
+                head_quote_id=head.quote_id,
+                head_version=head.version,
                 decision_sequence=result.ledger.sequence,
             ),
             current_decision=DecisionNow.model_validate(
-                dict(decision_id=latest.command.decision_id, quote_id=latest.command.quote_id,
-                sequence=latest.sequence, outcome=latest.command.outcome),
-            ) if latest is not None else None,
+                dict(
+                    decision_id=latest.command.decision_id,
+                    quote_id=latest.command.quote_id,
+                    sequence=latest.sequence,
+                    outcome=latest.command.outcome,
+                ),
+            )
+            if latest is not None
+            else None,
             order=OrderNow.model_validate(
-                dict(organization_id=result.order.organization_id, location_id=result.order.location_id,
-                order_id=result.order.order_id, state=result.order.state, version=result.order.version),
+                dict(
+                    organization_id=result.order.organization_id,
+                    location_id=result.order.location_id,
+                    order_id=result.order.order_id,
+                    state=result.order.state,
+                    version=result.order.version,
+                ),
             ),
         )

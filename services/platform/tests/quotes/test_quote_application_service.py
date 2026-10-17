@@ -21,7 +21,8 @@ from cycling_workshop.sync.writes import lock_writer
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from test_identity_migration import identity_migration_database as identity_migration_database
-from test_quote_repository import creation, database as database, decision, revision
+from test_quote_repository import creation, decision, revision
+from test_quote_repository import database as database
 from test_quote_storage import NOW
 
 pytestmark = pytest.mark.parametrize("identity_migration_database", ["sqlite"], indirect=True)
@@ -54,9 +55,7 @@ def execute(session, principal, command, *, enabled=True, deadline=None):
 def totals(session):
     return tuple(
         session.scalar(select(func.count()).select_from(model))
-        for model in (
-            QuoteOperationRecord, ServiceOrderEventRecord, ChangeRecord, OutboxRecord
-        )
+        for model in (QuoteOperationRecord, ServiceOrderEventRecord, ChangeRecord, OutboxRecord)
     )
 
 
@@ -152,6 +151,7 @@ def test_commit_ack_loss_is_unknown_and_same_identity_replays(database, actors, 
 
 def test_expired_deadline_refuses_before_writer_or_effects(database, actors, monkeypatch):
     with Session(database) as session:
+
         def forbidden(*_, **__):
             pytest.fail("expired request reached writer")
 
@@ -202,7 +202,9 @@ def test_replay_retains_receipt_after_order_cancellation(database, actors):
         assert replay["order"]["version"] == 3
 
 
-def test_expiry_after_order_effect_flush_rolls_back_outer_transaction(database, actors, monkeypatch):
+def test_expiry_after_order_effect_flush_rolls_back_outer_transaction(
+    database, actors, monkeypatch
+):
     from cycling_workshop.quotes import service
 
     with Session(database) as session:
@@ -220,7 +222,9 @@ def test_expiry_after_order_effect_flush_rolls_back_outer_transaction(database, 
         monkeypatch.setattr(service, "append_change", append_then_expire)
         with pytest.raises(QuoteServiceError, match="quote_request_unavailable"):
             execute(
-                session, actors, decision(),
+                session,
+                actors,
+                decision(),
                 deadline=QuoteDeadline(expires_at=8.0, clock=lambda: clock[0]),
             )
         assert clock == [9.0]
@@ -234,16 +238,23 @@ def test_create_revise_initial_and_revision_replays(database, actors):
     with Session(database) as session:
         first = execute(session, actors, creation())
         second = execute(session, actors, revision())
-        execute(session, actors, decision(
-            quote_id=uid(2), quote_version=2, expected_head_id=uid(2), expected_head_version=2
-        ))
+        execute(
+            session,
+            actors,
+            decision(
+                quote_id=uid(2), quote_version=2, expected_head_id=uid(2), expected_head_version=2
+            ),
+        )
         assert execute(session, actors, creation(), enabled=False)["receipt"] == first["receipt"]
         assert execute(session, actors, revision(), enabled=False)["receipt"] == second["receipt"]
         assert totals(session) == (3, 1, 1, 4)
 
 
-def test_failed_rollback_and_invalidation_preserve_closed_cleanup_state(database, actors, monkeypatch):
+def test_failed_rollback_and_invalidation_preserve_closed_cleanup_state(
+    database, actors, monkeypatch
+):
     with Session(database) as session:
+
         def fail():
             raise OSError("synthetic cleanup failure")
 
@@ -279,7 +290,9 @@ def test_hook_cleanup_failure_never_replaces_unknown_commit(database, actors, mo
         assert error.value.cleanup_unverified is True
 
 
-def test_driver_budget_failure_invalidates_instead_of_returning_connection(database, actors, monkeypatch):
+def test_driver_budget_failure_invalidates_instead_of_returning_connection(
+    database, actors, monkeypatch
+):
     from cycling_workshop.quotes import service
 
     with Session(database) as session:
