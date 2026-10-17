@@ -1,7 +1,7 @@
 # One-case PostgreSQL service-effect restore qualification
 
-Status: prepared; exact implementation review, image preparation and execution
-pending. The [three migration integrity cases](2026-10-17-quote-migration-integrity.md#verified-result)
+Status: exact implementation and terminal evidence independently reviewed; the
+single synthetic restore case passed. The [three migration integrity cases](2026-10-17-quote-migration-integrity.md#verified-result)
 passed independently. They did not prove logical backup restoration.
 
 ## Acceptance
@@ -42,7 +42,8 @@ Do not float versions, disable signature checks or install host packages.
 Verify package versions, actual pg_dump/pg_restore release 18.4 and dynamic-link
 resolution. Fixed symlinks make those clients visible through the existing
 sanitized PATH. The contained case retains bounded actual client identities.
-Installation and duration remain unmeasured until the hosted run. An unavailable
+Installation and duration were unmeasured at preparation; the verified result
+below records the completed hosted run. An unavailable
 historical package stops preparation rather than changing the accepted input.
 
 Keep a bounded public build/pull log for each of the three ordinary preparation
@@ -79,7 +80,7 @@ absence remain essential. No caller database or durable workshop volume is used.
 This case can establish only tiny synthetic logical restore of generated
 metadata and valid version-1 effect replay. Production-size restore/rewrite,
 concurrent writers, rollback after restore failure, external assets, browser
-queues, HTTP exposure, worker delivery, capacity, physical hardware and actual
+queues, HTTP exposure, worker delivery, capacity, physical hardware and real-workshop
 installation remain separately gated. Existing failed capacity/profile runs and
 the unknown historical restart cause remain preserved. The remaining pure and
 guard regressions also need their own execution evidence.
@@ -88,3 +89,36 @@ References: [PGDG archive](https://apt-archive.postgresql.org/),
 [official Debian key/repository instructions](https://www.postgresql.org/download/linux/debian/),
 [PostgreSQL 18 package pool](https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/),
 and the [bounded full-integrity amendment](../02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
+
+## Verified tiny service-effect restore result
+
+[Run 39067901565](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39067901565),
+job 117499266512, number/attempt 1/1, passed on commit
+`d7868100c1b736607e939bef40c91f94798fad2f`, tree
+`9baa4919d168279900545feb6fdabee790ff4ad8`. Artifact 12114530032 has SHA-256
+`8f34ed579074c6e0781a0305c8ce34cae5da87f6a4a4f999f27c4f10b0987b24`.
+Independent source and terminal-evidence reviews accepted the exact result.
+
+The one selected case and all three ordered phases passed without skips or
+errors. Actual pg_dump and pg_restore both reported PostgreSQL 18.4 (Debian
+18.4-1.pgdg13+1); signed package, version and link checks passed in image preparation.
+Final source/target probes observed distinct owned PostgreSQL 18.4 / psycopg 3.3.4
+UTF8 databases, public schema, revision 0013, and closed connections. The test
+proved real logical dump/restore, live generated STORED metadata, complete retained
+rows/raw payload bytes/counts, explicit target incarnation recovery, old-token
+invalid_session rejection and fresh same-ID replay with new commands disabled.
+Original effect identities/counts and source state remained unchanged.
+
+Measured workload was 4.848 seconds; setup 2.367 seconds and supervisor 7.634
+seconds. Final worker peak was 96,944,128 bytes; database peak 136,056,832 bytes.
+Final worker/database CPU counters were 4,646,788 / 2,038,004 microseconds;
+observed workload CPU delta was 5,600,478 microseconds. The separate cancellation
+canary observed four processes across three generations. Client reap and both
+primary and independent owned-container absence were verified. Successful
+execution does not claim the specimen's failure-path stop-before-reap occurred.
+
+Preparation logs were complete bounded outputs (72, 72 and 39 bytes), primarily
+image identities. No dump, token or workshop data was uploaded. This closes only
+tiny synthetic version-1 service-effect logical restore/replay. Production-size
+restore, concurrency, capacity, browser queues, real-workshop installation and activation remain
+open; new guard regressions and broader static/integration checks remain unrun.

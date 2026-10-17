@@ -1,7 +1,27 @@
 schema: 1
 
-quote_service_restore_20261017:
+quote_integration_checks_20261017:
   status: prepared_pending_exact_review_and_run
+  fixed_group_cases: [51, 68, 62, 6]
+  workload_seconds_per_group: 20
+  total_group_workload_allocation_seconds: 80
+  max_parallel: 1
+  frozen_outer_baseline: true
+  internal_merge_readiness: pending_consolidated_review_and_integration
+  activation_capacity_and_concurrency: unqualified
+  evidence: docs/10-spec-development/2026-10-17-quote-integration-checks.md
+
+quote_service_restore_20261017:
+  status: passed_independently_reviewed
+  run_id: 39067901565
+  source_commit: d7868100c1b736607e939bef40c91f94798fad2f
+  source_tree: 9baa4919d168279900545feb6fdabee790ff4ad8
+  artifact_id: 12114530032
+  artifact_sha256: 8f34ed579074c6e0781a0305c8ce34cae5da87f6a4a4f999f27c4f10b0987b24
+  measured_workload_seconds: 4.848
+  final_worker_peak_bytes: 96944128
+  final_database_peak_bytes: 136056832
+  cleanup: verified_absent
   expected_cases: 1
   expected_phases: 3
   database_roles: [source, target]
@@ -10,7 +30,7 @@ quote_service_restore_20261017:
   client_package_revision: "18.4-1.pgdg13+1"
   shared_workload_seconds: 20
   scope: tiny_valid_version_one_effect_metadata_restore_and_fresh_replay
-  package_installation_and_duration: unverified
+  package_installation_and_duration: verified_for_this_tiny_case
   evidence: docs/10-spec-development/2026-10-17-quote-service-restore.md
 
 quote_migration_integrity_20261017:

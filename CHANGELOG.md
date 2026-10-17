@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased · Service-effect logical restore verified
+
+- Verify one real PostgreSQL 18.4 dump/restore and fresh replay case, three phases, in run 39067901565.
+- Preserve exact generated metadata, raw payloads, effect IDs and original source state; reject the stale restored incarnation.
+- Workload 4.848 seconds; source-bound client versions, cancellation and both absence receipts independently checked.
+- Correct reusable PG service fixture identity to match its validated configured database, including ordinary CI's ocwp_e2e; runtime requalification remains pending.
+- Prepare four fixed contained integration groups (51/68 guard, 62 pure product boundaries, six static commands); exact results remain pending.
+- No capacity or production recovery claim; [integration scope](docs/10-spec-development/2026-10-17-quote-integration-checks.md).
+- [Verified scope](docs/10-spec-development/2026-10-17-quote-service-restore.md#verified-tiny-service-effect-restore-result).
+
 ## Unreleased · Valid service-effect restore preparation
 
 - Close three PostgreSQL migration integrity cases and nine phases in run 39066342042.

@@ -45,7 +45,9 @@ def postgres_identity(database, request):
             )
         ).one()
         name, schema, search_path, version, server_encoding, client_encoding, revision = observed
-        assert name == "ocwp_quote_micro_test"
+        # The owning fixture already validates loopback and *_test/*_e2e routing.
+        # Keep reusable product tests compatible with ordinary CI's ocwp_e2e.
+        assert name == database.url.database
         assert re.fullmatch(r"ocwp_identity_migration_[0-9a-f]{32}", schema)
         assert search_path == schema
         assert type(version) is int and version == 180004

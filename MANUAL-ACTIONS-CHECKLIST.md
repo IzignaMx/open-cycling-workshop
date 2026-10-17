@@ -13,8 +13,8 @@
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.
 - [x] Verify refusal of unsupported old effects in run 39066342042.
 - [x] Prove DDL rollback after the final ALTER in run 39066342042.
-- [ ] Prove logical restore with generated metadata and valid retained effects.
-- [ ] Review and execute the one-case signed-PG18.4-client restore candidate under unchanged limits.
+- [x] Prove tiny logical restore with generated metadata and valid retained effects in run 39067901565.
+- [x] Review and execute the one-case signed-PG18.4-client restore candidate under unchanged limits.
 - [ ] Complete broader integration, concurrency and capacity gates before activation.
 - [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
   Earlier preparation entries are historical checkpoints, not current completion claims.
