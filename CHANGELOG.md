@@ -1,5 +1,10 @@
 # Changelog
 
+## Quote PostgreSQL loader/writer evidence · 2026-10-17
+
+- Run 39075248467 passed all 32 real PostgreSQL cases and six selection mocks. The repository check passed; Ruff failed four new SIM300 comparisons and four later static commands were unrun.
+- Preserve that partial result, correct only the reported comparisons and prepare a static-six-only verification under unchanged limits. Product and PostgreSQL test bodies remain unchanged.
+
 ## Quote candidate static closure and PostgreSQL coverage · 2026-10-17
 
 - Verify all six static commands on cb2d8d48 in run 39074239970: repository, Ruff, format, strict production types, OpenAPI and generated client. Workload 13.270 seconds under the unchanged 20-second cap; prior failures remain preserved.

@@ -822,7 +822,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         assert module.PYTEST[:2] == ["env", "-i"] and "-k" not in module.PYTEST
         static = group in ("static6", "selection_static12")
         assert module.LIMIT == 16 * 1024
-        assert module.SPOOL_LIMIT == (32 * 1024 if static else 16 * 1024)
+        assert (32 * 1024 if static else 16 * 1024) == module.SPOOL_LIMIT
         assert ("OCWP_QUOTE_SERVICE_INITIAL=contained" in module.PYTEST) is static
         assert not any(
             "DATABASE_URL=" in arg or "quote_integrity_postgres" in arg for arg in module.PYTEST
@@ -909,7 +909,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         "tests.operations.test_quote_integrity_selection",
     ]
     combined = modules["selection_static12"]
-    assert combined.SELECTION == (
+    assert (
         (
             "tests/operations/test_quote_integrity_selection.py",
             tuple((name, 1, 0) for name in CHECK_NAMES),
@@ -918,13 +918,13 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
             "tests/operations/test_quote_integrity_static_contracts.py",
             tuple((name, 1, 0) for name in STATIC_NAMES),
         ),
-    )
-    assert combined.EXPECTED_COUNTS == dict.fromkeys((*CHECK_NAMES, *STATIC_NAMES), 1)
+    ) == combined.SELECTION
+    assert dict.fromkeys((*CHECK_NAMES, *STATIC_NAMES), 1) == combined.EXPECTED_COUNTS
     assert combined.CLASS_NAMES == [
         "tests.operations.test_quote_integrity_selection",
         "tests.operations.test_quote_integrity_static_contracts",
     ]
-    assert modules["static6"].SELECTION == (combined.SELECTION[1],)
+    assert (combined.SELECTION[1],) == modules["static6"].SELECTION
     assert modules["response50"].EXPECTED_COUNTS == {
         "test_numeric_fields_refuse_coercion_and_unsafe_values": 50
     }

@@ -12,7 +12,9 @@
 - [x] Verify 204 current-source service/effect/DTO/mock and PostgreSQL metadata/bridge cases in run 39072574166.
 - [x] Close the four SIM300 findings: repository and Ruff passed in run 39073762410.
 - [x] Close all six corrected-source static commands in run 39074239970.
-- [ ] Close remaining PostgreSQL loader/writer, service and broader integration coverage.
+- [x] Execute all 32 selected PostgreSQL loader/writer cases successfully in run 39075248467, with independent artifact checks.
+- [ ] Close the four new SIM300 findings and later static commands on the final source.
+- [ ] Close remaining service and broader integration coverage.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.
 - [x] Verify refusal of unsupported old effects in run 39066342042.

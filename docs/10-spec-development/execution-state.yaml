@@ -1,12 +1,22 @@
 schema: 1
 
 quote_loader_writer_checks_20261017:
-  status: prepared_pending_exact_review_and_execution
+  status: postgres_and_mock_passed_static_failed_independently_checked
+  run_id: 39075248467
+  source_commit: 07351675c671cf18077c5c08edab2132be070dec
+  source_tree: cb254639c316e3a48f5f10e74c56377a9be3495d
+  postgresql_cases_passed: 32
+  postgresql_phases_passed: 96
+  postgresql_workload_seconds: [4.936, 6.985, 7.166, 9.760]
+  cleanup: all_five_primary_and_independent_absence_verified
+  mock_cases_passed: 6
+  repository_check: passed
+  static_result: Ruff_four_SIM300_later_four_commands_unrun
   postgresql_group_cases: [5, 9, 9, 9]
   combined_mock_static_cases: 12
   total_selected_checks: 44
   workload_seconds_per_group: 20
-  runtime_result: not_executed
+  runtime_result: partial_failed_static
   scope: existing_prepared_writer_bounded_loader_and_updated_selection_static
   production_change: none
   evidence: docs/10-spec-development/2026-10-17-quote-loader-writer-checks.md

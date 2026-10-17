@@ -1,8 +1,8 @@
 # Remaining PostgreSQL quote loader and writer checks
 
-Status: finite source preparation; exact implementation review and execution are pending.
+Status: all 32 PostgreSQL cases and six selection mocks passed; the repository check passed, Ruff failed four style comparisons and four later static commands were unrun. Independent artifact checks passed for the selected functional scope; the overall workflow remains failed.
 
-The corrected service candidate has [204 functional/mock checks and six static commands verified](2026-10-17-quote-integrity-edges.md). This next selection is intended to qualify existing PostgreSQL prepared-writer and bounded-loader coverage. It introduces no product behavior or schema change.
+The corrected service candidate has [204 functional/mock checks and six static commands verified](2026-10-17-quote-integrity-edges.md). The following historical preparation plan selected existing PostgreSQL prepared-writer and bounded-loader coverage. It introduces no product behavior or schema change.
 
 ## Fixed selection
 
@@ -13,7 +13,7 @@ Four PostgreSQL groups select 32 existing cases, with complete functions and exa
 - `history9`: historical replay without current oversized Text hydration, six unknown/invalid version values, paired transition-claim refusal, and quote-outbox-pointer prefetch refusal.
 - `guards9`: three timestamp guards before driver conversion, actual NOWAIT row-lock retention during prepare/persist, compressed Text refusal without hydration, and four forged prepared-projection values.
 
-The planned implementation's explicit function tables define the exact node membership. Both selected test modules remain unchanged: `test_prepared_order_change.py` and `test_quote_bounded_effects_postgres.py`.
+The source-reviewed implementation's explicit function tables define the exact node membership. Both selected test modules remain unchanged: `test_prepared_order_change.py` and `test_quote_bounded_effects_postgres.py`.
 
 One additional `selection_static12` group runs the existing six mock selection/identity/parser regressions followed by the unchanged six static commands. Mock expectations must retain all old groups and validate the new mixed-type rows. Exact types distinguish `True` from `1`, and validate the fixed bytes value and one tiny dictionary without coercion or arbitrary serialization. This is 44 checks across five sequential workloads.
 
@@ -32,3 +32,13 @@ The prior static-only workload took 13.270 seconds. Previous metadata/bridge gro
 The writer rollback cases contain reached-insert sentinels. Some injected preparation/bypass cases assert refusal and no writes without an independent callback-reached sentinel; passing them must be reported at that narrower assertion scope. Actual lock retention in one NOWAIT test does not qualify broader service concurrency or contention performance.
 
 The prior tiny logical restore proves valid retained effects and replay after incarnation recovery. Full-history integrity validation before reopening, including corrupt/oversized/unknown-version restore refusal, remains open. Broader service integration, capacity, nominal latency, complete production deadlines, HTTP/UI and activation remain separate gates. No production route, deployment, real data or account change is included.
+
+## Observed partial result and exact style correction
+
+[Run 39075248467](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39075248467), first run/attempt, tested commit `07351675c671cf18077c5c08edab2132be070dec`, tree `cb254639c316e3a48f5f10e74c56377a9be3495d`. All four PostgreSQL groups passed their 32 cases and 96 ordered phases. The combined group passed all six mocks and the repository contract, then failed Ruff with four complete SIM300 findings in selection-test lines 825, 912, 922 and 927. Formatting, production types, OpenAPI and generated client did not run. The overall workflow failed; it is not 44 passing checks.
+
+The four PostgreSQL artifacts are `12116244768` (writer5), `12117150411` (admission9), `12116887277` (history9), and `12117130639` (guards9). The combined failed artifact is `12117260084`; its complete decoded Ruff output is 431 bytes. Its failed outer report has no accepted JUnit aggregate or final worker counters, and no such values are inferred from seven diagnostic pass markers.
+
+The corrective source reverses only the four equality operands, refreshes the test pin and adds an exact `codex/quote-loader-static-checks` / `.github/workflows/quote-loader-static-checks.yml` pair restricted to the existing six static commands. It preserves all consumed workflows, production and PostgreSQL test bodies, and resource limits. No PostgreSQL or mock workload is selected again. Exact correction review and execution remain pending.
+
+Independent artifact checks verified all five ZIP/source bindings, the 96 ordered PostgreSQL phases, 32 distinct closed schema identities, serialized jobs, real cancellation canaries and primary plus independent absence. PostgreSQL workloads were 4.936 / 6.985 / 7.166 / 9.760 seconds for writer/admission/history/guards respectively. Final worker memory peaks were 93,245,440 / 102,760,448 / 106,532,864 / 103,780,352 bytes. These successful-path readings precede container termination; they are not posttermination totals. PostgreSQL success records client reap, while failure-path specimen cancellation is not exercised by those successful bodies.
