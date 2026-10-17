@@ -1,4 +1,33 @@
 schema: 1
+
+quote_service_six_case_reconciliation_20261017:
+  status: source_reconciled_service_execution_pending_exact_review
+  actual_main_commit: 8a7eeecc39b0a43097484d10dc30af541ae38156
+  baseline_local_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  baseline_tree: 323661ade5a3540f389bfb5b965d4ff63b400d5c
+  published_guard_commit: d481d5b68240aca635e6ded957e660481b52c06b
+  reconstructed_published_guard_tree: 400a69cbd2c0351ee1ad853826e98481b41adf27
+  guard_bootstrap_run: 39007201961
+  guard_bootstrap_nodes_passed: 34
+  guard_bootstrap_actual_controls_and_both_cleanup_receipts: verified
+  service_cases_executed: 0
+  initial_selection: six_exact_existing_nodes_once_20_seconds
+  schema: unchanged_0012_no_0013_effect_version_amendment
+  source_changes: frozen_service_12_Python_files_identical_no_semantic_fix
+  remaining_static_contract_and_service_checks: unexecuted
+  publication: not_performed_by_this_reconciliation
+  evidence: docs/10-spec-development/2026-10-17-quote-service-six-case-candidate.md
+
+quote_service_candidate_20261016:
+  status: implemented_pending_evidence_execution_blocked_unproved_containment
+  base: PR57_tree540d963d686dd30bda31e7382b15837eae2c9c44
+  scope: unmounted_transaction_service_command_DTO_and_full_immutable_effect_receipt
+  tests: prepared_before_implementation_but_unexecuted_RED_GREEN_not_observed
+  static_and_contracts: unexecuted
+  deadlines: cooperative_only_acquisition_total_Python_and_cleanup_unproved
+  authority: synthetic_development_only_no_routes_adoption_publication_or_workloads
+  evidence: docs/10-spec-development/2026-10-16-quote-service-candidate.md
+
 project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md

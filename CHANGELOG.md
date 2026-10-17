@@ -1,6 +1,26 @@
 # Changelog
 
-## Unreleased · Prepare closed contained service qualification
+## Unreleased · Reconcile initial six-case service qualification
+
+- Reconcile the frozen 16-file service candidate with current-main tree `323661ad`
+  and exact published guard tree `400a69cb`, retaining schema 0012 unchanged.
+- Record bootstrap run `39007201961`: 34 finite guard cases passed inside actual
+  containment with both cleanup receipts verified. Service behavior remains
+  unexecuted; the exact six-node, 20-second qualification still requires review
+  and a separately authorized one-shot publication.
+- Preserve consumed PR51/PR56/bootstrap history, all wider gates and the frozen
+  service source. No schema 0013/version policy or semantic fix is included.
+
+## Historical preparation · Internal quote transaction candidate
+
+- Prepare an unmounted service, closed command DTO and immutable order-effect
+  reconstruction with tiny test-first specifications, all execution pending.
+- Preserve exact authorized replay, historical null effects and commit-outcome
+  uncertainty. No routes, grants, deployment or capacity claim are enabled.
+- Execution is blocked until a named contained venue passes actual preflight;
+  cooperative checkpoints do not prove a total Python deadline.
+
+## Historical preparation · Closed contained service qualification
 
 - Prepare a fixed six-case service selector, closed result validation and bounded descendant cancellation using existing containment helpers.
 - Keep publication/execution blocked pending exact review and independent guard qualification; no tests or workflows have run for this preparation.

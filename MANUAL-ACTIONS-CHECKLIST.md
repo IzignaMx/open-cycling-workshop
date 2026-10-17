@@ -1,5 +1,36 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Initial six-case service qualification · 2026-10-17
+
+- [x] Reconstruct published guard tree `400a69cb` exactly from current-main tree
+      `323661ad` and the 11-file published payload before adding service sources.
+- [x] Preserve the successful guard-only bootstrap run
+      [39007201961](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39007201961):
+      34 finite guard cases, actual controls/canary and both cleanup receipts.
+- [ ] Independently review the exact reconciled tree, frozen manifest and import
+      closure before a separately authorized service-trigger publication.
+- [ ] Qualify exactly six existing nodes once under the unchanged 20-second
+      service ceiling. Service tests, static checks and contracts remain unexecuted.
+- [ ] Keep schema 0012 for this initial batch. Schema 0013 and effect-version
+      admission are a separate uncombined proposal; no migration/model/registry
+      change is included here.
+- [ ] Preserve all PostgreSQL, semantic, deadlines, routes/fences/UI, capacity,
+      restore, physical/operator and activation gates. Consumed workflows stay
+      unchanged; a consumed or skipped service run cannot be replaced implicitly.
+- The following candidate/preparation entries are dated historical checkpoints;
+  current status and exact scope are in the
+  [six-case reconciliation](docs/10-spec-development/2026-10-17-quote-service-six-case-candidate.md).
+
+## Internal quote service candidate · 2026-10-16
+
+- [ ] Independently inspect the exact unmounted service/DTO/effect source.
+- [ ] Authorize a named contained venue and verify actual preflight before tests.
+- [ ] Execute prepared tiny tests and static/contracts; no RED/GREEN has been observed.
+- [ ] Resolve acquisition, synchronous Python and cleanup deadline enforcement.
+- [ ] Complete cohesive ingress/API/TS/UI and PostgreSQL/restore evidence before exposure.
+- [ ] Retain failed capacity/profile evidence and all activation/operator gates.
+- Scope: [unexecuted candidate](docs/10-spec-development/2026-10-16-quote-service-candidate.md).
+
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
 ## Product stack ordinary closure · 2026-10-16

@@ -9,6 +9,7 @@ READ COMMITTED is supported; SQLite proves functional behavior, not concurrency.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from sqlite3 import Connection as SQLiteConnection
@@ -30,8 +31,9 @@ from cycling_workshop.quotes.commands import (
     command_from_proof,
     operation_proof,
 )
-from cycling_workshop.quotes.decisions import QuoteDecisionLedger
+from cycling_workshop.quotes.decisions import QuoteDecisionLedger, QuoteDecisionResult
 from cycling_workshop.quotes.domain import PartLine, Quote
+from cycling_workshop.quotes.effects import QuoteOrderEffects, _validate_order_effects
 from cycling_workshop.quotes.models import (
     QuoteDecisionRecord,
     QuoteLineageRecord,
@@ -46,6 +48,8 @@ from cycling_workshop.quotes.reconstruction import (
 from cycling_workshop.quotes.reconstruction import (
     QuoteReceipt,
     QuoteSnapshot,
+    _advance_with_result,
+    _noop,
     _reconstruct_with_bytes,
     advance,
     event_payload,
@@ -62,7 +66,8 @@ from cycling_workshop.quotes.storage import (
     encode_lines,
     encode_quote,
 )
-from cycling_workshop.service_orders.models import ServiceOrderRecord
+from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
+from cycling_workshop.sync.models import ChangeRecord
 
 
 class QuoteConflictError(ValueError):
@@ -143,13 +148,16 @@ class QuoteRepository:
     def _load(self, lineage: QuoteLineageRecord) -> QuoteSnapshot:
         return self._load_with_bytes(lineage)[0]
 
-    def _load_with_bytes(self, lineage: QuoteLineageRecord) -> tuple[QuoteSnapshot, int]:
+    def _load_with_bytes(
+        self, lineage: QuoteLineageRecord, *, checkpoint: Callable[[], None] = _noop
+    ) -> tuple[QuoteSnapshot, int]:
         scope = lineage.lineage_id
 
         def rows[
             T: (QuoteRevisionRecord, QuoteLineRecord, QuoteDecisionRecord, QuoteOperationRecord)
         ](model: type[T], maximum: int, order: InstrumentedAttribute[int]) -> list[T]:
-            return list(
+            checkpoint()
+            result = list(
                 self.session.scalars(
                     select(model)
                     .where(model.lineage_id == scope)
@@ -158,11 +166,14 @@ class QuoteRepository:
                     .execution_options(populate_existing=True)
                 )
             )
+            checkpoint()
+            return result
 
         revisions = rows(QuoteRevisionRecord, 32, QuoteRevisionRecord.version)
         lines = rows(QuoteLineRecord, 3200, QuoteLineRecord.position)
         decisions = rows(QuoteDecisionRecord, 128, QuoteDecisionRecord.sequence)
         operations = rows(QuoteOperationRecord, 160, QuoteOperationRecord.ordinal)
+        checkpoint()
         targets = list(
             self.session.scalars(
                 select(QuoteLineTargetRecord)
@@ -174,6 +185,7 @@ class QuoteRepository:
                 .limit(32001)
             )
         )
+        checkpoint()
         outboxes = list(
             self.session.scalars(
                 select(OutboxRecord)
@@ -186,8 +198,76 @@ class QuoteRepository:
                 .execution_options(populate_existing=True)
             )
         )
+        checkpoint()
+        # Each source is selected by its retained identity through this scoped
+        # lineage. In particular, change cursors are global, not tenant-local.
+        order_events = list(
+            self.session.scalars(
+                select(ServiceOrderEventRecord)
+                .join(
+                    QuoteOperationRecord,
+                    QuoteOperationRecord.order_event_id == ServiceOrderEventRecord.event_id,
+                )
+                .where(
+                    QuoteOperationRecord.lineage_id == scope,
+                    ServiceOrderEventRecord.organization_id == lineage.organization_id,
+                    ServiceOrderEventRecord.order_id == lineage.order_id,
+                )
+                .limit(129)
+                .execution_options(populate_existing=True)
+            )
+        )
+        checkpoint()
+        changes = list(
+            self.session.scalars(
+                select(ChangeRecord)
+                .join(
+                    QuoteOperationRecord,
+                    QuoteOperationRecord.change_cursor == ChangeRecord.cursor,
+                )
+                .where(
+                    QuoteOperationRecord.lineage_id == scope,
+                    ChangeRecord.organization_id == lineage.organization_id,
+                    ChangeRecord.location_id == lineage.location_id,
+                    ChangeRecord.entity_type == "service_order",
+                    ChangeRecord.entity_id == lineage.order_id,
+                )
+                .limit(129)
+                .execution_options(populate_existing=True)
+            )
+        )
+        checkpoint()
+        order_outboxes = list(
+            self.session.scalars(
+                select(OutboxRecord)
+                .join(
+                    QuoteOperationRecord,
+                    QuoteOperationRecord.order_outbox_id == OutboxRecord.event_id,
+                )
+                .where(
+                    QuoteOperationRecord.lineage_id == scope,
+                    OutboxRecord.organization_id == lineage.organization_id,
+                    OutboxRecord.location_id == lineage.location_id,
+                    OutboxRecord.aggregate_type == "service_order",
+                    OutboxRecord.aggregate_id == lineage.order_id,
+                )
+                .limit(129)
+                .execution_options(populate_existing=True)
+            )
+        )
+        checkpoint()
         return _reconstruct_with_bytes(
-            lineage, revisions, lines, targets, decisions, operations, outboxes
+            lineage,
+            revisions,
+            lines,
+            targets,
+            decisions,
+            operations,
+            outboxes,
+            order_events=order_events,
+            changes=changes,
+            order_outboxes=order_outboxes,
+            checkpoint=checkpoint,
         )
 
     def load(self, organization_id: str, location_id: str, order_id: str) -> QuoteSnapshot | None:
@@ -202,16 +282,65 @@ class QuoteRepository:
     def apply(
         self, command: QuoteRepositoryCommand, *, recorded_at: datetime
     ) -> QuoteRepositoryResult:
+        """Historical repository append; never creates operational order effects."""
+        return self._apply(command, recorded_at=recorded_at)
+
+    def _apply_application(
+        self,
+        command: QuoteRepositoryCommand,
+        *,
+        recorded_at: datetime,
+        admit_new: Callable[[ServiceOrderRecord, QuoteSnapshot | None], None],
+        apply_effects: Callable[
+            [ServiceOrderRecord, QuoteDecisionLedger, QuoteDecisionResult | None],
+            QuoteOrderEffects | None,
+        ],
+        checkpoint: Callable[[], None] = _noop,
+    ) -> QuoteRepositoryResult:
+        """Private fixed service composition; accepts no prepared ledger or plan.
+
+        The service owns a clean session, admission, final materialization and
+        commit/rollback. Callbacks never escape their owning locked transaction.
+        They are not request data or an extension/command-dispatch API.
+        """
+        return self._apply(
+            command,
+            recorded_at=recorded_at,
+            admit_new=admit_new,
+            apply_effects=apply_effects,
+            checkpoint=checkpoint,
+        )
+
+    def _apply(
+        self,
+        command: QuoteRepositoryCommand,
+        *,
+        recorded_at: datetime,
+        admit_new: Callable[[ServiceOrderRecord, QuoteSnapshot | None], None] | None = None,
+        apply_effects: Callable[
+            [ServiceOrderRecord, QuoteDecisionLedger, QuoteDecisionResult | None],
+            QuoteOrderEffects | None,
+        ]
+        | None = None,
+        checkpoint: Callable[[], None] = _noop,
+    ) -> QuoteRepositoryResult:
+        checkpoint()
         # Reconstruct the immutable proof before examining storage; reject forged
         # dataclass internals just like malformed commands from future adapters.
         proof = operation_proof(command)
         command = command_from_proof(proof)
+        checkpoint()
         now = _timestamp(_document(recorded_at))
         self._admitted(command.organization_id, command.location_id, command.actor_id)
+        checkpoint()
         order = self._order(command.organization_id, command.location_id, command.order_id)
+        checkpoint()
         lineage = self._lineage(command.organization_id, command.order_id)
+        checkpoint()
         snapshot, history_bytes = (
-            self._load_with_bytes(lineage) if lineage is not None else (None, 2)
+            self._load_with_bytes(lineage, checkpoint=checkpoint)
+            if lineage is not None
+            else (None, 2)
         )
         # Never fetch a foreign order/location proof merely because its operation
         # ID collides with this request. Org-wide uniqueness is handled below with
@@ -230,6 +359,7 @@ class QuoteRepository:
             )
             .execution_options(populate_existing=True)
         )
+        checkpoint()
         if prior is not None:
             if canonical_bytes(prior.proof) != canonical_bytes(proof) or snapshot is None:
                 raise QuoteConflictError("operation identity reused with different semantic proof")
@@ -240,15 +370,29 @@ class QuoteRepository:
             if receipt is None:
                 raise QuoteIntegrityError("receipt is outside its recorded lineage")
             self._admitted(command.organization_id, command.location_id, command.actor_id)
+            checkpoint()
             return self._result(receipt, snapshot.ledger, order, True)
+        # Availability and other new-command policy never suppress a scoped
+        # exact replay, and run before stale CAS, domain validation or writes.
+        if admit_new is not None:
+            admit_new(order, snapshot)
+            checkpoint()
         if type(order.version) is not int or order.version != command.expected_order_version:
             raise QuoteConflictError("stale order version")
         try:
-            ledger = advance(snapshot.ledger if snapshot else None, command, now)
+            fresh_decision: QuoteDecisionResult | None = None
+            if apply_effects is None:
+                ledger = advance(snapshot.ledger if snapshot else None, command, now)
+            else:
+                ledger, fresh_decision = _advance_with_result(
+                    snapshot.ledger if snapshot else None, command, now
+                )
         except ValueError as error:
             raise QuoteConflictError(str(error)) from error
+        checkpoint()
         if not isinstance(command, RecordQuoteDecisionCommand):
             for line in ledger.history.head.lines:
+                checkpoint()
                 if (
                     isinstance(line, PartLine)
                     and self.session.scalar(
@@ -261,11 +405,13 @@ class QuoteRepository:
                     is None
                 ):
                     raise QuoteConflictError("new quote part reference is outside order scope")
+        checkpoint()
         # Reuse only the byte count from this same locked, fully validated load.
         # Canonical arrays add one comma when appending to a nonempty history.
         # Keep the original history-array JSON depth validation for the candidate.
         candidate_bytes = len(canonical_bytes([logical_record(command, ledger)])) - 2
         _check_history_byte_count(history_bytes + int(snapshot is not None) + candidate_bytes)
+        checkpoint()
         # A local savepoint rolls back this operation on any late serialization,
         # constraint or admission failure. The caller still owns outer commit.
         connection = self.session.connection()
@@ -274,8 +420,10 @@ class QuoteRepository:
             # sqlite3 legacy SELECT does not begin a real transaction; otherwise
             # RELEASE of the first SAVEPOINT would commit behind the caller.
             connection.exec_driver_sql("BEGIN")
+        checkpoint()
         try:
             with self.session.begin_nested():
+                checkpoint()
                 if isinstance(command, CreateQuoteCommand):
                     lineage = QuoteLineageRecord(
                         lineage_id=command.lineage_id,
@@ -289,7 +437,9 @@ class QuoteRepository:
                         decision_sequence=0,
                     )
                     self.session.add(lineage)
+                    checkpoint()
                     self.session.flush()
+                    checkpoint()
                 if isinstance(command, RecordQuoteDecisionCommand):
                     entry = ledger.entries[-1]
                     document = encode_entry(entry)
@@ -309,11 +459,19 @@ class QuoteRepository:
                             pricing=cast(dict[str, object], document["pricing"]),
                         )
                     )
+                    checkpoint()
                     self.session.flush()
+                    checkpoint()
                 else:
-                    self._insert_revision(ledger.history.head, command.actor_id, command.lineage_id)
+                    self._insert_revision(
+                        ledger.history.head,
+                        command.actor_id,
+                        command.lineage_id,
+                        checkpoint=checkpoint,
+                    )
                 head = ledger.history.head
                 if not isinstance(command, CreateQuoteCommand):
+                    checkpoint()
                     updated = self.session.execute(
                         update(QuoteLineageRecord)
                         .where(
@@ -333,6 +491,18 @@ class QuoteRepository:
                     )
                     if updated.scalar_one_or_none() != command.lineage_id:
                         raise QuoteConflictError("quote cursor changed before append")
+                checkpoint()
+                order_effects = None
+                if apply_effects is not None:
+                    order_effects = apply_effects(order, ledger, fresh_decision)
+                    if isinstance(command, RecordQuoteDecisionCommand):
+                        if type(order_effects) is not QuoteOrderEffects:
+                            raise QuoteConflictError(
+                                "initial decision requires complete order effects"
+                            )
+                    elif order_effects is not None:
+                        raise QuoteConflictError("quote revision cannot create order effects")
+                    checkpoint()
                 outbox_id = enqueue_outbox(
                     self.session,
                     event_type=event_type(command),
@@ -343,7 +513,13 @@ class QuoteRepository:
                     payload=event_payload(command, ledger),
                     occurred_at=now,
                 )
+                checkpoint()
                 self.session.flush()
+                checkpoint()
+                if order_effects is not None:
+                    self._validate_inserted_effects(
+                        order_effects, command, now, outbox_id, checkpoint=checkpoint
+                    )
                 ordinal = head.version + ledger.sequence
                 self.session.add(
                     QuoteOperationRecord(
@@ -363,19 +539,89 @@ class QuoteRepository:
                         actor_id=command.actor_id,
                         recorded_at=now,
                         quote_outbox_id=outbox_id,
+                        order_event_id=order_effects.order_event_id if order_effects else None,
+                        resulting_order_version=(
+                            order_effects.resulting_order_version if order_effects else None
+                        ),
+                        change_cursor=order_effects.change_cursor if order_effects else None,
+                        order_outbox_id=order_effects.order_outbox_id if order_effects else None,
                     )
                 )
+                checkpoint()
                 self.session.flush()
+                checkpoint()
                 self._admitted(command.organization_id, command.location_id, command.actor_id)
                 receipt = QuoteReceipt(
-                    command, head.quote_id, head.version, ledger.sequence, ordinal, now, outbox_id
+                    command,
+                    head.quote_id,
+                    head.version,
+                    ledger.sequence,
+                    ordinal,
+                    now,
+                    outbox_id,
+                    order_effects,
                 )
                 result = self._result(receipt, ledger, order, False)
+                checkpoint()
         except IntegrityError:
             raise QuoteConflictError(
                 "quote operation conflicts with stored identity or scope"
             ) from None
         return result
+
+    def _validate_inserted_effects(
+        self,
+        effects: QuoteOrderEffects,
+        command: QuoteRepositoryCommand,
+        recorded_at: datetime,
+        quote_outbox_id: str,
+        *,
+        checkpoint: Callable[[], None],
+    ) -> None:
+        checkpoint()
+        order_event = self.session.scalar(
+            select(ServiceOrderEventRecord)
+            .where(
+                ServiceOrderEventRecord.event_id == effects.order_event_id,
+                ServiceOrderEventRecord.organization_id == command.organization_id,
+                ServiceOrderEventRecord.order_id == command.order_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+        checkpoint()
+        change = self.session.scalar(
+            select(ChangeRecord)
+            .where(
+                ChangeRecord.cursor == effects.change_cursor,
+                ChangeRecord.organization_id == command.organization_id,
+                ChangeRecord.location_id == command.location_id,
+                ChangeRecord.entity_type == "service_order",
+                ChangeRecord.entity_id == command.order_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+        checkpoint()
+        order_outbox = self.session.scalar(
+            select(OutboxRecord)
+            .where(
+                OutboxRecord.event_id == effects.order_outbox_id,
+                OutboxRecord.organization_id == command.organization_id,
+                OutboxRecord.location_id == command.location_id,
+                OutboxRecord.aggregate_type == "service_order",
+                OutboxRecord.aggregate_id == command.order_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+        checkpoint()
+        try:
+            if order_event is None or change is None or order_outbox is None:
+                raise ValueError("initial decision effect source row is missing")
+            _validate_order_effects(
+                effects, command, recorded_at, quote_outbox_id, order_event, change, order_outbox
+            )
+        except (ValueError, TypeError, AttributeError, KeyError, OverflowError) as error:
+            raise QuoteIntegrityError("stored quote history is invalid") from error
+        checkpoint()
 
     @staticmethod
     def _result(
@@ -393,8 +639,17 @@ class QuoteRepository:
             replayed,
         )
 
-    def _insert_revision(self, quote: Quote, actor_id: str, lineage_id: str) -> None:
+    def _insert_revision(
+        self,
+        quote: Quote,
+        actor_id: str,
+        lineage_id: str,
+        *,
+        checkpoint: Callable[[], None] = _noop,
+    ) -> None:
+        checkpoint()
         document = encode_quote(quote)
+        checkpoint()
         totals = quote.totals
         self.session.add(
             QuoteRevisionRecord(
@@ -414,9 +669,12 @@ class QuoteRepository:
                 ),
             )
         )
+        checkpoint()
         self.session.flush()
+        checkpoint()
         edges: list[QuoteLineTargetRecord] = []
         for position, value in enumerate(encode_lines(quote.lines)):
+            checkpoint()
             row = cast(dict[str, object], value).copy()
             targets = cast(list[str], row.pop("base_line_ids", row.pop("scope_line_ids", [])))
             self.session.add(
@@ -436,6 +694,10 @@ class QuoteRepository:
                 )
                 for target in targets
             )
+        checkpoint()
         self.session.flush()
+        checkpoint()
         self.session.add_all(edges)
+        checkpoint()
         self.session.flush()
+        checkpoint()

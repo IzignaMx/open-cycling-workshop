@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from sqlalchemy import select
@@ -52,6 +52,12 @@ def lock_writer(session: Session, principal: Principal, admission: WriteAdmissio
     return admitted
 
 
+@dataclass(frozen=True, slots=True)
+class ChangeAppendResult:
+    cursor: int
+    outbox_event_id: str
+
+
 def append_change(
     session: Session,
     *,
@@ -63,22 +69,21 @@ def append_change(
     entity_version: int,
     occurred_at: datetime,
     payload: dict[str, object],
-) -> None:
+) -> ChangeAppendResult:
     """Append exactly one projection and outbox event under the caller's lock."""
-    session.add(
-        ChangeRecord(
-            organization_id=organization_id,
-            location_id=location_id,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            operation=operation,
-            entity_version=entity_version,
-            occurred_at=occurred_at,
-            payload=payload,
-        )
+    change = ChangeRecord(
+        organization_id=organization_id,
+        location_id=location_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        operation=operation,
+        entity_version=entity_version,
+        occurred_at=occurred_at,
+        payload=payload,
     )
+    session.add(change)
     session.flush()
-    enqueue_outbox(
+    outbox_event_id = enqueue_outbox(
         session,
         event_type=f"{entity_type}.{'created' if operation == 'create' else 'updated'}",
         aggregate_type=entity_type,
@@ -88,3 +93,4 @@ def append_change(
         payload=payload,
         occurred_at=occurred_at,
     )
+    return ChangeAppendResult(change.cursor, outbox_event_id)
