@@ -1,5 +1,32 @@
 schema: 1
 
+quote_service_initial_failure_20261017:
+  status: failed_initial_qualification_correction_prepared_unexecuted
+  run: 39039629649
+  run_number: 1
+  run_attempt: 1
+  commit: 49a6f9d8ddce77f1b9488fac78f17a952300e448
+  tree: 8def8ab7ce55db121c9f31f72265f0447e3c3253
+  artifact: 12103397218
+  artifact_sha256: 56d6933692f4e7a1a2cfd581c5aa12b6d0aa108a46b2b5d6662abb8c50301da0
+  specimen_returncode: 4
+  supervisor_elapsed_seconds: 6.395
+  workload_ceiling_seconds: 20
+  cancellation: verified_stopped
+  supervisor_cleanup: verified_absent
+  independent_cleanup: verified_absent
+  six_case_qualification: false
+  original_diagnostic: not_retained_exact_initiating_error_unknown
+  static_defect: module_indirect_database_parametrization_rejects_two_pure_tests
+  correction_tests: prepared_not_executed_RED_GREEN_not_observed
+  correction_gate: fixed_eight_node_dev_only_batch_pending_exact_review_execution
+  correction_gate_branch: codex/quote-collection-regression-proof
+  correction_gate_workload_seconds: 20
+  correction_gate_cpu: 1
+  correction_gate_memory_mib: 512
+  consumed_workflow: unchanged_no_rerun
+  evidence: docs/10-spec-development/2026-10-17-service-collection-correction.md
+
 quote_service_six_case_reconciliation_20261017:
   status: source_reconciled_service_execution_pending_exact_review
   actual_main_commit: 8a7eeecc39b0a43097484d10dc30af541ae38156

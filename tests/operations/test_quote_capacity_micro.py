@@ -857,13 +857,16 @@ def test_service_mode_conflict_refuses_before_tools(tmp_path, monkeypatch):
 
 
 def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
-    """Twelve tiny mocked paths. No Docker, business imports or DB setup."""
+    """Finite mocked paths. No Docker, business imports or DB setup."""
     import json
+    from contextlib import contextmanager
     from types import SimpleNamespace
 
     scenarios = (
         "success", "source", "preflight", "setup_deadline", "fixture_exit", "workload_deadline",
         "mid_probe", "final_deadline", "invalid_report", "cancellation_unknown", "cleanup", "create_timeout",
+        "diagnostic_missing", "diagnostic_duplicate", "diagnostic_invalid", "diagnostic_parser_error",
+        "client_reap_unknown", "output_limit",
     )
     for fault in scenarios:
         with monkeypatch.context() as patch:
@@ -875,21 +878,53 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             patch.setattr(module.time, "sleep", lambda seconds: None)
             patch.setattr(module.os, "killpg", lambda *a: calls.append(["client_kill"]))
             patch.setattr(module.signal, "signal", lambda *a: None)
+            temporary_file = module.tempfile.TemporaryFile
+
+            @contextmanager
+            def traced_spool():
+                with temporary_file() as output:
+                    def read(limit):
+                        calls.append(["spool_read"])
+                        assert limit == module.LIMIT
+                        return output.read(limit)
+
+                    yield SimpleNamespace(
+                        fileno=output.fileno, write=output.write, flush=output.flush,
+                        seek=output.seek, read=read,
+                    )
+
+            patch.setattr(module.tempfile, "TemporaryFile", traced_spool)
 
             def popen(args, **kwargs):
                 launches.append(args)
                 child = SimpleNamespace(pid=123, returncode=0)
-                active = fault in {"workload_deadline", "mid_probe", "cancellation_unknown"}
-                child.returncode = None if active else (1 if fault == "fixture_exit" else 0)
+                active = fault in {
+                    "workload_deadline", "mid_probe", "cancellation_unknown", "client_reap_unknown",
+                }
+                failed = fault == "fixture_exit" or fault.startswith("diagnostic_")
+                child.returncode = None if active else (4 if failed else 0)
                 child.poll = lambda: child.returncode
+                marker = service_failure_marker()
+                if fault == "diagnostic_missing":
+                    marker = b""
+                elif fault == "diagnostic_duplicate":
+                    marker *= 2
+                elif fault == "diagnostic_invalid":
+                    marker = marker.replace(b'"stage":1', b'"stage":"private"')
+                kwargs["stdout"].write(
+                    b"private\xff\n" + marker if fault != "output_limit" else b"x" * module.LIMIT
+                )
+                kwargs["stdout"].flush()
 
                 def wait(*, timeout):
                     calls.append(["client_wait"])
+                    if fault == "client_reap_unknown":
+                        raise module.subprocess.TimeoutExpired("synthetic", timeout)
                     child.returncode = -9
                     return -9
 
                 child.wait = wait
-                if fault == "workload_deadline":
+                if fault in {"workload_deadline", "client_reap_unknown"}:
                     clock[0] = 21.0
                 return child
 
@@ -967,6 +1002,21 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 "uid": 10001, "effective_capabilities": 0, "no_new_privileges": True,
             })
             patch.setattr(module, "reconcile_owned", reconcile)
+            parser = module.service_failure_diagnostic
+
+            def diagnostic(raw, *, returncode):
+                assert any(row[:2] == ["docker", "kill"] for row in calls)
+                stopped = [row for row in calls if row[:2] == ["docker", "inspect"]
+                           and "State.Running" in row[3]]
+                assert stopped and fault != "cancellation_unknown"
+                if fault == "workload_deadline" or fault == "mid_probe":
+                    assert ["client_wait"] in calls
+                calls.append(["diagnostic"])
+                if fault == "diagnostic_parser_error":
+                    raise RuntimeError("private parser failure")
+                return parser(raw, returncode=returncode)
+
+            patch.setattr(module, "service_failure_diagnostic", diagnostic)
             evidence, owned = folder / "report.json", folder / "owned.json"
             if fault == "success":
                 module.supervise("worker", "pg", commit, evidence, owned, service_initial=True)
@@ -978,8 +1028,11 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
             assert len(launches) == expected_launches, fault
             if launches:
                 assert launches[0] == module.service_argv("c" * 64)
-                assert type(result["specimen_returncode"]) is int
-                assert result["specimen_client_reap"] == "verified"
+                if fault == "client_reap_unknown":
+                    assert result["specimen_client_reap"] == "unverified"
+                else:
+                    assert type(result["specimen_returncode"]) is int
+                    assert result["specimen_client_reap"] == "verified"
             assert result["status"] == (
                 "service_initial_passed_not_postgresql_or_capacity" if fault == "success" else "failed"
             ), fault
@@ -998,6 +1051,31 @@ def test_service_supervisor_closed_scenarios(tmp_path, monkeypatch):
                 assert result["environment_overhead_before_workload_cpu_usec"] == {"db": 100, "worker": 100}
                 assert result["specimen_returncode"] == 0
                 assert not any(row[:2] == ["docker", "kill"] for row in calls)
+                assert "service_failure_diagnostic" not in result
+            if fault == "fixture_exit" or fault.startswith("diagnostic_"):
+                assert result["failure"] == "micro_failed"
+                assert result["client_returncode"] == result["specimen_returncode"] == 4
+                assert result["service_failure_diagnostic"] == (
+                    service_failure_summary() if fault == "fixture_exit" else "unavailable_or_invalid"
+                )
+            if fault in {"cancellation_unknown", "client_reap_unknown", "output_limit"}:
+                assert result["service_failure_diagnostic"] == "unavailable_or_invalid"
+            if fault in {"success", "cancellation_unknown", "client_reap_unknown"}:
+                assert ["diagnostic"] not in calls
+                assert ["spool_read"] not in calls
+            if fault == "fixture_exit" or fault.startswith("diagnostic_"):
+                assert ["diagnostic"] in calls
+            if ["spool_read"] in calls:
+                stopped = next(i for i, row in enumerate(calls) if row[:2] == ["docker", "inspect"]
+                               and "State.Running" in row[3])
+                assert stopped < calls.index(["spool_read"]) < calls.index(["diagnostic"])
+                if ["client_wait"] in calls:
+                    assert calls.index(["client_wait"]) < calls.index(["spool_read"])
+            if ["diagnostic"] in calls:
+                assert calls.index(["diagnostic"]) < calls.index(["reconcile"])
+                assert not any(row[:3] == ["docker", "exec", "c" * 64] and row[3] == "cat"
+                               for row in calls)
+            assert "private" not in evidence.read_text()
 
 
 def test_service_canary_respects_remaining_setup_deadline(monkeypatch):
@@ -1065,3 +1143,157 @@ def test_service_rejects_all_controller_pressure_boundaries():
     ):
         with pytest.raises(module.ProofFailure):
             module.parse_probe(probe().replace(old, new), 512, 64)
+
+
+# Failure-diagnostic regressions were authored before implementation. RED/GREEN
+# are unexecuted; execute only in a separately reviewed bounded containment.
+def service_failure_summary():
+    return dict(
+        schema=1, stage=1, session_exitstatus=4, collection_count=0,
+        collection_errors=1, unhandled_errors=0, protocol_errors=1,
+        report_count=0, setup_reports=0, call_reports=0, teardown_reports=0,
+        failed_reports=0, skipped_reports=0,
+    )
+
+
+def service_failure_marker(value=None):
+    import json
+
+    value = service_failure_summary() if value is None else value
+    return (b"OCWP_SERVICE_FAILURE_V1:" + json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("ascii") + b"\n")
+
+
+def test_service_failure_diagnostic_retains_only_closed_numbers():
+    good = service_failure_summary()
+    marker = service_failure_marker(good)
+    assert len(marker) <= 512
+    assert module.service_failure_diagnostic(
+        b"private\xff output\n" + marker + b"private exception\n", returncode=4,
+    ) == good
+    boundary = good | {
+        "stage": 4, "collection_count": 100, "collection_errors": 100,
+        "unhandled_errors": 100, "protocol_errors": 100,
+        "report_count": 18, "setup_reports": 6, "call_reports": 6,
+        "teardown_reports": 6, "failed_reports": 17, "skipped_reports": 1,
+    }
+    assert module.service_failure_diagnostic(service_failure_marker(boundary), returncode=4) == boundary
+
+
+def test_service_failure_diagnostic_rejects_untrusted_fields_and_ranges():
+    good = service_failure_summary()
+    changes = (
+        {"schema": True}, {"schema": 2}, {"stage": "private"}, {"stage": -1}, {"stage": 5},
+        {"session_exitstatus": 0}, {"session_exitstatus": 6}, {"session_exitstatus": 1},
+        {"collection_count": True}, {"collection_count": -1}, {"collection_count": 101},
+        {"collection_errors": 101}, {"unhandled_errors": 0.0}, {"protocol_errors": None},
+        {"report_count": 19}, {"setup_reports": 1}, {"call_reports": -1},
+        {"teardown_reports": 19}, {"failed_reports": 1}, {"skipped_reports": 1},
+        {"nodes": ["private"]}, {"raw_error": "private"},
+    )
+    for change in changes:
+        with pytest.raises(module.ProofFailure):
+            module.service_failure_diagnostic(service_failure_marker(good | change), returncode=4)
+    for key in good:
+        with pytest.raises(module.ProofFailure):
+            module.service_failure_diagnostic(
+                service_failure_marker({k: v for k, v in good.items() if k != key}), returncode=4,
+            )
+    for returncode in (True, 0, -9, 1, 6, None):
+        with pytest.raises(module.ProofFailure):
+            module.service_failure_diagnostic(service_failure_marker(), returncode=returncode)
+
+
+def test_service_failure_diagnostic_rejects_bad_framing_and_duplicate_keys():
+    marker = service_failure_marker()
+    for raw in (
+        b"", b"private", marker * 2, marker[:-1], b"prefix" + marker,
+        marker.replace(b'"stage":1', b'"stage":1,"stage":1'),
+        marker.replace(b'"stage":1', b'"stage":NaN'),
+        marker.replace(b'"stage":1', b'"stage":Infinity'),
+        marker.replace(b'"stage":1', b'"stage":1e0'),
+        marker.replace(b'"stage":1', b'"stage":true'),
+        marker.replace(b'"stage":1', b'"stage":"\xff"'),
+        marker.replace(b'{', b'{ '), marker[:-1] + b" private\n",
+        b"OCWP_SERVICE_FAILURE_V1:" + b" " * 512 + b"\n",
+        marker + b"x" * module.LIMIT,
+        marker + b"OCWP_SERVICE_FAILURE_V1:incomplete", marker.decode("ascii"),
+    ):
+        with pytest.raises(module.ProofFailure):
+            module.service_failure_diagnostic(raw, returncode=4)
+
+
+def test_service_failure_hook_emits_once_outside_capture_without_raw_text(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    from types import SimpleNamespace
+
+    calls = []
+
+    @contextmanager
+    def disabled():
+        calls.append("capture_disabled")
+        yield
+        calls.append("capture_restored")
+
+    def write(fd, raw):
+        assert fd == 1 and calls[-1] == "capture_disabled"
+        calls.append(raw)
+        return len(raw)
+
+    capture = SimpleNamespace(global_and_fixture_disabled=disabled)
+    session = SimpleNamespace(config=SimpleNamespace(pluginmanager=SimpleNamespace(
+        getplugin=lambda name: capture if name == "capturemanager" else None,
+    )))
+    monkeypatch.setattr(module.os, "write", write)
+    monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "report.json"))
+    hook = module.ServiceReportHook()
+    hook.pytest_collectreport(SimpleNamespace(outcome="failed", longrepr="private"))
+    with pytest.raises(pytest.UsageError):
+        hook.pytest_collection_finish(SimpleNamespace(items=[]))
+    hook.pytest_sessionfinish(session, 4)
+    hook.pytest_sessionfinish(session, 4)
+    assert calls == ["capture_disabled", b"\n" + service_failure_marker(), "capture_restored"]
+    assert module.service_failure_diagnostic(calls[1], returncode=4) == service_failure_summary()
+    assert "private" not in repr(calls)
+
+
+def test_service_failure_hook_counts_first_failed_stage_and_ignores_emission_errors(tmp_path, monkeypatch):
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+
+    emitted = []
+    capture = SimpleNamespace(global_and_fixture_disabled=nullcontext)
+    session = SimpleNamespace(config=SimpleNamespace(pluginmanager=SimpleNamespace(
+        getplugin=lambda name: capture,
+    )))
+    monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "report.json"))
+    monkeypatch.setattr(module.os, "write", lambda fd, raw: emitted.append(raw) or len(raw))
+    for when, stage in (("setup", 2), ("call", 3), ("teardown", 4)):
+        hook = module.ServiceReportHook()
+        hook.pytest_collection_finish(SimpleNamespace(
+            items=[SimpleNamespace(nodeid=node) for node in module.SERVICE_NODES],
+        ))
+        for phase in ("setup", "call", "teardown"):
+            hook.pytest_runtest_logreport(SimpleNamespace(
+                nodeid=module.SERVICE_NODES[0], when=phase,
+                outcome="failed" if phase == when else "passed", duration=0.001,
+                capstdout="private", longrepr="private",
+            ))
+        hook.pytest_sessionfinish(session, 1)
+        value = module.service_failure_diagnostic(emitted[-1], returncode=1)
+        assert value["stage"] == stage and value["failed_reports"] == 1
+        assert value["setup_reports"] == value["call_reports"] == value["teardown_reports"] == 1
+        assert value["report_count"] == 3 and "private" not in repr(value)
+    success = module.ServiceReportHook()
+    success.pytest_sessionfinish(session, 0)
+    assert len(emitted) == 3
+
+    def broken_write(*args):
+        raise OSError("private emitter failure")
+
+    monkeypatch.setattr(module.os, "write", broken_write)
+    module.ServiceReportHook().pytest_sessionfinish(session, 4)
+    monkeypatch.setattr(module, "SERVICE_REPORT", str(tmp_path / "absent" / "report.json"))
+    with pytest.raises(FileNotFoundError):
+        module.ServiceReportHook().pytest_sessionfinish(session, 4)

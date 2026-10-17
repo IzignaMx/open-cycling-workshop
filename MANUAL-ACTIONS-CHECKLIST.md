@@ -1,5 +1,21 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Initial service collection failure and correction · 2026-10-17
+
+- [x] Preserve [failed run 39039629649](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39039629649),
+      exact source identity and digest-verified artifact `12103397218`.
+- [x] Verify actual containment, cancellation and both owned-container absence receipts.
+- [x] Identify the independent static collection defect affecting two pure tests.
+- [ ] Review the local test separation and closed failure diagnostics exactly.
+- [ ] Review and run the separate fixed eight-node correction gate once with the
+      frozen outer helper, 20-second deadline and both final absence receipts.
+- [ ] Verify corrected collection and original six-case service behavior under
+      bounded containment. The consumed original workflow is not rerun.
+- [ ] Preserve PostgreSQL, capacity, deadlines, schema/version, routes and activation gates.
+- Current result and proposed verification are described in the
+  [collection correction](docs/10-spec-development/2026-10-17-service-collection-correction.md).
+  The dated preparation blocks below are historical, not current qualification claims.
+
 ## Initial six-case service qualification · 2026-10-17
 
 - [x] Reconstruct published guard tree `400a69cb` exactly from current-main tree

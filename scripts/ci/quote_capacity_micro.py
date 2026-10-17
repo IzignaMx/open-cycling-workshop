@@ -514,6 +514,8 @@ SERVICE_NODES = (
     "test_historical_quote_only_decision_replay_does_not_invent_transition[sqlite]",
 )
 SERVICE_REPORT = "/tmp/quote-service-initial-result.json"
+SERVICE_FAILURE_MARKER = b"OCWP_SERVICE_FAILURE_V1:"
+SERVICE_FAILURE_LIMIT = 512
 
 
 def service_argv(cid: str) -> list[str]:
@@ -575,10 +577,53 @@ def service_result(raw: str) -> dict[str, object]:
     return value
 
 
+def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]:
+    """Validate a numeric marker; supervisor spool reads require verified stop/reap."""
+    if (
+        type(raw) is not bytes or len(raw) >= LIMIT
+        or type(returncode) is not int or not 1 <= returncode <= 5
+        or raw.count(SERVICE_FAILURE_MARKER) != 1
+    ):
+        raise ProofFailure("service_diagnostic_invalid")
+    lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(SERVICE_FAILURE_MARKER)]
+    if len(lines) != 1 or len(lines[0]) + 1 > SERVICE_FAILURE_LIMIT:
+        raise ProofFailure("service_diagnostic_invalid")
+    payload = lines[0][len(SERVICE_FAILURE_MARKER):]
+    try:
+        value = json.loads(
+            payload.decode("ascii"), object_pairs_hook=strict_object, parse_constant=reject_constant,
+        )
+    except (ValueError, RecursionError) as error:
+        raise ProofFailure("service_diagnostic_invalid") from error
+    bounds = {
+        "schema": (1, 1), "stage": (0, 4), "session_exitstatus": (returncode, returncode),
+        "collection_count": (0, 100), "collection_errors": (0, 100),
+        "unhandled_errors": (0, 100), "protocol_errors": (0, 100),
+        "report_count": (0, 18), "setup_reports": (0, 18), "call_reports": (0, 18),
+        "teardown_reports": (0, 18), "failed_reports": (0, 18), "skipped_reports": (0, 18),
+    }
+    if type(value) is not dict or set(value) != set(bounds):
+        raise ProofFailure("service_diagnostic_invalid")
+    if any(type(value[k]) is not int or not low <= value[k] <= high
+           for k, (low, high) in bounds.items()):
+        raise ProofFailure("service_diagnostic_invalid")
+    if (
+        value["report_count"] != sum(value[f"{when}_reports"] for when in ("setup", "call", "teardown"))
+        or value["failed_reports"] + value["skipped_reports"] > value["report_count"]
+        or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
+    ):
+        raise ProofFailure("service_diagnostic_invalid")
+    return value
+
+
 class ServiceReportHook:
     """Small explicit pytest plugin. Retain no payload, trace, exception or captured text."""
 
     def __init__(self) -> None:
+        # Closed stage codes: 0 bootstrap, 1 collection, 2 setup, 3 call, 4 teardown.
+        self.stage = 0
+        self.failure_stage: int | None = None
+        self.failure_marker_attempted = False
         self.value: dict[str, object] = {
             "schema": 1, "nodes": [], "collection_count": 0,
             "collection_errors": 0, "unhandled_errors": 0, "protocol_errors": 0,
@@ -587,14 +632,18 @@ class ServiceReportHook:
 
     def bump(self, field: str) -> None:
         self.value[field] = min(100, cast(int, self.value[field]) + 1)
+        if self.failure_stage is None:
+            self.failure_stage = self.stage
 
     def pytest_collectreport(self, report: object) -> None:
+        self.stage = 1
         if getattr(report, "outcome", None) != "passed":
             self.bump("collection_errors")
 
     def pytest_collection_finish(self, session: object) -> None:
         import pytest
 
+        self.stage = 1
         nodes = [getattr(item, "nodeid", None) for item in getattr(session, "items")]
         self.value["collection_count"] = min(100, len(nodes))
         if nodes != list(SERVICE_NODES) or len(set(nodes)) != 6:
@@ -614,6 +663,9 @@ class ServiceReportHook:
         ):
             self.bump("protocol_errors")
             return
+        self.stage = {"setup": 2, "call": 3, "teardown": 4}[when]
+        if outcome != "passed" and self.failure_stage is None:
+            self.failure_stage = self.stage
         rows.append({"node": node, "when": when, "outcome": outcome, "seconds": seconds})
 
     def pytest_internalerror(self) -> None:
@@ -622,13 +674,50 @@ class ServiceReportHook:
     def pytest_keyboard_interrupt(self) -> None:
         self.bump("unhandled_errors")
 
+    def emit_failure_marker(self, session: object) -> None:
+        """Best effort: emit numbers only; never flush captured output or alter failure."""
+        if self.failure_marker_attempted:
+            return
+        self.failure_marker_attempted = True
+        try:
+            rows = cast(list[dict[str, object]], self.value["reports"])
+            value = {
+                key: self.value[key] for key in (
+                    "schema", "session_exitstatus", "collection_count", "collection_errors",
+                    "unhandled_errors", "protocol_errors",
+                )
+            } | {
+                "stage": self.stage if self.failure_stage is None else self.failure_stage,
+                "report_count": len(rows),
+                **{f"{when}_reports": sum(row["when"] == when for row in rows)
+                   for when in ("setup", "call", "teardown")},
+                **{f"{outcome}_reports": sum(row["outcome"] == outcome for row in rows)
+                   for outcome in ("failed", "skipped")},
+            }
+            marker = SERVICE_FAILURE_MARKER + json.dumps(
+                value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode("ascii") + b"\n"
+            service_failure_diagnostic(marker, returncode=cast(int, value["session_exitstatus"]))
+            capture = getattr(session, "config").pluginmanager.getplugin("capturemanager")
+            # --capture=fd otherwise hides a session hook's print. Suspend only
+            # around this one bounded write; never read/release captured text.
+            with capture.global_and_fixture_disabled():
+                os.write(1, b"\n" + marker)
+        except Exception:
+            # Missing/truncated/invalid output is unavailable, never a new failure.
+            return
+
     def pytest_sessionfinish(self, session: object, exitstatus: int) -> None:
         self.value["session_finished"] = True
         self.value["session_exitstatus"] = int(exitstatus)
-        raw = json.dumps(self.value, allow_nan=False, sort_keys=True)
-        if len(raw.encode("utf-8")) >= LIMIT:
-            raise ProofFailure("service_report_limit")
-        Path(SERVICE_REPORT).write_text(raw, encoding="utf-8")
+        try:
+            raw = json.dumps(self.value, allow_nan=False, sort_keys=True)
+            if len(raw.encode("utf-8")) >= LIMIT:
+                raise ProofFailure("service_report_limit")
+            Path(SERVICE_REPORT).write_text(raw, encoding="utf-8")
+        finally:
+            if exitstatus:
+                self.emit_failure_marker(session)
 
 
 def pytest_configure(config: object) -> None:
@@ -1018,6 +1107,7 @@ def supervise(
                 )
             except (ProofFailure, ValueError, OSError):
                 if service_initial:
+                    report["service_failure_diagnostic"] = "unavailable_or_invalid"
                     cancel_workload()
                 raise
             finally:
@@ -1036,6 +1126,16 @@ def supervise(
                         raise ProofFailure("specimen_exit_unverified")
                     report["specimen_returncode"] = child.returncode
                     report["specimen_client_reap"] = "verified"
+                    if child.returncode and report.get("cancellation") == "verified_stopped":
+                        try:
+                            # Local spool only, after whole-workload stop and client
+                            # reaping. No extra Docker read or deadline extension.
+                            output.seek(0)
+                            report["service_failure_diagnostic"] = service_failure_diagnostic(
+                                output.read(LIMIT), returncode=child.returncode,
+                            )
+                        except Exception:
+                            report["service_failure_diagnostic"] = "unavailable_or_invalid"
         command_deadline = time.monotonic() + 5 if service_initial else started + 900
         if service_initial:
             report["phase"] = "service_final_readback"

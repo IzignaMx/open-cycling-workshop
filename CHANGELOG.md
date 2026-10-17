@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased · Initial service collection correction (verification pending)
+
+- Preserve failed single run `39039629649` on `49a6f9d8`: exit 4 during pytest
+  bootstrap, 6.395 seconds supervisor time, cancellation and both cleanup receipts
+  verified. No six-case service qualification was obtained.
+- Separate two pure driver-budget tests from a module-wide indirect database
+  parametrization that pytest rejects during collection, even for other selected
+  tests. Assertions and the original six selected service nodes are unchanged.
+- Prepare bounded, closed failure-stage/count diagnostics; implementation and
+  regression execution remain subject to exact review. The discarded original
+  diagnostic cannot establish that the collection defect was the only cause.
+- Preserve the consumed workflow, schema 0012, limits and all activation gates.
+- Prepare a separate fixed eight-node correction gate using the proven frozen
+  outer helper and development-only image. One 20-second contained regression
+  batch is pending exact wrapper review and execution; no service rerun is implied.
+
 ## Unreleased · Reconcile initial six-case service qualification
 
 - Reconcile the frozen 16-file service candidate with current-main tree `323661ad`
