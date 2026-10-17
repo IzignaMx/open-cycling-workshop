@@ -10,7 +10,8 @@
 - [x] Verify four genuine PostgreSQL 0013 cases in corrected run 39065290465.
 - [x] Verify the fixed 119 guard / 62 database-free product / 6 static selection in run 39069601139.
 - [x] Verify 204 current-source service/effect/DTO/mock and PostgreSQL metadata/bridge cases in run 39072574166.
-- [ ] Close corrected-source static qualification after four SIM300 findings; four later static commands were unrun.
+- [x] Close the four SIM300 findings: repository and Ruff passed in run 39073762410.
+- [ ] Close the retained three-file formatter diff and remaining types/OpenAPI/client checks.
 - [ ] Close remaining PostgreSQL loader/writer, service and broader integration coverage.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.

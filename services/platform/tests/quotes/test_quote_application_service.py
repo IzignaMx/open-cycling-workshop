@@ -233,8 +233,7 @@ def test_nul_order_reference_refuses_before_text_hydration(
         assert counts(session) == (0, 0, 0, 0)
         assert totals(session) == (0, 0, 0, 0)
         assert (
-            session.scalar(select(column).where(ServiceOrderRecord.id == "order-a"))
-            == reference_id
+            session.scalar(select(column).where(ServiceOrderRecord.id == "order-a")) == reference_id
         )
 
 

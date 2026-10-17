@@ -1,5 +1,10 @@
 # Changelog
 
+## Quote candidate formatter correction · 2026-10-17
+
+- Preserve run 39073762410: repository and Ruff passed, then formatter reported a complete 2,616-byte layout diff in three files. Types, OpenAPI and generated client were unrun.
+- Apply exactly the retained formatting hunks and prepare only the existing six-command static scope, with unchanged limits. New execution remains pending; no product behavior change.
+
 ## Quote candidate integrity corrections · 2026-10-17
 
 - Verify 204 functional/mock checks across nine groups in run 39072574166, including ten canonical-year and NUL-prehydration regressions and 27 actual PostgreSQL cases. Independent identity, result and cleanup review passed.

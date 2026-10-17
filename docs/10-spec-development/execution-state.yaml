@@ -1,5 +1,18 @@
 schema: 1
 
+quote_integrity_format_20261017:
+  status: exact_formatter_patch_prepared_pending_execution
+  prior_run: 39073762410
+  prior_source_commit: 86eb20b0db740d1911d06f7e1e6272f0cba87bb5
+  prior_source_tree: f04fd26f4748954cad6e9f81fa9b87fc27a579b9
+  prior_artifact: 12115797338
+  repository_and_ruff: passed
+  formatter: failed_three_files_2616_bytes_complete_diff
+  types_openapi_generated_client: unrun
+  correction: retained_formatting_only_and_fixed_static_scope
+  workload_seconds: 20
+  evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md
+
 quote_integrity_edges_20261017:
   status: functional_selection_passed_static_failed
   run_id: 39072574166
@@ -11,7 +24,7 @@ quote_integrity_edges_20261017:
   static: repository_pass_ruff_four_SIM300_format_types_openapi_client_unrun
   cleanup: all_ten_primary_and_independent_absence_verified
   failed_static_final_resource_counters: not_retained
-  static_style_correction: reviewed_prepared_execution_pending
+  static_style_correction: repository_and_lint_passed_formatter_failed_run39073762410
   observed_red_green: false
   scope: canonical_receipt_year_and_scalar_order_nul_prehydration
   evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md

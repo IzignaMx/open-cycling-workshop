@@ -1,6 +1,6 @@
 # Quote service integrity edge corrections
 
-Status: 204 functional/mock checks passed and independently reviewed on the exact corrected source; static qualification failed with four style findings. Corrective static-only execution is pending.
+Status: 204 functional/mock checks passed and independently reviewed on the exact corrected source; static qualification failed with four style findings. The first corrective static-only run passed lint and exposed a complete formatter diff; its exact layout correction is pending verification.
 
 Consolidated source review after the [fixed integration selection](2026-10-17-quote-integration-checks.md) identified two narrow contract mismatches:
 
@@ -42,6 +42,14 @@ The static job passed the repository contract and failed Ruff with four complete
 
 All ten groups have verified resource configurations, real cancellation canaries and primary plus independent owned-container absence. Successful workloads took 3.533–9.770 seconds individually, below each unchanged 20-second limit. Successful final resource readings precede termination. The failed static report lacks final worker counters and workload duration; its supervisor duration does not replace those missing measurements. PostgreSQL successful specimens record client reap and final absence, not failure-path cancellation evidence.
 
-The correction reverses only the four reported comparison operands. A new fixed `codex/quote-integrity-style-checks` branch/workflow pair uses the same reviewed controller and permits only `static6`; the original consumed workflow and all functional group selections remain unchanged. The six commands retain the shared 20-second, 1 CPU, 512 MiB workload and existing preparation, cancellation and cleanup limits. No functional rerun is included. Publication and exact static results remain pending.
+The correction reverses only the four reported comparison operands. A new fixed `codex/quote-integrity-style-checks` branch/workflow pair uses the same reviewed controller and permits only `static6`; the original consumed workflow and all functional group selections remain unchanged. The six commands retain the shared 20-second, 1 CPU, 512 MiB workload and existing preparation, cancellation and cleanup limits. No functional rerun is included. That preparation was published and executed in the static-only run recorded below: repository and lint passed, then formatter failed.
 
 Remaining internal gates include PostgreSQL bounded-loader/prepared-writer cases, broader service success/replay and rejection/race seams, and existing integration suites. Capacity, service contention, complete production deadlines and pre-reopen full-history restore validation remain open. No route activation or deployment follows from this partial qualification.
+
+## Static-only formatter result
+
+[Run 39073762410](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39073762410), first run/attempt, tested commit `86eb20b0db740d1911d06f7e1e6272f0cba87bb5`, tree `f04fd26f4748954cad6e9f81fa9b87fc27a579b9`. Repository and Ruff checks passed. Formatter failed with a complete, untruncated 2,616-byte diff in the existing controller, service test and selection test; 41 files were already formatted. Types, OpenAPI and generated client were unrun.
+
+Artifact `12115797338` retains the exact diagnostic and both cleanup receipts. Its ZIP is 5,747 bytes, SHA-256 `bdb2ee258157ec5d0fcbed687ebedcb52e1d0dcc4f3bd99411d3f6783d6b438e`. Whole-worker stop, client reap and primary/independent absence were recorded. The failed specimen has no retained final worker counters or workload duration.
+
+Apply only the retained layout hunks, refresh their source pins, and add a fixed `codex/quote-integrity-format-checks` / `.github/workflows/quote-integrity-format-checks.yml` pair restricted to the same six static commands. Both consumed workflows remain unchanged. The 20-second worker budget, resources, command ceilings and cleanup remain unchanged; no functional rerun or product behavior change is included. Exact source review and new execution remain pending. The previous two failures remain preserved.

@@ -47,7 +47,7 @@ CANDIDATE_SHA = {
         "f21fcff0793d682abe6f120fb897ff7cce1d356b5bce22d71b972d91b91f68c6"
     ),
     "services/platform/tests/quotes/test_quote_application_service.py": (
-        "01eee838abe6d024172d01b7c2e1c8ff8ab42d5b1c9f40d04045034b2a11c0f4"
+        "cb8fa657410399b091454c1324ddec1faf28c52f7d629b7a609eb73602a3a57f"
     ),
     "services/platform/tests/quotes/test_quote_atomic_effects.py": (
         "e02f262efa710eaacf2e0d5a045187eaa4ba64067fcef77dd9341ef27c8eb7e4"
@@ -62,13 +62,16 @@ CANDIDATE_SHA = {
         "c3a7bd71c1dd21194569f5993f6ce88cc0d7c7cf89f6b76b2496ef93236e4eb0"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "8c816c13a5bcf1cf1f667c41ec7b3d6f3eb319887dddd6738cea8d439e53274d"
+        "bbcdd43ea2be303daa04a506090bc505e8d8559fe012a1b726976c4518a379bf"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
     ),
     ".github/workflows/quote-integrity-style-checks.yml": (
         "7023b418b4fd6061f2b10fb82a1446deb9d1d33ffc93ee11339476d9137be20b"
+    ),
+    ".github/workflows/quote-integrity-format-checks.yml": (
+        "cb383e9e1176e585a1322697644d8d6ee75a8ea5ebbbb0fe4008f81c197855ba"
     ),
 }
 LOCKED_INPUT_SHA = {
@@ -84,6 +87,8 @@ BRANCH = "refs/heads/codex/quote-integrity-checks"
 WORKFLOW = ".github/workflows/quote-integrity-checks.yml"
 STYLE_BRANCH = "refs/heads/codex/quote-integrity-style-checks"
 STYLE_WORKFLOW = ".github/workflows/quote-integrity-style-checks.yml"
+FORMAT_BRANCH = "refs/heads/codex/quote-integrity-format-checks"
+FORMAT_WORKFLOW = ".github/workflows/quote-integrity-format-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -165,9 +170,7 @@ GROUPS = {
     "response50": (
         (
             RESPONSE_PATH,
-            (
-                ("test_numeric_fields_refuse_coercion_and_unsafe_values", 50, 24),
-            ),
+            (("test_numeric_fields_refuse_coercion_and_unsafe_values", 50, 24),),
         ),
     ),
     "response64": (
@@ -306,6 +309,9 @@ def gate() -> None:
     if os.environ.get("GITHUB_REF") == STYLE_BRANCH:
         require(GROUP_KEY == "static6")
         branch, workflow = STYLE_BRANCH, STYLE_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == FORMAT_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = FORMAT_BRANCH, FORMAT_WORKFLOW
     require(os.environ.get("GITHUB_REF") == branch)
     require(os.environ.get("GITHUB_RUN_NUMBER") == "1")
     require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1")
@@ -903,9 +909,7 @@ def run_guard(helper) -> None:
                     size = os.fstat(output.fileno()).st_size
                     output.seek(0)
                     captured = output.read(SPOOL_LIMIT)
-                    diagnostic = (
-                        ROOT / "artifacts" / f"quote-integrity-{GROUP_KEY}-diagnostic.txt"
-                    )
+                    diagnostic = ROOT / "artifacts" / f"quote-integrity-{GROUP_KEY}-diagnostic.txt"
                     diagnostic.parent.mkdir(exist_ok=True)
                     diagnostic.write_bytes(captured)
                     report["diagnostic"] = {

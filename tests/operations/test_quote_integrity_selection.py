@@ -610,14 +610,14 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
         assert [
             path.removesuffix(".py").replace("/", ".") for path in sources[group]
         ] == module.CLASS_NAMES
-        assert tuple(
-            f"{path}::{name}" for path, cases in module.SELECTION for name, _, _ in cases
-        ) == module.NODES
+        assert (
+            tuple(f"{path}::{name}" for path, cases in module.SELECTION for name, _, _ in cases)
+            == module.NODES
+        )
         assert module.PYTEST[-len(module.NODES) :] == list(module.NODES)
         assert module.PYTEST[:2] == ["env", "-i"] and "-k" not in module.PYTEST
         assert not any(
-            "DATABASE_URL=" in arg or "quote_integrity_postgres" in arg
-            for arg in module.PYTEST
+            "DATABASE_URL=" in arg or "quote_integrity_postgres" in arg for arg in module.PYTEST
         )
         assert all("[" not in node for node in module.NODES)
         root = junit_document(module)
