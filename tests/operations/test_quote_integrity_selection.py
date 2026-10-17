@@ -1,4 +1,4 @@
-"""Six synthetic selection regressions for the separately contained service27 group.
+"""Six synthetic selection regressions for the fixed contained integrity groups.
 
 Source preparation is not execution evidence. These hooks and receipts launch no
 subprocess, open no database and never run the selected product tests themselves.
@@ -16,6 +16,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = "services/platform/tests/quotes/test_quote_effect_metadata.py"
 BRIDGE = "services/platform/tests/quotes/test_quote_application_service_postgres.py"
+WRITER = "services/platform/tests/sync/test_prepared_order_change.py"
+BOUNDED = "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py"
 MALFORMED = "test_runtime_count_verifier_refuses_malformed_postgres_metadata"
 RELATIONS = "test_runtime_count_verifier_refuses_nonordinary_relations"
 SHADOWS = "test_runtime_count_verifier_refuses_shadowed_generated_dependencies"
@@ -38,12 +40,57 @@ PG_SELECTIONS = {
         ),
         "not sqlite",
     ),
+    "writer5": (
+        WRITER,
+        (
+            ("test_prepared_writer_retains_both_exact_raw_copies_and_generated_counts", 1),
+            ("test_prepared_inserts_are_owned_by_caller_rollback", 3),
+            ("test_ordinary_dictionary_writers_keep_payload_and_unbounded_contract", 1),
+        ),
+        "not sqlite",
+    ),
+    "admission9": (
+        BOUNDED,
+        (
+            ("test_common_repository_create_checks_source_before_first_write", 1),
+            ("test_invalid_part_reference_refuses_before_order_text_admission", 1),
+            ("test_exhausted_version_refuses_new_enrollment_but_preserves_replay", 2),
+            ("test_actual_projection_preparation_refuses_before_savepoint_or_write", 1),
+            ("test_quote_writer_never_calls_generic_order_save", 1),
+            ("test_source_utf8_boundary_is_checked_before_enrollment", 3),
+        ),
+        "not sqlite",
+    ),
+    "history9": (
+        BOUNDED,
+        (
+            ("test_historical_replay_does_not_hydrate_oversized_current_text", 1),
+            ("test_invalid_version_refuses_before_generic_payload_fetch", 6),
+            ("test_two_transition_claims_refuse_before_generic_payload_fetch", 1),
+            ("test_quote_outbox_pointer_cannot_prefetch_generic_order_json", 1),
+        ),
+        "not sqlite",
+    ),
+    "guards9": (
+        BOUNDED,
+        (
+            ("test_order_timestamp_guard_refuses_before_driver_conversion", 3),
+            ("test_order_row_lock_is_retained_during_prepare_and_persist", 1),
+            ("test_small_compressed_text_is_refused_by_length_without_hydration", 1),
+            ("test_bypassed_prepared_projection_refuses_before_any_write", 4),
+        ),
+        "not sqlite",
+    ),
 }
 PG_COUNTS = {
     "metadata_sync": 7,
     "metadata_outbox": 7,
     "metadata_relations": 9,
     "service_bridge": 4,
+    "writer5": 5,
+    "admission9": 9,
+    "history9": 9,
+    "guards9": 9,
 }
 JUNIT_COUNTS = {
     "service27": 27,
@@ -52,6 +99,7 @@ JUNIT_COUNTS = {
     "response50": 50,
     "response64": 64,
     "static6": 6,
+    "selection_static12": 12,
 }
 CHECK_NAMES = (
     "test_fixed_postgres_selection_and_argv",
@@ -60,6 +108,14 @@ CHECK_NAMES = (
     "test_metadata_observer_and_bridge_registration",
     "test_numeric_failure_bounds_and_static_exactness",
     "test_fixed_junit_maps_and_parser",
+)
+STATIC_NAMES = (
+    "test_repository_contract",
+    "test_python_lint",
+    "test_python_format",
+    "test_production_types",
+    "test_openapi_contract",
+    "test_generated_client_contract",
 )
 
 
@@ -193,12 +249,61 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
     )
     expected["metadata_relations"].append(fixture)
     expected["service_bridge"] = [fixture] * 4
+    expected["writer5"] = [
+        fixture,
+        fixture | {"failure_after": "sync_changes"},
+        fixture | {"failure_after": "outbox_events"},
+        fixture | {"failure_after": "caller"},
+        fixture,
+    ]
+    expected["admission9"] = [
+        fixture,
+        fixture,
+        fixture | {"replay": False},
+        fixture | {"replay": True},
+        fixture,
+        fixture,
+        fixture | {"delta": -1},
+        fixture | {"delta": 0},
+        fixture | {"delta": 1},
+    ]
+    expected["history9"] = [
+        fixture,
+        fixture | {"version": None},
+        fixture | {"version": 0},
+        fixture | {"version": 2},
+        fixture | {"version": -1},
+        fixture | {"version": True},
+        fixture | {"version": "1"},
+        fixture,
+        fixture,
+    ]
+    expected["guards9"] = [
+        fixture | {"value": "infinity"},
+        fixture | {"value": "-infinity"},
+        fixture | {"value": "10000-01-01 00:00:00+00"},
+        fixture,
+        fixture,
+        fixture | {"field": "raw_json", "value": "{}"},
+        fixture | {"field": "raw_octets", "value": 1},
+        fixture | {"field": "canonical_utf8", "value": b"{}"},
+        fixture | {"field": "payload", "value": {"version": True}},
+    ]
     for group, selection in PG_SELECTIONS.items():
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         source, functions, expression = selection
         assert pg.selection() == selection
         assert pg.case_count() == PG_COUNTS[group]
         assert pg.expected_parameters() == expected[group]
+        for actual, wanted in zip(pg.expected_parameters(), expected[group], strict=True):
+            assert type(actual) is dict and actual.keys() == wanted.keys()
+            assert all(type(key) is str for key in actual)
+            for key, value in wanted.items():
+                assert type(actual[key]) is type(value)
+                if type(value) is dict:
+                    assert list(actual[key]) == ["version"]
+                    assert type(next(iter(actual[key]))) is str
+                    assert actual[key]["version"] is True
         args = pg.service_argv("a" * 64)
         assert args[:5] == ["docker", "exec", "a" * 64, "env", "-i"]
         assert args[-len(functions) :] == [f"{source}::{name}" for name, _ in functions]
@@ -219,7 +324,7 @@ def test_fixed_postgres_selection_and_argv(pg, monkeypatch):
         ]
         assert "untrusted-setting" not in " ".join(args)
         assert not any("[postgres]" in arg for arg in args)
-    for group in ("", "metadata", "postgres", "static6", "service27"):
+    for group in ("", "metadata", "postgres", "static6", "service27", "selection_static12"):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         with pytest.raises(pg.ProofFailure, match="service_selection"):
             pg.selection()
@@ -229,8 +334,10 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
     for group in PG_SELECTIONS:
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         items = pg_items(pg)
-        if group != "service_bridge":
-            items[0], items[1] = items[1], items[0]
+        offset = 0
+        for _, count in PG_SELECTIONS[group][1]:
+            items[offset : offset + count] = reversed(items[offset : offset + count])
+            offset += count
         hook = pg.ServiceReportHook()
         hook.pytest_collection_finish(SimpleNamespace(items=items))
         assert hook.value["nodes"] == [item.nodeid for item in items]
@@ -315,9 +422,88 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
     function = PG_SELECTIONS["service_bridge"][1][0][0]
     assert pg.selected_node(f"{BRIDGE}::{function}[postgres]", function)
     assert not pg.selected_node(f"{BRIDGE}::{function}[sqlite]", function)
+    for group, index, key, value in (
+        ("writer5", 1, "failure_after", True),
+        ("writer5", 1, "failure_after", "unknown"),
+        ("admission9", 2, "replay", 0),
+        ("admission9", 3, "replay", 1),
+        ("admission9", 2, "replay", "False"),
+        ("admission9", 6, "delta", -1.0),
+        ("admission9", 7, "delta", False),
+        ("admission9", 8, "delta", True),
+        ("admission9", 8, "delta", 2),
+        ("history9", 1, "version", "None"),
+        ("history9", 2, "version", False),
+        ("history9", 3, "version", 2.0),
+        ("history9", 4, "version", -1.0),
+        ("history9", 5, "version", 1),
+        ("history9", 6, "version", 1),
+        ("guards9", 0, "value", b"infinity"),
+        ("guards9", 0, "value", "unknown"),
+        ("guards9", 5, "field", OtherString("raw_json")),
+        ("guards9", 5, "value", b"{}"),
+        ("guards9", 5, "value", bytearray(b"{}")),
+        ("guards9", 6, "value", True),
+        ("guards9", 6, "value", 1.0),
+        ("guards9", 7, "value", "{}"),
+        ("guards9", 7, "value", bytearray(b"{}")),
+        ("guards9", 7, "value", b"{ }"),
+        ("guards9", 8, "value", {"version": 1}),
+        ("guards9", 8, "value", {"version": False}),
+        ("guards9", 8, "value", {"version": "true"}),
+        ("guards9", 8, "value", {"other": True}),
+        ("guards9", 8, "value", {b"version": True}),
+        ("guards9", 8, "value", {OtherString("version"): True}),
+        ("guards9", 8, "value", {"version": True, "extra": True}),
+        ("guards9", 8, "value", []),
+    ):
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        items = pg_items(pg)
+        items[index].callspec.params[key] = value
+        hook = pg.ServiceReportHook()
+        with pytest.raises(pytest.UsageError, match="service_selection"):
+            hook.pytest_collection_finish(SimpleNamespace(items=items))
+        assert hook.value["nodes"] == [] and hook.value["protocol_errors"] == 1
+    for group, first, second in (
+        ("writer5", 1, 2),
+        ("admission9", 2, 3),
+        ("admission9", 6, 7),
+        ("history9", 1, 2),
+        ("guards9", 0, 1),
+        ("guards9", 5, 6),
+        ("guards9", 5, 7),
+        ("guards9", 5, 8),
+        ("guards9", 6, 7),
+        ("guards9", 6, 8),
+        ("guards9", 7, 8),
+    ):
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        items = pg_items(pg)
+        items[second].callspec.params = items[first].callspec.params.copy()
+        with pytest.raises(pytest.UsageError, match="service_selection"):
+            pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=items))
+        if group == "guards9" and first >= 5:
+            items = pg_items(pg)
+            left, right = items[first].callspec.params, items[second].callspec.params
+            left["value"], right["value"] = right["value"], left["value"]
+            with pytest.raises(pytest.UsageError, match="service_selection"):
+                pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=items))
+    for group in ("writer5", "admission9", "history9", "guards9"):
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        for fault in ("function_order", "extra_key", "missing_key"):
+            items = pg_items(pg)
+            if fault == "function_order":
+                items[0], items[-1] = items[-1], items[0]
+            elif fault == "extra_key":
+                items[0].callspec.params["extra"] = True
+            else:
+                del items[0].callspec.params["identity_migration_database"]
+            with pytest.raises(pytest.UsageError, match="service_selection"):
+                pg.ServiceReportHook().pytest_collection_finish(SimpleNamespace(items=items))
 
 
 def test_closed_postgres_reports_and_identities(pg, monkeypatch, tmp_path):
+    assert pg.LIMIT == 16 * 1024
     for group in PG_SELECTIONS:
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         good = pg_report(pg)
@@ -437,7 +623,6 @@ def test_closed_postgres_reports_and_identities(pg, monkeypatch, tmp_path):
 
 
 def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
-    node = pg_items(pg)[0].nodeid
     engine = object()
     events = []
 
@@ -447,15 +632,24 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
         return pg_identity(node)
 
     monkeypatch.setattr(pg, "probe_postgres_identity", probe)
-    request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
-    observer = pg.observe_postgres((object(), engine), request)
-    next(observer)
-    assert events == [] and request.node.user_properties == []
-    events.append("body_transaction_closed")
-    with pytest.raises(StopIteration):
+    for group in PG_SELECTIONS:
+        if group == "service_bridge":
+            continue
+        monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
+        node = pg_items(pg)[0].nodeid
+        events.clear()
+        request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
+        observer = pg.observe_postgres((object(), engine), request)
         next(observer)
-    assert events == ["body_transaction_closed", "final_probe"]
-    assert request.node.user_properties == [("ocwp_postgres_identity", pg_identity(node))]
+        assert events == [] and request.node.user_properties == []
+        events.append("body_transaction_closed")
+        with pytest.raises(StopIteration):
+            next(observer)
+        assert events == ["body_transaction_closed", "final_probe"]
+        assert request.node.user_properties == [("ocwp_postgres_identity", pg_identity(node))]
+    monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "metadata_relations")
+    node = pg_items(pg)[0].nodeid
+    request = SimpleNamespace(node=SimpleNamespace(nodeid=node, user_properties=[]))
     monkeypatch.setattr(
         pg,
         "probe_postgres_identity",
@@ -487,6 +681,7 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
             [] if group == "service_bridge" else [(observer_plugin, "quote-postgres-observer")]
         )
         assert calls[1:] == expected
+    monkeypatch.setenv("OCWP_INTEGRITY_GROUP", "service_bridge")
     bridge_node = pg_items(pg)[0].nodeid
     request.node.nodeid = bridge_node
     with pytest.raises(pg.ProofFailure, match="service_selection"):
@@ -495,11 +690,16 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
 
 
 def test_numeric_failure_bounds_and_static_exactness(pg, monkeypatch):
+    assert pg.STATIC_FAILURE_LIMIT == 24 * 1024
     for group, ceiling in (
         ("metadata_sync", 21),
         ("metadata_outbox", 21),
         ("metadata_relations", 27),
         ("service_bridge", 18),
+        ("writer5", 18),
+        ("admission9", 27),
+        ("history9", 27),
+        ("guards9", 27),
     ):
         monkeypatch.setenv("OCWP_INTEGRITY_GROUP", group)
         boundary = failure_summary(ceiling // 3) | {"collection_count": PG_COUNTS[group]}
@@ -583,7 +783,7 @@ def xml_text(root):
     return ET.tostring(root, encoding="unicode")
 
 
-def test_fixed_junit_maps_and_parser(monkeypatch):
+def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
     modules = {}
     base = "services/platform/tests/quotes/"
     sources = {
@@ -596,6 +796,10 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
         "response50": (base + "test_quote_command_response.py",),
         "response64": (base + "test_quote_command_response.py",),
         "static6": ("tests/operations/test_quote_integrity_static_contracts.py",),
+        "selection_static12": (
+            "tests/operations/test_quote_integrity_selection.py",
+            "tests/operations/test_quote_integrity_static_contracts.py",
+        ),
     }
     for group, count in JUNIT_COUNTS.items():
         # The JUnit recipe freezes group constants at import time.
@@ -616,6 +820,10 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
         )
         assert module.PYTEST[-len(module.NODES) :] == list(module.NODES)
         assert module.PYTEST[:2] == ["env", "-i"] and "-k" not in module.PYTEST
+        static = group in ("static6", "selection_static12")
+        assert module.LIMIT == 16 * 1024
+        assert module.SPOOL_LIMIT == (32 * 1024 if static else 16 * 1024)
+        assert ("OCWP_QUOTE_SERVICE_INITIAL=contained" in module.PYTEST) is static
         assert not any(
             "DATABASE_URL=" in arg or "quote_integrity_postgres" in arg for arg in module.PYTEST
         )
@@ -700,6 +908,23 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
         "services.platform.tests.quotes.test_quote_application_service",
         "tests.operations.test_quote_integrity_selection",
     ]
+    combined = modules["selection_static12"]
+    assert combined.SELECTION == (
+        (
+            "tests/operations/test_quote_integrity_selection.py",
+            tuple((name, 1, 0) for name in CHECK_NAMES),
+        ),
+        (
+            "tests/operations/test_quote_integrity_static_contracts.py",
+            tuple((name, 1, 0) for name in STATIC_NAMES),
+        ),
+    )
+    assert combined.EXPECTED_COUNTS == dict.fromkeys((*CHECK_NAMES, *STATIC_NAMES), 1)
+    assert combined.CLASS_NAMES == [
+        "tests.operations.test_quote_integrity_selection",
+        "tests.operations.test_quote_integrity_static_contracts",
+    ]
+    assert modules["static6"].SELECTION == (combined.SELECTION[1],)
     assert modules["response50"].EXPECTED_COUNTS == {
         "test_numeric_fields_refuse_coercion_and_unsafe_values": 50
     }
@@ -707,4 +932,65 @@ def test_fixed_junit_maps_and_parser(monkeypatch):
     assert response_counts["test_service_projector_preserves_four_digit_receipt_year"] == 8
     for left, right in (("response50", "response64"), ("atomic18_corruption", "atomic18_other")):
         assert set(modules[left].NODES).isdisjoint(modules[right].NODES)
-    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 210
+    assert sum(JUNIT_COUNTS.values()) + sum(PG_COUNTS.values()) == 254
+    assert (
+        sum(PG_COUNTS[group] for group in ("writer5", "admission9", "history9", "guards9"))
+        + JUNIT_COUNTS["selection_static12"]
+        == 44
+    )
+    assert (
+        sum(count for group, count in JUNIT_COUNTS.items() if group != "selection_static12")
+        + sum(
+            PG_COUNTS[group]
+            for group in (
+                "metadata_sync",
+                "metadata_outbox",
+                "metadata_relations",
+                "service_bridge",
+            )
+        )
+        == 210
+    )
+    assert combined.LOADER_BRANCH == "refs/heads/codex/quote-loader-writer-checks"
+    assert combined.LOADER_WORKFLOW == ".github/workflows/quote-loader-writer-checks.yml"
+    monkeypatch.chdir(ROOT)
+    for key, value in (
+        ("GITHUB_EVENT_NAME", "push"),
+        ("GITHUB_REPOSITORY", "synthetic/ocwp"),
+        ("GITHUB_RUN_ID", "123"),
+        ("GITHUB_RUN_NUMBER", "1"),
+        ("GITHUB_RUN_ATTEMPT", "1"),
+        ("GITHUB_SHA", "a" * 40),
+        ("RUNNER_TEMP", str(tmp_path)),
+    ):
+        monkeypatch.setenv(key, value)
+    branches = (
+        (combined.BRANCH, combined.WORKFLOW),
+        (combined.STYLE_BRANCH, combined.STYLE_WORKFLOW),
+        (combined.FORMAT_BRANCH, combined.FORMAT_WORKFLOW),
+        (combined.LOADER_BRANCH, combined.LOADER_WORKFLOW),
+    )
+    for group, module in modules.items():
+        for branch, workflow in branches:
+            monkeypatch.setenv("GITHUB_REF", branch)
+            monkeypatch.setenv("GITHUB_WORKFLOW_REF", f"synthetic/ocwp/{workflow}@{branch}")
+            accepted = (
+                (branch == combined.BRANCH and group != "selection_static12")
+                or (
+                    branch in (combined.STYLE_BRANCH, combined.FORMAT_BRANCH)
+                    and group == "static6"
+                )
+                or (branch == combined.LOADER_BRANCH and group == "selection_static12")
+            )
+            if accepted:
+                module.gate()
+            else:
+                with pytest.raises(module.Refusal):
+                    module.gate()
+            for _, foreign_workflow in branches:
+                if foreign_workflow != workflow:
+                    monkeypatch.setenv(
+                        "GITHUB_WORKFLOW_REF", f"synthetic/ocwp/{foreign_workflow}@{branch}"
+                    )
+                    with pytest.raises(module.Refusal):
+                        module.gate()

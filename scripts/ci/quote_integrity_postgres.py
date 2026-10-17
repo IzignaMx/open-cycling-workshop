@@ -1,4 +1,4 @@
-"""Four fixed PostgreSQL integrity groups; copied reviewed containment, no capacity mode."""
+"""Eight fixed PostgreSQL integrity groups; reviewed containment, no capacity mode."""
 
 from __future__ import annotations
 
@@ -517,6 +517,9 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
 
 METADATA_TEST = "services/platform/tests/quotes/test_quote_effect_metadata.py"
 BRIDGE_TEST = "services/platform/tests/quotes/test_quote_application_service_postgres.py"
+WRITER_TEST = "services/platform/tests/sync/test_prepared_order_change.py"
+BOUNDED_TEST = "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py"
+BYPASS = "test_bypassed_prepared_projection_refuses_before_any_write"
 MALFORMED = "test_runtime_count_verifier_refuses_malformed_postgres_metadata"
 RELATIONS = "test_runtime_count_verifier_refuses_nonordinary_relations"
 SHADOWS = "test_runtime_count_verifier_refuses_shadowed_generated_dependencies"
@@ -546,6 +549,47 @@ PG_GROUPS = {
             ("test_expired_deadline_refuses_before_writer_or_effects", 1),
             ("test_historical_quote_only_decision_replay_does_not_invent_transition", 1),
             ("test_response_failure_rolls_back_all_decision_effects", 1),
+        ),
+        "not sqlite",
+    ),
+    "writer5": (
+        WRITER_TEST,
+        (
+            ("test_prepared_writer_retains_both_exact_raw_copies_and_generated_counts", 1),
+            ("test_prepared_inserts_are_owned_by_caller_rollback", 3),
+            ("test_ordinary_dictionary_writers_keep_payload_and_unbounded_contract", 1),
+        ),
+        "not sqlite",
+    ),
+    "admission9": (
+        BOUNDED_TEST,
+        (
+            ("test_common_repository_create_checks_source_before_first_write", 1),
+            ("test_invalid_part_reference_refuses_before_order_text_admission", 1),
+            ("test_exhausted_version_refuses_new_enrollment_but_preserves_replay", 2),
+            ("test_actual_projection_preparation_refuses_before_savepoint_or_write", 1),
+            ("test_quote_writer_never_calls_generic_order_save", 1),
+            ("test_source_utf8_boundary_is_checked_before_enrollment", 3),
+        ),
+        "not sqlite",
+    ),
+    "history9": (
+        BOUNDED_TEST,
+        (
+            ("test_historical_replay_does_not_hydrate_oversized_current_text", 1),
+            ("test_invalid_version_refuses_before_generic_payload_fetch", 6),
+            ("test_two_transition_claims_refuse_before_generic_payload_fetch", 1),
+            ("test_quote_outbox_pointer_cannot_prefetch_generic_order_json", 1),
+        ),
+        "not sqlite",
+    ),
+    "guards9": (
+        BOUNDED_TEST,
+        (
+            ("test_order_timestamp_guard_refuses_before_driver_conversion", 3),
+            ("test_order_row_lock_is_retained_during_prepare_and_persist", 1),
+            ("test_small_compressed_text_is_refused_by_length_without_hydration", 1),
+            (BYPASS, 4),
         ),
         "not sqlite",
     ),
@@ -596,7 +640,7 @@ def selected_nodes(value: object) -> list[str]:
     return value
 
 
-def expected_parameters() -> list[dict[str, str]]:
+def expected_parameters() -> list[dict[str, object]]:
     group = os.environ.get("OCWP_INTEGRITY_GROUP", "")
     selection()
     fixture = {"identity_migration_database": "postgres"}
@@ -611,6 +655,49 @@ def expected_parameters() -> list[dict[str, str]]:
         ]
         shadows = [fixture | {"shadow": shadow} for shadow in ("function", "operator")]
         return relations + shadows + [fixture]
+    if group == "writer5":
+        return [
+            fixture.copy(),
+            *(
+                fixture | {"failure_after": value}
+                for value in ("sync_changes", "outbox_events", "caller")
+            ),
+            fixture.copy(),
+        ]
+    if group == "admission9":
+        return [
+            fixture.copy(),
+            fixture.copy(),
+            *(fixture | {"replay": value} for value in (False, True)),
+            fixture.copy(),
+            fixture.copy(),
+            *(fixture | {"delta": value} for value in (-1, 0, 1)),
+        ]
+    if group == "history9":
+        return [
+            fixture.copy(),
+            *(fixture | {"version": value} for value in (None, 0, 2, -1, True, "1")),
+            fixture.copy(),
+            fixture.copy(),
+        ]
+    if group == "guards9":
+        return [
+            *(
+                fixture | {"value": value}
+                for value in ("infinity", "-infinity", "10000-01-01 00:00:00+00")
+            ),
+            fixture.copy(),
+            fixture.copy(),
+            *(
+                fixture | {"field": field, "value": value}
+                for field, value in (
+                    ("raw_json", "{}"),
+                    ("raw_octets", 1),
+                    ("canonical_utf8", b"{}"),
+                    ("payload", {"version": True}),
+                )
+            ),
+        ]
     return [fixture.copy() for _ in range(4)]
 
 
@@ -786,7 +873,7 @@ def observe_postgres(database: object, request: object) -> Iterator[None]:
     """Probe final state only; leave all expected migration failures untouched."""
     _config, engine = database
     node = request.node.nodeid
-    if selection()[0] != METADATA_TEST or not any(
+    if selection()[0] not in (METADATA_TEST, WRITER_TEST, BOUNDED_TEST) or not any(
         selected_node(node, name) for name, _ in selection()[1]
     ):
         raise ProofFailure("service_selection")
@@ -1030,28 +1117,40 @@ class ServiceReportHook:
             root = Path(__file__).resolve().parents[2]
             source, functions, _ = selection()
             names = [name for name, count in functions for _ in range(count)]
-            remaining = expected_parameters()
+            remaining = list(zip(names, expected_parameters(), strict=True))
             for item, name in zip(session.items, names, strict=True):
                 path = getattr(item, "path", None)
                 params = getattr(getattr(item, "callspec", None), "params", None)
-                keys = {"identity_migration_database"}
-                if name == MALFORMED:
-                    keys |= {"table", "discriminator", "fault"}
-                elif name == RELATIONS:
-                    keys |= {"table", "discriminator", "replacement"}
-                elif name == SHADOWS:
-                    keys.add("shadow")
                 if (
                     not isinstance(path, Path)
                     or path.resolve() != root / source
                     or getattr(item, "originalname", None) != name
                     or type(params) is not dict
-                    or set(params) != keys
-                    or any(type(k) is not str or type(v) is not str for k, v in params.items())
-                    or params not in remaining
+                    or any(type(key) is not str for key in params)
                 ):
                     raise ProofFailure("service_selection")
-                remaining.remove(params)
+                for index, (function, wanted) in enumerate(remaining):
+                    if function != name or set(params) != set(wanted):
+                        continue
+                    if any(type(params[key]) is not type(value) for key, value in wanted.items()):
+                        continue
+                    # Only one reviewed row contains a nested value. Keep its exact
+                    # finite shape, including bool versus int, before dictionary equality.
+                    if name == BYPASS and wanted["field"] == "payload":
+                        value = params["value"]
+                        if (
+                            len(value) != 1
+                            or any(type(key) is not str for key in value)
+                            or set(value) != {"version"}
+                            or type(value["version"]) is not bool
+                            or value["version"] is not True
+                        ):
+                            continue
+                    if params == wanted:
+                        del remaining[index]
+                        break
+                else:
+                    raise ProofFailure("service_selection")
             if remaining:
                 raise ProofFailure("service_selection")
         except (OSError, RuntimeError, ValueError) as error:
@@ -1169,7 +1268,7 @@ def pytest_configure(config: object) -> None:
         raise ProofFailure("service_hook_context")
     config.pluginmanager.register(ServiceReportHook(), "quote-service-closed-report")
     selection()
-    if selection()[0] == METADATA_TEST:
+    if selection()[0] in (METADATA_TEST, WRITER_TEST, BOUNDED_TEST):
         config.pluginmanager.register(postgres_observer_plugin(), "quote-postgres-observer")
 
 

@@ -1,6 +1,6 @@
 # Quote service integrity edge corrections
 
-Status: 204 functional/mock checks passed and independently reviewed on the exact corrected source; static qualification failed with four style findings. The first corrective static-only run passed lint and exposed a complete formatter diff; its exact layout correction is pending verification.
+Status: 204 functional/mock checks passed and independently reviewed on the exact corrected source; static qualification failed with four style findings. The complete static scope now passes on cb2d8d48; both preceding failed runs remain preserved.
 
 Consolidated source review after the [fixed integration selection](2026-10-17-quote-integration-checks.md) identified two narrow contract mismatches:
 
@@ -52,4 +52,12 @@ Remaining internal gates include PostgreSQL bounded-loader/prepared-writer cases
 
 Artifact `12115797338` retains the exact diagnostic and both cleanup receipts. Its ZIP is 5,747 bytes, SHA-256 `bdb2ee258157ec5d0fcbed687ebedcb52e1d0dcc4f3bd99411d3f6783d6b438e`. Whole-worker stop, client reap and primary/independent absence were recorded. The failed specimen has no retained final worker counters or workload duration.
 
-Apply only the retained layout hunks, refresh their source pins, and add a fixed `codex/quote-integrity-format-checks` / `.github/workflows/quote-integrity-format-checks.yml` pair restricted to the same six static commands. Both consumed workflows remain unchanged. The 20-second worker budget, resources, command ceilings and cleanup remain unchanged; no functional rerun or product behavior change is included. Exact source review and new execution remain pending. The previous two failures remain preserved.
+Apply only the retained layout hunks, refresh their source pins, and add a fixed `codex/quote-integrity-format-checks` / `.github/workflows/quote-integrity-format-checks.yml` pair restricted to the same six static commands. Both consumed workflows remain unchanged. The 20-second worker budget, resources, command ceilings and cleanup remain unchanged; no functional rerun or product behavior change is included. That correction was independently source-reviewed and executed successfully as recorded below. The previous two failures remain preserved.
+
+## Corrected static scope passed
+
+[Run 39074239970](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39074239970), first run/attempt, tested commit `cb2d8d4830e01fc7eaa9ec13582240d8f56087f2`, tree `ddffa0b8c8be5fdd501698a3b91b789e2df32d71`. All six ordered commands passed with zero failures, errors or skips: repository contract, Ruff lint, formatter, strict production types, OpenAPI and generated client. Ruff covered 44 paths and mypy covered 13 production roots. No functional rerun occurred.
+
+Artifact `12116625573` is 3,828 bytes, SHA-256 `8925a315fb33bc6736f51299dc7a6ad22a895549d752d21f641f0054e9e6dcb9`. The workload took 13.270 seconds. Final worker peak memory was 276,189,184 bytes and worker CPU delta was 13,354,458 microseconds. These readings follow accepted JUnit and precede termination; they are not posttermination totals. The actual resource configuration, real cancellation canary, stop/reap and primary/independent absence remain recorded. Independent artifact review verified exact source/input/image identities, all six commands, actual resource thresholds, stop-before-reap and both absence receipts. Fresh reconciliation found one run, the exact branch head and unchanged main.
+
+This closes the selected static scope and preserves the earlier source-bound 204 functional/mock result. It does not close the remaining PostgreSQL loader/writer or broader integration and activation gates.

@@ -1,14 +1,33 @@
 schema: 1
 
+quote_loader_writer_checks_20261017:
+  status: prepared_pending_exact_review_and_execution
+  postgresql_group_cases: [5, 9, 9, 9]
+  combined_mock_static_cases: 12
+  total_selected_checks: 44
+  workload_seconds_per_group: 20
+  runtime_result: not_executed
+  scope: existing_prepared_writer_bounded_loader_and_updated_selection_static
+  production_change: none
+  evidence: docs/10-spec-development/2026-10-17-quote-loader-writer-checks.md
+
 quote_integrity_format_20261017:
-  status: exact_formatter_patch_prepared_pending_execution
+  status: six_static_commands_passed_independently_reviewed
+  qualification_run: 39074239970
+  source_commit: cb2d8d4830e01fc7eaa9ec13582240d8f56087f2
+  source_tree: ddffa0b8c8be5fdd501698a3b91b789e2df32d71
+  artifact: 12116625573
+  passed_commands: 6
+  failures_errors_skips: 0
+  measured_workload_seconds: 13.270018381
+  final_pretermination_worker_peak_bytes: 276189184
   prior_run: 39073762410
   prior_source_commit: 86eb20b0db740d1911d06f7e1e6272f0cba87bb5
   prior_source_tree: f04fd26f4748954cad6e9f81fa9b87fc27a579b9
   prior_artifact: 12115797338
-  repository_and_ruff: passed
-  formatter: failed_three_files_2616_bytes_complete_diff
-  types_openapi_generated_client: unrun
+  prior_repository_and_ruff: passed
+  prior_formatter: failed_three_files_2616_bytes_complete_diff
+  prior_types_openapi_generated_client: unrun
   correction: retained_formatting_only_and_fixed_static_scope
   workload_seconds: 20
   evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md

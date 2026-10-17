@@ -1,9 +1,9 @@
-"""Six fixed integrity groups; source preparation is not runtime evidence.
+"""Seven fixed integrity groups; source preparation is not runtime evidence.
 
 SPDX-FileCopyrightText: 2026 Open Cycling Workshop Platform contributors
 SPDX-License-Identifier: AGPL-3.0-only
 
-Only prepare/run/cleanup and six source-declared environment group keys exist.
+Only prepare/run/cleanup and seven source-declared environment group keys exist.
 No caller selector, path, budget or retry exists. Host imports only the pinned baseline.
 """
 
@@ -59,10 +59,10 @@ CANDIDATE_SHA = {
         "52aca207fc09a15aae626947d622a32085533d7ed4225d988dce32541630a877"
     ),
     "scripts/ci/quote_integrity_postgres.py": (
-        "c3a7bd71c1dd21194569f5993f6ce88cc0d7c7cf89f6b76b2496ef93236e4eb0"
+        "ef69f56cbae3b32ce60aae4bdbfc41884dadb57206c60485ac093222f40bc9cf"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "bbcdd43ea2be303daa04a506090bc505e8d8559fe012a1b726976c4518a379bf"
+        "184cc20aca227963a0d3523aa4b99a0d5986e2ea185338c6cc59f735429a3e03"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -72,6 +72,15 @@ CANDIDATE_SHA = {
     ),
     ".github/workflows/quote-integrity-format-checks.yml": (
         "cb383e9e1176e585a1322697644d8d6ee75a8ea5ebbbb0fe4008f81c197855ba"
+    ),
+    "services/platform/tests/sync/test_prepared_order_change.py": (
+        "265627babde722d95f364becec13dca70efb02fb9128c69a8692b62e8a38d812"
+    ),
+    "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py": (
+        "3371ea170bcaa11a9478e8a30ae4c1bc20ea0e89dd767323378a3af69e4fd1f7"
+    ),
+    ".github/workflows/quote-loader-writer-checks.yml": (
+        "14cd94ec07eaf2055dd6db07beb2ba2ffae10e5d449ea7857b7232a9045b0b7c"
     ),
 }
 LOCKED_INPUT_SHA = {
@@ -89,6 +98,8 @@ STYLE_BRANCH = "refs/heads/codex/quote-integrity-style-checks"
 STYLE_WORKFLOW = ".github/workflows/quote-integrity-style-checks.yml"
 FORMAT_BRANCH = "refs/heads/codex/quote-integrity-format-checks"
 FORMAT_WORKFLOW = ".github/workflows/quote-integrity-format-checks.yml"
+LOADER_BRANCH = "refs/heads/codex/quote-loader-writer-checks"
+LOADER_WORKFLOW = ".github/workflows/quote-loader-writer-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -215,6 +226,30 @@ GROUPS = {
             ),
         ),
     ),
+    "selection_static12": (
+        (
+            SELECTION_PATH,
+            (
+                ("test_fixed_postgres_selection_and_argv", 1, 0),
+                ("test_typed_postgres_collection_contract", 1, 0),
+                ("test_closed_postgres_reports_and_identities", 1, 0),
+                ("test_metadata_observer_and_bridge_registration", 1, 0),
+                ("test_numeric_failure_bounds_and_static_exactness", 1, 0),
+                ("test_fixed_junit_maps_and_parser", 1, 0),
+            ),
+        ),
+        (
+            STATIC_PATH,
+            (
+                ("test_repository_contract", 1, 0),
+                ("test_python_lint", 1, 0),
+                ("test_python_format", 1, 0),
+                ("test_production_types", 1, 0),
+                ("test_openapi_contract", 1, 0),
+                ("test_generated_client_contract", 1, 0),
+            ),
+        ),
+    ),
 }
 GROUP_COUNTS = {
     "service27": 27,
@@ -223,6 +258,7 @@ GROUP_COUNTS = {
     "response50": 50,
     "response64": 64,
     "static6": 6,
+    "selection_static12": 12,
 }
 GROUP_KEY = os.environ.get("OCWP_INTEGRITY_GROUP", "")
 SELECTION = GROUPS.get(GROUP_KEY, ())
@@ -230,7 +266,7 @@ NODES = tuple(f"{path}::{name}" for path, cases in SELECTION for name, _, _ in c
 EXPECTED_COUNTS = {name: count for _, cases in SELECTION for name, count, _ in cases}
 CLASS_NAMES = [SOURCE_CLASSES[path] for path, _ in SELECTION]
 CASE_COUNT = GROUP_COUNTS.get(GROUP_KEY, 0)
-SPOOL_LIMIT = 32 * 1024 if GROUP_KEY == "static6" else LIMIT
+SPOOL_LIMIT = 32 * 1024 if GROUP_KEY in ("static6", "selection_static12") else LIMIT
 JUNIT_PATH = "/tmp/quote-integrity-checks.xml"
 PYTEST = [
     "env",
@@ -239,7 +275,11 @@ PYTEST = [
     "HOME=/tmp",
     "PYTHONDONTWRITEBYTECODE=1",
     "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
-    *(["OCWP_QUOTE_SERVICE_INITIAL=contained"] if GROUP_KEY == "static6" else []),
+    *(
+        ["OCWP_QUOTE_SERVICE_INITIAL=contained"]
+        if GROUP_KEY in ("static6", "selection_static12")
+        else []
+    ),
     "/app/.venv/bin/python",
     "-m",
     "pytest",
@@ -312,6 +352,11 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == FORMAT_BRANCH:
         require(GROUP_KEY == "static6")
         branch, workflow = FORMAT_BRANCH, FORMAT_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == LOADER_BRANCH:
+        require(GROUP_KEY == "selection_static12")
+        branch, workflow = LOADER_BRANCH, LOADER_WORKFLOW
+    else:
+        require(GROUP_KEY != "selection_static12")
     require(os.environ.get("GITHUB_REF") == branch)
     require(os.environ.get("GITHUB_RUN_NUMBER") == "1")
     require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1")

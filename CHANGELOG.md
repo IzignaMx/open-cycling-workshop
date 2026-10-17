@@ -1,5 +1,10 @@
 # Changelog
 
+## Quote candidate static closure and PostgreSQL coverage · 2026-10-17
+
+- Verify all six static commands on cb2d8d48 in run 39074239970: repository, Ruff, format, strict production types, OpenAPI and generated client. Workload 13.270 seconds under the unchanged 20-second cap; prior failures remain preserved.
+- Prepare the remaining 32 existing PostgreSQL prepared-writer/bounded-loader cases and one combined six-mock/six-static group. Exact source review and execution remain pending.
+
 ## Quote candidate formatter correction · 2026-10-17
 
 - Preserve run 39073762410: repository and Ruff passed, then formatter reported a complete 2,616-byte layout diff in three files. Types, OpenAPI and generated client were unrun.
