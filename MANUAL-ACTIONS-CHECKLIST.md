@@ -1,5 +1,13 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Observed Ruff corrections · 2026-10-17
+
+- [x] Retain all four diagnostic records from run `39049797128`.
+- [ ] Review the four exact corrections and obtain all six static results.
+- [ ] Qualify the finite PostgreSQL-0012 service cases after static closure.
+- One output line is unparsed; the capture remains explicitly incomplete.
+  Earlier pending sections below describe historical preparation checkpoints.
+
 ## Static diagnostic retention · 2026-10-17
 
 - [x] Independently close failed run `39048370590`; verify cancellation and absence.

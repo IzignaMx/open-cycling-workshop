@@ -243,7 +243,7 @@ def test_corrupt_effect_association_has_normalized_integrity_error(
 ):
     data, effects, _receipt = effect_records
     setattr(effects[group][0], field, value)
-    with pytest.raises(QuoteIntegrityError, match="^stored quote history is invalid$"):
+    with pytest.raises(QuoteIntegrityError, match=r"^stored quote history is invalid$"):
         reconstruct(*data, **effects)
 
 
@@ -288,7 +288,7 @@ def test_foreign_cursor_is_refused_without_materializing_its_payload(database):
 
         event.listen(session, "loaded_as_persistent", observe)
         try:
-            with pytest.raises(QuoteIntegrityError, match="^stored quote history is invalid$"):
+            with pytest.raises(QuoteIntegrityError, match=r"^stored quote history is invalid$"):
                 apply_decision(session, effects)
         finally:
             event.remove(session, "loaded_as_persistent", observe)

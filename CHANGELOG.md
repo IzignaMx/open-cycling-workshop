@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Four observed Ruff corrections pending qualification
+
+- Correct SIM905, two RUF043 reports and SIM300 observed in run `39049797128`.
+  Preserve fixed rule values, anchored regex behavior and path comparison.
+- Repository verification passed; Ruff failed. All four reported diagnostics
+  were retained, while one unparsed line keeps the capture explicitly incomplete.
+  Format, types and contract checks remain unrun.
+- Reuse the existing six-command qualification with unchanged execution limits.
+
 ## Unreleased · Actionable static diagnostic preparation
 
 - Retain run `39048370590`: repository passed, Ruff failed with 679 output

@@ -1,5 +1,29 @@
 # Retain actionable standard Ruff diagnostics
 
+## Actual diagnostic qualification and next correction
+
+[Run 39049797128](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39049797128)
+on commit `5513ead255ec64128de1230009dc7fe0bc4acba1`, tree
+`aaa9578ccaabbc15e0526019b53d65f3b7f66c59`, passed repository verification
+and failed Ruff. Artifact `12107027091` is 1,901 bytes, SHA-256
+`893421506573b3c04442444a90020ce381f697a58934c69d2a0804e4a58ae8e7`.
+The receipt retained all four reported diagnostics with zero omissions:
+
+- `SIM905`: guard's fixed mypy-code collection built through `str.split`.
+- Two `RUF043`: anchored error-message regex literals without explicit raw syntax.
+- `SIM300`: the static wrapper's inverted path comparison.
+
+One unparsed line means `complete=false`; its content is unknown. Format, mypy,
+OpenAPI and generated-client checks were unrun. Cancellation, client reap and
+both absence receipts are retained for independent verification. This run does
+not qualify PostgreSQL or product activation.
+
+The next source candidate corrects exactly these four observed findings without
+changing rule-set values, regex meaning, command selection or execution limits.
+It uses the existing fixed six-command qualification. Source review and actual
+checks on that corrected candidate are pending. The preparation description
+below records the diagnostic change already executed, not a new pending design.
+
 ## Observed failure
 
 [Run 39048370590](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39048370590)

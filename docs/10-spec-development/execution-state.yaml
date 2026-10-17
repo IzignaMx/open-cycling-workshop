@@ -1,7 +1,26 @@
 schema: 1
 
+quote_observed_ruff_corrections_20261017:
+  status: prepared_pending_review_and_qualification
+  source_commit: 5513ead255ec64128de1230009dc7fe0bc4acba1
+  source_tree: aaa9578ccaabbc15e0526019b53d65f3b7f66c59
+  failed_run: 39049797128
+  artifact: 12107027091
+  observed_rules: [SIM905, RUF043, RUF043, SIM300]
+  reported_diagnostics: 4
+  retained_diagnostics: 4
+  omitted_diagnostics: 0
+  unparsed_lines: 1
+  complete_capture: false
+  repository_result: passed
+  ruff_result: failed
+  format_types_openapi_client: unrun
+  execution_limits_and_semantics: preserved
+
 quote_static_diagnostic_retention_20261017:
-  status: prepared_pending_review_and_actual_qualification
+  status: verified_actionable_failure_diagnostics_static_checks_not_qualified
+  qualification_run: 39049797128
+  qualification_artifact: 12107027091
   source_commit: 038a463c3339210488a80e5c8b0d61fc83edfdad
   source_tree: 1e68b89488d65ba8f828da122e48ae9d34be51ba
   failed_run: 39048370590

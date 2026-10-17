@@ -162,7 +162,7 @@ def _summarize(tool: int, output: bytes) -> tuple[list[dict[str, object]], int, 
 
 
 def _check(tool: int, capfd: pytest.CaptureFixture[str]) -> None:
-    if ROOT != Path("/app") or os.environ.get("OCWP_QUOTE_SERVICE_INITIAL") != "contained":
+    if Path("/app") != ROOT or os.environ.get("OCWP_QUOTE_SERVICE_INITIAL") != "contained":
         pytest.fail("static_tool_context", pytrace=False)
     kind, returncode = 1, None
     with tempfile.TemporaryFile() as output:

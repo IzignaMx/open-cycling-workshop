@@ -564,23 +564,86 @@ STATIC_RUFF_CODE_PATTERN = r"(?:[A-Z]+[0-9]+|[a-z][a-z0-9]*(?:-[a-z0-9]+)*)"
 STATIC_RUFF_FAILURE_LIMIT = 12 * 1024
 STATIC_RUFF_MESSAGE_LIMIT = 1024
 STATIC_MYPY_RULES = frozenset(
-    (
-        "abstract annotation-unchecked arg-type assert-type assignment attr-defined "
-        "await-not-async call-arg call-overload comparison-overlap deprecated dict-item "
-        "empty-body exhaustive-match exit-return explicit-any explicit-override "
-        "func-returns-value has-type ignore-without-code import import-not-found "
-        "import-untyped index list-item literal-required maybe-unrecognized-str-typeform "
-        "metaclass method-assign misc mutable-override name-defined name-match "
-        "narrowed-type-not-subtype no-any-return no-any-unimported no-overload-impl no-redef "
-        "no-untyped-call no-untyped-def nonetype-type operator overload-cannot-match "
-        "overload-overlap override possibly-undefined prop-decorator redundant-cast "
-        "redundant-expr redundant-self return return-value safe-super str-bytes-safe "
-        "str-format str-unpack syntax top-level-await truthy-bool truthy-function "
-        "truthy-iterable type-abstract type-arg type-var typeddict-item "
-        "typeddict-readonly-mutated typeddict-unknown-key unimported-reveal union-attr "
-        "unreachable untyped-decorator unused-awaitable unused-coroutine unused-ignore "
-        "used-before-def valid-newtype valid-type var-annotated"
-    ).split()
+    [
+        "abstract",
+        "annotation-unchecked",
+        "arg-type",
+        "assert-type",
+        "assignment",
+        "attr-defined",
+        "await-not-async",
+        "call-arg",
+        "call-overload",
+        "comparison-overlap",
+        "deprecated",
+        "dict-item",
+        "empty-body",
+        "exhaustive-match",
+        "exit-return",
+        "explicit-any",
+        "explicit-override",
+        "func-returns-value",
+        "has-type",
+        "ignore-without-code",
+        "import",
+        "import-not-found",
+        "import-untyped",
+        "index",
+        "list-item",
+        "literal-required",
+        "maybe-unrecognized-str-typeform",
+        "metaclass",
+        "method-assign",
+        "misc",
+        "mutable-override",
+        "name-defined",
+        "name-match",
+        "narrowed-type-not-subtype",
+        "no-any-return",
+        "no-any-unimported",
+        "no-overload-impl",
+        "no-redef",
+        "no-untyped-call",
+        "no-untyped-def",
+        "nonetype-type",
+        "operator",
+        "overload-cannot-match",
+        "overload-overlap",
+        "override",
+        "possibly-undefined",
+        "prop-decorator",
+        "redundant-cast",
+        "redundant-expr",
+        "redundant-self",
+        "return",
+        "return-value",
+        "safe-super",
+        "str-bytes-safe",
+        "str-format",
+        "str-unpack",
+        "syntax",
+        "top-level-await",
+        "truthy-bool",
+        "truthy-function",
+        "truthy-iterable",
+        "type-abstract",
+        "type-arg",
+        "type-var",
+        "typeddict-item",
+        "typeddict-readonly-mutated",
+        "typeddict-unknown-key",
+        "unimported-reveal",
+        "union-attr",
+        "unreachable",
+        "untyped-decorator",
+        "unused-awaitable",
+        "unused-coroutine",
+        "unused-ignore",
+        "used-before-def",
+        "valid-newtype",
+        "valid-type",
+        "var-annotated",
+    ]
 )
 STATIC_ALLOWED_PATHS = (
     STATIC_REPOSITORY_PATHS,
