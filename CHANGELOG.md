@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased · PostgreSQL NULL guard assertion correction
+
+- Preserve failed run 39064719886: two cases passed, third SQL-spelling assertion failed, historical case unrun.
+- Match the locked compiler's implicit-NULL CASE and directly assert both oversized raw results are NULL.
+- Keep product SQL, count guards, no-ORM assertions and resource limits unchanged; corrected qualification pending.
+- [Evidence and scope](docs/10-spec-development/2026-10-17-bounded-effects-null.md).
+
 ## Unreleased · Bounded-effects PostgreSQL 0013 qualification preparation
 
 - Close eighteen pure cases and all 54 phases on 0b8e3ea9, run 39063614879.

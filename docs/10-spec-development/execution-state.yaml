@@ -1,7 +1,27 @@
 schema: 1
 
-bounded_effects_postgresql_20261017:
+bounded_effects_null_correction_20261017:
   status: prepared_pending_exact_review_and_run
+  preserved_failed_run: 39064719886
+  change: test_only_implicit_null_shape_and_actual_guarded_null_results
+  expected_cases: 4
+  expected_phases: 12
+  shared_workload_seconds: 20
+  product_source_changed: false
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-null.md
+
+bounded_effects_postgresql_20261017:
+  status: failed_independently_reviewed_preserved
+  run_id: 39064719886
+  source_commit: f842b58e5cd7a3cb7038c3af4a141979fd9756de
+  source_tree: c56e653bb35cf8ab13e5af1ab38686db0fba3fea
+  artifact_id: 12111704973
+  artifact_sha256: 82db1c3f071aa874e617ac34a2b2cc20177df24b0b38f62b2d60a7762577511d
+  passed_cases: 2
+  failed_case: paired_raw_cast_literal_else_assertion
+  historical_case: unrun
+  complete_postgresql_identity_receipt: unavailable_on_failure
+  cancellation_and_cleanup: independently_verified
   expected_cases: 4
   expected_phases: 12
   database_schemas: 4

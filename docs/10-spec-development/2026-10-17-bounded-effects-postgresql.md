@@ -1,6 +1,6 @@
 # Fixed PostgreSQL 0013 bounded-effects qualification
 
-Status: preparation; exact review and execution pending. Product source is unchanged from the static-qualified snapshot 2460fbc11577170ec7660bc75c237dfd5a905bcf. The separate eighteen-case pure result is recorded in [its evidence note](2026-10-17-bounded-effects-pure.md).
+Status: original preparation completed; the exact run failed as recorded below. Corrected qualification is separately pending. Product source is unchanged from the static-qualified snapshot 2460fbc11577170ec7660bc75c237dfd5a905bcf. The separate eighteen-case pure result is recorded in [its evidence note](2026-10-17-bounded-effects-pure.md).
 
 ## Four existing cases
 
@@ -24,3 +24,13 @@ The selected observer depends only on the existing isolated-schema fixture. It f
 Reuse the established 20-second aggregate workload, 1 CPU / 512 MiB worker, 1 CPU / 768 MiB PostgreSQL container, cancellation canary, bounded output and independent cleanup. Preparation has the existing separate job limit. Diagnostic output uses the existing bounded short traceback, without locals or environment dumps; a failure remains a failure and its evidence is retained. No consumed workflow is modified or rerun.
 
 This batch changes no product code or selected test bodies. It does not prove DDL failure rollback, logical restore, lock contention, production latency, maximum capacity or physical Raspberry Pi operation. Those gates remain open, as do the other pure/negative cases. No routes, installed workshop or real permissions are activated.
+
+## Preserved failed result
+
+[Run 39064719886](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39064719886), number 1 / attempt 1, failed on commit f842b58e5cd7a3cb7038c3af4a141979fd9756de, tree c56e653bb35cf8ab13e5af1ab38686db0fba3fea. Artifact 12111704973, SHA-256 82db1c3f071aa874e617ac34a2b2cc20177df24b0b38f62b2d60a7762577511d, retains the complete 1,249-byte diagnostic transport. Pytest itself abbreviates the SQL repr within that output.
+
+Four cases were collected. The first two passed; the third call failed its literal `ELSE` assertion after the initial refusal/no-ORM checks and the first CASE's count-guard checks. Nine phases were recorded, one failed, zero skips or collection/protocol errors. The fourth historical case was not run. No complete final service/PG identity receipt was retained in the artifact, so this failed batch does not qualify all four schemas or the historical migration.
+
+Independent review verified the artifact and source identity, the real cancellation canary, worker stop before client reap and both container-absence receipts. Supervisor elapsed time was 8.919 seconds, setup 2.316 seconds and cancellation 0.126 seconds. Failure-path resource counters are last samples, not final totals. Worker last-sampled peak was 98,746,368 bytes and CPU 5,898,662 microseconds; PostgreSQL was 100,917,248 bytes and 2,685,413 microseconds. No timeout or resource-limit failure is reported.
+
+The concrete failure is in the test's SQL spelling requirement. Product source uses SQLAlchemy `case(..., else_=None)`; locked SQLAlchemy 2.0.52 emits no ELSE clause for this value. [PostgreSQL 18 CASE semantics](https://www.postgresql.org/docs/18/functions-conditional.html#FUNCTIONS-CASE) return NULL when no WHEN matches and ELSE is absent. The separate [test-only correction](2026-10-17-bounded-effects-null.md) preserves this failure and all resource limits.

@@ -330,9 +330,10 @@ def test_both_raw_casts_share_both_count_guards_without_orm_materialization(
     statements = []
     materialized = []
 
-    def capture(_connection, _cursor, statement, _parameters, _context, _many):
+    def capture(_connection, _cursor, statement, parameters, _context, many):
         if " AS change_raw" in statement:
-            statements.append(statement)
+            assert type(parameters) is dict and not many
+            statements.append((statement, parameters.copy()))
 
     def observe(_session, instance):
         if isinstance(instance, ChangeRecord):
@@ -351,20 +352,33 @@ def test_both_raw_casts_share_both_count_guards_without_orm_materialization(
     finally:
         event.remove(database, "before_cursor_execute", capture)
     assert len(statements) == 1 and materialized == []
-    sql = statements[0]
+    sql, parameters = statements[0]
+    assert sql.startswith("SELECT ")
     assert sql.count("CAST(sync_changes.payload AS pg_catalog.text)") == 1
     assert sql.count("CAST(outbox_events.payload AS pg_catalog.text)") == 1
     assert sql.count("order_payload_raw_octets") >= 6
-    for label in ("change_raw", "outbox_raw"):
+    for label, payload_table in (("change_raw", "sync_changes"), ("outbox_raw", "outbox_events")):
         guarded = sql.split(f" AS {label}")[0].rsplit("CASE", 1)[1]
+        predicate, result = guarded.split(" THEN ")
         for table in ("sync_changes", "outbox_events"):
             for operator in (">=", "<="):
                 assert (
                     f"{table}.order_payload_raw_octets OPERATOR(pg_catalog.{operator})"
-                ) in guarded
-        assert " ELSE " in guarded
+                ) in predicate
+        # Locked SQLAlchemy omits ELSE for else_=None. Exact tail equality also
+        # rejects any non-NULL fallback, extra branch or misplaced payload cast.
+        assert result == f"CAST({payload_table}.payload AS pg_catalog.text) END"
     assert "service_order_events.note IS NULL" in sql
     assert "service_order_events.note," not in sql
+    # Re-read only this fixture's captured loader SELECT and bound parameters,
+    # after service rollback and listener removal. Nothing is logged or rebuilt.
+    with database.connect() as connection:
+        guarded_row = connection.exec_driver_sql(sql, parameters).mappings().one()
+    assert connection.closed
+    for prefix in ("change", "outbox"):
+        assert type(guarded_row[f"{prefix}_octets"]) is int
+        assert guarded_row[f"{prefix}_octets"] > 1
+        assert guarded_row[f"{prefix}_raw"] is None
 
 
 def test_order_row_lock_is_retained_during_prepare_and_persist(database, actors, monkeypatch):
