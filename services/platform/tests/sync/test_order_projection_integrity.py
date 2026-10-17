@@ -109,8 +109,9 @@ def test_duplicate_unicode_depth_and_malformed_rejection(raw):
 def test_preflight_precedes_json_loads(monkeypatch):
     def unsafe(*args, **kwargs):
         pytest.fail("unsafe decoder reached")
+
     monkeypatch.setattr(codec.json, "loads", unsafe)
-    for raw in ('[' * 13 + '0' + ']' * 13, '{"x":' + '9' * 200 + '}', '{"x":2e0}'):
+    for raw in ("[" * 13 + "0" + "]" * 13, '{"x":' + "9" * 200 + "}", '{"x":2e0}'):
         with pytest.raises(codec.OrderProjectionIntegrityError):
             decode(raw)
 
@@ -123,9 +124,17 @@ def test_each_byte_boundary(monkeypatch, offset, limit_name):
     payload = projection()
     prepared = codec.encode_order_projection(payload)
     sizes = {
-        "ORDER_SOURCE_MAX_BYTES": sum(len(payload[key].encode("utf-8")) for key in
-            ("reported_problem", "intake_condition", "accessories", "priority", "diagnosis")
-            if payload[key] is not None),
+        "ORDER_SOURCE_MAX_BYTES": sum(
+            len(payload[key].encode("utf-8"))
+            for key in (
+                "reported_problem",
+                "intake_condition",
+                "accessories",
+                "priority",
+                "diagnosis",
+            )
+            if payload[key] is not None
+        ),
         "ORDER_CANONICAL_MAX_BYTES": len(prepared.canonical_utf8),
         "ORDER_RAW_MAX_BYTES": prepared.raw_octets,
     }
@@ -161,7 +170,7 @@ def test_duplicate_key_in_otherwise_valid_projection():
 
 
 def test_escaped_strings_are_not_number_or_depth_tokens():
-    payload = projection() | {"diagnosis": '[' * 40 + '9' * 200 + '2e0\\"' + ']' * 40}
+    payload = projection() | {"diagnosis": "[" * 40 + "9" * 200 + '2e0\\"' + "]" * 40}
     prepared = codec.encode_order_projection(payload)
     assert decode(prepared.raw_json).payload == payload
     assert decode(json.dumps(payload, ensure_ascii=True)).payload == payload
@@ -183,6 +192,7 @@ def test_raw_decode_exact_byte_boundary(monkeypatch, offset):
 def test_preflight_unicode_rejection_precedes_decoder(monkeypatch):
     def unsafe(*args, **kwargs):
         pytest.fail("unsafe decoder reached")
+
     monkeypatch.setattr(codec.json, "loads", unsafe)
     for raw in ('{"x":"\\u0000"}', '{"x":"\\ud800"}', '{"x":"\\udfff"}'):
         with pytest.raises(codec.OrderProjectionIntegrityError):

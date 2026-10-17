@@ -253,9 +253,7 @@ def test_prepared_inserts_are_owned_by_caller_rollback(database, failure_after):
     finally:
         event.remove(database, "after_cursor_execute", fail_after_insert)
     assert reached == (
-        ["sync_changes"]
-        if failure_after == "sync_changes"
-        else ["sync_changes", "outbox_events"]
+        ["sync_changes"] if failure_after == "sync_changes" else ["sync_changes", "outbox_events"]
     )
     with Session(database) as session:
         assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0

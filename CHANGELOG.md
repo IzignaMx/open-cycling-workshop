@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased · Final reported codec and writer formatting
+
+- Retain complete formatter report from run 39060973460; apply its five reviewed hunks.
+- Two files changed, 36 previously formatted; exact-source static/runtime checks pending.
+
 ## Unreleased · Stable metadata query layout
 
 - Preserve run 39060563945 and its formatter-produced long SQL test line.

@@ -1,28 +1,23 @@
 schema: 1
 
 bounded_effects_static_20261017:
-  status: failed_formatter_indented_sql_line_correction_pending
-  run_id: 39060563945
-  source_commit: 94f280a65826ca8084b7e553f0ea033659b4d008
-  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021]
-  lint_diagnostics: 1
-  previous_formatter_output_bytes: 16384
-  previous_formatter_output_truncated: true
-  latest_lint_output_bytes: 116
-  latest_lint_output_truncated: false
-  earlier_complete_file_sections_applied: 6
-  previous_complete_hunks_applied: 18
-  next_complete_hunks_applied: 19
-  incomplete_codec_hunk: excluded
+  status: complete_formatter_report_applied_pending_checks
+  run_id: 39060973460
+  source_commit: 35adb76ac22214fe0b782d9d2d459ef4b81ac365
+  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945]
+  repository: passed_on_reported_source
+  lint: passed_on_reported_source
+  formatter_output_bytes: 2909
+  formatter_output_truncated: false
+  complete_hunks_applied: 5
   later_commands: unrun
   fixed_commands: 6
   source_paths: 38
   production_type_roots: 13
   shared_workload_seconds: 20
-  product_snapshot_tree: 89b919583d2d0e60883898e973740abd42404be3
   database_usage: unused_environment_overhead
   runtime_tests: unrun
-  evidence: docs/10-spec-development/2026-10-17-bounded-effects-static.md
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-source-repair.md
 
 bounded_quote_effects_joint_20261017:
   status: source_reviewed_tests_unexecuted
