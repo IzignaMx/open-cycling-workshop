@@ -1,7 +1,43 @@
 schema: 1
 
+full_python_preparation_diagnostics_20261018:
+  status: prepared_unrun
+  source_base: 2e85dd7b6e3b19e74d29c536ca62f79a5de325e3
+  first_attempt:
+    run_id: 39140389383
+    run_attempt: 1
+    source_commit: 6b166504dde92aa5fa42f85eef687fc97b2306eb
+    source_tree: dd30aeb9530fb41f7e11aab5cde3b7859ef5dc13
+    preparation: first_docker_build_invocation_failed
+    build_output_child_returncode_and_underlying_cause: unavailable
+    pytest: skipped
+    independent_cleanup_observation: unavailable
+    full_python_artifact: absent
+    separate_verify_formatting: failed_two_markdown_files
+    main_browser_install_and_journeys: skipped
+    secondary_verifier_browser_fixtures: failed_missing_chromium
+    secondary_browser_unexpected_tests: 80
+    secondary_browser_failed_attempts: 159
+    secondary_browser_assertion_passes: 0
+    verify_aggregate_passed: 21
+    verify_aggregate_failed: 5
+    verify_aggregate_blocked: 1
+    missing_receipt: rejected_identity_image_no_fallback_pytest
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39140389383
+  prepared_correction:
+    preparation_control_spool_bytes: 16384
+    stage_returncode_and_truncation: explicit
+    diagnostic_capture: after_bounded_client_reap_only
+    independent_cleanup_record: separate_unqualified_observation
+    missing_ownership: cannot_certify_absence
+    build_resource_cleanup: not_assessed
+    full_suite_limits_and_receipt_acceptance: unchanged
+    mocked_regressions: unrun
+    two_markdown_files: canonical_locked_prettier_3_9_6_inert_copy_output
+  further_execution: pending_technical_review_no_retry
+
 clean_quote_service_integration_20261018:
-  status: prepared_final_tree_qualification_pending
+  status: first_attempt_failed_final_tree_qualification_pending
   intended_branch: codex/quote-service-clean-integration
   integration_base: 8a7eeecc39b0a43097484d10dc30af541ae38156
   historical_clean_tree: d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f
@@ -43,8 +79,8 @@ clean_quote_service_integration_20261018:
     locked_inputs: 4
     primary_and_independent_cleanup: verified_absent
     evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481
-  final_clean_tree_runtime: unrun
-  full_image_preparation: unrun
+  final_clean_tree_runtime: first_attempt_failed_before_pytest
+  full_image_preparation: failed_without_retained_build_diagnostics
   full_python_suite: unrun
   full_python_business_seconds: 900
   worker_cpus: 1
@@ -54,7 +90,7 @@ clean_quote_service_integration_20261018:
   intentional_skip_identities: 58
   required_restore_cases: 6
   ordinary_large_specimens: retained_both_dialects
-  launch_status: held_for_technical_review
+  launch_status: first_attempt_failed_correction_under_review
   ordinary_ci_merge_recovery_reopening_capacity_activation: pending
 
 quote_oracle_format_closure_20261018:

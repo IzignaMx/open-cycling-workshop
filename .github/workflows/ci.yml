@@ -87,22 +87,27 @@ jobs:
           import os
           import time
           from pathlib import Path
-          from scripts.ci.quote_capacity_micro import ProofFailure, full_client, source_query
+          from scripts.ci.quote_capacity_micro import (
+              ProofFailure, full_client, full_preparation_diagnostic, source_query,
+          )
           deadline = time.monotonic() + 650
           context = os.environ['OCWP_FULL_CONTEXT']
-          def execute(args, *, timeout=5):
+          diagnostics = Path('artifacts/full-python')
+          def execute(args, *, timeout=5, stage='source_tree'):
               remaining = deadline - time.monotonic()
               if remaining <= 0:
+                  full_preparation_diagnostic(None, diagnostics, stage, 'preparation_deadline', None, False)
                   raise ProofFailure('preparation_deadline')
-              return full_client(args, timeout=min(timeout, remaining))
+              return full_client(args, timeout=min(timeout, remaining), preparation=(diagnostics, stage))
           tree = source_query('tree', execute)
           execute(['docker', 'build', '--quiet', '-f',
                    str(Path(os.environ['RUNNER_TEMP']) / 'full-python.Dockerfile'),
-                   '--build-arg', f'SOURCE_TREE={tree}', '-t', 'ocwp-full-python', context], timeout=590)
-          execute(['docker', 'pull', '--quiet', 'postgres:18.4-trixie'], timeout=60)
+                   '--build-arg', f'SOURCE_TREE={tree}', '-t', 'ocwp-full-python', context], timeout=590, stage='image_build')
+          execute(['docker', 'pull', '--quiet', 'postgres:18.4-trixie'], timeout=60, stage='postgres_pull')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               for key, tag in [('image_id', 'ocwp-full-python'), ('pg_image_id', 'postgres:18.4-trixie')]:
-                  image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag])
+                  stage = 'worker_image' if key == 'image_id' else 'postgres_image'
+                  image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], stage=stage)
                   output.write(f'{key}={image}\n')
           PY
       - name: Run the complete pytest collection once inside the fixed resource boundary
@@ -141,6 +146,9 @@ jobs:
             artifacts/full-python/receipt.json
             artifacts/full-python/diagnostic.txt
             artifacts/full-python/diagnostic.json
+            artifacts/full-python/preparation.txt
+            artifacts/full-python/preparation.json
+            artifacts/full-python/independent-cleanup.json
           if-no-files-found: error
   verify:
     needs: python-tests

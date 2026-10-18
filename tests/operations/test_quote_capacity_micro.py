@@ -95,6 +95,118 @@ def test_full_diagnostic_retains_only_the_bounded_host_spool(tmp_path):
     }
 
 
+@pytest.mark.parametrize(
+    "fault", [None, "nonzero", "cap", "timeout", "reap", "spawn", "nonzero_reap"]
+)
+def test_preparation_client_retains_only_reaped_bounded_output(tmp_path, monkeypatch, fault):
+    import json
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"build diagnostic" if fault != "cap" else b"x" * module.LIMIT
+    clock = iter([0.0, 1.0] if fault == "timeout" else [0.0, 0.0])
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+
+    def launch(args, **kwargs):
+        assert args == ["docker", "build", "--quiet"]
+        if fault == "spawn":
+            raise OSError("unavailable synthetic client")
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        client = SimpleNamespace(
+            pid=1234,
+            returncode=7 if fault in {"nonzero", "nonzero_reap"} else 0,
+            poll=lambda: None if fault == "timeout" else 0,
+        )
+
+        def wait(**kwargs):
+            events.append("client_reap")
+            if fault in {"reap", "nonzero_reap"}:
+                raise module.subprocess.TimeoutExpired("fixed", 2)
+            if fault == "timeout":
+                client.returncode = -9
+            return client.returncode
+
+        client.wait = wait
+        return client
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    original = module.full_preparation_diagnostic
+
+    def save(output, *args):
+        if output is not None and args[-1]:
+            assert events[-1] == "client_reap"
+        original(output, *args)
+
+    monkeypatch.setattr(module, "full_preparation_diagnostic", save)
+    arguments = {"timeout": 0.5, "preparation": (tmp_path, "image_build")}
+    if fault:
+        error = {
+            "reap": module.subprocess.TimeoutExpired,
+            "nonzero_reap": module.subprocess.TimeoutExpired,
+            "spawn": OSError,
+        }.get(fault, module.ProofFailure)
+        with pytest.raises(error):
+            module.full_client(["docker", "build", "--quiet"], **arguments)
+    else:
+        assert module.full_client(["docker", "build", "--quiet"], **arguments) == raw.decode()
+    record = json.loads((tmp_path / "preparation.json").read_text())
+    assert record["stage"] == "image_build"
+    assert record["limit_bytes"] == module.LIMIT
+    assert record["qualification"] == "not_a_receipt"
+    assert record["build_resource_cleanup"] == "not_assessed"
+    available = fault not in {"reap", "spawn", "nonzero_reap"}
+    assert record["client_reaped"] is available
+    assert record["available"] is available
+    assert record["returncode"] == {
+        "nonzero": 7,
+        "timeout": -9,
+        "reap": None,
+        "spawn": None,
+        "nonzero_reap": None,
+    }.get(fault, 0)
+    assert (
+        record["failure"]
+        == {
+            None: None,
+            "nonzero": "command_failed",
+            "cap": "command_failed",
+            "timeout": "command_timeout",
+            "reap": "client_reap_unverified",
+            "spawn": "tool_unavailable",
+            "nonzero_reap": "command_failed",
+        }[fault]
+    )
+    assert record["at_limit_or_truncated"] is (fault == "cap" if available else None)
+    assert record["retained_bytes"] == (len(raw) if available else 0)
+    assert (tmp_path / "preparation.txt").read_bytes() == (raw if available else b"")
+    assert not (tmp_path / "receipt.json").exists()
+
+
+@pytest.mark.parametrize("fault", ["stage", "record_limit", "abort"])
+def test_preparation_diagnostics_cannot_expand_the_control_scope(tmp_path, monkeypatch, fault):
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    arguments = {"preparation": (tmp_path, "image_build")}
+    if fault == "stage":
+        arguments["preparation"] = (tmp_path, "arbitrary")
+    elif fault == "record_limit":
+        arguments["limit"] = module.FULL_RECORD_LIMIT
+    else:
+        arguments["abort"] = lambda: pytest.fail("abort called")
+    with pytest.raises(module.ProofFailure, match="preparation_diagnostic_scope"):
+        module.full_client(["docker", "build", "--quiet"], **arguments)
+
+
+def test_default_full_client_spawn_failure_does_not_invoke_abort(monkeypatch):
+    def fail(*args, **kwargs):
+        raise OSError("unavailable synthetic client")
+
+    monkeypatch.setattr(module.subprocess, "Popen", fail)
+    with pytest.raises(OSError):
+        module.full_client(["docker", "exec"], abort=lambda: pytest.fail("abort before spawn"))
+
+
 def test_full_record_capture_accepts_only_fixed_names_and_typed_pending_marker():
     with pytest.raises(module.ProofFailure, match="record_name"):
         module.full_capture_record("a" * 64, "arbitrary", lambda *args: pytest.fail("spawned"))
@@ -251,10 +363,82 @@ def test_independent_absence_cannot_promote_failed_or_missing_proof(tmp_path, mo
     monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
     monkeypatch.setattr(module, "full_identity", lambda *args: {})
     receipt = tmp_path / "receipt.json"
+    (tmp_path / "owned.owner.json").write_text("{}")
     receipt.write_text(json.dumps({"status": "failed", "failure": "wall_budget"}))
     with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
         module.finalize_python("worker", "postgres", "c" * 40, receipt, tmp_path / "owned.json")
     assert json.loads(receipt.read_text())["status"] == "failed"
+    assert json.loads(receipt.read_text())["failure"] == "wall_budget"
+    assert (
+        json.loads((tmp_path / "independent-cleanup.json").read_text())["outcome"]
+        == "verified_absent"
+    )
+
+
+@pytest.mark.parametrize("fault", ["owner", "image", "receipt", "cleanup"])
+def test_finalizer_retains_cleanup_evidence_without_qualification(tmp_path, monkeypatch, fault):
+    import json
+
+    receipt = tmp_path / "receipt.json"
+    owned = tmp_path / "owned.json"
+    if fault != "owner":
+        owned.with_suffix(".owner.json").write_text("{}")
+
+    def reconcile(*args):
+        if fault == "cleanup":
+            raise module.ProofFailure("cleanup_failed")
+
+    def identity(*args):
+        assert fault not in {"owner", "cleanup"}
+        cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+        assert cleanup["outcome"] == "verified_absent"
+        if fault == "image":
+            raise module.ProofFailure("image_identity")
+        return {}
+
+    monkeypatch.setattr(module, "full_reconcile", reconcile)
+    monkeypatch.setattr(module, "full_identity", identity)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", "c" * 40, receipt, owned)
+    cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+    assert cleanup["outcome"] == {"owner": "no_ownership_manifest", "cleanup": "failed"}.get(
+        fault, "verified_absent"
+    )
+    assert cleanup["owner_manifest_present"] is (fault != "owner")
+    assert cleanup["qualification"] == "not_a_receipt"
+    assert cleanup["build_resource_cleanup"] == "not_assessed"
+    assert cleanup["expected_commit"] == "c" * 40
+    assert not receipt.exists()
+
+
+def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch):
+    import json
+
+    from scripts.ci import verify_v01
+
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(json.dumps({"status": "failed", "failure": "independent_cleanup_pending"}))
+    owned = tmp_path / "owned.json"
+    owned.with_suffix(".owner.json").write_text("{}")
+    calls = []
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    monkeypatch.setattr(module, "full_identity", lambda *args: {"exact": True})
+
+    def validate(report, identity, *, allow_pending_cleanup=False):
+        assert identity == {"exact": True}
+        assert report["status"] == ("failed" if allow_pending_cleanup else "passed")
+        calls.append(allow_pending_cleanup)
+
+    monkeypatch.setattr(verify_v01, "validate_full_python_receipt", validate)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    module.finalize_python("worker", "postgres", "c" * 40, receipt, owned)
+    assert calls == [True, False]
+    assert json.loads(receipt.read_text())["status"] == "passed"
+    assert (
+        json.loads((tmp_path / "independent-cleanup.json").read_text())["qualification"]
+        == "not_a_receipt"
+    )
 
 
 @pytest.mark.parametrize("fault", [None, "workload", "stop", "cleanup", "create"])

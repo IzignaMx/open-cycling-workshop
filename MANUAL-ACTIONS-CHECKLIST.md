@@ -6,9 +6,12 @@
 - [x] Independently verify all six corrected-source static commands and both cleanup proofs in [run 39093315481](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481).
 - [x] Recover the exact historical clean source and prepare the four canonical source-file reconciliation without reintroducing experiment-only controls.
 - [x] Pass the bounded locked Prettier 3.9.6 check for CI YAML and the three status documents; apply the narrowly reviewed `persist-credentials: false` setting to the CI verification checkout.
+- [x] Preserve [PR 58's first CI attempt](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39140389383): image-build failure with missing build diagnostics, skipped pytest, unobserved independent cleanup, and no full-Python artifact. The original Docker-build cause remains unknown.
+- [x] Retain the separate two-file Prettier failure and prepare its exact canonical Markdown changes with locked Prettier 3.9.6 on bounded inert copies. The main browser steps were skipped; secondary verifier fixture attempts failed without Chromium (80 unexpected tests, 159 failed attempts, no assertion passes). The aggregate remained 21 passed, five failed and one blocked, with no fallback pytest for missing receipt.
+- [ ] Review and qualify the prepared fixed-stage diagnostic/finalizer correction and its mocked regressions before any additional execution. Missing ownership or missing image/receipt must remain unqualified; builder resources are outside the owned worker/database/canary cleanup proof.
 - [ ] Qualify the final clean tree through fixed full-image preparation and one complete source-bound Python receipt; do not relabel earlier results as final-tree execution.
 - [ ] Preserve the 900-second business limit, one-CPU 512-MiB worker, one-CPU 768-MiB database, bounded scratch/output, exactly 58 intentional skips and all six required restore cases. Keep both ordinary larger specimens in the complete collection.
-- [ ] Complete technical review of the execution route before launching it. A draft PR already triggers ordinary CI, Security/DCO, Local runtime/native ARM64, QEMU diagnostics and the existing quote microfixtures; those scopes are separate from the full-Python worker.
+- [ ] Complete technical review of the corrected source before any later execution. The first draft PR triggered ordinary CI, Security/DCO, Local runtime/native ARM64, QEMU diagnostics and the existing quote microfixtures; those scopes remain separate from the full-Python worker.
 - [ ] Complete the full-history pre-reopen validator, real-installation inventory, physical-restore/corruption and capacity/activation obligations separately.
 
 ## Joint bounded quote-effects candidate · 2026-10-17

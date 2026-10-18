@@ -1,5 +1,11 @@
 # Changelog
 
+## Full-Python preparation diagnostics · 2026-10-18
+
+- Preserve the first [PR 58](https://github.com/IzignaMx/open-cycling-workshop/pull/58) attempt, [run 39140389383](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39140389383), on synthetic merge `6b166504dde92aa5fa42f85eef687fc97b2306eb` (tree `dd30aeb9530fb41f7e11aab5cde3b7859ef5dc13`). The first image-build invocation failed before PostgreSQL image pull or pytest; its output and actual child return code were not retained, so the underlying build cause remains unknown. The finalizer exited unsuccessfully without an independent cleanup record, and no full-Python artifact was uploaded.
+- Prepare fixed-stage, 16-KiB preparation diagnostics and a separate independent cleanup observation, including missing-image/receipt paths. Missing ownership does not prove resource absence; client reap does not prove builder cleanup. Neither diagnostic can substitute for a passing full-Python receipt. Resource limits, deadlines, required restores and the exact skip ledger are unchanged. New mocked regressions are prepared but unrun.
+- Preserve the same attempt's separate verification failure: Prettier identified exactly the bounded-effects ADR and integration-checks page. Apply the complete canonical two-file output from locked Prettier 3.9.6 using inert copies under the bounded developer-tool check. The main browser installation/journeys were skipped; the always-run verifier later attempted secondary fixtures without Chromium, reporting 80 unexpected tests and 159 failed attempts without assertion passes. Its aggregate retained 21 passed checks, five failed and one blocked; missing full-Python evidence failed closed without fallback pytest. Full integration remains pending.
+
 ## Clean quote service integration preparation · 2026-10-18
 
 - Preserve [run 39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151): 214 helper/verifier/guard cases and the repository command passed; Ruff failed and four later commands were unrun. Preserve [run 39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007): repository and Ruff passed, the formatter output hit its 16,384-byte ceiling, and three later commands were unrun.

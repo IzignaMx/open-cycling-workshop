@@ -76,13 +76,13 @@ corrected.
 
 For effect contract 1 select these inclusive byte ceilings:
 
-| Boundary | New limit and meaning |
-| --- | --- |
-| Current-order source prefetch | Sum of UTF-8 bytes of reported_problem, intake_condition, accessories, priority and diagnosis, counting SQL null as zero, at most 262,144 bytes. Metadata is separately bounded before text fetch. |
-| One retained order projection | At most 262,144 canonical UTF-8 JSON bytes, after full closed-shape validation. Both the change and order-outbox payload must satisfy this. |
-| One stored raw JSON representation | At most 1,048,576 UTF-8 bytes before application JSON decoding. Both stored copies must satisfy this independently. |
-| Linked initial transitions per lineage | Zero or one. Enforce in reconstruction, not merely the current writer. A linked initial proof must have expected decision sequence 0. |
-| Aggregate linked generic content | At most 524,288 canonical bytes and 2,097,152 raw transfer bytes, since there is at most one pair. These are additional to the existing 16 MiB financial/evidence budget. |
+| Boundary                               | New limit and meaning                                                                                                                                                                              |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Current-order source prefetch          | Sum of UTF-8 bytes of reported_problem, intake_condition, accessories, priority and diagnosis, counting SQL null as zero, at most 262,144 bytes. Metadata is separately bounded before text fetch. |
+| One retained order projection          | At most 262,144 canonical UTF-8 JSON bytes, after full closed-shape validation. Both the change and order-outbox payload must satisfy this.                                                        |
+| One stored raw JSON representation     | At most 1,048,576 UTF-8 bytes before application JSON decoding. Both stored copies must satisfy this independently.                                                                                |
+| Linked initial transitions per lineage | Zero or one. Enforce in reconstruction, not merely the current writer. A linked initial proof must have expected decision sequence 0.                                                              |
+| Aggregate linked generic content       | At most 524,288 canonical bytes and 2,097,152 raw transfer bytes, since there is at most one pair. These are additional to the existing 16 MiB financial/evidence budget.                          |
 
 Rationale: reuse the already reviewable 256 KiB unit and 1 MiB transport scale as
 new explicit application admission choices. The current HTTP intake maxima total

@@ -851,12 +851,51 @@ def supervise(
         raise ProofFailure("micro_unqualified")
 
 
+def full_preparation_diagnostic(
+    output, directory: Path, stage: str, failure: str | None, returncode: int | None, reaped: bool
+) -> None:
+    """Preparation-only client evidence; never a workload or build-cleanup proof."""
+    from scripts.ci.verify_v01 import write_full_python_json
+
+    directory.mkdir(parents=True, exist_ok=True)
+    raw = b""
+    size = None
+    if output is not None and reaped:
+        size = os.fstat(output.fileno()).st_size
+        output.seek(0)
+        raw = output.read(LIMIT)
+    (directory / "preparation.txt").write_bytes(raw)
+    write_full_python_json(
+        directory / "preparation.json",
+        {
+            "schema": 1,
+            "kind": "ocwp.full_python.preparation_client",
+            "status": "unqualified",
+            "expected_commit": os.environ.get("GITHUB_SHA", ""),
+            "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+            "stage": stage,
+            "failure": failure,
+            "returncode": returncode,
+            "client_reaped": reaped,
+            "available": size is not None,
+            "observed_bytes": size,
+            "retained_bytes": len(raw),
+            "limit_bytes": LIMIT,
+            "at_limit_or_truncated": None if size is None else size >= LIMIT,
+            "build_resource_cleanup": "not_assessed",
+            "qualification": "not_a_receipt",
+        },
+    )
+
+
 def full_client(
     args: list[str],
     *,
     timeout: float = 5,
     limit: int = LIMIT,
     abort: Callable[[], None] | None = None,
+    preparation: tuple[Path, str] | None = None,
 ) -> str:
     """Bound a full-route control client without an implicit Popen wait.
 
@@ -865,14 +904,33 @@ def full_client(
     """
     if limit not in {LIMIT, FULL_RECORD_LIMIT} or not 0 < timeout <= 660:
         raise ProofFailure("client_budget")
+    if preparation is not None and (
+        limit != LIMIT
+        or abort is not None
+        or preparation[1]
+        not in {"source_tree", "image_build", "postgres_pull", "worker_image", "postgres_image"}
+    ):
+        raise ProofFailure("preparation_diagnostic_scope")
 
     def cap() -> None:
         resource.setrlimit(resource.RLIMIT_FSIZE, (limit, limit))
 
     with tempfile.TemporaryFile() as output:
-        child = subprocess.Popen(
-            args, stdout=output, stderr=output, start_new_session=True, preexec_fn=cap
-        )
+        failure = "preparation_failed"
+        reaped = False
+        if preparation is not None:
+            full_preparation_diagnostic(None, *preparation, "unfinished", None, False)
+        try:
+            child = subprocess.Popen(
+                args, stdout=output, stderr=output, start_new_session=True, preexec_fn=cap
+            )
+        except BaseException as error:
+            if preparation is not None:
+                failure = (
+                    "interrupted" if isinstance(error, KeyboardInterrupt) else "tool_unavailable"
+                )
+                full_preparation_diagnostic(None, *preparation, failure, None, False)
+            raise
         deadline = time.monotonic() + timeout
         try:
             while child.poll() is None:
@@ -886,17 +944,38 @@ def full_client(
             if child.returncode or os.fstat(output.fileno()).st_size >= limit:
                 raise ProofFailure("command_failed", returncode=child.returncode)
             output.seek(0)
-            return output.read(limit).decode("utf-8", errors="strict").strip()
-        except BaseException:
+            result = output.read(limit).decode("utf-8", errors="strict").strip()
+            failure = None
+            return result
+        except BaseException as error:
+            if isinstance(error, ProofFailure) and str(error) in {
+                "command_timeout",
+                "command_failed",
+                "output_limit",
+            }:
+                failure = str(error)
+            elif isinstance(error, OSError):
+                failure = "tool_unavailable"
+            elif isinstance(error, KeyboardInterrupt):
+                failure = "interrupted"
             if abort is not None:
                 abort()
             raise
         finally:
             # abort first attempts verified stop and bounded owned reconciliation.
             # If both fail, client hygiene is still bounded; that attempt cannot pass.
-            if child.poll() is None:
-                os.killpg(child.pid, signal.SIGKILL)
-            child.wait(timeout=2)
+            try:
+                if child.poll() is None:
+                    os.killpg(child.pid, signal.SIGKILL)
+                child.wait(timeout=2)
+                reaped = True
+            finally:
+                if preparation is not None:
+                    if not reaped and failure is None:
+                        failure = "client_reap_unverified"
+                    full_preparation_diagnostic(
+                        output, *preparation, failure, child.returncode if reaped else None, reaped
+                    )
 
 
 def full_stop_worker(cid: str, execute: Callable[..., str] = full_client) -> None:
@@ -1539,8 +1618,30 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
         return full_client(args, timeout=min(timeout, remaining))
 
     report = None
+    cleanup = {
+        "schema": 1,
+        "kind": "ocwp.full_python.independent_cleanup",
+        "status": "unqualified",
+        "expected_commit": commit,
+        "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+        "scope": "manifest_owned_canary_database_worker",
+        "owner_manifest_present": owned.with_suffix(".owner.json").exists(),
+        "outcome": "unfinished",
+        "build_resource_cleanup": "not_assessed",
+        "qualification": "not_a_receipt",
+    }
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    cleanup_path = evidence.parent / "independent-cleanup.json"
+    write_full_python_json(cleanup_path, cleanup)
     try:
         full_reconcile(owned, execute)
+        cleanup["outcome"] = (
+            "verified_absent" if cleanup["owner_manifest_present"] else "no_ownership_manifest"
+        )
+        write_full_python_json(cleanup_path, cleanup)
+        if not cleanup["owner_manifest_present"]:
+            raise ProofFailure("ownership_unrecorded")
         identity = full_identity(commit, worker_image, pg_image, execute)
         report = read_full_python_json(evidence)
         validate_full_python_receipt(report, identity, allow_pending_cleanup=True)
@@ -1550,10 +1651,22 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
             raise ProofFailure("independent_cleanup_deadline")
         write_full_python_json(evidence, report)
     except (ProofFailure, FullPythonEvidenceError, ValueError, OSError):
+        if cleanup["outcome"] == "unfinished":
+            cleanup["outcome"] = "failed"
         if report is not None:
-            report.update(status="failed", failure="cleanup_failed", independent_cleanup="failed")
+            report["status"] = "failed"
+            report["independent_cleanup"] = (
+                "verified_absent" if cleanup["outcome"] == "verified_absent" else "failed"
+            )
+            if (
+                report.get("failure") is None
+                or report.get("failure") == "independent_cleanup_pending"
+            ):
+                report["failure"] = "invalid_evidence"
             write_full_python_json(evidence, report)
         raise ProofFailure("full_python_unqualified") from None
+    finally:
+        write_full_python_json(cleanup_path, cleanup)
 
 
 def main() -> None:

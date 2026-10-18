@@ -70,7 +70,7 @@ part of this increment.
 Read-only consolidated review found that the four-body PG service fixture
 hardcoded ocwp_quote_micro_test, while ordinary CI configures ocwp_e2e. The
 owning identity_migration_database fixture already validates loopback routing,
-*_test/*_e2e names, absence of connection overrides and actual database identity.
+_\_test/__e2e names, absence of connection overrides and actual database identity.
 The service bridge now compares current_database() to that validated engine URL.
 It retains actual driver/version/schema/encoding checks. The outer qualification
 receipt's fixed owned-database requirement remains unchanged.
@@ -78,7 +78,6 @@ receipt's fixed owned-database requirement remains unchanged.
 This is a source-demonstrated integration mismatch, not a previously executed
 failure. Static checks alone cannot qualify the corrected fixture; current
 revision-0013 PG service execution remains an explicit integration requirement.
-
 
 ## Verified fixed integration selection
 
@@ -88,16 +87,17 @@ Commit: 181579e9a76fabb8af72ec4cc343d85ecbfde55b
 Tree: 71adc27482ce823e062d055ae9bf911c9a12d0ee
 Run number/attempt: 1/1. All four sequential jobs completed successfully.
 
-| Group | Passed | Workload seconds | Final-read worker peak bytes | Artifact |
-| --- | ---: | ---: | ---: | ---: |
-| Guard foundation | 51 | 0.791 | 49,504,256 | 12114437035 |
-| Guard protocol | 68 | 2.190 | 60,678,144 | 12114538048 |
-| Database-free product | 62 | 3.488 | 93,605,888 | 12114712400 |
-| Static/contracts | 6 | 9.632 | 274,591,744 | 12114547961 |
+| Group                 | Passed | Workload seconds | Final-read worker peak bytes |    Artifact |
+| --------------------- | -----: | ---------------: | ---------------------------: | ----------: |
+| Guard foundation      |     51 |            0.791 |                   49,504,256 | 12114437035 |
+| Guard protocol        |     68 |            2.190 |                   60,678,144 | 12114538048 |
+| Database-free product |     62 |            3.488 |                   93,605,888 | 12114712400 |
+| Static/contracts      |      6 |            9.632 |                  274,591,744 | 12114547961 |
 
 All 187 selected cases/commands passed with zero failures, errors or skips. Exact source hashes, observed case identities/counts, real cancellation canary, whole-worker stop before client reap, primary absence and independent absence were reviewed. CPU/memory samples are final-read counters before worker termination, not post-termination totals. Each distinct workload stayed within its own 20-second cap; no retries occurred.
 
 Artifact SHA-256 values:
+
 - 12114437035: c41e5c97f4d7528a7f3a32fb72d50a5c31294a936d855ae1450149e9ee3d481a
 - 12114538048: 8a4b0696bf56998744d9e105f0f2b87b1141d65eb657bc355dd830df453a474a
 - 12114712400: 63a04aab9aa678d8964b6ae5b861967cd92582ac1328aae0f75f061cf41cad8d
