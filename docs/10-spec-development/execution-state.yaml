@@ -1,109 +1,61 @@
 schema: 1
 
-full_python_format_correction_20261018:
-  status: prepared_pending_verification
-  source_base: e144a054b4de1748ac85e9eb5141559aba5cf0ec
-  prior_run: 39092755007
+clean_quote_service_integration_20261018:
+  status: prepared_final_tree_qualification_pending
+  intended_branch: codex/quote-service-clean-integration
+  integration_base: 8a7eeecc39b0a43097484d10dc30af541ae38156
+  historical_clean_tree: d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f
+  historical_tree_recovery: independently_verified
+  canonical_source_commit: f550cde9e7675f38e9523ad9998e4e04ea58d0a8
+  canonical_source_tree: 2d52aff76ab170a70e43d1c7490b7962cb557e71
   canonical_source_files: 4
-  canonical_diff_bytes: 23252
-  formatter: Ruff_0.16.5_matches_lock
-  inert_copy_formatter_check: passed_four_files
-  candidate_imports_or_tests: false
-  existing_static_commands: 6
-  groups: 1
-  workload_seconds: 20
+  clean_status_documents: 3
+  ci_verify_checkout_persist_credentials: false
+  locked_formatter: Prettier_3_9_6
+  bounded_ci_yaml_and_three_status_documents_format_check: passed
+  product_migrations_functional_tests_and_locks: unchanged_from_reviewed_candidate
+  original_case_run:
+    run_id: 39091798151
+    helper_verifier_guard_cases_passed: 214
+    repository_command: passed
+    ruff: failed_SIM105_SIM300
+    later_commands_unrun: 4
+    source_commit: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151
+  preserved_style_run:
+    run_id: 39092755007
+    passed_commands: 2
+    formatter: failed_output_cap
+    inner_output_bytes: 16384
+    inner_output_truncated: true
+    later_commands_unrun: 3
+    source_commit: e144a054b4de1748ac85e9eb5141559aba5cf0ec
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007
+  static_closure:
+    run_id: 39093315481
+    status: independently_verified_six_passed
+    failures_errors_skips_unrun: 0
+    workload_seconds: 10.852200477
+    final_pretermination_peak_bytes: 275406848
+    artifact_id: 12123386817
+    artifact_sha256: 89edddfd550c75ca4d0b8f931ac7332ffefd66cb7d20dab525869dd7e3e8f0c3
+    source_pins: 54
+    locked_inputs: 4
+    primary_and_independent_cleanup: verified_absent
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481
+  final_clean_tree_runtime: unrun
+  full_image_preparation: unrun
+  full_python_suite: unrun
+  full_python_business_seconds: 900
   worker_cpus: 1
   worker_memory_mib: 512
-  worker_pids: 64
-  candidate_source_pins: 54
-  locked_input_pins: 4
-  static_record_limit_bytes: 16384
-  static_stdout_limit_bytes: 32768
-  integrated_static_build_runtime: unrun
-  original_214_case_evidence: retained_not_rerun
-  ordinary_ci_full_suite_and_activation: pending
-  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
-
-full_python_style_correction_20261018:
-  status: formatter_output_cap_failed_independently_reviewed
-  run_id: 39092755007
-  source_commit: e144a054b4de1748ac85e9eb5141559aba5cf0ec
-  source_tree: e4c0d64cf98de74fbc6c4ddfcd792171bedc2a2a
-  repository_and_ruff: passed
-  formatter: failed_output_cap
-  observed_passes: 2
-  failed_commands: 1
-  unrun_commands: 3
-  types_openapi_client: unrun
-  inner_formatter_output_bytes: 16384
-  inner_formatter_output_truncated: true
-  formatter_returncode: -25
-  outer_diagnostic_bytes: 22444
-  outer_diagnostic_truncated: false
-  both_cleanup_pairs: verified_absent
-  failed_static_final_metrics: unavailable
-  source_base: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
-  prior_run: 39091798151
-  source_findings: [SIM105, SIM300]
-  corrected_source_files: 2
-  existing_static_commands: 6
-  groups: 1
-  workload_seconds: 20
-  worker_cpus: 1
-  worker_memory_mib: 512
-  worker_pids: 64
-  candidate_source_pins: 53
-  locked_input_pins: 4
-  static_record_limit_bytes: 16384
-  static_stdout_limit_bytes: 32768
-  collection_static_build_runtime: failed_formatter_after_two_passes
-  original_214_case_evidence: retained_not_rerun
-  ordinary_ci_full_suite_and_activation: pending
-  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
-
-full_python_route_checks_20261018:
-  status: mock_passed_static_failed_independently_reviewed
-  run_id: 39091798151
-  source_commit: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
-  source_tree: 2e353018c02e29e44069b2388b4a079bfcba3c98
-  mock_cases_passed: 214
-  mock_workload_seconds: 1.461891052
-  mock_final_pretermination_peak_bytes: 58183680
-  both_cleanup_pairs: verified_absent
-  failed_static_final_metrics: unavailable
-  repository_check: passed
-  ruff: failed_SIM105_SIM300
-  formatting_types_openapi_client: unrun
-  observed_passes: 215
-  failed_commands: 1
-  unrun_commands: 4
-  source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
-  helper_cases: 99
-  verifier_cases: 108
-  existing_workflow_repository_guards: 7
-  new_mock_cases: 129
-  preserved_cases: 85
-  static_commands: 6
-  total_planned_checks: 220
-  serialized_groups: 2
-  workload_seconds_per_group: 20
-  maximum_business_allocation_seconds: 40
-  worker_cpus: 1
-  worker_memory_mib: 512
-  worker_pids: 64
-  mock_junit_upper_bytes: 41156
-  mock_receipt_upper_bytes: 42365
-  mock_record_limit_bytes: 65536
-  mock_stdout_limit_bytes: 16384
-  static_stdout_limit_bytes: 32768
-  candidate_source_pins: 52
-  locked_input_pins: 4
-  collection_and_mock_runtime: passed
-  python_git_qualification_image: built
-  full_suite_image_and_ordinary_ci: unrun
-  clean_route_and_functional_source: preserved
-  full_suite_and_activation: pending
-  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
+  postgres_cpus: 1
+  postgres_memory_mib: 768
+  intentional_skip_identities: 58
+  required_restore_cases: 6
+  ordinary_large_specimens: retained_both_dialects
+  launch_status: held_for_technical_review
+  ordinary_ci_merge_recovery_reopening_capacity_activation: pending
 
 quote_oracle_format_closure_20261018:
   status: verified_fixed_scope_independently_reviewed
@@ -337,9 +289,9 @@ quote_service_restore_20261017:
   expected_cases: 1
   expected_phases: 3
   database_roles: [source, target]
-  selected_revision: "0013"
-  client_server_release: "18.4"
-  client_package_revision: "18.4-1.pgdg13+1"
+  selected_revision: '0013'
+  client_server_release: '18.4'
+  client_package_revision: '18.4-1.pgdg13+1'
   shared_workload_seconds: 20
   scope: tiny_valid_version_one_effect_metadata_restore_and_fresh_replay
   package_installation_and_duration: verified_for_this_tiny_case
@@ -358,7 +310,7 @@ quote_migration_integrity_20261017:
   cleanup: verified_absent
   expected_cases: 3
   expected_phases: 9
-  final_revisions: ["0012", "0013", "0013"]
+  final_revisions: ['0012', '0013', '0013']
   shared_workload_seconds: 20
   observer: final_only_no_upgrade_interception
   restore_concurrency_capacity: unqualified
@@ -372,9 +324,9 @@ bounded_effects_null_correction_20261017:
   artifact_id: 12112758073
   artifact_sha256: 6d967e5a95bc8ec230915da3e526a82097a403a21b329d20af676ec9291a303c
   actual_postgresql_schemas: 4
-  server_version: "18.4"
+  server_version: '18.4'
   driver: psycopg_3_3_4
-  schema_revision: "0013"
+  schema_revision: '0013'
   measured_workload_seconds: 6.98
   final_worker_peak_bytes: 101507072
   final_database_peak_bytes: 108875776
@@ -403,7 +355,7 @@ bounded_effects_postgresql_20261017:
   expected_cases: 4
   expected_phases: 12
   database_schemas: 4
-  selected_revision: "0013"
+  selected_revision: '0013'
   shared_workload_seconds: 20
   migration_identity: observation_only_no_implicit_upgrade
   restore_concurrency_capacity: unqualified
@@ -447,14 +399,24 @@ bounded_effects_static_20261017:
   cleanup: verified_absent
   database_usage: unused_environment_overhead
   runtime_tests: unrun
-  previous_failed_runs: [39056889116, 39057515145, 39057919833, 39059789509, 39060197021, 39060563945, 39060973460, 39061333413]
+  previous_failed_runs:
+    [
+      39056889116,
+      39057515145,
+      39057919833,
+      39059789509,
+      39060197021,
+      39060563945,
+      39060973460,
+      39061333413,
+    ]
   evidence: docs/10-spec-development/2026-10-17-bounded-effects-source-repair.md
 
 bounded_quote_effects_joint_20261017:
   status: source_reviewed_tests_unexecuted
   base_commit: 9c07e2249fedd59462e00d9a1b44652709b05e2e
   base_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
-  selected_schema_revision: "0013"
+  selected_schema_revision: '0013'
   effect_version: 1
   current_source_octet_limit: 262144
   canonical_projection_octet_limit: 262144
@@ -475,9 +437,9 @@ postgresql_0012_verified_20261017:
   source_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
   result: six_cases_eighteen_ordered_phases_passed
   actual_postgresql_schemas: 4
-  server_version: "18.4"
+  server_version: '18.4'
   driver: psycopg_3_3_4
-  schema_revision: "0012"
+  schema_revision: '0012'
   workload_seconds: 4.316
   worker_peak_bytes: 99504128
   database_peak_bytes: 109645824
@@ -496,7 +458,7 @@ quote_postgresql_settings_result_correction_20261017:
   cancellation_cleanup: independently_verified
   correction: explicit_iteration_of_same_three_settings_rows
   workload_seconds: 20
-  schema_revision: "0012"
+  schema_revision: '0012'
   new_regression_tests: prepared_unrun
   evidence: docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md
 
@@ -508,7 +470,7 @@ quote_service_postgresql_0012_20261017:
   prior_static_result: six_commands_eighteen_phases_passed
   selector: two_existing_dto_four_existing_service_cases_on_postgresql
   expected_isolated_postgresql_schemas: 4
-  database_revision: "0012"
+  database_revision: '0012'
   shared_workload_seconds: 20
   worker_cpu: 1
   worker_memory_mib: 512

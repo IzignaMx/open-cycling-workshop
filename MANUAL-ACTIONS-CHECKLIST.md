@@ -1,13 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## Full-Python route finite verification · 2026-10-18
+## Clean quote service integration · 2026-10-18
 
-- [x] Execute all 214 complete cases in the [finite aggregate-route selection](docs/10-spec-development/2026-10-18-full-python-route-checks.md), run 39091798151; preserve its repository pass, Ruff failure and four unrun commands.
-- [x] Close the two Ruff findings in run 39092755007; preserve its formatter output-limit failure and three unrun commands.
-- [x] Independently verify that failed follow-on, including the explicitly truncated inner formatter output and both cleanup proofs.
-- [ ] Apply the complete four-file canonical formatting and close the existing static-six gate under unchanged limits; the 214-case result remains tied to its original source.
-- [ ] Verify the changed workflow formatting and fixed full-suite image before complete integration qualification.
-- [ ] Preserve six required restores, both ordinary large specimens and exactly 58 intentional skip identities in the later full collection; retain separate recovery/activation obligations.
+- [x] Preserve the original 214-case evidence and both failed static runs: [39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151) and [39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007). The latter has complete outer diagnostics but truncated inner formatter output; neither failed static run supplies final workload metrics.
+- [x] Independently verify all six corrected-source static commands and both cleanup proofs in [run 39093315481](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481).
+- [x] Recover the exact historical clean source and prepare the four canonical source-file reconciliation without reintroducing experiment-only controls.
+- [x] Pass the bounded locked Prettier 3.9.6 check for CI YAML and the three status documents; apply the narrowly reviewed `persist-credentials: false` setting to the CI verification checkout.
+- [ ] Qualify the final clean tree through fixed full-image preparation and one complete source-bound Python receipt; do not relabel earlier results as final-tree execution.
+- [ ] Preserve the 900-second business limit, one-CPU 512-MiB worker, one-CPU 768-MiB database, bounded scratch/output, exactly 58 intentional skips and all six required restore cases. Keep both ordinary larger specimens in the complete collection.
+- [ ] Complete technical review of the execution route before launching it. A draft PR already triggers ordinary CI, Security/DCO, Local runtime/native ARM64, QEMU diagnostics and the existing quote microfixtures; those scopes are separate from the full-Python worker.
+- [ ] Complete the full-history pre-reopen validator, real-installation inventory, physical-restore/corruption and capacity/activation obligations separately.
 
 ## Joint bounded quote-effects candidate · 2026-10-17
 
@@ -42,7 +44,6 @@
 - [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
   Earlier preparation entries are historical checkpoints, not current completion claims.
 
-
 ## PostgreSQL settings-result correction · 2026-10-17
 
 - [x] Preserve and independently review failed run `39053071575` and cleanup.
@@ -50,7 +51,6 @@
 - [ ] Qualify the corrected source against all six existing PostgreSQL/DTO cases.
 - [ ] Run new focused regressions and the broader integration suite.
 - [Evidence and limits](docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md).
-
 
 ## PostgreSQL-0012 service qualification · 2026-10-17
 
@@ -1666,7 +1666,6 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
 - No new operator action is needed for this test-only instrumentation. Existing
   maximum quote capacity, recovery, physical-device and activation gates remain
   open. See the [diagnostic scope and evidence](docs/10-spec-development/2026-10-16-bounded-restart-diagnostics.md).
-
 
 ## Contained service preparation (2026-10-17)
 

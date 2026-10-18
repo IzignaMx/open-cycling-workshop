@@ -1,23 +1,11 @@
 # Changelog
 
-## Full-Python canonical formatting follow-on · 2026-10-18
+## Clean quote service integration preparation · 2026-10-18
 
-- Preserve run 39092755007: repository and Ruff passed, formatter hit its 16,384-byte output ceiling, and three later commands were unrun. The complete outer diagnostic does not make the inner formatter diff complete.
-- Prepare the complete 23,252-byte locked-Ruff canonical diff across the two aggregate helpers and their two CI test modules, with independent source review and no behavioral changes.
-- Prepare only the existing static-six workload on the next fixed branch under unchanged limits. The original 214-case evidence remains source-bound; ordinary CI and full-suite qualification remain pending. [Evidence and scope](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
-
-## Full-Python route mock evidence and style correction · 2026-10-18
-
-- Preserve run 39091798151: 214 complete cases and repository verification passed; Ruff reported two findings, leaving four later static commands unrun.
-- Prepare only the two reported style corrections and the existing static-six workload under unchanged 20-second/resource/output limits. The consumed workflow and test bodies remain unchanged.
-- Ordinary CI, workflow formatting, the full-suite image and complete Python collection remain pending. [Evidence and correction scope](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
-
-## Full-Python route verification preparation · 2026-10-18
-
-- Prepare 214 complete helper/verifier/CI guard cases and the existing six static commands in two serialized 20-second workloads. Collection and execution remain unrun.
-- Preserve the clean route and corrected functional source; reuse the contained Python/Git image and disclosed tiny subprocess probes.
-- Bound only the 214-case XML/receipt at 64 KiB, justified by 41,156-byte XML and 42,365-byte report bounds. Other output and resource limits remain unchanged.
-- [Scope, prior evidence and pending full-suite gates](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
+- Preserve [run 39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151): 214 helper/verifier/guard cases and the repository command passed; Ruff failed and four later commands were unrun. Preserve [run 39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007): repository and Ruff passed, the formatter output hit its 16,384-byte ceiling, and three later commands were unrun.
+- Verify all six static commands on `f550cde9e7675f38e9523ad9998e4e04ea58d0a8` in [run 39093315481](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481): zero failures, errors, skips or unrun commands; workload 10.852200477 seconds, final pre-termination peak 275,406,848 bytes, and both cleanup proofs independently verified.
+- Reconcile the four reviewed canonical helper/verifier/test files into the clean source. Preserve product, migrations, functional tests and locks; retain experiment source and evidence in their published history rather than shipping the qualification controls. Earlier runtime results remain tied to their actual source.
+- Pass the bounded locked Prettier 3.9.6 check for ordinary CI YAML and the three clean status documents. Set `persist-credentials: false` on the CI verification checkout so checkout authentication is not retained in the workspace used by existing recovery clients. Full-image preparation and final clean-tree/runtime qualification remain pending; the complete suite retains exactly 58 intentional skips, six restore cases and both ordinary larger specimens. Capacity, recovery reopening and activation remain unqualified.
 
 ## Quote oracle functional evidence and static formatting · 2026-10-18
 
