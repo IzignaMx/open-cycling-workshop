@@ -134,10 +134,10 @@ def test_preparation_client_retains_only_reaped_bounded_output(tmp_path, monkeyp
     monkeypatch.setattr(module.subprocess, "Popen", launch)
     original = module.full_preparation_diagnostic
 
-    def save(output, *args):
+    def save(output, *args, **kwargs):
         if output is not None and args[-1]:
             assert events[-1] == "client_reap"
-        original(output, *args)
+        original(output, *args, **kwargs)
 
     monkeypatch.setattr(module, "full_preparation_diagnostic", save)
     arguments = {"timeout": 0.5, "preparation": (tmp_path, "image_build")}
@@ -182,6 +182,117 @@ def test_preparation_client_retains_only_reaped_bounded_output(tmp_path, monkeyp
     assert record["retained_bytes"] == (len(raw) if available else 0)
     assert (tmp_path / "preparation.txt").read_bytes() == (raw if available else b"")
     assert not (tmp_path / "receipt.json").exists()
+
+
+@pytest.mark.parametrize("fault", [None, "nonzero", "cap", "running_cap", "nonzero_reap"])
+def test_fixed_build_spool_retains_tail_and_preserves_failure(tmp_path, monkeypatch, fault):
+    import json
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"discarded progress\n" + b"z" * module.LIMIT + b"final build diagnostic\n"
+    if fault in {"cap", "running_cap"}:
+        raw = b"x" * (module.FULL_BUILD_SPOOL_LIMIT - module.LIMIT) + raw[-module.LIMIT :]
+    monkeypatch.setattr(module.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+    monkeypatch.setattr(module.resource, "setrlimit", lambda key, value: events.append(value))
+
+    def launch(args, **kwargs):
+        assert args == ["docker", "build", "--progress=plain"]
+        kwargs["preexec_fn"]()
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        client = SimpleNamespace(
+            pid=1234,
+            returncode=1 if fault in {"nonzero", "nonzero_reap"} else 0,
+            poll=lambda: None if fault == "running_cap" else 0,
+        )
+
+        def wait(**kwargs):
+            events.append("client_reap")
+            if fault == "nonzero_reap":
+                raise module.subprocess.TimeoutExpired("fixed", 2)
+            if fault == "running_cap":
+                client.returncode = -9
+            return client.returncode
+
+        client.wait = wait
+        return client
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    original = module.full_preparation_diagnostic
+
+    def save(output, *args, **kwargs):
+        if output is not None and args[-1]:
+            assert events[-1] == "client_reap"
+        original(output, *args, **kwargs)
+
+    monkeypatch.setattr(module, "full_preparation_diagnostic", save)
+    arguments = {
+        "limit": module.FULL_BUILD_SPOOL_LIMIT,
+        "preparation": (tmp_path, "image_build"),
+    }
+    if fault:
+        error = module.subprocess.TimeoutExpired if fault == "nonzero_reap" else module.ProofFailure
+        with pytest.raises(error):
+            module.full_client(["docker", "build", "--progress=plain"], **arguments)
+    else:
+        assert (
+            module.full_client(["docker", "build", "--progress=plain"], **arguments)
+            == raw.decode().strip()
+        )
+    available = fault != "nonzero_reap"
+    record = json.loads((tmp_path / "preparation.json").read_text())
+    assert record["schema"] == 2
+    assert record["capture"] == "tail"
+    assert record["limit_bytes"] == module.LIMIT
+    assert record["spool_limit_bytes"] == module.FULL_BUILD_SPOOL_LIMIT
+    assert record["observed_bytes"] == (len(raw) if available else None)
+    assert record["retained_bytes"] == (module.LIMIT if available else 0)
+    assert record["dropped_prefix_bytes"] == (len(raw) - module.LIMIT if available else None)
+    assert record["retention_truncated"] is (True if available else None)
+    assert record["at_spool_limit"] is (fault in {"cap", "running_cap"} if available else None)
+    assert record["client_reaped"] is available
+    assert (
+        record["failure"]
+        == {
+            None: None,
+            "nonzero": "command_failed",
+            "cap": "command_failed",
+            "running_cap": "output_limit",
+            "nonzero_reap": "command_failed",
+        }[fault]
+    )
+    assert record["returncode"] == {"nonzero": 1, "nonzero_reap": None, "running_cap": -9}.get(
+        fault, 0
+    )
+    assert record["qualification"] == "not_a_receipt"
+    assert record["build_resource_cleanup"] == "not_assessed"
+    assert events[0] == (module.FULL_BUILD_SPOOL_LIMIT, module.FULL_BUILD_SPOOL_LIMIT)
+    assert (tmp_path / "preparation.txt").read_bytes() == (
+        raw[-module.LIMIT :] if available else b""
+    )
+    assert not (tmp_path / "receipt.json").exists()
+
+
+@pytest.mark.parametrize("fault", ["no_preparation", "other_stage", "quiet", "abort"])
+def test_build_spool_cannot_expand_other_clients(tmp_path, monkeypatch, fault):
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    arguments = {
+        "limit": module.FULL_BUILD_SPOOL_LIMIT,
+        "preparation": (tmp_path, "image_build"),
+    }
+    args = ["docker", "build", "--progress=plain"]
+    if fault == "no_preparation":
+        arguments["preparation"] = None
+    elif fault == "other_stage":
+        arguments["preparation"] = (tmp_path, "postgres_pull")
+    elif fault == "quiet":
+        args[-1] = "--quiet"
+    else:
+        arguments["abort"] = lambda: pytest.fail("abort called")
+    with pytest.raises(module.ProofFailure, match="preparation_diagnostic_scope"):
+        module.full_client(args, **arguments)
 
 
 @pytest.mark.parametrize("fault", ["stage", "record_limit", "abort"])

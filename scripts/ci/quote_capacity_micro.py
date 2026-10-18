@@ -36,6 +36,7 @@ PROBE = "set -eu; cat /proc/self/cgroup; " + "".join(
 )
 
 FULL_SPOOL_LIMIT = 1024 * 1024
+FULL_BUILD_SPOOL_LIMIT = 1024 * 1024
 FULL_RECORD_LIMIT = 4 * 1024 * 1024
 FULL_SECONDS = 900
 FULL_OUTER_SECONDS = 1020
@@ -852,23 +853,35 @@ def supervise(
 
 
 def full_preparation_diagnostic(
-    output, directory: Path, stage: str, failure: str | None, returncode: int | None, reaped: bool
+    output,
+    directory: Path,
+    stage: str,
+    failure: str | None,
+    returncode: int | None,
+    reaped: bool,
+    *,
+    spool_limit: int = LIMIT,
 ) -> None:
     """Preparation-only client evidence; never a workload or build-cleanup proof."""
     from scripts.ci.verify_v01 import write_full_python_json
 
+    if spool_limit not in {LIMIT, FULL_BUILD_SPOOL_LIMIT} or (
+        spool_limit != LIMIT and stage != "image_build"
+    ):
+        raise ProofFailure("preparation_diagnostic_scope")
+    tail = spool_limit == FULL_BUILD_SPOOL_LIMIT
     directory.mkdir(parents=True, exist_ok=True)
     raw = b""
     size = None
     if output is not None and reaped:
         size = os.fstat(output.fileno()).st_size
-        output.seek(0)
+        output.seek(max(0, size - LIMIT) if tail else 0)
         raw = output.read(LIMIT)
     (directory / "preparation.txt").write_bytes(raw)
     write_full_python_json(
         directory / "preparation.json",
         {
-            "schema": 1,
+            "schema": 2,
             "kind": "ocwp.full_python.preparation_client",
             "status": "unqualified",
             "expected_commit": os.environ.get("GITHUB_SHA", ""),
@@ -882,6 +895,15 @@ def full_preparation_diagnostic(
             "observed_bytes": size,
             "retained_bytes": len(raw),
             "limit_bytes": LIMIT,
+            "spool_limit_bytes": spool_limit,
+            "capture": "tail" if tail else "prefix",
+            "dropped_prefix_bytes": None
+            if size is None
+            else max(0, size - len(raw))
+            if tail
+            else 0,
+            "retention_truncated": None if size is None else size > len(raw),
+            "at_spool_limit": None if size is None else size >= spool_limit,
             "at_limit_or_truncated": None if size is None else size >= LIMIT,
             "build_resource_cleanup": "not_assessed",
             "qualification": "not_a_receipt",
@@ -902,10 +924,19 @@ def full_client(
     The workload and record readers supply stop-before-reap through abort.
     RLIMIT_FSIZE belongs to this host client, never the container subprocess.
     """
-    if limit not in {LIMIT, FULL_RECORD_LIMIT} or not 0 < timeout <= 660:
+    if limit not in {LIMIT, FULL_BUILD_SPOOL_LIMIT, FULL_RECORD_LIMIT} or not 0 < timeout <= 660:
         raise ProofFailure("client_budget")
+    build_output = (
+        preparation is not None
+        and preparation[1] == "image_build"
+        and args[:3] == ["docker", "build", "--progress=plain"]
+        and abort is None
+        and limit == FULL_BUILD_SPOOL_LIMIT
+    )
+    if limit == FULL_BUILD_SPOOL_LIMIT and not build_output:
+        raise ProofFailure("preparation_diagnostic_scope")
     if preparation is not None and (
-        limit != LIMIT
+        (limit != LIMIT and not build_output)
         or abort is not None
         or preparation[1]
         not in {"source_tree", "image_build", "postgres_pull", "worker_image", "postgres_image"}
@@ -919,7 +950,9 @@ def full_client(
         failure = "preparation_failed"
         reaped = False
         if preparation is not None:
-            full_preparation_diagnostic(None, *preparation, "unfinished", None, False)
+            full_preparation_diagnostic(
+                None, *preparation, "unfinished", None, False, spool_limit=limit
+            )
         try:
             child = subprocess.Popen(
                 args, stdout=output, stderr=output, start_new_session=True, preexec_fn=cap
@@ -929,7 +962,9 @@ def full_client(
                 failure = (
                     "interrupted" if isinstance(error, KeyboardInterrupt) else "tool_unavailable"
                 )
-                full_preparation_diagnostic(None, *preparation, failure, None, False)
+                full_preparation_diagnostic(
+                    None, *preparation, failure, None, False, spool_limit=limit
+                )
             raise
         deadline = time.monotonic() + timeout
         try:
@@ -974,7 +1009,12 @@ def full_client(
                     if not reaped and failure is None:
                         failure = "client_reap_unverified"
                     full_preparation_diagnostic(
-                        output, *preparation, failure, child.returncode if reaped else None, reaped
+                        output,
+                        *preparation,
+                        failure,
+                        child.returncode if reaped else None,
+                        reaped,
+                        spool_limit=limit,
                     )
 
 

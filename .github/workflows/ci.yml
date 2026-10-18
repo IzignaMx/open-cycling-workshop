@@ -56,30 +56,51 @@ jobs:
           WORKDIR /app
           COPY --from=node /app /app
           RUN uv sync --all-packages --group dev --locked
-          RUN set -eu; apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg git libstdc++6 \
-              && install -d -m 0755 /usr/share/postgresql-common/pgdg \
-              && curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-              && gpg --batch --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /tmp/pgdg-key-info \
-              && test "$(awk -F: '$1 == "pub" {n++} END {print n+0}' /tmp/pgdg-key-info)" = 1 \
-              && test "$(awk -F: '$1 == "pub" {primary=1; next} primary && $1 == "fpr" {print $10; primary=0}' /tmp/pgdg-key-info)" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 \
-              && printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt-archive.postgresql.org/pub/repos/apt trixie-pgdg-archive main' > /etc/apt/sources.list.d/pgdg.list \
-              && apt-get update -qq \
-              && apt-get install -y -qq --no-install-recommends postgresql-client-18=18.4-1.pgdg13+1 libpq5=18.4-1.pgdg13+1 \
-              && test "$(dpkg-query -W -f='${Version}' postgresql-client-18)" = 18.4-1.pgdg13+1 \
-              && test "$(dpkg-query -W -f='${Version}' libpq5)" = 18.4-1.pgdg13+1 \
-              && for tool in pg_dump pg_restore psql; do \
-                   ln -s /usr/lib/postgresql/18/bin/$tool /usr/local/bin/$tool || exit 1; \
-                   version="$(/usr/lib/postgresql/18/bin/$tool --version)" || exit 1; \
-                   case "$version" in "$tool (PostgreSQL) 18.4"|"$tool (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)") ;; *) exit 1;; esac; \
-                   ldd /usr/lib/postgresql/18/bin/$tool > /tmp/client-link-check || exit 1; \
-                   if grep -F 'not found' /tmp/client-link-check; then exit 1; else status=$?; test "$status" -eq 1 || exit 1; fi; \
-                 done \
-              && ldd /usr/local/bin/node > /tmp/node-link-check \
-              && if grep -F 'not found' /tmp/node-link-check; then exit 1; else status=$?; test "$status" -eq 1; fi \
-              && test "$(node --version)" = v22.16.0 \
-              && test "$(pnpm --version)" = 11.17.0 \
-              && test "$(node -p 'require("./apps/web/node_modules/@playwright/test/package.json").version')" = 1.62.0 \
-              && rm -rf /var/lib/apt/lists/* /tmp/client-link-check /tmp/node-link-check /tmp/pgdg-key-info
+          RUN set -eu; printf '%s\n' 'OCWP build: base dependencies'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg git libstdc++6; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PGDG signing key'; \
+              install -d -m 0755 /usr/share/postgresql-common/pgdg; \
+              curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc; \
+              gpg --batch --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /tmp/pgdg-key-info; \
+              keys="$(awk -F: '$1 == "pub" {n++} END {print n+0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG primary keys: %s\n' "$keys"; test "$keys" = 1; \
+              fingerprint="$(awk -F: '$1 == "pub" {primary=1; next} primary && $1 == "fpr" {print $10; primary=0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG fingerprint: %s\n' "$fingerprint"; \
+              test "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8; \
+              printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt-archive.postgresql.org/pub/repos/apt trixie-pgdg-archive main' > /etc/apt/sources.list.d/pgdg.list; \
+              rm /tmp/pgdg-key-info
+          RUN set -eu; printf '%s\n' 'OCWP build: pinned PostgreSQL packages'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends postgresql-client-18=18.4-1.pgdg13+1 libpq5=18.4-1.pgdg13+1; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL package versions'; \
+              for package in postgresql-client-18 libpq5; do \
+                version="$(dpkg-query -W -f='${Version}' "$package")"; \
+                printf '%s: %s\n' "$package" "$version"; test "$version" = 18.4-1.pgdg13+1; \
+              done
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL client versions and links'; \
+              for tool in pg_dump pg_restore psql; do \
+                printf 'PostgreSQL client: %s\n' "$tool"; \
+                ln -s /usr/lib/postgresql/18/bin/$tool /usr/local/bin/$tool || exit 1; \
+                version="$(/usr/lib/postgresql/18/bin/$tool --version)" || exit 1; \
+                printf '%s\n' "$version"; \
+                case "$version" in "$tool (PostgreSQL) 18.4"|"$tool (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)") ;; *) exit 1;; esac; \
+                ldd /usr/lib/postgresql/18/bin/$tool > /tmp/client-link-check || exit 1; \
+                cat /tmp/client-link-check; \
+                if grep -F 'not found' /tmp/client-link-check; then exit 1; else status=$?; test "$status" -eq 1 || exit 1; fi; \
+              done; rm /tmp/client-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node runtime links'; \
+              ldd /usr/local/bin/node > /tmp/node-link-check; cat /tmp/node-link-check; \
+              if grep -F 'not found' /tmp/node-link-check; then exit 1; else status=$?; test "$status" -eq 1; fi; \
+              rm /tmp/node-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node version assertion'; version="$(node --version)"; \
+              printf 'OCWP build: Node version: %s\n' "$version"; test "$version" = v22.16.0
+          RUN set -eu; printf '%s\n' 'OCWP build: pnpm version assertion'; version="$(pnpm --version)"; \
+              printf 'OCWP build: pnpm version: %s\n' "$version"; test "$version" = 11.17.0
+          RUN set -eu; printf '%s\n' 'OCWP build: Playwright package assertion'; version="$(node -p 'require("./apps/web/node_modules/@playwright/test/package.json").version')"; \
+              printf 'OCWP build: Playwright package version: %s\n' "$version"; test "$version" = 1.62.0
           ARG SOURCE_TREE
           LABEL ocwp.source-tree=$SOURCE_TREE
           DOCKERFILE
@@ -88,19 +109,21 @@ jobs:
           import time
           from pathlib import Path
           from scripts.ci.quote_capacity_micro import (
-              ProofFailure, full_client, full_preparation_diagnostic, source_query,
+              FULL_BUILD_SPOOL_LIMIT, LIMIT, ProofFailure, full_client,
+              full_preparation_diagnostic, source_query,
           )
           deadline = time.monotonic() + 650
           context = os.environ['OCWP_FULL_CONTEXT']
           diagnostics = Path('artifacts/full-python')
           def execute(args, *, timeout=5, stage='source_tree'):
               remaining = deadline - time.monotonic()
+              limit = FULL_BUILD_SPOOL_LIMIT if stage == 'image_build' else LIMIT
               if remaining <= 0:
-                  full_preparation_diagnostic(None, diagnostics, stage, 'preparation_deadline', None, False)
+                  full_preparation_diagnostic(None, diagnostics, stage, 'preparation_deadline', None, False, spool_limit=limit)
                   raise ProofFailure('preparation_deadline')
-              return full_client(args, timeout=min(timeout, remaining), preparation=(diagnostics, stage))
+              return full_client(args, timeout=min(timeout, remaining), limit=limit, preparation=(diagnostics, stage))
           tree = source_query('tree', execute)
-          execute(['docker', 'build', '--quiet', '-f',
+          execute(['docker', 'build', '--progress=plain', '-f',
                    str(Path(os.environ['RUNNER_TEMP']) / 'full-python.Dockerfile'),
                    '--build-arg', f'SOURCE_TREE={tree}', '-t', 'ocwp-full-python', context], timeout=590, stage='image_build')
           execute(['docker', 'pull', '--quiet', 'postgres:18.4-trixie'], timeout=60, stage='postgres_pull')
