@@ -51,7 +51,7 @@ jobs:
           COPY --from=uv /uv /bin/uv
           COPY --from=node /usr/local/bin/node /usr/local/bin/node
           COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
-          RUN ln -s /usr/local/lib/node_modules/pnpm/bin/pnpm.cjs /usr/local/bin/pnpm
+          RUN ln -s /usr/local/lib/node_modules/pnpm/bin/pnpm.mjs /usr/local/bin/pnpm
           ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never PYTHONDONTWRITEBYTECODE=1
           WORKDIR /app
           COPY --from=node /app /app
@@ -215,6 +215,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
+
+      - name: Keep browser branding assets outside the source checkout
+        run: printf 'OCWP_BRANDING_ASSET_ROOT=%s/ocwp-browser-branding-assets\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
       - name: Generate missing lockfiles
         shell: bash

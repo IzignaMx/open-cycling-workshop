@@ -131,6 +131,8 @@ FULL_CHECK_NAMES = ("python_tests", "python_psycopg", "postgresql_integration")
 class FullPythonEvidenceError(ValueError):
     """A closed diagnostic code; never an exception payload or connection URL."""
 
+    source_status: str | None = None
+
 
 def _full_require(condition: bool, code: str) -> None:
     if not condition:
@@ -350,14 +352,32 @@ def full_python_expected_identity(env: dict[str, str]) -> dict[str, Any]:
                 _full_require(result.returncode == 0, "source_unavailable")
                 _full_require(os.fstat(output.fileno()).st_size < 16384, "source_output_limit")
                 output.seek(0)
-                return output.read(16384).decode("utf-8", errors="strict").strip()
+                return output.read(16384).decode("utf-8", errors="strict")
         except (OSError, subprocess.TimeoutExpired, UnicodeError):
             raise FullPythonEvidenceError("source_unavailable") from None
 
-    _full_require(not git("status", "--porcelain", "--untracked-files=normal"), "identity_dirty")
+    status = git("status", "--porcelain", "--untracked-files=normal")
+    if status:
+        raw = status.encode("utf-8")
+        retained = raw[:4096]
+        error = FullPythonEvidenceError("identity_dirty")
+        error.source_status = json.dumps(
+            {
+                "kind": "git_porcelain_paths_only",
+                "observed_bytes": len(raw),
+                "retained_bytes": len(retained),
+                "limit_bytes": 4096,
+                "truncated": len(raw) > len(retained),
+                "encoding": "utf-8-with-replacement",
+                "porcelain": retained.decode("utf-8", errors="replace"),
+            },
+            ensure_ascii=True,
+            sort_keys=True,
+        )
+        raise error
     return full_python_identity(
-        commit=git("rev-parse", "HEAD"),
-        tree=git("rev-parse", "HEAD^{tree}"),
+        commit=git("rev-parse", "HEAD").strip(),
+        tree=git("rev-parse", "HEAD^{tree}").strip(),
         image_id=env.get("OCWP_FULL_PYTHON_IMAGE_ID", ""),
         pg_image_id=env.get("OCWP_FULL_PYTHON_PG_IMAGE_ID", ""),
         nonce=env.get("OCWP_FULL_PYTHON_NONCE", ""),
@@ -965,11 +985,11 @@ def validate_full_python_receipt(
     return validate_full_python_result(value["result"], expected_identity, value["collection"])
 
 
-def _full_failed_checks(code: str) -> list[Check]:
-    return [
-        Check(name, "fail", f"Required full-Python evidence rejected: {code}")
-        for name in FULL_CHECK_NAMES
-    ]
+def _full_failed_checks(code: str, source_status: str | None = None) -> list[Check]:
+    detail = f"Required full-Python evidence rejected: {code}"
+    if code == "identity_dirty" and source_status is not None:
+        detail += f"; bounded source status: {source_status}"
+    return [Check(name, "fail", detail) for name in FULL_CHECK_NAMES]
 
 
 def consume_full_python_receipt(path: Path, expected_identity: dict[str, Any]) -> list[Check]:
@@ -1002,7 +1022,7 @@ def full_python_route_checks(path: Path | None, env: dict[str, str]) -> list[Che
         expected = full_python_expected_identity(env)
         return consume_full_python_receipt(path, expected)
     except FullPythonEvidenceError as error:
-        return _full_failed_checks(str(error))
+        return _full_failed_checks(str(error), error.source_status)
 
 
 def _full_worker_preflight() -> dict[str, Any]:

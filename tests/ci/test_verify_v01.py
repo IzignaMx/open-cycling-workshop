@@ -799,6 +799,52 @@ def test_full_python_expected_context_uses_checkout_and_job_outputs(monkeypatch)
         MODULE.full_python_expected_identity(env)
 
 
+@pytest.mark.parametrize("case", ["short", "truncated", "query_cap"])
+def test_dirty_source_paths_are_bounded_and_never_admit_a_receipt(monkeypatch, case):
+    raw = b" M tracked.py\n?? var/\n"
+    if case == "truncated":
+        raw += b"?? synthetic-runtime-path/\n" * 200
+    elif case == "query_cap":
+        raw = b"x" * 16384
+
+    def git(command, **kwargs):
+        assert command == [
+            "git",
+            "--no-optional-locks",
+            "status",
+            "--porcelain",
+            "--untracked-files=normal",
+        ]
+        kwargs["stdout"].write(raw)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(MODULE.subprocess, "run", git)
+    monkeypatch.setattr(
+        MODULE, "consume_full_python_receipt", lambda *args: pytest.fail("dirty receipt admitted")
+    )
+    checks = MODULE.full_python_route_checks(Path("unread-receipt.json"), {})
+    assert [item.name for item in checks] == list(MODULE.FULL_CHECK_NAMES)
+    assert all(item.status == "fail" for item in checks)
+    assert len({item.detail for item in checks}) == 1
+    if case == "query_cap":
+        assert checks[0].detail == "Required full-Python evidence rejected: source_output_limit"
+        return
+    prefix = "Required full-Python evidence rejected: identity_dirty; bounded source status: "
+    assert checks[0].detail.startswith(prefix)
+    diagnostic = json.loads(checks[0].detail[len(prefix) :])
+    assert diagnostic == {
+        "kind": "git_porcelain_paths_only",
+        "observed_bytes": len(raw),
+        "retained_bytes": min(len(raw), 4096),
+        "limit_bytes": 4096,
+        "truncated": len(raw) > 4096,
+        "encoding": "utf-8-with-replacement",
+        "porcelain": raw[:4096].decode("utf-8", errors="replace"),
+    }
+    assert diagnostic["porcelain"].startswith(" M tracked.py\n?? var/\n")
+    assert len(checks[0].detail) < 25000
+
+
 @pytest.mark.parametrize("with_path", [False, True])
 def test_full_python_aggregate_never_falls_back_and_allow_blocked_cannot_pass(
     monkeypatch, tmp_path, with_path

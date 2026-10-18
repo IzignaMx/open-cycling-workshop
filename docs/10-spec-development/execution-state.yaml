@@ -1,7 +1,60 @@
 schema: 1
 
-full_python_build_output_localization_20261018:
+full_python_image_entry_and_workspace_20261018:
   status: prepared_unrun
+  source_base: 7c436d9d94ff1b63e4eb78f39a8443426756f428
+  third_preparation_attempt:
+    run_id: 39143857377
+    source_commit: af4706a111b5a79524711e2e322d6037a1db5e3f
+    source_tree: 352ed2fab06747bad77cc79328401e3e5d5779ba
+    artifact_id: 12142782067
+    artifact_sha256: 47ea822dc5ec9866ca5c17431db171005ce84a17c4c647fed6a0ed0c4e51d34d
+    build_client_returncode: 1
+    failing_assertion: pnpm_version_permission_denied
+    inner_shell_returncode: 127
+    client_reaped: true
+    observed_spool_bytes: 39855
+    retained_tail_bytes: 16384
+    dropped_prefix_bytes: 23471
+    retention_truncated: true
+    spool_saturated: false
+    pg_package_client_and_node_checks: passed_in_retained_tail
+    playwright_package_assertion_and_pytest: unrun
+    independent_cleanup: no_ownership_manifest_not_absence_proof
+    build_resource_cleanup: not_assessed
+    first_two_build_causes: not_retrospectively_proven
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39143857377
+  previous_verify_attempt:
+    run_id: 39141875819
+    direct_browser_passed: 80
+    aggregate_passed: 24
+    aggregate_failed: 3
+    failures: [python_tests, python_psycopg, postgresql_integration]
+    refusal: identity_dirty
+    runtime_writer: default_checkout_var_branding_assets
+    causal_evidence: successful_real_logo_upload_and_exact_source
+    sole_dirty_path_proof: unavailable_no_porcelain_record
+  prepared_corrections:
+    pnpm_version: 11.17.0
+    final_image_entry: bin/pnpm.mjs
+    official_entry_mode: '0755'
+    compatibility_cjs_mode: '0644'
+    verify_asset_root: RUNNER_TEMP/ocwp-browser-branding-assets
+    propagation: early_fixed_step_via_GITHUB_ENV
+    production_asset_default: unchanged
+    identity_dirty_retained_path_status_bytes: 4096
+    original_git_query_limit_bytes: 16384
+    path_status_byte_counts_and_truncation: explicit
+    source_cleanliness_rejection: unchanged
+    file_contents_and_environment_values: not_captured
+    new_mocked_cases: 3
+    new_mocked_execution: unrun
+    pins_build_and_runtime_budgets: unchanged
+    next_attempt: held_for_exact_review_and_terminal_current_runs
+
+full_python_build_output_localization_20261018:
+  checkpoint: historical_preparation_before_run_39143857377
+  status_at_checkpoint: prepared_unrun
   source_base: f525d4f07973926680c0f7564497886db7029eaf
   second_preparation_attempt:
     run_id: 39141875819
@@ -75,7 +128,7 @@ full_python_preparation_diagnostics_20261018:
   further_execution_at_checkpoint: pending_technical_review_no_retry
 
 clean_quote_service_integration_20261018:
-  status: two_preparation_attempts_failed_final_tree_qualification_pending
+  status: three_preparation_attempts_failed_final_tree_qualification_pending
   intended_branch: codex/quote-service-clean-integration
   integration_base: 8a7eeecc39b0a43097484d10dc30af541ae38156
   historical_clean_tree: d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f
@@ -117,8 +170,8 @@ clean_quote_service_integration_20261018:
     locked_inputs: 4
     primary_and_independent_cleanup: verified_absent
     evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481
-  final_clean_tree_runtime: both_attempts_failed_before_pytest
-  full_image_preparation: second_attempt_retained_combined_RUN_failure_cause_unknown
+  final_clean_tree_runtime: all_three_attempts_failed_before_pytest
+  full_image_preparation: third_attempt_pnpm_entry_permission_denied
   full_python_suite: unrun
   full_python_business_seconds: 900
   worker_cpus: 1
