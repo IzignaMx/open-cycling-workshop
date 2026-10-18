@@ -1,7 +1,32 @@
 schema: 1
 
-quote_oracle_adapter_correction_20261018:
+quote_oracle_format_closure_20261018:
   status: exact_source_independently_reviewed_runtime_pending
+  source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  prior_run: 39082181517
+  retained_format_output_bytes: 9755
+  format_hunks: 15
+  auxiliary_files_formatted: 3
+  planned_checks: 12
+  planned_groups: 1
+  workload_seconds: 20
+  runtime: unexecuted
+  evidence: docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md
+
+quote_oracle_adapter_correction_20261018:
+  status: functional_passed_formatter_failed_independently_reviewed
+  run_id: 39082181517
+  source_commit: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  source_tree: 7136fdb0d7d5642839af9963caa09461571d8775
+  functional_cases_passed: 66
+  selection_mocks_passed: 6
+  repository_and_ruff: passed
+  formatter: failed_complete_retained_diff
+  types_openapi_client: unrun
+  observed_passes: 74
+  failures: 1
+  unrun_checks: 3
+  cleanup: all_four_primary_and_independent_absence_verified
   source_base: dea1a661c81fee3aa1ce907f095a1709edb82d6e
   original_failed_run: 39080692255
   product_change: none
@@ -10,7 +35,7 @@ quote_oracle_adapter_correction_20261018:
   planned_groups: 4
   workload_seconds_per_group: 20
   maximum_business_allocation_seconds: 80
-  runtime: unexecuted
+  runtime: partial_failed_formatter
   evidence: docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md
 
 quote_existing_integration_checks_20261017:

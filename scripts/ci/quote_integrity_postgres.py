@@ -654,16 +654,12 @@ PG_GROUPS = {
     ),
     "pg_schema_immutable10": (
         "services/platform/tests/quotes/test_quote_schema.py",
-        (
-            ("test_financial_history_update_delete_are_refused", 10),
-        ),
+        (("test_financial_history_update_delete_are_refused", 10),),
         "not sqlite",
     ),
     "pg_schema_operations11": (
         "services/platform/tests/quotes/test_quote_schema.py",
-        (
-            ("test_operation_result_proof_and_effect_completeness", 11),
-        ),
+        (("test_operation_result_proof_and_effect_completeness", 11),),
         "not sqlite",
     ),
     "pg_schema_other5": (
@@ -682,16 +678,12 @@ PG_GROUPS = {
     ),
     "pg_cutover_head1": (
         "services/platform/tests/identity/test_cutover_migration.py",
-        (
-            ("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),
-        ),
+        (("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),),
         "not sqlite",
     ),
     "pg_branding_head1": (
         "services/platform/tests/branding/test_profile_migration.py",
-        (
-            ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),
-        ),
+        (("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),),
         "not sqlite",
     ),
     "pg_repository_create3": (
@@ -704,9 +696,7 @@ PG_GROUPS = {
     ),
     "pg_repository_append4": (
         "services/platform/tests/quotes/test_quote_repository_postgres.py",
-        (
-            ("test_current_head_and_sequence_allow_only_one_competing_append", 4),
-        ),
+        (("test_current_head_and_sequence_allow_only_one_competing_append", 4),),
         "not sqlite",
     ),
     "pg_repository_rollback4": (
@@ -1377,11 +1367,7 @@ class ServiceReportHook:
                 path = getattr(item, "path", None)
                 callspec = getattr(item, "callspec", None)
                 params = getattr(callspec, "params", None)
-                if (
-                    callspec is None
-                    and source == REPOSITORY_TEST
-                    and name in REPOSITORY_SINGLETONS
-                ):
+                if callspec is None and source == REPOSITORY_TEST and name in REPOSITORY_SINGLETONS:
                     params = {}
                 if (
                     not isinstance(path, Path)

@@ -59,10 +59,10 @@ CANDIDATE_SHA = {
         "52aca207fc09a15aae626947d622a32085533d7ed4225d988dce32541630a877"
     ),
     "scripts/ci/quote_integrity_postgres.py": (
-        "7cf77d3ac510e397c1c875b2e5c21edae4dcb105961e1ed1506f453bb44268d6"
+        "a6798d59dd1e11721a11e31d24e1bfbfbdef483bc08e5253d590d9096338835d"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "e7880085e2d19ff3f55b6afff1c594ca7579cb1b87f89b3a32abf109d2fa5055"
+        "6a4a3864fa72282d8a4fd662a585e9f46c54743474ddc061d861f7670383efe5"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -114,6 +114,9 @@ CANDIDATE_SHA = {
     ),
     ".github/workflows/quote-oracle-adapter-checks.yml": (
         "11cc3ec404f87a6e6509d70b2c5cc97c4cfb5a627423f8fb7b05668891d0d897"
+    ),
+    ".github/workflows/quote-oracle-format-checks.yml": (
+        "077ba916267598c312e5f1f57425692c32807546e85edfc58bf5ad0e375d9b79"
     ),
     "services/platform/tests/branding/test_profile_migration.py": (
         "600410d91d8854f12c55231bf7678a95d7589a1dacfd0deaefa1862ed53d5f50"
@@ -198,6 +201,8 @@ EXISTING_BRANCH = "refs/heads/codex/quote-existing-integration-checks"
 EXISTING_WORKFLOW = ".github/workflows/quote-existing-integration-checks.yml"
 ORACLE_BRANCH = "refs/heads/codex/quote-oracle-adapter-checks"
 ORACLE_WORKFLOW = ".github/workflows/quote-oracle-adapter-checks.yml"
+ORACLE_FORMAT_BRANCH = "refs/heads/codex/quote-oracle-format-checks"
+ORACLE_FORMAT_WORKFLOW = ".github/workflows/quote-oracle-format-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -430,9 +435,7 @@ GROUPS = {
     "sqlite_reconstruction_corrupt37": (
         (
             "services/platform/tests/quotes/test_quote_reconstruction.py",
-            (
-                ("test_corrupt_result_or_receipt_is_rejected", 37, 96),
-            ),
+            (("test_corrupt_result_or_receipt_is_rejected", 37, 96),),
         ),
     ),
     "sqlite_reconstruction_other20": (
@@ -577,17 +580,13 @@ GROUPS = {
         ),
         (
             "services/platform/tests/branding/test_profile_migration.py",
-            (
-                ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),
-            ),
+            (("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),),
         ),
     ),
     "generic_callers17": (
         (
             "services/platform/tests/events/test_outbox.py",
-            (
-                ("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),
-            ),
+            (("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),),
         ),
         (
             "services/platform/tests/sync/test_rest_change_feed.py",
@@ -638,17 +637,13 @@ GROUPS = {
     "cutover_preconditions16": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),
-            ),
+            (("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),),
         ),
     ),
     "cutover_schema20": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_operator_refuses_unqualified_schema_without_effects", 20, 24),
-            ),
+            (("test_operator_refuses_unqualified_schema_without_effects", 20, 24),),
         ),
     ),
     "cutover_cas_audit16": (
@@ -841,6 +836,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == ORACLE_BRANCH:
         require(GROUP_KEY in ORACLE_GROUPS)
         branch, workflow = ORACLE_BRANCH, ORACLE_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == ORACLE_FORMAT_BRANCH:
+        require(GROUP_KEY == "selection_static12")
+        branch, workflow = ORACLE_FORMAT_BRANCH, ORACLE_FORMAT_WORKFLOW
     else:
         require(GROUP_KEY not in EXISTING_GROUPS)
     require(os.environ.get("GITHUB_REF") == branch)

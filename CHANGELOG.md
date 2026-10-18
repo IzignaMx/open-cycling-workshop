@@ -1,5 +1,11 @@
 # Changelog
 
+## Quote oracle functional evidence and static formatting · 2026-10-18
+
+- Verify all 66 corrected functional cases in run 39082181517. Six mocks, repository and lint also passed; formatter failed with 15 complete layout hunks in three auxiliary files, leaving types and both contracts unrun.
+- Preserve that result and prepare only the retained format changes plus the existing 12-check mock/static workload under unchanged limits. Product and functional test behavior remain unchanged.
+- [Evidence and pending closure](docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md).
+
 ## Quote-only oracle adapter correction · 2026-10-18
 
 - Preserve the existing regression run 39080692255: 259 cases in complete passing groups, including 39 PostgreSQL cases; four failed groups and all cleanup evidence retained.

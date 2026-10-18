@@ -19,8 +19,9 @@
 - [x] Close the import-order finding: repository and Ruff passed in run 39078500578.
 - [x] Verify the retained formatter hunk and all six static commands in run 39078898414, with independent evidence review.
 - [ ] Close the remaining affected integration regressions on the final intended integration tree.
-- [ ] Close the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md): 259 cases in complete passing groups; three test-adapter failures and one lint failure remain open after run 39080692255.
-- [ ] Verify the [78-check corrected oracle/static selection](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md) against its exact reviewed source.
+- [ ] Close the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md): its original four failures are preserved; corrected functional cases passed in run 39082181517, while static formatting and three later commands remain open.
+- [x] Verify all 66 corrected functional cases and six mocks in the [oracle correction](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md), run 39082181517.
+- [ ] Close its retained formatter failure and three unrun commands through the [12-check mock/static selection](docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md).
 - [ ] Review ordinary pull-request CI workload containment before opening the clean integration PR; its full Python selection includes specimens excluded from the finite groups.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.
