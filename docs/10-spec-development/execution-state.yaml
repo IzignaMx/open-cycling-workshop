@@ -1,7 +1,49 @@
 schema: 1
 
-full_python_containment_observation_20261018:
+full_python_scratch_path_observation_20261018:
   status: prepared_unrun
+  source_base: 172556621f430b3c8dcd73a5efb24a197b6187d2
+  fifth_attempt:
+    run_id: 39147495876
+    source_commit: 1541412b95f2b657c2ada3a8a44ec89b49b8d658
+    source_tree: 17547cb85de4e033412b002bc8c77c0dcfd7787c
+    artifact_id: 12143952911
+    artifact_sha256: 80e618fb9956080595ef9549492f23521fe71632207cc0c7fa838a756973bb06
+    image_preparation: passed
+    cancellation_canary: passed
+    failed_role: db
+    failed_stage: scratch
+    failure: scratch_readback
+    raw_scratch_rows: unavailable
+    business_and_pytest: not_launched
+    collection_and_result: null
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39147495876
+  prepared_correction:
+    official_pg_config_sha256: 4b87d5343a0e499eea33b6c19ec152a3ed4a0d1a453eadd26ff415a406821a6e
+    official_source_revision: d71f5241e97ebf5c6e6e37e3043ab542132550f2
+    metadata: two_digest_verified_layers_without_execution_or_extraction
+    requested_socket_path: /var/run/postgresql
+    required_canonical_socket_path: /run/postgresql
+    other_paths: required_to_resolve_to_themselves
+    realpath_equality: mandatory_fixed_expected_destinations
+    historical_sole_cause: not_proven_without_raw_readback
+    requested_tmpfs_paths_sizes_options_and_kernel_enforcement: unchanged
+    diagnostic: first_fixed_path_check_and_bounded_expected_observed_values
+    numeric_bound_exclusive: 340282366920938463463374607431768211456
+    free_space_expected_value: fixed_two_integer_interval
+    arbitrary_malformed_or_unbounded_observations: omitted
+    diagnostic_limit_bytes_exclusive: 16384
+    raw_output: excluded
+    additional_mocked_cases: 8
+    mocked_execution: unrun
+    budgets_and_receipt_acceptance: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_containment_observation_20261018:
+  checkpoint: historical_preparation_before_run_39147495876
+  status_at_checkpoint: prepared_unrun
   source_base: e98ba57e106849fd4830fc955e7c7139663a691f
   fourth_attempt:
     run_id: 39145603647

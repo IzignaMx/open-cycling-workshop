@@ -441,6 +441,7 @@ def full_scratch_value(role):
     paths = module.FULL_TMPFS[role] | {"/dev/shm": "size=64m,mode=1777"}
     stats, mounts = [], []
     for path, raw in paths.items():
+        canonical = "/run/postgresql" if path == "/var/run/postgresql" else path
         options = dict(part.split("=", 1) if "=" in part else (part, "") for part in raw.split(","))
         blocks = int(options["size"][:-1]) * 256
         inodes = int(options.get("nr_inodes", "1024"))
@@ -449,32 +450,91 @@ def full_scratch_value(role):
                 f"{path}|tmpfs|4096|{blocks}|{blocks - 1}|{inodes}|{inodes - 1}",
                 f"{path}|{options.get('uid', '0')}|{options.get('gid', '0')}|"
                 f"{options['mode'].lstrip('0')}",
+                f"{path}|{canonical}",
             ]
         )
         flags = "rw,nosuid,nodev" + ("" if path == "/tmp/ocwp-tests" else ",noexec")
-        mounts.append(f"1 0 0:1 / {path} {flags} - tmpfs tmpfs rw")
+        mounts.append(f"1 0 0:1 / {canonical} {flags} - tmpfs tmpfs rw")
     return "\n".join(stats) + "\n---mounts---\n" + "\n".join(mounts)
 
 
 @pytest.mark.parametrize("role", ["worker", "db"])
-@pytest.mark.parametrize("fault", [None, "bytes", "inodes", "space", "flags"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "bytes",
+        "inodes",
+        "space",
+        "flags",
+        "canonical",
+        "mount_missing",
+        "mount_duplicate",
+        "ownership",
+    ],
+)
 def test_full_scratch_uses_kernel_bytes_inodes_permissions_and_flags(role, fault):
     raw = full_scratch_value(role)
     if fault == "bytes":
         raw = raw.replace("|4096|", "|8192|", 1)
     elif fault == "inodes":
-        raw = raw.replace("|16384|16383", "|32768|16383", 1)
+        lines = raw.splitlines()
+        values = lines[0].split("|")
+        values[5:7] = ["32768", "32767"]
+        lines[0] = "|".join(values)
+        raw = "\n".join(lines)
     elif fault == "space":
         raw = raw.replace("|16384|16383|", "|16384|0|", 1)
     elif fault == "flags":
         raw = raw.replace("rw,nosuid,nodev,noexec", "rw,nosuid,nodev", 1)
+    elif fault == "ownership":
+        raw = raw.replace("/tmp|0|0|1777\n", "/tmp|1|0|1777\n", 1)
+    elif fault == "canonical":
+        original = "/var/run/postgresql|/run/postgresql" if role == "db" else "/tmp|/tmp"
+        raw = raw.replace(original, original.rsplit("|", 1)[0] + "|/unexpected", 1)
+    elif fault == "mount_missing":
+        raw = raw.rsplit("\n", 1)[0]
+    elif fault == "mount_duplicate":
+        stats, mounts = raw.split("\n---mounts---\n")
+        rows = mounts.splitlines()
+        rows[-1] = rows[0]
+        raw = stats + "\n---mounts---\n" + "\n".join(rows)
 
-    def execute(*args, **kwargs):
+    def execute(args, **kwargs):
+        assert args[:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+        command = args[5]
+        assert "readlink -e -- /tmp;" in command
+        if role == "db":
+            assert "readlink -e -- /var/run/postgresql;" in command
+            assert '$5 == "/run/postgresql"' in command
+            assert '$5 == "/var/run/postgresql"' not in command
         return raw
 
     if fault:
-        with pytest.raises(module.ProofFailure):
+        with pytest.raises(module.ProofFailure) as error:
             module.full_scratch("a" * 64, role, execute)
+        check, path, wanted, observed = {
+            "bytes": ("scratch_bytes", "/tmp", 67108864, 134217728),
+            "inodes": ("scratch_inodes", "/tmp", 16384, 32768),
+            "space": ("scratch_free_blocks", "/tmp", [1, 16384], 0),
+            "flags": ("scratch_mount_noexec", "/tmp", True, False),
+            "canonical": (
+                "scratch_realpath",
+                "/var/run/postgresql" if role == "db" else "/tmp",
+                "/run/postgresql" if role == "db" else "/tmp",
+                "mismatch",
+            ),
+            "mount_missing": ("scratch_mount_rows", None, 4, 3),
+            "mount_duplicate": ("scratch_mount_identity", "/tmp", 1, 2),
+            "ownership": ("scratch_uid", "/tmp", 0, 1),
+        }[fault]
+        assert error.value.check == check
+        assert error.value.scratch == {
+            "path": path,
+            "check": check,
+            "expected": wanted,
+            "observed": observed,
+        }
     else:
         module.full_scratch("a" * 64, role, execute)
 
@@ -735,6 +795,81 @@ def test_preflight_diagnostic_is_closed_bounded_and_not_raw_output(tmp_path):
         evidence, None, "start", "canary", module.ProofFailure("command_failed", returncode=-25)
     )
     assert json.loads((tmp_path / "diagnostic.json").read_text())["returncode"] == -25
+    for check in (
+        "scratch_stat_rows",
+        "scratch_mount_rows",
+        "scratch_realpath",
+        "scratch_stat_shape",
+        "scratch_bytes",
+        "scratch_free_blocks",
+        "scratch_free_inodes",
+        "scratch_inodes",
+        "scratch_ownership_shape",
+        "scratch_ownership_identity",
+        "scratch_uid",
+        "scratch_gid",
+        "scratch_mode",
+        "scratch_mount_identity",
+        "scratch_mount_type",
+        "scratch_mount_rw",
+        "scratch_mount_nosuid",
+        "scratch_mount_nodev",
+        "scratch_mount_noexec",
+        "scratch_format",
+    ):
+        module.full_preflight_diagnostic(
+            evidence, None, "scratch", "db", module.ProofFailure("scratch_readback", check=check)
+        )
+        value = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert value["failed_field"] == check
+        assert value["status"] == "unqualified"
+        assert value["qualification"] == "not_a_receipt"
+    detail = {"path": "/tmp", "check": "scratch_uid", "expected": 0, "observed": 1}
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "scratch",
+        "db",
+        module.ProofFailure("scratch_allocation", check="scratch_uid", scratch=detail),
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["scratch"] == detail
+    interval = {
+        "path": "/tmp",
+        "check": "scratch_free_blocks",
+        "expected": [1, 16384],
+        "observed": 0,
+    }
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "scratch",
+        "db",
+        module.ProofFailure("scratch_allocation", check="scratch_free_blocks", scratch=interval),
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["scratch"] == interval
+    for bad in (
+        detail | {"path": "/untrusted"},
+        detail | {"check": "untrusted"},
+        detail | {"observed": "untrusted"},
+        detail | {"observed": 2**128},
+        detail | {"extra": True},
+        interval | {"expected": [True, 16384]},
+    ):
+        check = (
+            "scratch_free_blocks" if bad.get("check") == "scratch_free_blocks" else "scratch_uid"
+        )
+        module.full_preflight_diagnostic(
+            evidence,
+            None,
+            "scratch",
+            "db",
+            module.ProofFailure("scratch_allocation", check=check, scratch=bad),
+        )
+        value = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert "scratch" not in value
+        assert value["failure"] == "scratch_allocation"
+        assert value["failed_field"] == check
+        assert value["status"] == "unqualified"
     module.full_preflight_diagnostic(
         evidence,
         None,

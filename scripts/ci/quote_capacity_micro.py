@@ -62,11 +62,17 @@ FULL_TMPFS = {
 
 class ProofFailure(RuntimeError):
     def __init__(
-        self, reason: str, *, returncode: int | None = None, check: str | None = None
+        self,
+        reason: str,
+        *,
+        returncode: int | None = None,
+        check: str | None = None,
+        scratch: object = None,
     ) -> None:
         super().__init__(reason)
         self.returncode = returncode
         self.check = check
+        self.scratch = scratch
 
 
 def identifier(value: str) -> str:
@@ -1105,59 +1111,105 @@ def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
     """Verify kernel allocation and flags, not only requested Docker options."""
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
     paths = [*expected, "/dev/shm"]
+    # The pinned Debian image resolves /var/run through its /run symlink.
+    # Observe only these fixed destinations; never trust arbitrary resolved paths.
+    canonical = {
+        path: "/run/postgresql" if path == "/var/run/postgresql" else path for path in paths
+    }
     command = "set -eu; " + "".join(
         f"stat -f -c '{path}|%T|%S|%b|%f|%c|%d' {path}; stat -c '{path}|%u|%g|%a' {path}; "
+        f"printf '{path}|'; readlink -e -- {path}; "
         for path in paths
     )
     command += (
         "printf '%s\\n' '---mounts---'; awk '"
-        + " || ".join(f'$5 == "{path}"' for path in paths)
+        + " || ".join(f'$5 == "{path}"' for path in canonical.values())
         + "' /proc/self/mountinfo"
     )
     raw = execute(["docker", "exec", cid, "sh", "-c", command])
+
+    def refuse(reason: str, check: str, path: str | None, wanted: object, observed: object) -> None:
+        raise ProofFailure(
+            reason,
+            check=check,
+            scratch={"path": path, "check": check, "expected": wanted, "observed": observed},
+        )
+
     try:
         stats, mount_rows = raw.split("\n---mounts---\n")
         lines = stats.splitlines()
         mounts = [line.split() for line in mount_rows.splitlines()]
-        if len(lines) != 2 * len(paths) or len(mounts) != len(paths):
-            raise ProofFailure("scratch_readback")
+        if len(lines) != 3 * len(paths):
+            refuse("scratch_readback", "scratch_stat_rows", None, 3 * len(paths), len(lines))
+        if len(mounts) != len(paths):
+            refuse("scratch_readback", "scratch_mount_rows", None, len(paths), len(mounts))
         for index, path in enumerate(paths):
-            values = lines[2 * index].split("|")
-            ownership = lines[2 * index + 1].split("|")
+            values = lines[3 * index].split("|")
+            ownership = lines[3 * index + 1].split("|")
+            if lines[3 * index + 2].split("|") != [path, canonical[path]]:
+                refuse("scratch_readback", "scratch_realpath", path, canonical[path], "mismatch")
             if len(values) != 7 or values[:2] != [path, "tmpfs"]:
-                raise ProofFailure("scratch_readback")
+                raise ProofFailure("scratch_readback", check="scratch_stat_shape")
             block, blocks, free, inodes, ifree = map(integer, values[2:])
             options = dict(
                 option.split("=", 1) if "=" in option else (option, "")
                 for option in expected.get(path, "size=64m,mode=1777").split(",")
             )
-            if (
-                block * blocks != int(options["size"][:-1]) * 1024 * 1024
-                or not 0 < free <= blocks
-                or not 0 < ifree <= inodes
-                or ("nr_inodes" in options and inodes != int(options["nr_inodes"]))
-                or ownership
-                != [
-                    path,
-                    options.get("uid", "0"),
-                    options.get("gid", "0"),
-                    options["mode"].lstrip("0"),
-                ]
-            ):
-                raise ProofFailure("scratch_allocation")
-            matching = [row for row in mounts if len(row) > 9 and row[4] == path]
+            size = int(options["size"][:-1]) * 1024 * 1024
+            if block * blocks != size:
+                refuse("scratch_allocation", "scratch_bytes", path, size, block * blocks)
+            if not 0 < free <= blocks:
+                refuse("scratch_allocation", "scratch_free_blocks", path, [1, blocks], free)
+            if not 0 < ifree <= inodes:
+                refuse("scratch_allocation", "scratch_free_inodes", path, [1, inodes], ifree)
+            if "nr_inodes" in options and inodes != int(options["nr_inodes"]):
+                refuse(
+                    "scratch_allocation", "scratch_inodes", path, int(options["nr_inodes"]), inodes
+                )
+            wanted_ownership = [
+                path,
+                options.get("uid", "0"),
+                options.get("gid", "0"),
+                options["mode"].lstrip("0"),
+            ]
+            if ownership != wanted_ownership:
+                if len(ownership) != 4:
+                    refuse("scratch_allocation", "scratch_ownership_shape", path, 4, len(ownership))
+                if ownership[0] != path:
+                    refuse(
+                        "scratch_allocation", "scratch_ownership_identity", path, path, "mismatch"
+                    )
+                for field, wanted, observed in zip(
+                    ("scratch_uid", "scratch_gid", "scratch_mode"),
+                    wanted_ownership[1:],
+                    ownership[1:],
+                    strict=True,
+                ):
+                    if observed != wanted:
+                        number = (
+                            int(observed) if re.fullmatch(r"0|[1-9][0-9]{0,38}", observed) else None
+                        )
+                        refuse("scratch_allocation", field, path, int(wanted), number)
+            matching = [row for row in mounts if len(row) > 9 and row[4] == canonical[path]]
             if len(matching) != 1:
-                raise ProofFailure("scratch_mount")
+                refuse("scratch_mount", "scratch_mount_identity", path, 1, len(matching))
             row = matching[0]
             flags = set(row[5].split(","))
-            if (
-                row[row.index("-") + 1] != "tmpfs"
-                or not {"rw", "nosuid", "nodev"} <= flags
-                or ("noexec" in flags) != (path != "/tmp/ocwp-tests")
-            ):
-                raise ProofFailure("scratch_mount")
+            if row[row.index("-") + 1] != "tmpfs":
+                refuse("scratch_mount", "scratch_mount_type", path, "tmpfs", "mismatch")
+            for flag in ("rw", "nosuid", "nodev"):
+                if flag not in flags:
+                    refuse("scratch_mount", "scratch_mount_" + flag, path, True, False)
+            if ("noexec" in flags) != (path != "/tmp/ocwp-tests"):
+                refuse(
+                    "scratch_mount",
+                    "scratch_mount_noexec",
+                    path,
+                    path != "/tmp/ocwp-tests",
+                    "noexec" in flags,
+                )
     except (ValueError, IndexError, KeyError) as error:
-        raise ProofFailure("scratch_readback") from error
+        raise ProofFailure("scratch_readback", check="scratch_format") from error
 
 
 def full_reconcile(owned: Path, execute: Callable[..., str]) -> None:
@@ -1329,6 +1381,26 @@ def full_preflight_diagnostic(
         "LogConfig",
         "HostConfig.Mounts",
         "Mounts",
+        "scratch_stat_rows",
+        "scratch_mount_rows",
+        "scratch_realpath",
+        "scratch_stat_shape",
+        "scratch_bytes",
+        "scratch_free_blocks",
+        "scratch_free_inodes",
+        "scratch_inodes",
+        "scratch_ownership_shape",
+        "scratch_ownership_identity",
+        "scratch_uid",
+        "scratch_gid",
+        "scratch_mode",
+        "scratch_mount_identity",
+        "scratch_mount_type",
+        "scratch_mount_rw",
+        "scratch_mount_nosuid",
+        "scratch_mount_nodev",
+        "scratch_mount_noexec",
+        "scratch_format",
     }
     stages = {
         "identity",
@@ -1359,6 +1431,37 @@ def full_preflight_diagnostic(
         if type(returncode) is int and -(2**31) <= returncode < 2**31
         else None,
     }
+    detail = error.scratch if isinstance(error, ProofFailure) else None
+    fixed_paths = {None, *FULL_TMPFS["worker"], *FULL_TMPFS["db"], "/dev/shm"}
+    fixed_values = {"mismatch", "tmpfs", "/run/postgresql"} | (fixed_paths - {None})
+
+    def scalar(item: object) -> bool:
+        return (
+            type(item) is bool
+            or (type(item) is int and 0 <= item < 2**128)
+            or (type(item) is str and item in fixed_values)
+        )
+
+    if (
+        type(detail) is dict
+        and set(detail) == {"path", "check", "expected", "observed"}
+        and (detail["path"] is None or type(detail["path"]) is str)
+        and detail["path"] in fixed_paths
+        and detail["check"] == check
+        and type(check) is str
+        and check in fields
+        and check.startswith("scratch_")
+        and (detail["observed"] is None or scalar(detail["observed"]))
+    ):
+        wanted = detail["expected"]
+        if scalar(wanted) or (
+            check in {"scratch_free_blocks", "scratch_free_inodes"}
+            and type(wanted) is list
+            and len(wanted) == 2
+            and all(type(item) is int and 0 <= item < 2**128 for item in wanted)
+            and wanted[0] <= wanted[1]
+        ):
+            value["scratch"] = detail
     if len(json.dumps(value, sort_keys=True).encode("utf-8")) + 1 >= LIMIT:
         raise ProofFailure("preflight_diagnostic_limit")
     write_full_python_json(evidence.parent / "diagnostic.json", value)
