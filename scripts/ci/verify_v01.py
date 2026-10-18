@@ -1011,7 +1011,7 @@ def full_python_route_checks(path: Path | None, env: dict[str, str]) -> list[Che
 
 def _full_worker_preflight() -> dict[str, Any]:
     """Use only fixed local tools and the supervisor's owned synthetic database."""
-    _full_require(ROOT == Path("/app") and Path.cwd() == ROOT, "worker_directory")
+    _full_require(Path("/app") == ROOT and Path.cwd() == ROOT, "worker_directory")
     _full_require(os.environ.get("OCWP_TEST_DATABASE_URL") == FULL_DATABASE_URL, "database_target")
     _full_require(
         not any(key.startswith("PG") for key in os.environ)

@@ -1,10 +1,48 @@
 # Full-Python route: finite mock and static preparation
 
-Status: source prepared; collection, tests, static checks and image build remain
-unrun for this packet. Full-suite integration and production activation remain
+Status: 214 cases passed; static verification failed at Ruff with four later
+commands unrun. The minimal style correction and static-only verification are
+prepared but unrun. Ordinary CI, the full Python suite and activation remain
 pending.
 
-## Scope and source
+## Recorded result and narrow correction
+
+[Run 39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151)
+executed once on commit `3695dfd896bb8e22a07fbd8671a77d3e1f37df8e`, tree
+`2e353018c02e29e44069b2388b4a079bfcba3c98`. Its complete 214-case group passed
+with zero failures, errors or skips. The static job passed repository
+verification, then Ruff reported SIM105 in `quote_capacity_micro.py` and SIM300
+in `verify_v01.py`. Formatting, production types, OpenAPI and generated-client
+checks were unrun. Across 220 planned checks, retain 215 passes, one failed
+command and four unrun commands; the consumed run remains failed.
+Independent evidence review verified all 52 source pins, four locked inputs,
+both cancellation canaries, bounded worker stop/client reap and primary plus
+independent cleanup. The 214-case workload took 1.461891052 seconds; its final
+pre-termination peak was 58,183,680 bytes. The failed static job has no successful
+workload duration or final worker counters, so neither is inferred.
+
+The correction changes only the reported source expressions: use
+`contextlib.suppress(ProofFailure, OSError, ValueError)` around the existing
+best-effort reconciliation, and put `Path("/app")` on the left of its equality
+check. The permanent unverified-stop failure and all other control behavior
+remain unchanged. Product, tests, locks and the consumed workflow are unchanged.
+The 214-case evidence remains bound to its original source; it is not rerun or
+relabeled as execution of the corrected source.
+
+Use the existing `static6` selection once on the new exact
+`codex/quote-full-python-style-checks` branch/workflow, first run/attempt only.
+The six commands share the existing 20-second limit, one CPU and 512 MiB.
+Refresh the two corrected source pins and add only the new workflow pin, giving
+53 source pins and four locked inputs. Static XML/receipts remain capped at
+16 KiB, workload output at 32 KiB, command output at 16 KiB and the failure
+marker at 24 KiB. Image preparation, canary, cancellation and independent
+cleanup are unchanged. The correction does not launch ordinary CI or the
+900-second full-suite route. Its static result remains pending.
+
+## Historical scope and source for run 39091798151
+
+The following selection and resource details describe the consumed packet;
+pre-run uncertainty statements do not override the recorded result above.
 
 Before qualifying the new full-Python CI route, run exactly two serialized
 20-second workloads through the existing contained verification mechanism:
@@ -90,7 +128,7 @@ then passed the 12-check format closure in 14.579792505 seconds with independent
 verified identity and cleanup. Its retained layout-only changes are reused in
 the qualification controls. Neither run executes the new aggregate route.
 
-This packet still needs exact source review and its two bounded executions.
+The two-workload result and its static-only correction are recorded above.
 Pinned Prettier for the changed ordinary CI workflow, the new Node/PG-client
 image build, and the full collection remain pending. The eventual full suite
 must preserve all six restore cases, the ordinary 100-line and 26-revision
@@ -98,7 +136,7 @@ specimens, and exactly the 58 intentional skip identities; missing dependency
 skips must fail. Dedicated capacity recipes, the documented all-history
 pre-reopen validator and production activation remain separate obligations.
 
-The only new trigger is the first push run/attempt on
+The consumed packet used the first push run/attempt on
 `codex/quote-full-python-mock-static`. Its matrix contains only the two groups
 above. It does not trigger the ordinary 900-second CI route, open a PR, or
 establish full-suite or capacity qualification.

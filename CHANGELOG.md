@@ -1,5 +1,11 @@
 # Changelog
 
+## Full-Python route mock evidence and style correction · 2026-10-18
+
+- Preserve run 39091798151: 214 complete cases and repository verification passed; Ruff reported two findings, leaving four later static commands unrun.
+- Prepare only the two reported style corrections and the existing static-six workload under unchanged 20-second/resource/output limits. The consumed workflow and test bodies remain unchanged.
+- Ordinary CI, workflow formatting, the full-suite image and complete Python collection remain pending. [Evidence and correction scope](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
+
 ## Full-Python route verification preparation · 2026-10-18
 
 - Prepare 214 complete helper/verifier/CI guard cases and the existing six static commands in two serialized 20-second workloads. Collection and execution remain unrun.

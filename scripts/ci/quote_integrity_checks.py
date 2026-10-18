@@ -32,7 +32,7 @@ BASELINE = ROOT / "scripts/ci/frozen_quote_guard/baseline_323661ad.py"
 BASELINE_SHA = "1d7e19e627d9b0506813a12b76829defa9905550537f00a2a8e5d5c359149db6"
 CANDIDATE_SHA = {
     "scripts/ci/quote_capacity_micro.py": (
-        "bff6f743f5e0c8959f4c00476514a42edf4931144b0207eb1675ae2f366be5fa"
+        "3445874b99617b34a648e3cbd9b42753e2a0996f716e87379f4beb5641b46113"
     ),
     "tests/operations/test_quote_integrity_static_contracts.py": (
         "152c2ab380b631c6c41f6f3c29669a4fa6777ee616a5ce88faca8066dc6c68ed"
@@ -170,7 +170,7 @@ CANDIDATE_SHA = {
         "1179950616d30f852766bff7a8f513f2d807881c4a722e4f37f5746e4fc4b087"
     ),
     ".github/workflows/ci.yml": "894ba53c299c205cd53d427c19c3fbea6fc2fa0b5dd5b143a649038d8d70512c",
-    "scripts/ci/verify_v01.py": "e65603f2aa317323d243d1c39ac3f69dba9ea6d271485faf6cb9ca3be0fa38e9",
+    "scripts/ci/verify_v01.py": "2230e3165ccecae8603e480741aa7fcf4264eb08f3e8321e9a59f4a6d33d0328",
     "tests/operations/test_quote_capacity_micro.py": (
         "3864e984551af2094540c33faca484ead724f2b92efd14cb391f17abf5341eb9"
     ),
@@ -182,6 +182,9 @@ CANDIDATE_SHA = {
     ),
     "tests/repository/test_repository_contract.py": (
         "d357c050cde8fa86872aec57bb85acfebee1bd2bfab5e5ff0fa35506e40fe0aa"
+    ),
+    ".github/workflows/quote-full-python-style-checks.yml": (
+        "045b9270df36d90e333633fbbdade0f7b106cf1ce73581979f05121716c9cd1f"
     ),
 }
 
@@ -197,6 +200,8 @@ LIMIT = 16 * 1024
 FULL_CHECKS_BRANCH = "refs/heads/codex/quote-full-python-mock-static"
 FULL_CHECKS_WORKFLOW = ".github/workflows/quote-full-python-mock-static.yml"
 FULL_CHECKS_GROUPS = ("aggregate_mocks214", "static6")
+FULL_STYLE_BRANCH = "refs/heads/codex/quote-full-python-style-checks"
+FULL_STYLE_WORKFLOW = ".github/workflows/quote-full-python-style-checks.yml"
 INTENDED_SOURCE = {
     "intended_source_base": "dea1a661c81fee3aa1ce907f095a1709edb82d6e",
     "intended_source_tree": "d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f",
@@ -998,6 +1003,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == FULL_CHECKS_BRANCH:
         require(GROUP_KEY in FULL_CHECKS_GROUPS)
         branch, workflow = FULL_CHECKS_BRANCH, FULL_CHECKS_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == FULL_STYLE_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = FULL_STYLE_BRANCH, FULL_STYLE_WORKFLOW
     else:
         require(GROUP_KEY not in EXISTING_GROUPS and GROUP_KEY != "aggregate_mocks214")
     require(os.environ.get("GITHUB_REF") == branch)

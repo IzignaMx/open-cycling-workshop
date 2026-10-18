@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from types import FrameType
 from typing import cast
@@ -1154,10 +1155,8 @@ def supervise_python(
             except (ProofFailure, OSError):
                 # Later absence may clean up, but cannot prove the missed cutoff.
                 report["failure"] = "worker_stop_unverified"
-                try:
+                with suppress(ProofFailure, OSError, ValueError):
                     full_reconcile(owned, control)
-                except (ProofFailure, OSError, ValueError):
-                    pass
                 raise ProofFailure("worker_stop_unverified") from None
 
     def execute(args, *, timeout=5, limit=LIMIT):

@@ -1,7 +1,42 @@
 schema: 1
 
-full_python_route_checks_20261018:
+full_python_style_correction_20261018:
   status: prepared_pending_verification
+  source_base: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
+  prior_run: 39091798151
+  source_findings: [SIM105, SIM300]
+  corrected_source_files: 2
+  existing_static_commands: 6
+  groups: 1
+  workload_seconds: 20
+  worker_cpus: 1
+  worker_memory_mib: 512
+  worker_pids: 64
+  candidate_source_pins: 53
+  locked_input_pins: 4
+  static_record_limit_bytes: 16384
+  static_stdout_limit_bytes: 32768
+  collection_static_build_runtime: unrun
+  original_214_case_evidence: retained_not_rerun
+  ordinary_ci_full_suite_and_activation: pending
+  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
+
+full_python_route_checks_20261018:
+  status: mock_passed_static_failed_independently_reviewed
+  run_id: 39091798151
+  source_commit: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
+  source_tree: 2e353018c02e29e44069b2388b4a079bfcba3c98
+  mock_cases_passed: 214
+  mock_workload_seconds: 1.461891052
+  mock_final_pretermination_peak_bytes: 58183680
+  both_cleanup_pairs: verified_absent
+  failed_static_final_metrics: unavailable
+  repository_check: passed
+  ruff: failed_SIM105_SIM300
+  formatting_types_openapi_client: unrun
+  observed_passes: 215
+  failed_commands: 1
+  unrun_commands: 4
   source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
   helper_cases: 99
   verifier_cases: 108
@@ -23,7 +58,9 @@ full_python_route_checks_20261018:
   static_stdout_limit_bytes: 32768
   candidate_source_pins: 52
   locked_input_pins: 4
-  collection_static_mock_build_runtime: unrun
+  collection_and_mock_runtime: passed
+  python_git_qualification_image: built
+  full_suite_image_and_ordinary_ci: unrun
   clean_route_and_functional_source: preserved
   full_suite_and_activation: pending
   evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
