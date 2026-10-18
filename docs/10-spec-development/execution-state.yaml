@@ -1,7 +1,52 @@
 schema: 1
 
-full_python_scratch_path_observation_20261018:
+full_python_immutable_legacy_source_20261018:
   status: prepared_unrun
+  source_base: 68d9c50184fd4f9ecd56b2137f14d66627481f34
+  sixth_attempt:
+    run_id: 39149558971
+    source_commit: 7e66adad82cfdef24a2f9b1c34c2e75ad9c9bab3
+    source_tree: 7997293576a2e65c5a7cd8a013b775122d7f10d9
+    artifact_id: 12144184476
+    artifact_sha256: 3d6d1b4e8b5c47354f5a2c25e127c9f78b2c1b7060e8e9921270e3d9aaf9f4fa
+    image_preparation_canary_reached_scratch_checks: passed
+    collected: 4422
+    collection_errors_and_deselections: 0
+    passed: 180
+    skipped: 5
+    failed: 1
+    unreached: 4236
+    failed_fixture: legacy_fixture_session_pinned_git_show
+    git_exit: 128
+    git_stderr_and_exact_fatal_reason: unavailable
+    diagnostic_bytes: 1869
+    diagnostic_truncated: false
+    required_restores: all_six_unrun
+    final_result_and_final_resource_counters: unavailable
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39149558971
+  prepared_correction:
+    historical_commit: 714342c60f4163c7b4c1ebec8433995dccbeea01
+    historical_tree: fbf5e5678188a97b8b9709e6f91cb6b250e20c9f
+    historical_path: services/platform/src/cycling_workshop/identity/security.py
+    historical_blob: 0a13a1ac154f0b982589dfa09c470cf4aa61c4e0
+    source_bytes: 4549
+    source_sha256: 95613b4278c0a966ecdd68445c8d5197e5d874f1678a35f8be930720811b87c6
+    packaged_fixture: tests/fixtures/legacy-714342c6/security.py.source
+    preparation_provenance: exact_commit_tree_path_blob_membership_verified
+    runtime_proof: exact_bounded_length_and_sha256_before_historical_compile
+    runtime_read_bound_bytes: 4550
+    git_metadata_credentials_hooks_or_current_codec_substitution: none
+    original_cutover_session_assertions: unchanged
+    additional_regression_cases: 5
+    regression_execution: unrun
+    workflows_dependencies_resources_deadlines_skips_and_restores: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_scratch_path_observation_20261018:
+  checkpoint: historical_preparation_before_run_39149558971
+  status_at_checkpoint: prepared_unrun
   source_base: 172556621f430b3c8dcd73a5efb24a197b6187d2
   fifth_attempt:
     run_id: 39147495876
