@@ -32,7 +32,7 @@ BASELINE = ROOT / "scripts/ci/frozen_quote_guard/baseline_323661ad.py"
 BASELINE_SHA = "1d7e19e627d9b0506813a12b76829defa9905550537f00a2a8e5d5c359149db6"
 CANDIDATE_SHA = {
     "scripts/ci/quote_capacity_micro.py": (
-        "3445874b99617b34a648e3cbd9b42753e2a0996f716e87379f4beb5641b46113"
+        "afa9be6a26c436afe9492fc8811eb44a72e62290c666aaedc249084208e74af5"
     ),
     "tests/operations/test_quote_integrity_static_contracts.py": (
         "152c2ab380b631c6c41f6f3c29669a4fa6777ee616a5ce88faca8066dc6c68ed"
@@ -170,12 +170,12 @@ CANDIDATE_SHA = {
         "1179950616d30f852766bff7a8f513f2d807881c4a722e4f37f5746e4fc4b087"
     ),
     ".github/workflows/ci.yml": "894ba53c299c205cd53d427c19c3fbea6fc2fa0b5dd5b143a649038d8d70512c",
-    "scripts/ci/verify_v01.py": "2230e3165ccecae8603e480741aa7fcf4264eb08f3e8321e9a59f4a6d33d0328",
+    "scripts/ci/verify_v01.py": "9de1a2383e33484c0d14018b5138bf923b59e2439c8b8589179cf52e82bf339e",
     "tests/operations/test_quote_capacity_micro.py": (
-        "3864e984551af2094540c33faca484ead724f2b92efd14cb391f17abf5341eb9"
+        "880f8a82ec5cd975858ea24b8d6dc431365169b71638d1b67e0a70aade4708e6"
     ),
     "tests/ci/test_verify_v01.py": (
-        "649e60ebccc33c02a38ed464697b8007ff65f1deef585177e79195614566f10b"
+        "dc86417e6fb5f14694682b70a2a01cdc8223afd0180361c52436683c503f71f1"
     ),
     "tests/operations/test_ci_contract.py": (
         "d0415cf03d8b206ba984aedb5fe900158ec2b6917727b65b898e3819cdb445cd"
@@ -185,6 +185,9 @@ CANDIDATE_SHA = {
     ),
     ".github/workflows/quote-full-python-style-checks.yml": (
         "045b9270df36d90e333633fbbdade0f7b106cf1ce73581979f05121716c9cd1f"
+    ),
+    ".github/workflows/quote-full-python-format-checks.yml": (
+        "012c3455b0982df3ac9d9f60d949b510a3635a1395e8814babf1fa9e3b211f06"
     ),
 }
 
@@ -202,6 +205,8 @@ FULL_CHECKS_WORKFLOW = ".github/workflows/quote-full-python-mock-static.yml"
 FULL_CHECKS_GROUPS = ("aggregate_mocks214", "static6")
 FULL_STYLE_BRANCH = "refs/heads/codex/quote-full-python-style-checks"
 FULL_STYLE_WORKFLOW = ".github/workflows/quote-full-python-style-checks.yml"
+FULL_FORMAT_BRANCH = "refs/heads/codex/quote-full-python-format-checks"
+FULL_FORMAT_WORKFLOW = ".github/workflows/quote-full-python-format-checks.yml"
 INTENDED_SOURCE = {
     "intended_source_base": "dea1a661c81fee3aa1ce907f095a1709edb82d6e",
     "intended_source_tree": "d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f",
@@ -1006,6 +1011,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == FULL_STYLE_BRANCH:
         require(GROUP_KEY == "static6")
         branch, workflow = FULL_STYLE_BRANCH, FULL_STYLE_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == FULL_FORMAT_BRANCH:
+        require(GROUP_KEY == "static6")
+        branch, workflow = FULL_FORMAT_BRANCH, FULL_FORMAT_WORKFLOW
     else:
         require(GROUP_KEY not in EXISTING_GROUPS and GROUP_KEY != "aggregate_mocks214")
     require(os.environ.get("GITHUB_REF") == branch)

@@ -3,8 +3,9 @@
 ## Full-Python route finite verification · 2026-10-18
 
 - [x] Execute all 214 complete cases in the [finite aggregate-route selection](docs/10-spec-development/2026-10-18-full-python-route-checks.md), run 39091798151; preserve its repository pass, Ruff failure and four unrun commands.
-- [ ] Close the two reported style findings through the existing static-six-only workload under its unchanged 20-second limit.
-- [ ] Independently verify corrected-source static evidence; the 214-case result remains tied to its original source.
+- [x] Close the two Ruff findings in run 39092755007; preserve its formatter output-limit failure and three unrun commands.
+- [x] Independently verify that failed follow-on, including the explicitly truncated inner formatter output and both cleanup proofs.
+- [ ] Apply the complete four-file canonical formatting and close the existing static-six gate under unchanged limits; the 214-case result remains tied to its original source.
 - [ ] Verify the changed workflow formatting and fixed full-suite image before complete integration qualification.
 - [ ] Preserve six required restores, both ordinary large specimens and exactly 58 intentional skip identities in the later full collection; retain separate recovery/activation obligations.
 

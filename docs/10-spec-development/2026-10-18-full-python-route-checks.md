@@ -1,11 +1,43 @@
 # Full-Python route: finite mock and static preparation
 
-Status: 214 cases passed; static verification failed at Ruff with four later
-commands unrun. The minimal style correction and static-only verification are
-prepared but unrun. Ordinary CI, the full Python suite and activation remain
-pending.
+Status: the original 214 cases passed. The style follow-on passed repository
+and Ruff checks, then failed at the formatter output limit; three commands were
+unrun. Four-file canonical formatting and another static-only verification are
+prepared. Ordinary CI, the full Python suite and activation remain pending.
 
-## Recorded result and narrow correction
+## Canonical formatting follow-on
+
+[Run 39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007)
+executed on commit `e144a054b4de1748ac85e9eb5141559aba5cf0ec`, tree
+`e4c0d64cf98de74fbc6c4ddfcd792171bedc2a2a`. Repository and Ruff checks passed;
+the formatter command hit its 16,384-byte output ceiling and returned -25.
+Retain two passes, one failed command and three unrun commands: production
+types, OpenAPI and generated client. Independent evidence review verified all
+53 source pins, four locked inputs, containment and both cleanup proofs. The
+22,444-byte outer diagnostic is complete, but its embedded 16,384-byte formatter
+output is explicitly truncated. No successful workload duration or final worker
+counters were retained or inferred.
+
+The truncated output is not treated as a complete patch. Locked Ruff 0.16.5
+produced a separate complete 23,252-byte canonical diff from inert copies of
+`quote_capacity_micro.py`, `verify_v01.py` and their two existing CI test modules.
+Its four-file format check passed under a 10-second shell limit, five CPU
+seconds, 512 MiB address-space limit and 1 MiB file-size ceiling. This developer
+formatting step imported no candidate module and ran no tests; it does not
+replace the hosted integrated gate. Independent review preserves statements,
+assertions, literals and execution order across these layout changes.
+
+Apply those four canonical files together. The fixed
+`codex/quote-full-python-format-checks` branch/workflow selects only the existing
+six static commands, first run/attempt only, under the unchanged 20-second
+worker limit. Four source pins are refreshed and one workflow pin is added,
+for 54 source pins and four locked inputs. The static record, stdout, command
+output and marker limits remain 16/32/16/24 KiB. Existing selectors, image,
+cancellation and cleanup mechanisms are unchanged. Integrated collection,
+static verification and image execution for this packet remain pending.
+The original 214-case result is retained at its actual source, without rerun.
+
+## Original result and two-expression correction
 
 [Run 39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151)
 executed once on commit `3695dfd896bb8e22a07fbd8671a77d3e1f37df8e`, tree
@@ -29,15 +61,15 @@ remain unchanged. Product, tests, locks and the consumed workflow are unchanged.
 The 214-case evidence remains bound to its original source; it is not rerun or
 relabeled as execution of the corrected source.
 
-Use the existing `static6` selection once on the new exact
+The consumed correction used the existing `static6` selection once on the exact
 `codex/quote-full-python-style-checks` branch/workflow, first run/attempt only.
-The six commands share the existing 20-second limit, one CPU and 512 MiB.
-Refresh the two corrected source pins and add only the new workflow pin, giving
-53 source pins and four locked inputs. Static XML/receipts remain capped at
+The six commands shared the existing 20-second limit, one CPU and 512 MiB.
+Two corrected source pins and the new workflow pin gave 53 source pins and four
+locked inputs. Static XML/receipts remain capped at
 16 KiB, workload output at 32 KiB, command output at 16 KiB and the failure
 marker at 24 KiB. Image preparation, canary, cancellation and independent
 cleanup are unchanged. The correction does not launch ordinary CI or the
-900-second full-suite route. Its static result remains pending.
+900-second full-suite route. Its failed formatter result is recorded above.
 
 ## Historical scope and source for run 39091798151
 

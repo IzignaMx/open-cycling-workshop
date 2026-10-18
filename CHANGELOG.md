@@ -1,5 +1,11 @@
 # Changelog
 
+## Full-Python canonical formatting follow-on · 2026-10-18
+
+- Preserve run 39092755007: repository and Ruff passed, formatter hit its 16,384-byte output ceiling, and three later commands were unrun. The complete outer diagnostic does not make the inner formatter diff complete.
+- Prepare the complete 23,252-byte locked-Ruff canonical diff across the two aggregate helpers and their two CI test modules, with independent source review and no behavioral changes.
+- Prepare only the existing static-six workload on the next fixed branch under unchanged limits. The original 214-case evidence remains source-bound; ordinary CI and full-suite qualification remain pending. [Evidence and scope](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
+
 ## Full-Python route mock evidence and style correction · 2026-10-18
 
 - Preserve run 39091798151: 214 complete cases and repository verification passed; Ruff reported two findings, leaving four later static commands unrun.

@@ -71,7 +71,10 @@ def test_full_route_unverified_stop_stays_failure_even_after_client_hygiene(monk
     with pytest.raises(module.ProofFailure, match="worker_stop_unverified"):
         module.full_client(["docker", "exec", "a" * 64, "fixed-reader"], timeout=0.05, abort=abort)
     assert events == [
-        "stop_unverified", "owned_reconciliation_attempted", "client_kill", "client_reap"
+        "stop_unverified",
+        "owned_reconciliation_attempted",
+        "client_kill",
+        "client_reap",
     ]
 
 
@@ -95,9 +98,12 @@ def test_full_diagnostic_retains_only_the_bounded_host_spool(tmp_path):
 def test_full_record_capture_accepts_only_fixed_names_and_typed_pending_marker():
     with pytest.raises(module.ProofFailure, match="record_name"):
         module.full_capture_record("a" * 64, "arbitrary", lambda *args: pytest.fail("spawned"))
-    assert module.full_capture_record(
-        "a" * 64, "collection", lambda *args, **kwargs: '{"pending":true}'
-    ) is None
+    assert (
+        module.full_capture_record(
+            "a" * 64, "collection", lambda *args, **kwargs: '{"pending":true}'
+        )
+        is None
+    )
     assert module.full_capture_record(
         "a" * 64, "collection", lambda *args, **kwargs: '{"pending":1}'
     ) == {"pending": 1}
@@ -123,16 +129,27 @@ def test_full_stop_requires_exact_terminal_state(final):
 
 def full_inspect_value():
     return {
-        "id": "a" * 64, "image": "sha256:" + "b" * 64, "token": "c" * 32,
+        "id": "a" * 64,
+        "image": "sha256:" + "b" * 64,
+        "token": "c" * 32,
         "user": "10001:10001",
         "host": {
-            "NetworkMode": "none", "Privileged": False, "ReadonlyRootfs": True,
-            "Memory": 512 * 1024 * 1024, "MemorySwap": 512 * 1024 * 1024,
-            "NanoCpus": 1_000_000_000, "PidsLimit": 64, "ShmSize": 64 * 1024 * 1024,
-            "CgroupnsMode": "private", "CapDrop": ["ALL"],
-            "IpcMode": "private", "PidMode": "", "UTSMode": "",
+            "NetworkMode": "none",
+            "Privileged": False,
+            "ReadonlyRootfs": True,
+            "Memory": 512 * 1024 * 1024,
+            "MemorySwap": 512 * 1024 * 1024,
+            "NanoCpus": 1_000_000_000,
+            "PidsLimit": 64,
+            "ShmSize": 64 * 1024 * 1024,
+            "CgroupnsMode": "private",
+            "CapDrop": ["ALL"],
+            "IpcMode": "private",
+            "PidMode": "",
+            "UTSMode": "",
             "PublishAllPorts": False,
-            "SecurityOpt": ["no-new-privileges:true"], "Tmpfs": module.FULL_TMPFS["worker"],
+            "SecurityOpt": ["no-new-privileges:true"],
+            "Tmpfs": module.FULL_TMPFS["worker"],
             "LogConfig": {"Type": "none", "Config": {}},
         },
         "mounts": [{"Type": "tmpfs", "Destination": path} for path in module.FULL_TMPFS["worker"]],
@@ -172,11 +189,13 @@ def full_scratch_value(role):
         options = dict(part.split("=", 1) if "=" in part else (part, "") for part in raw.split(","))
         blocks = int(options["size"][:-1]) * 256
         inodes = int(options.get("nr_inodes", "1024"))
-        stats.extend([
-            f"{path}|tmpfs|4096|{blocks}|{blocks - 1}|{inodes}|{inodes - 1}",
-            f"{path}|{options.get('uid', '0')}|{options.get('gid', '0')}|"
-            f"{options['mode'].lstrip('0')}",
-        ])
+        stats.extend(
+            [
+                f"{path}|tmpfs|4096|{blocks}|{blocks - 1}|{inodes}|{inodes - 1}",
+                f"{path}|{options.get('uid', '0')}|{options.get('gid', '0')}|"
+                f"{options['mode'].lstrip('0')}",
+            ]
+        )
         flags = "rw,nosuid,nodev" + ("" if path == "/tmp/ocwp-tests" else ",noexec")
         mounts.append(f"1 0 0:1 / {path} {flags} - tmpfs tmpfs rw")
     return "\n".join(stats) + "\n---mounts---\n" + "\n".join(mounts)
@@ -274,8 +293,10 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         if args[:2] == ["docker", "exec"]:
             if args[-1] == module.PROBE:
                 if len(created) > 1 and args[2] == created[1]:
-                    return probe().replace("536870912", "805306368").replace(
-                        "---pids.max---\n64", "---pids.max---\n128"
+                    return (
+                        probe()
+                        .replace("536870912", "805306368")
+                        .replace("---pids.max---\n64", "---pids.max---\n128")
                     )
                 return probe()
             if "pg_isready" in args:
@@ -297,7 +318,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def launch(args, **kwargs):
         events.append("pytest")
-        assert args[-len(verify_v01.FULL_PYTHON_ARGS):] == list(verify_v01.FULL_PYTHON_ARGS)
+        assert args[-len(verify_v01.FULL_PYTHON_ARGS) :] == list(verify_v01.FULL_PYTHON_ARGS)
         assert "OCWP_QUOTE_MICRO=contained" not in args
         return SimpleNamespace(
             returncode=1 if fault == "workload" else 0,

@@ -508,9 +508,7 @@ def test_full_python_classifier_uses_complete_typed_parameters_not_nodeid_spelli
     for case in MODULE.FULL_CASES:
         assert MODULE.full_python_case(case.source, case.function, dict(case.params)) == case.case
         with pytest.raises(MODULE.FullPythonEvidenceError, match="case_matrix_changed"):
-            MODULE.full_python_case(
-                case.source, case.function, {**case.params, "unreviewed": True}
-            )
+            MODULE.full_python_case(case.source, case.function, {**case.params, "unreviewed": True})
     legacy = MODULE.FULL_CASE_BY_ID["required.restore.branding.legacy"]
     with pytest.raises(MODULE.FullPythonEvidenceError, match="case_matrix_changed"):
         MODULE.full_python_case(legacy.source, legacy.function, {"legacy_source": 1})
@@ -660,9 +658,7 @@ def test_full_python_plugin_is_inert_outside_contained_mode(monkeypatch):
         "services/platform/tests",
     )
     monkeypatch.delenv("OCWP_FULL_PYTHON", raising=False)
-    monkeypatch.setattr(
-        MODULE, "_FullPythonPlugin", lambda config: pytest.fail("plugin activated")
-    )
+    monkeypatch.setattr(MODULE, "_FullPythonPlugin", lambda config: pytest.fail("plugin activated"))
     MODULE.pytest_configure(SimpleNamespace())
 
 
@@ -729,9 +725,7 @@ def test_full_python_plugin_seals_hashed_inventory_before_reports(monkeypatch):
             )
     plugin.pytest_sessionfinish(session, 0)
     assert written[1][0] == Path("/tmp/ocwp-proof/result.json")
-    counts = MODULE.validate_full_python_result(
-        written[1][1], plugin.identity, written[0][1]
-    )
+    counts = MODULE.validate_full_python_result(written[1][1], plugin.identity, written[0][1])
     assert counts["passed"] == 12
 
 

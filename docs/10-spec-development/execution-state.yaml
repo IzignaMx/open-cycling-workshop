@@ -1,7 +1,47 @@
 schema: 1
 
-full_python_style_correction_20261018:
+full_python_format_correction_20261018:
   status: prepared_pending_verification
+  source_base: e144a054b4de1748ac85e9eb5141559aba5cf0ec
+  prior_run: 39092755007
+  canonical_source_files: 4
+  canonical_diff_bytes: 23252
+  formatter: Ruff_0.16.5_matches_lock
+  inert_copy_formatter_check: passed_four_files
+  candidate_imports_or_tests: false
+  existing_static_commands: 6
+  groups: 1
+  workload_seconds: 20
+  worker_cpus: 1
+  worker_memory_mib: 512
+  worker_pids: 64
+  candidate_source_pins: 54
+  locked_input_pins: 4
+  static_record_limit_bytes: 16384
+  static_stdout_limit_bytes: 32768
+  integrated_static_build_runtime: unrun
+  original_214_case_evidence: retained_not_rerun
+  ordinary_ci_full_suite_and_activation: pending
+  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
+
+full_python_style_correction_20261018:
+  status: formatter_output_cap_failed_independently_reviewed
+  run_id: 39092755007
+  source_commit: e144a054b4de1748ac85e9eb5141559aba5cf0ec
+  source_tree: e4c0d64cf98de74fbc6c4ddfcd792171bedc2a2a
+  repository_and_ruff: passed
+  formatter: failed_output_cap
+  observed_passes: 2
+  failed_commands: 1
+  unrun_commands: 3
+  types_openapi_client: unrun
+  inner_formatter_output_bytes: 16384
+  inner_formatter_output_truncated: true
+  formatter_returncode: -25
+  outer_diagnostic_bytes: 22444
+  outer_diagnostic_truncated: false
+  both_cleanup_pairs: verified_absent
+  failed_static_final_metrics: unavailable
   source_base: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
   prior_run: 39091798151
   source_findings: [SIM105, SIM300]
@@ -16,7 +56,7 @@ full_python_style_correction_20261018:
   locked_input_pins: 4
   static_record_limit_bytes: 16384
   static_stdout_limit_bytes: 32768
-  collection_static_build_runtime: unrun
+  collection_static_build_runtime: failed_formatter_after_two_passes
   original_214_case_evidence: retained_not_rerun
   ordinary_ci_full_suite_and_activation: pending
   evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md

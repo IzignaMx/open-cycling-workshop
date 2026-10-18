@@ -283,14 +283,12 @@ def _full_identity(identity: object) -> dict[str, Any]:
             "identity_image",
         )
     _full_require(
-        type(value["nonce"]) is str
-        and re.fullmatch(r"[0-9a-f]{32}", value["nonce"]) is not None,
+        type(value["nonce"]) is str and re.fullmatch(r"[0-9a-f]{32}", value["nonce"]) is not None,
         "identity_nonce",
     )
     for key in ("run_id", "run_attempt"):
         _full_require(
-            type(value[key]) is str
-            and re.fullmatch(r"[1-9][0-9]{0,19}", value[key]) is not None,
+            type(value[key]) is str and re.fullmatch(r"[1-9][0-9]{0,19}", value[key]) is not None,
             "identity_run",
         )
     _full_require(value["job"] == "python-tests", "identity_job")
@@ -671,9 +669,7 @@ def _full_typed_params(actual: object, expected: dict[str, object]) -> bool:
 
 def full_python_case(source: str, function: str, params: dict[str, object]) -> str | None:
     """Classify only closed typed matrices; do not inspect generated node-ID text."""
-    candidates = [
-        case for case in FULL_CASES if (case.source, case.function) == (source, function)
-    ]
+    candidates = [case for case in FULL_CASES if (case.source, case.function) == (source, function)]
     if not candidates:
         return None
     for case in candidates:

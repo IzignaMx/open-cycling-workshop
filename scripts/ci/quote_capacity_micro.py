@@ -922,18 +922,23 @@ def full_inspect(
 
     raw = execute(
         [
-            "docker", "inspect", "--format",
+            "docker",
+            "inspect",
+            "--format",
             '{"id":{{json .Id}},"image":{{json .Image}},'
             '"token":{{json (index .Config.Labels "ocwp.quote-micro")}},'
             '"user":{{json .Config.User}},"host":{{json .HostConfig}},'
-            '"mounts":{{json .Mounts}}}', cid,
+            '"mounts":{{json .Mounts}}}',
+            cid,
         ]
     )
     value = read_full_python_value(raw)
     host = value.get("host")
     if (
         set(value) != {"id", "image", "token", "user", "host", "mounts"}
-        or value["id"] != cid or value["image"] != image or value["token"] != token
+        or value["id"] != cid
+        or value["image"] != image
+        or value["token"] != token
         or value["user"] != ("postgres" if role == "db" else "10001:10001")
         or type(host) is not dict
     ):
@@ -941,13 +946,22 @@ def full_inspect(
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
     memory, pids = (768, 128) if role == "db" else (512, 64)
     fixed = {
-        "NetworkMode": network, "Privileged": False, "ReadonlyRootfs": True,
-        "Memory": memory * 1024 * 1024, "MemorySwap": memory * 1024 * 1024,
-        "NanoCpus": 1_000_000_000, "PidsLimit": pids, "ShmSize": FULL_SHM_BYTES,
-        "CgroupnsMode": "private", "CapDrop": ["ALL"],
-        "IpcMode": "private", "PidMode": "", "UTSMode": "",
+        "NetworkMode": network,
+        "Privileged": False,
+        "ReadonlyRootfs": True,
+        "Memory": memory * 1024 * 1024,
+        "MemorySwap": memory * 1024 * 1024,
+        "NanoCpus": 1_000_000_000,
+        "PidsLimit": pids,
+        "ShmSize": FULL_SHM_BYTES,
+        "CgroupnsMode": "private",
+        "CapDrop": ["ALL"],
+        "IpcMode": "private",
+        "PidMode": "",
+        "UTSMode": "",
         "PublishAllPorts": False,
-        "SecurityOpt": ["no-new-privileges:true"], "Tmpfs": expected,
+        "SecurityOpt": ["no-new-privileges:true"],
+        "Tmpfs": expected,
     }
     if any(type(host.get(k)) is not type(v) or host[k] != v for k, v in fixed.items()):
         raise ProofFailure("container_boundary")
@@ -957,7 +971,8 @@ def full_inspect(
         raise ProofFailure("container_boundary")
     mounts = value["mounts"]
     if (
-        type(mounts) is not list or len(mounts) != len(expected)
+        type(mounts) is not list
+        or len(mounts) != len(expected)
         or any(type(item) is not dict or item.get("Type") != "tmpfs" for item in mounts)
         or {item.get("Destination") for item in mounts} != set(expected)
     ):
@@ -969,12 +984,14 @@ def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
     paths = [*expected, "/dev/shm"]
     command = "set -eu; " + "".join(
-        f"stat -f -c '{path}|%T|%S|%b|%f|%c|%d' {path}; "
-        f"stat -c '{path}|%u|%g|%a' {path}; " for path in paths
+        f"stat -f -c '{path}|%T|%S|%b|%f|%c|%d' {path}; stat -c '{path}|%u|%g|%a' {path}; "
+        for path in paths
     )
-    command += "printf '%s\\n' '---mounts---'; awk '" + " || ".join(
-        f'$5 == "{path}"' for path in paths
-    ) + "' /proc/self/mountinfo"
+    command += (
+        "printf '%s\\n' '---mounts---'; awk '"
+        + " || ".join(f'$5 == "{path}"' for path in paths)
+        + "' /proc/self/mountinfo"
+    )
     raw = execute(["docker", "exec", cid, "sh", "-c", command])
     try:
         stats, mount_rows = raw.split("\n---mounts---\n")
@@ -994,10 +1011,16 @@ def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
             )
             if (
                 block * blocks != int(options["size"][:-1]) * 1024 * 1024
-                or not 0 < free <= blocks or not 0 < ifree <= inodes
+                or not 0 < free <= blocks
+                or not 0 < ifree <= inodes
                 or ("nr_inodes" in options and inodes != int(options["nr_inodes"]))
-                or ownership != [path, options.get("uid", "0"), options.get("gid", "0"),
-                                 options["mode"].lstrip("0")]
+                or ownership
+                != [
+                    path,
+                    options.get("uid", "0"),
+                    options.get("gid", "0"),
+                    options["mode"].lstrip("0"),
+                ]
             ):
                 raise ProofFailure("scratch_allocation")
             matching = [row for row in mounts if len(row) > 9 and row[4] == path]
@@ -1040,14 +1063,30 @@ def full_identity(commit: str, worker_image: str, pg_image: str, execute: Callab
         execute(["docker", "image", "inspect", "--format", "{{.Id}}", name])
         for name in (worker_image, pg_image)
     ]
-    if images != [os.environ.get("OCWP_FULL_PYTHON_IMAGE_ID"),
-                  os.environ.get("OCWP_FULL_PYTHON_PG_IMAGE_ID")]:
+    if images != [
+        os.environ.get("OCWP_FULL_PYTHON_IMAGE_ID"),
+        os.environ.get("OCWP_FULL_PYTHON_PG_IMAGE_ID"),
+    ]:
         raise ProofFailure("image_identity")
-    if execute(["docker", "image", "inspect", "--format",
-                '{{index .Config.Labels "ocwp.source-tree"}}', images[0]]) != tree:
+    if (
+        execute(
+            [
+                "docker",
+                "image",
+                "inspect",
+                "--format",
+                '{{index .Config.Labels "ocwp.source-tree"}}',
+                images[0],
+            ]
+        )
+        != tree
+    ):
         raise ProofFailure("image_source_mismatch")
     return full_python_identity(
-        commit=commit, tree=tree, image_id=images[0], pg_image_id=images[1],
+        commit=commit,
+        tree=tree,
+        image_id=images[0],
+        pg_image_id=images[1],
         nonce=os.environ.get("OCWP_FULL_PYTHON_NONCE", ""),
         run_id=os.environ.get("GITHUB_RUN_ID", ""),
         run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""),
@@ -1125,17 +1164,31 @@ def supervise_python(
     child = None
     creation_uncertain = False
     report = {
-        "schema": 1, "kind": "ocwp.full_python.receipt", "identity": None,
-        "policy": FULL_POLICY, "status": "failed", "failure": "unrun",
-        "collection": None, "result": None, "containment": None,
-        "primary_cleanup": "pending", "independent_cleanup": "pending",
+        "schema": 1,
+        "kind": "ocwp.full_python.receipt",
+        "identity": None,
+        "policy": FULL_POLICY,
+        "status": "failed",
+        "failure": "unrun",
+        "collection": None,
+        "result": None,
+        "containment": None,
+        "primary_cleanup": "pending",
+        "independent_cleanup": "pending",
     }
     containment = {
-        "canary": "pending", "worker_exit": None, "deadline": "unfinished",
-        "stdout_bytes": 0, "source_read_only": False, "closed_network": False,
-        "scratch_verified": False, "worker_stopped": False, "creation_uncertain": False,
+        "canary": "pending",
+        "worker_exit": None,
+        "deadline": "unfinished",
+        "stdout_bytes": 0,
+        "source_read_only": False,
+        "closed_network": False,
+        "scratch_verified": False,
+        "worker_stopped": False,
+        "creation_uncertain": False,
         "resource_samples": {"worker": 0, "db": 0},
-        "pressure_events": {"worker": 0, "db": 0}, "final_probe": "pending",
+        "pressure_events": {"worker": 0, "db": 0},
+        "final_probe": "pending",
     }
     report["containment"] = containment
 
@@ -1164,7 +1217,9 @@ def supervise_python(
         if remaining <= 0:
             raise ProofFailure("wall_budget")
         result = full_client(
-            args, timeout=min(timeout, remaining), limit=limit,
+            args,
+            timeout=min(timeout, remaining),
+            limit=limit,
             abort=stop if business and args[:2] == ["docker", "exec"] else None,
         )
         if time.monotonic() >= deadline:
@@ -1182,8 +1237,11 @@ def supervise_python(
         identity = full_identity(commit, worker_image, pg_image, execute)
         report["identity"] = identity
         token = uuid4().hex
-        images = {"db": identity["pg_image_id"], "worker": identity["image_id"],
-                  "canary": identity["image_id"]}
+        images = {
+            "db": identity["pg_image_id"],
+            "worker": identity["image_id"],
+            "canary": identity["image_id"],
+        }
         if owned.with_suffix(".owner.json").exists():
             raise ProofFailure("owner_already_exists")
         owned.with_suffix(".owner.json").write_text(json.dumps({"token": token, "images": images}))
@@ -1193,28 +1251,74 @@ def supervise_python(
             memory, pids = (768, 128) if role == "db" else (512, 64)
             network = f"container:{containers['db']}" if role == "worker" else "none"
             args = [
-                "docker", "create", "--name", f"ocwp-quote-{token}-{role}",
-                "--cidfile", str(owned.with_suffix(f".{role}.cid")),
-                "--label", f"ocwp.quote-micro={token}", "--pull", "never",
-                "--cgroupns", "private", "--ipc", "private", "--cpus", "1",
-                "--read-only", "--cap-drop", "ALL",
-                "--security-opt", "no-new-privileges:true", "--log-driver", "none",
-                "--memory", f"{memory}m", "--memory-swap", f"{memory}m",
-                "--pids-limit", str(pids), "--network", network, "--shm-size", "64m",
+                "docker",
+                "create",
+                "--name",
+                f"ocwp-quote-{token}-{role}",
+                "--cidfile",
+                str(owned.with_suffix(f".{role}.cid")),
+                "--label",
+                f"ocwp.quote-micro={token}",
+                "--pull",
+                "never",
+                "--cgroupns",
+                "private",
+                "--ipc",
+                "private",
+                "--cpus",
+                "1",
+                "--read-only",
+                "--cap-drop",
+                "ALL",
+                "--security-opt",
+                "no-new-privileges:true",
+                "--log-driver",
+                "none",
+                "--memory",
+                f"{memory}m",
+                "--memory-swap",
+                f"{memory}m",
+                "--pids-limit",
+                str(pids),
+                "--network",
+                network,
+                "--shm-size",
+                "64m",
             ]
             for path, options in FULL_TMPFS["db" if role == "db" else "worker"].items():
                 args.extend(["--tmpfs", f"{path}:{options}"])
             if role == "db":
-                args.extend([
-                    "--user", "postgres", "--env", "POSTGRES_PASSWORD=ocwp-synthetic",
-                    "--env", "POSTGRES_USER=ocwp", "--env", "POSTGRES_DB=ocwp_quote_full_test",
-                    images[role], "-c", "max_connections=20", "-c", "shared_buffers=64MB",
-                ])
+                args.extend(
+                    [
+                        "--user",
+                        "postgres",
+                        "--env",
+                        "POSTGRES_PASSWORD=ocwp-synthetic",
+                        "--env",
+                        "POSTGRES_USER=ocwp",
+                        "--env",
+                        "POSTGRES_DB=ocwp_quote_full_test",
+                        images[role],
+                        "-c",
+                        "max_connections=20",
+                        "-c",
+                        "shared_buffers=64MB",
+                    ]
+                )
             else:
-                args.extend([
-                    "--user", "10001:10001", "--workdir", "/app", "--entrypoint",
-                    "/app/.venv/bin/python", images[role], "-c", "import time; time.sleep(1200)",
-                ])
+                args.extend(
+                    [
+                        "--user",
+                        "10001:10001",
+                        "--workdir",
+                        "/app",
+                        "--entrypoint",
+                        "/app/.venv/bin/python",
+                        images[role],
+                        "-c",
+                        "import time; time.sleep(1200)",
+                    ]
+                )
             creation_uncertain = True
             cid = identifier(execute(args))
             creation_uncertain = False
@@ -1238,8 +1342,19 @@ def supervise_python(
                 containment["resource_samples"][role] += 1
         while True:
             try:
-                execute(["docker", "exec", containers["db"], "pg_isready", "-U", "ocwp",
-                         "-d", "ocwp_quote_full_test"], timeout=2)
+                execute(
+                    [
+                        "docker",
+                        "exec",
+                        containers["db"],
+                        "pg_isready",
+                        "-U",
+                        "ocwp",
+                        "-d",
+                        "ocwp_quote_full_test",
+                    ],
+                    timeout=2,
+                )
                 break
             except ProofFailure:
                 if time.monotonic() >= deadline:
@@ -1249,9 +1364,13 @@ def supervise_python(
         business = True
         deadline = min(time.monotonic() + FULL_SECONDS, outer_deadline - 55)
         environment = [
-            "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/tmp/ocwp-tests",
-            "TMPDIR=/tmp/ocwp-tests", "PYTHONDONTWRITEBYTECODE=1", "PYTHONUNBUFFERED=1",
-            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1", "OCWP_FULL_PYTHON=contained",
+            "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin",
+            "HOME=/tmp/ocwp-tests",
+            "TMPDIR=/tmp/ocwp-tests",
+            "PYTHONDONTWRITEBYTECODE=1",
+            "PYTHONUNBUFFERED=1",
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+            "OCWP_FULL_PYTHON=contained",
             "OCWP_FULL_PYTHON_IDENTITY="
             + json.dumps(identity, sort_keys=True, separators=(",", ":")),
             "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_full_test",
@@ -1279,9 +1398,22 @@ def supervise_python(
 
         with tempfile.TemporaryFile() as output:
             child = subprocess.Popen(
-                ["docker", "exec", worker, "env", "-i", *environment,
-                 "/app/.venv/bin/python", "-m", "pytest", *FULL_PYTHON_ARGS],
-                stdout=output, stderr=output, start_new_session=True, preexec_fn=cap_output,
+                [
+                    "docker",
+                    "exec",
+                    worker,
+                    "env",
+                    "-i",
+                    *environment,
+                    "/app/.venv/bin/python",
+                    "-m",
+                    "pytest",
+                    *FULL_PYTHON_ARGS,
+                ],
+                stdout=output,
+                stderr=output,
+                start_new_session=True,
+                preexec_fn=cap_output,
             )
             try:
                 while child.poll() is None:
@@ -1419,8 +1551,7 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
         write_full_python_json(evidence, report)
     except (ProofFailure, FullPythonEvidenceError, ValueError, OSError):
         if report is not None:
-            report.update(status="failed", failure="cleanup_failed",
-                          independent_cleanup="failed")
+            report.update(status="failed", failure="cleanup_failed", independent_cleanup="failed")
             write_full_python_json(evidence, report)
         raise ProofFailure("full_python_unqualified") from None
 
