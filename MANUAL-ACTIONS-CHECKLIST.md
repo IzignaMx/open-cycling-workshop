@@ -1,5 +1,12 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Full-Python route finite verification · 2026-10-18
+
+- [ ] Close exact source review and execute the [214-case plus six-static selection](docs/10-spec-development/2026-10-18-full-python-route-checks.md) under its two independent 20-second limits.
+- [ ] Independently verify complete source/count/output/resource/cleanup evidence; preparation is not a passing result.
+- [ ] Verify the changed workflow formatting and fixed full-suite image before complete integration qualification.
+- [ ] Preserve six required restores, both ordinary large specimens and exactly 58 intentional skip identities in the later full collection; retain separate recovery/activation obligations.
+
 ## Joint bounded quote-effects candidate · 2026-10-17
 
 - [x] Independently verify six corrected PostgreSQL 0012 cases in run 39053813148.
@@ -19,8 +26,9 @@
 - [x] Close the import-order finding: repository and Ruff passed in run 39078500578.
 - [x] Verify the retained formatter hunk and all six static commands in run 39078898414, with independent evidence review.
 - [ ] Close the remaining affected integration regressions on the final intended integration tree.
-- [ ] Close the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md): 259 cases in complete passing groups; three test-adapter failures and one lint failure remain open after run 39080692255.
-- [ ] Verify the [78-check corrected oracle/static selection](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md) against its exact reviewed source.
+- [ ] Close the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md): its original four failures are preserved; corrected functional cases passed in run 39082181517, and the static closure passed in run 39082876503; final integration-tree qualification remains open.
+- [x] Verify all 66 corrected functional cases and six mocks in the [oracle correction](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md), run 39082181517.
+- [x] Close its retained formatter failure and three unrun commands in run 39082876503 through the [12-check mock/static selection](docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md).
 - [ ] Review ordinary pull-request CI workload containment before opening the clean integration PR; its full Python selection includes specimens excluded from the finite groups.
 - [x] Verify three migration integrity cases and nine phases in run 39066342042.
 - [x] Verify valid historical 0012 migration/replay in run 39065290465.

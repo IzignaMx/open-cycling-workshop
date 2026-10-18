@@ -143,16 +143,12 @@ PG_SELECTIONS = {
     ),
     "pg_schema_immutable10": (
         "services/platform/tests/quotes/test_quote_schema.py",
-        (
-            ("test_financial_history_update_delete_are_refused", 10),
-        ),
+        (("test_financial_history_update_delete_are_refused", 10),),
         "not sqlite",
     ),
     "pg_schema_operations11": (
         "services/platform/tests/quotes/test_quote_schema.py",
-        (
-            ("test_operation_result_proof_and_effect_completeness", 11),
-        ),
+        (("test_operation_result_proof_and_effect_completeness", 11),),
         "not sqlite",
     ),
     "pg_schema_other5": (
@@ -171,16 +167,12 @@ PG_SELECTIONS = {
     ),
     "pg_cutover_head1": (
         "services/platform/tests/identity/test_cutover_migration.py",
-        (
-            ("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),
-        ),
+        (("test_cutover_initializes_unique_canonical_incarnations_without_changing_tenancy", 1),),
         "not sqlite",
     ),
     "pg_branding_head1": (
         "services/platform/tests/branding/test_profile_migration.py",
-        (
-            ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),
-        ),
+        (("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1),),
         "not sqlite",
     ),
     "pg_repository_create3": (
@@ -193,9 +185,7 @@ PG_SELECTIONS = {
     ),
     "pg_repository_append4": (
         "services/platform/tests/quotes/test_quote_repository_postgres.py",
-        (
-            ("test_current_head_and_sequence_allow_only_one_competing_append", 4),
-        ),
+        (("test_current_head_and_sequence_allow_only_one_competing_append", 4),),
         "not sqlite",
     ),
     "pg_repository_rollback4": (
@@ -291,9 +281,7 @@ EXISTING_JUNIT_SELECTIONS = {
     "sqlite_reconstruction_corrupt37": (
         (
             "services/platform/tests/quotes/test_quote_reconstruction.py",
-            (
-                ("test_corrupt_result_or_receipt_is_rejected", 37, 96),
-            ),
+            (("test_corrupt_result_or_receipt_is_rejected", 37, 96),),
         ),
     ),
     "sqlite_reconstruction_other20": (
@@ -438,17 +426,13 @@ EXISTING_JUNIT_SELECTIONS = {
         ),
         (
             "services/platform/tests/branding/test_profile_migration.py",
-            (
-                ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),
-            ),
+            (("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),),
         ),
     ),
     "generic_callers17": (
         (
             "services/platform/tests/events/test_outbox.py",
-            (
-                ("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),
-            ),
+            (("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),),
         ),
         (
             "services/platform/tests/sync/test_rest_change_feed.py",
@@ -499,17 +483,13 @@ EXISTING_JUNIT_SELECTIONS = {
     "cutover_preconditions16": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),
-            ),
+            (("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),),
         ),
     ),
     "cutover_schema20": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_operator_refuses_unqualified_schema_without_effects", 20, 24),
-            ),
+            (("test_operator_refuses_unqualified_schema_without_effects", 20, 24),),
         ),
     ),
     "cutover_cas_audit16": (
@@ -1146,9 +1126,9 @@ def test_typed_postgres_collection_contract(pg, monkeypatch):
         for fault in ("unexpected_params", "missing_parameterized_callspec", "foreign_function"):
             bad = deepcopy(items)
             if fault == "unexpected_params":
-                next(item for item in bad if not hasattr(item, "callspec")).callspec = (
-                    SimpleNamespace(params={"identity_migration_database": "postgres"})
-                )
+                next(
+                    item for item in bad if not hasattr(item, "callspec")
+                ).callspec = SimpleNamespace(params={"identity_migration_database": "postgres"})
             elif fault == "missing_parameterized_callspec":
                 del next(item for item in bad if hasattr(item, "callspec")).callspec
             else:
@@ -1745,9 +1725,10 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         "selection_static12",
     )
     assert sum(JUNIT_COUNTS[group] for group in combined.ORACLE_GROUPS) == 78
-    assert tuple(
-        key for key in EXISTING_JUNIT_SELECTIONS if key.startswith("sqlite_")
-    ) == combined.SQLITE_GROUPS
+    assert (
+        tuple(key for key in EXISTING_JUNIT_SELECTIONS if key.startswith("sqlite_"))
+        == combined.SQLITE_GROUPS
+    )
     assert combined.SEMANTIC_FORMAT_BRANCH == "refs/heads/codex/quote-semantic-format-checks"
     assert combined.SEMANTIC_FORMAT_WORKFLOW == ".github/workflows/quote-semantic-format-checks.yml"
     assert combined.SEMANTIC_STYLE_BRANCH == "refs/heads/codex/quote-semantic-style-checks"

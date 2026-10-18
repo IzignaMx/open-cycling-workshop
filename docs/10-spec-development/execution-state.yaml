@@ -1,7 +1,70 @@
 schema: 1
 
+full_python_route_checks_20261018:
+  status: prepared_pending_verification
+  source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  helper_cases: 99
+  verifier_cases: 108
+  existing_workflow_repository_guards: 7
+  new_mock_cases: 129
+  preserved_cases: 85
+  static_commands: 6
+  total_planned_checks: 220
+  serialized_groups: 2
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 40
+  worker_cpus: 1
+  worker_memory_mib: 512
+  worker_pids: 64
+  mock_junit_upper_bytes: 41156
+  mock_receipt_upper_bytes: 42365
+  mock_record_limit_bytes: 65536
+  mock_stdout_limit_bytes: 16384
+  static_stdout_limit_bytes: 32768
+  candidate_source_pins: 52
+  locked_input_pins: 4
+  collection_static_mock_build_runtime: unrun
+  clean_route_and_functional_source: preserved
+  full_suite_and_activation: pending
+  evidence: docs/10-spec-development/2026-10-18-full-python-route-checks.md
+
+quote_oracle_format_closure_20261018:
+  status: verified_fixed_scope_independently_reviewed
+  source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  prior_run: 39082181517
+  retained_format_output_bytes: 9755
+  format_hunks: 15
+  auxiliary_files_formatted: 3
+  planned_checks: 12
+  planned_groups: 1
+  workload_seconds: 20
+  runtime: passed
+  run_id: 39082876503
+  source_commit: 1d32c9a4b91b6e3b2cc0a1ec2c6e54329b24a5ef
+  source_tree: ef961b9a12780a3a618f3fe5bbcdd90bfce2cb9e
+  artifact_id: 12119921296
+  checks_passed: 12
+  failures_errors_skips_unrun: 0
+  measured_workload_seconds: 14.579792505
+  final_pretermination_worker_peak_bytes: 283918336
+  cleanup: primary_and_independent_absence_verified
+  full_integration: pending
+  evidence: docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md
+
 quote_oracle_adapter_correction_20261018:
-  status: exact_source_independently_reviewed_runtime_pending
+  status: functional_passed_formatter_failed_independently_reviewed
+  run_id: 39082181517
+  source_commit: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  source_tree: 7136fdb0d7d5642839af9963caa09461571d8775
+  functional_cases_passed: 66
+  selection_mocks_passed: 6
+  repository_and_ruff: passed
+  formatter: failed_complete_retained_diff
+  types_openapi_client: unrun
+  observed_passes: 74
+  failures: 1
+  unrun_checks: 3
+  cleanup: all_four_primary_and_independent_absence_verified
   source_base: dea1a661c81fee3aa1ce907f095a1709edb82d6e
   original_failed_run: 39080692255
   product_change: none
@@ -10,7 +73,7 @@ quote_oracle_adapter_correction_20261018:
   planned_groups: 4
   workload_seconds_per_group: 20
   maximum_business_allocation_seconds: 80
-  runtime: unexecuted
+  runtime: partial_failed_formatter
   evidence: docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md
 
 quote_existing_integration_checks_20261017:

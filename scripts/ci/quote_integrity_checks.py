@@ -32,10 +32,10 @@ BASELINE = ROOT / "scripts/ci/frozen_quote_guard/baseline_323661ad.py"
 BASELINE_SHA = "1d7e19e627d9b0506813a12b76829defa9905550537f00a2a8e5d5c359149db6"
 CANDIDATE_SHA = {
     "scripts/ci/quote_capacity_micro.py": (
-        "39f60d861187048878b32b55f3834168ca19f199c1e090d38bffb37fe9db0d6b"
+        "bff6f743f5e0c8959f4c00476514a42edf4931144b0207eb1675ae2f366be5fa"
     ),
     "tests/operations/test_quote_integrity_static_contracts.py": (
-        "859c73712905b69aab4cef4ffd826d9d1f647590123629d3fb43070afbc1532b"
+        "152c2ab380b631c6c41f6f3c29669a4fa6777ee616a5ce88faca8066dc6c68ed"
     ),
     "services/platform/src/cycling_workshop/quotes/repository.py": (
         "8a672931a4b5a8cff831f1466e7bd97bd1b31d2991f77b6160ebce69501bbe91"
@@ -59,10 +59,10 @@ CANDIDATE_SHA = {
         "52aca207fc09a15aae626947d622a32085533d7ed4225d988dce32541630a877"
     ),
     "scripts/ci/quote_integrity_postgres.py": (
-        "7cf77d3ac510e397c1c875b2e5c21edae4dcb105961e1ed1506f453bb44268d6"
+        "a6798d59dd1e11721a11e31d24e1bfbfbdef483bc08e5253d590d9096338835d"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "e7880085e2d19ff3f55b6afff1c594ca7579cb1b87f89b3a32abf109d2fa5055"
+        "07c8f1bc4dbfc9eb0083c348195f487534a11f09708661b7dff2b689a22d39e5"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -166,7 +166,25 @@ CANDIDATE_SHA = {
     "services/platform/tests/sync/test_sync_service.py": (
         "0b069ad9dfd3dd62abfdb4ab17b3603e10fe0759130e7570b884c60f6fb4345d"
     ),
+    ".github/workflows/quote-full-python-mock-static.yml": (
+        "1179950616d30f852766bff7a8f513f2d807881c4a722e4f37f5746e4fc4b087"
+    ),
+    ".github/workflows/ci.yml": "894ba53c299c205cd53d427c19c3fbea6fc2fa0b5dd5b143a649038d8d70512c",
+    "scripts/ci/verify_v01.py": "e65603f2aa317323d243d1c39ac3f69dba9ea6d271485faf6cb9ca3be0fa38e9",
+    "tests/operations/test_quote_capacity_micro.py": (
+        "3864e984551af2094540c33faca484ead724f2b92efd14cb391f17abf5341eb9"
+    ),
+    "tests/ci/test_verify_v01.py": (
+        "649e60ebccc33c02a38ed464697b8007ff65f1deef585177e79195614566f10b"
+    ),
+    "tests/operations/test_ci_contract.py": (
+        "d0415cf03d8b206ba984aedb5fe900158ec2b6917727b65b898e3819cdb445cd"
+    ),
+    "tests/repository/test_repository_contract.py": (
+        "d357c050cde8fa86872aec57bb85acfebee1bd2bfab5e5ff0fa35506e40fe0aa"
+    ),
 }
+
 LOCKED_INPUT_SHA = {
     "pyproject.toml": "fd9f19fdeea77c028552a7f9aaeaa3adb42358fa4859c7d7229ae27d6e859be5",
     "uv.lock": "4439fc18e440130de10912aecf5a0cb7b18d4a27714e1c4fc20ccb4a4011febb",
@@ -176,6 +194,17 @@ LOCKED_INPUT_SHA = {
     "LICENSE": "5132c7f0475b02c8107a2e0f0363e70423c62d2664ab927e76193226e5e05905",
 }
 LIMIT = 16 * 1024
+FULL_CHECKS_BRANCH = "refs/heads/codex/quote-full-python-mock-static"
+FULL_CHECKS_WORKFLOW = ".github/workflows/quote-full-python-mock-static.yml"
+FULL_CHECKS_GROUPS = ("aggregate_mocks214", "static6")
+INTENDED_SOURCE = {
+    "intended_source_base": "dea1a661c81fee3aa1ce907f095a1709edb82d6e",
+    "intended_source_tree": "d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f",
+    "intended_source_manifest_sha256": (
+        "b7a10c7c2416cae95d93136ef3865a8e2b085eae6ceb6cbee363819f7cb6d3e3"
+    ),
+    "preserved_functional_reference": "b353c4b4d364ebfbcd1dc98134017c8bc6aae609",
+}
 BRANCH = "refs/heads/codex/quote-integrity-checks"
 WORKFLOW = ".github/workflows/quote-integrity-checks.yml"
 STYLE_BRANCH = "refs/heads/codex/quote-integrity-style-checks"
@@ -205,6 +234,10 @@ RESPONSE_PATH = "services/platform/tests/quotes/test_quote_command_response.py"
 STATIC_PATH = "tests/operations/test_quote_integrity_static_contracts.py"
 SELECTION_PATH = "tests/operations/test_quote_integrity_selection.py"
 SOURCE_CLASSES = {
+    "tests/operations/test_quote_capacity_micro.py": "tests.operations.test_quote_capacity_micro",
+    "tests/ci/test_verify_v01.py": "tests.ci.test_verify_v01",
+    "tests/operations/test_ci_contract.py": "tests.operations.test_ci_contract",
+    "tests/repository/test_repository_contract.py": "tests.repository.test_repository_contract",
     SERVICE_PATH: "services.platform.tests.quotes.test_quote_application_service",
     ATOMIC_PATH: "services.platform.tests.quotes.test_quote_atomic_effects",
     RESPONSE_PATH: "services.platform.tests.quotes.test_quote_command_response",
@@ -259,6 +292,135 @@ SOURCE_CLASSES = {
 }
 # Complete fixed functions: count and maximum JSON-encoded parameter suffix bytes.
 GROUPS = {
+    "aggregate_mocks214": (
+        (
+            "tests/operations/test_quote_capacity_micro.py",
+            (
+                ("test_exact_enforced_limits_and_numeric_counters", 1, 0),
+                ("test_full_route_stops_worker_before_reaping_failed_exec_client", 1, 0),
+                ("test_full_route_unverified_stop_stays_failure_even_after_client_hygiene", 1, 0),
+                ("test_full_diagnostic_retains_only_the_bounded_host_spool", 1, 0),
+                (
+                    "test_full_record_capture_accepts_only_fixed_names_and_typed_pending_marker",
+                    1,
+                    0,
+                ),
+                ("test_full_stop_requires_exact_terminal_state", 4, 16),
+                ("test_full_boundary_has_fixed_memory_shm_and_only_declared_scratch", 6, 24),
+                ("test_full_scratch_uses_kernel_bytes_inodes_permissions_and_flags", 10, 24),
+                ("test_full_preflight_failure_has_no_candidate_launch_and_cannot_qualify", 1, 0),
+                ("test_independent_absence_cannot_promote_failed_or_missing_proof", 1, 0),
+                ("test_full_supervisor_terminal_paths_require_stop_and_both_cleanups", 5, 16),
+                ("test_missing_or_wrong_containment_fails_closed", 9, 128),
+                ("test_cpu_counters_cannot_go_backwards_or_exceed_budget", 1, 0),
+                ("test_cleanup_failure_is_not_absence", 1, 0),
+                ("test_cleanup_requires_successful_listing_and_absence", 1, 0),
+                ("test_cleanup_success_reverses_creation_order", 1, 0),
+                ("test_invalid_container_id_never_reaches_docker", 1, 0),
+                ("test_failed_preflight_never_launches_specimen", 1, 0),
+                ("test_bounded_client_rejects_output_overflow", 1, 0),
+                ("test_bounded_client_terminates_sleeping_process_group", 1, 0),
+                ("test_actual_shell_probe_delimiters", 1, 0),
+                ("test_closed_micro_report_rejects_raw_proof_and_nonfinite_timings", 1, 0),
+                ("test_supervisor_success_and_terminal_failures_are_closed", 14, 64),
+                ("test_effective_privileges_fail_closed", 5, 128),
+                ("test_effective_privileges_are_observed", 1, 0),
+                ("test_invalid_ownership_manifest_never_calls_docker", 5, 16),
+                ("test_owner_discovery_checks_image_and_label_before_removal", 1, 0),
+                ("test_canary_kills_client_then_requires_descendant_chain_and_removal", 5, 96),
+                ("test_source_status_never_refreshes_large_index", 1, 0),
+                ("test_failed_client_retains_only_numeric_returncode", 1, 0),
+                ("test_source_failure_records_closed_stage_and_returncode", 1, 0),
+                ("test_fixed_feasibility_schema_accepts_only_reviewed_specimen", 1, 0),
+                ("test_fixed_feasibility_metrics_fail_closed", 6, 64),
+                ("test_record_failure_diagnostic_is_closed", 1, 0),
+                ("test_record_failure_diagnostic_refuses_unclosed_fields", 6, 16),
+            ),
+        ),
+        (
+            "tests/ci/test_verify_v01.py",
+            (
+                ("test_probe_tool_requires_the_executable_to_run_successfully", 1, 0),
+                (
+                    "test_browser_runtime_checks_are_explicitly_blocked_"
+                    "without_pnpm_or_e2e_database",
+                    1,
+                    0,
+                ),
+                ("test_indexeddb_runtime_check_preserves_environment_blockers", 1, 0),
+                ("test_static_analysis_checks_run_available_python_and_frontend_tools", 1, 0),
+                (
+                    "test_static_analysis_checks_report_blocked_groups_without_executing_commands",
+                    1,
+                    0,
+                ),
+                ("test_qualification_metadata_identifies_commit_and_runtime", 1, 0),
+                (
+                    "test_postgresql_runtime_checks_block_when_driver_or_database_is_unavailable",
+                    1,
+                    0,
+                ),
+                ("test_postgresql_runtime_checks_execute_integration_when_ready", 1, 0),
+                (
+                    "test_qualifier_browser_evidence_is_isolated_even_with_inherited_direct_paths",
+                    1,
+                    0,
+                ),
+                ("test_qualifier_requires_real_pinned_old_build_before_browser_setup", 1, 0),
+                ("test_full_python_receipt_consumes_all_three_controls_once", 1, 0),
+                ("test_full_python_receipt_rejects_stale_or_wrong_context", 15, 96),
+                ("test_full_python_receipt_requires_inner_source_identity", 2, 16),
+                ("test_full_python_receipt_requires_every_large_restore_and_database_case", 11, 40),
+                ("test_full_python_receipt_requires_unique_bijective_inventory", 5, 24),
+                ("test_full_python_exit_zero_alone_never_proves_completion", 8, 32),
+                ("test_full_python_phase_duration_is_strict_bounded_microseconds", 6, 16),
+                ("test_full_python_fail_fast_tail_is_unrun_not_passed", 2, 16),
+                ("test_full_python_restore_dependency_skips_are_never_allowed", 6, 40),
+                ("test_full_python_exact_skip_ledger_rejects_replacement_or_wrong_phase", 1, 0),
+                (
+                    "test_full_python_classifier_uses_complete_typed_parameters_"
+                    "not_nodeid_spelling",
+                    1,
+                    0,
+                ),
+                ("test_full_python_containment_is_required_for_success", 16, 32),
+                ("test_full_python_both_cleanup_proofs_are_required", 2, 24),
+                ("test_full_python_finalizer_can_only_accept_exact_provisional_success", 1, 0),
+                ("test_full_python_count_reconciliation_rejects_booleans_and_wrong_totals", 4, 24),
+                (
+                    "test_full_python_reader_rejects_duplicate_nonfinite_truncated_or_wrong_json",
+                    6,
+                    24,
+                ),
+                ("test_full_python_reader_and_writer_enforce_strict_size_and_regular_files", 1, 0),
+                ("test_full_python_missing_failed_and_unrun_receipts_fail_all_controls", 1, 0),
+                ("test_full_python_protocol_size_is_bounded_at_node_ceiling", 1, 0),
+                ("test_full_python_plugin_is_inert_outside_contained_mode", 1, 0),
+                ("test_full_python_plugin_seals_hashed_inventory_before_reports", 1, 0),
+                ("test_full_python_plugin_normalizes_only_exact_skip_reason", 2, 40),
+                ("test_full_python_plugin_rejects_out_of_order_and_duplicate_reports", 1, 0),
+                ("test_full_python_expected_context_uses_checkout_and_job_outputs", 1, 0),
+                ("test_full_python_aggregate_never_falls_back_and_allow_blocked_cannot_pass", 2, 8),
+            ),
+        ),
+        (
+            "tests/operations/test_ci_contract.py",
+            (
+                ("test_ci_workflow_runs_repository_backend_frontend_and_contract_checks", 1, 0),
+                ("test_ci_supports_manual_dispatch_and_exports_generated_lockfiles", 1, 0),
+                ("test_direct_browser_evidence_upload_immediately_follows_e2e", 1, 0),
+            ),
+        ),
+        (
+            "tests/repository/test_repository_contract.py",
+            (
+                ("test_ci_and_v01_verifier_execute_api_client_behavior_tests", 1, 0),
+                ("test_root_scripts_and_ci_use_normative_uv_and_static_quality_gates", 1, 0),
+                ("test_ci_postgres_service_healthcheck_matches_the_e2e_database_name", 1, 0),
+                ("test_ci_publishes_a_v01_qualification_artifact", 1, 0),
+            ),
+        ),
+    ),
     "service27": (
         (
             SERVICE_PATH,
@@ -430,9 +592,7 @@ GROUPS = {
     "sqlite_reconstruction_corrupt37": (
         (
             "services/platform/tests/quotes/test_quote_reconstruction.py",
-            (
-                ("test_corrupt_result_or_receipt_is_rejected", 37, 96),
-            ),
+            (("test_corrupt_result_or_receipt_is_rejected", 37, 96),),
         ),
     ),
     "sqlite_reconstruction_other20": (
@@ -577,17 +737,13 @@ GROUPS = {
         ),
         (
             "services/platform/tests/branding/test_profile_migration.py",
-            (
-                ("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),
-            ),
+            (("test_branding_upgrade_preserves_accounts_and_qualifies_cutover_recovery", 1, 8),),
         ),
     ),
     "generic_callers17": (
         (
             "services/platform/tests/events/test_outbox.py",
-            (
-                ("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),
-            ),
+            (("test_enqueue_outbox_persists_an_unpublished_event_in_same_session", 1, 0),),
         ),
         (
             "services/platform/tests/sync/test_rest_change_feed.py",
@@ -638,17 +794,13 @@ GROUPS = {
     "cutover_preconditions16": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),
-            ),
+            (("test_recovery_rejects_noncanonical_precondition_without_changes", 16, 64),),
         ),
     ),
     "cutover_schema20": (
         (
             "services/platform/tests/ops/test_cutover_cli.py",
-            (
-                ("test_operator_refuses_unqualified_schema_without_effects", 20, 24),
-            ),
+            (("test_operator_refuses_unqualified_schema_without_effects", 20, 24),),
         ),
     ),
     "cutover_cas_audit16": (
@@ -668,6 +820,7 @@ GROUPS = {
     ),
 }
 GROUP_COUNTS = {
+    "aggregate_mocks214": 214,
     "service27": 27,
     "atomic18_corruption": 18,
     "atomic18_other": 18,
@@ -730,6 +883,7 @@ NODES = tuple(f"{path}::{name}" for path, cases in SELECTION for name, _, _ in c
 EXPECTED_COUNTS = {name: count for _, cases in SELECTION for name, count, _ in cases}
 CLASS_NAMES = [SOURCE_CLASSES[path] for path, _ in SELECTION]
 CASE_COUNT = GROUP_COUNTS.get(GROUP_KEY, 0)
+RECORD_LIMIT = 64 * 1024 if GROUP_KEY == "aggregate_mocks214" else LIMIT
 SPOOL_LIMIT = 32 * 1024 if GROUP_KEY in ("static6", "selection_static12") else LIMIT
 JUNIT_PATH = "/tmp/quote-integrity-checks.xml"
 PYTEST = [
@@ -841,8 +995,11 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == ORACLE_BRANCH:
         require(GROUP_KEY in ORACLE_GROUPS)
         branch, workflow = ORACLE_BRANCH, ORACLE_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == FULL_CHECKS_BRANCH:
+        require(GROUP_KEY in FULL_CHECKS_GROUPS)
+        branch, workflow = FULL_CHECKS_BRANCH, FULL_CHECKS_WORKFLOW
     else:
-        require(GROUP_KEY not in EXISTING_GROUPS)
+        require(GROUP_KEY not in EXISTING_GROUPS and GROUP_KEY != "aggregate_mocks214")
     require(os.environ.get("GITHUB_REF") == branch)
     require(os.environ.get("GITHUB_RUN_NUMBER") == "1")
     require(os.environ.get("GITHUB_RUN_ATTEMPT") == "1")
@@ -882,12 +1039,13 @@ def base_report() -> dict:
         "postgresql_qualified": False,
         "capacity_qualified": False,
         "activation_qualified": False,
+        **(INTENDED_SOURCE if os.environ.get("GITHUB_REF") == FULL_CHECKS_BRANCH else {}),
     }
 
 
 def write_report(name: str, value: dict) -> None:
     raw = json.dumps(value, allow_nan=False, sort_keys=True, separators=(",", ":")) + "\n"
-    require(len(raw.encode("utf-8")) < LIMIT)
+    require(len(raw.encode("utf-8")) < RECORD_LIMIT)
     target = ROOT / "artifacts" / name
     target.parent.mkdir(exist_ok=True)
     target.write_text(raw)
@@ -1210,7 +1368,7 @@ def client_exit_without_reaping(child: subprocess.Popen) -> int | None:
 
 def parse_junit(raw: str) -> dict:
     # No candidate hooks or generated parameter IDs are trusted as the selector.
-    require(0 < len(raw.encode("utf-8")) < LIMIT)
+    require(0 < len(raw.encode("utf-8")) < RECORD_LIMIT)
     require("<!DOCTYPE" not in raw.upper() and "<!ENTITY" not in raw.upper())
     root = ET.fromstring(raw)
     require(root.tag == "testsuites" and set(root.attrib) == {"name"})
@@ -1388,18 +1546,27 @@ def run_guard(helper) -> None:
                 final_read = Stage(helper, min(time.monotonic() + 5, worker_deadline))
                 # Parse only bounded all-pass XML before stopping the worker.
                 # Any failure output is read locally only after stop and client reap.
-                raw = final_read(
-                    [
-                        "docker",
-                        "exec",
-                        worker,
-                        "/app/.venv/bin/python",
-                        "-c",
-                        "from pathlib import Path; import sys; "
-                        f"data=Path({JUNIT_PATH!r}).open('rb').read({LIMIT}); "
-                        f"sys.exit(2) if len(data)>={LIMIT} else sys.stdout.buffer.write(data)",
-                    ]
-                )
+                # Only this fixed larger inventory uses the reviewed 64-KiB reader.
+                # Restore the frozen helper's 16-KiB control limit before any parser,
+                # resource observation, cancellation or cleanup call, including errors.
+                require(helper.LIMIT == LIMIT)
+                helper.LIMIT = RECORD_LIMIT
+                try:
+                    raw = final_read(
+                        [
+                            "docker",
+                            "exec",
+                            worker,
+                            "/app/.venv/bin/python",
+                            "-c",
+                            "from pathlib import Path; import sys; "
+                            f"data=Path({JUNIT_PATH!r}).open('rb').read({RECORD_LIMIT}); "
+                            f"sys.exit(2) if len(data)>={RECORD_LIMIT} "
+                            "else sys.stdout.buffer.write(data)",
+                        ]
+                    )
+                finally:
+                    helper.LIMIT = LIMIT
                 report["result"] = parse_junit(raw)
                 previous = resource_sample(helper, worker, final_read, previous)
                 final_read.check()

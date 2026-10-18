@@ -1,5 +1,19 @@
 # Changelog
 
+## Full-Python route verification preparation · 2026-10-18
+
+- Prepare 214 complete helper/verifier/CI guard cases and the existing six static commands in two serialized 20-second workloads. Collection and execution remain unrun.
+- Preserve the clean route and corrected functional source; reuse the contained Python/Git image and disclosed tiny subprocess probes.
+- Bound only the 214-case XML/receipt at 64 KiB, justified by 41,156-byte XML and 42,365-byte report bounds. Other output and resource limits remain unchanged.
+- [Scope, prior evidence and pending full-suite gates](docs/10-spec-development/2026-10-18-full-python-route-checks.md).
+
+## Quote oracle functional evidence and static formatting · 2026-10-18
+
+- Verify all 66 corrected functional cases in run 39082181517. Six mocks, repository and lint also passed; formatter failed with 15 complete layout hunks in three auxiliary files, leaving types and both contracts unrun.
+- Preserve that result and prepare only the retained format changes plus the existing 12-check mock/static workload under unchanged limits. Product and functional test behavior remain unchanged.
+- Verify the 12-check closure in run 39082876503: all checks passed in 14.580 seconds, with exact source identity and cleanup independently verified. Full integration remains pending.
+- [Evidence and closure](docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md).
+
 ## Quote-only oracle adapter correction · 2026-10-18
 
 - Preserve the existing regression run 39080692255: 259 cases in complete passing groups, including 39 PostgreSQL cases; four failed groups and all cleanup evidence retained.

@@ -1,28 +1,24 @@
-"""Finite, quote-only hosted containment preflight. There is no maximum mode."""
+"""Fixed contained CI workloads; no arbitrary selector or maximum-capacity mode."""
 
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import math
 import os
 import re
 import resource
-import shutil
 import signal
 import subprocess
 import tempfile
 import time
-from collections.abc import Callable, Iterator
-from contextlib import suppress
+from collections.abc import Callable
 from pathlib import Path
 from types import FrameType
 from typing import cast
 from uuid import uuid4
 
 LIMIT = 16 * 1024
-SERVICE_OUTPUT_LIMIT = 32 * 1024
 FIELDS = (
     "memory.max",
     "memory.swap.max",
@@ -37,6 +33,29 @@ FIELDS = (
 PROBE = "set -eu; cat /proc/self/cgroup; " + "".join(
     f"printf '\\n---{field}---\\n'; cat /sys/fs/cgroup/{field}; " for field in FIELDS
 )
+
+FULL_SPOOL_LIMIT = 1024 * 1024
+FULL_RECORD_LIMIT = 4 * 1024 * 1024
+FULL_SECONDS = 900
+FULL_OUTER_SECONDS = 1020
+FULL_CPU_SECONDS = 2060
+FULL_SHM_BYTES = 64 * 1024 * 1024
+FULL_TMPFS = {
+    "worker": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=64m,nr_inodes=16384,mode=1777",
+        "/tmp/ocwp-tests": (
+            "rw,exec,nosuid,nodev,size=64m,nr_inodes=16384,uid=10001,gid=10001,mode=0700"
+        ),
+        "/tmp/ocwp-proof": (
+            "rw,noexec,nosuid,nodev,size=16m,nr_inodes=32,uid=10001,gid=10001,mode=0700"
+        ),
+    },
+    "db": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=64m,nr_inodes=16384,mode=1777",
+        "/var/lib/postgresql": "rw,noexec,nosuid,nodev,size=256m,nr_inodes=32768,mode=1777",
+        "/var/run/postgresql": "rw,noexec,nosuid,nodev,size=16m,nr_inodes=128,mode=1777",
+    },
+}
 
 
 class ProofFailure(RuntimeError):
@@ -112,49 +131,29 @@ def output_limit() -> None:
     resource.setrlimit(resource.RLIMIT_FSIZE, (LIMIT, LIMIT))
 
 
-def service_output_limit() -> None:
-    resource.setrlimit(resource.RLIMIT_FSIZE, (SERVICE_OUTPUT_LIMIT, SERVICE_OUTPUT_LIMIT))
-
-
-def run(
-    args: list[str],
-    *,
-    timeout: float = 5,
-    before_reap: Callable[[], None] | None = None,
-    deadline: float | None = None,
-) -> str:
-    """Bound output and client lifetime; service failure cancels containers before reaping."""
+def run(args: list[str], *, timeout: float = 5) -> str:
+    """Bound Docker/Git client output on disk and never echo raw errors."""
     with tempfile.TemporaryFile() as output:
         try:
-            child = subprocess.Popen(
+            with subprocess.Popen(
                 args, stdout=output, stderr=output, start_new_session=True, preexec_fn=output_limit
-            )
-            started = time.monotonic()
-            try:
-                while child.poll() is None:
-                    if time.monotonic() - started > timeout:
-                        raise ProofFailure("command_timeout")
-                    if os.fstat(output.fileno()).st_size >= LIMIT:
-                        raise ProofFailure("output_limit")
-                    time.sleep(0.02)
+            ) as child:
+                started = time.monotonic()
+                try:
+                    while child.poll() is None:
+                        if time.monotonic() - started > timeout:
+                            raise ProofFailure("command_timeout")
+                        if os.fstat(output.fileno()).st_size >= LIMIT:
+                            raise ProofFailure("output_limit")
+                        time.sleep(0.02)
+                finally:
+                    if child.poll() is None:
+                        os.killpg(child.pid, signal.SIGKILL)
+                        child.wait(timeout=2)
                 if time.monotonic() - started >= timeout:
                     raise ProofFailure("command_timeout")
                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("command_failed", returncode=child.returncode)
-            except (ProofFailure, OSError):
-                if before_reap is not None:
-                    before_reap()
-                raise
-            finally:
-                if child.poll() is None:
-                    os.killpg(child.pid, signal.SIGKILL)
-                    reap_seconds = (
-                        2 if deadline is None else max(0, min(2, deadline - time.monotonic()))
-                    )
-                    try:
-                        child.wait(timeout=reap_seconds)
-                    except subprocess.TimeoutExpired:
-                        raise ProofFailure("client_reap_unverified") from None
         except OSError as error:
             raise ProofFailure("tool_unavailable") from error
         output.seek(0)
@@ -269,12 +268,7 @@ def effective_privileges(
         raise ProofFailure("effective_privileges_unavailable") from error
 
 
-def cancellation_canary(
-    cid: str,
-    execute: Callable[..., str] | None = None,
-    *,
-    aggregate_deadline: float | None = None,
-) -> dict[str, int]:
+def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) -> dict[str, int]:
     """Three sleeping Python generations; terminate client before container cleanup."""
     execute = execute or run
     grandchild = (
@@ -295,8 +289,6 @@ def cancellation_canary(
         start_new_session=True,
     )
     deadline = time.monotonic() + 10
-    if aggregate_deadline is not None:
-        deadline = min(deadline, aggregate_deadline)
     try:
         while True:
             remaining = deadline - time.monotonic()
@@ -309,18 +301,9 @@ def cancellation_canary(
                 )
                 break
             except ProofFailure:
-                if time.monotonic() >= deadline:
-                    raise ProofFailure("canary_readiness") from None
-                time.sleep(min(0.05, deadline - time.monotonic()))
+                time.sleep(0.05)
         os.killpg(client.pid, signal.SIGKILL)
-        try:
-            client.wait(
-                timeout=2
-                if aggregate_deadline is None
-                else max(0, min(2, aggregate_deadline - time.monotonic()))
-            )
-        except subprocess.TimeoutExpired:
-            raise ProofFailure("canary_client_reap_unverified") from None
+        client.wait(timeout=2)
         # Prove the exec client's death did not itself clean up the descendants.
         rows = execute(["docker", "top", cid, "-eo", "pid,ppid"]).splitlines()
         if not rows or rows[0].split() != ["PID", "PPID"]:
@@ -343,21 +326,11 @@ def cancellation_canary(
     finally:
         if client.poll() is None:
             os.killpg(client.pid, signal.SIGKILL)
-            try:
-                client.wait(
-                    timeout=2
-                    if aggregate_deadline is None
-                    else max(0, min(2, aggregate_deadline - time.monotonic()))
-                )
-            except subprocess.TimeoutExpired:
-                raise ProofFailure("canary_client_reap_unverified") from None
+            client.wait(timeout=2)
 
 
-def inspect_owned(
-    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
-) -> None:
-    execute = execute or run
-    fields = execute(
+def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
+    fields = run(
         [
             "docker",
             "inspect",
@@ -375,7 +348,7 @@ def inspect_owned(
         or fields[6:] != ["true"]
     ):
         raise ProofFailure("container_identity")
-    mounts = execute(
+    mounts = run(
         [
             "docker",
             "inspect",
@@ -516,624 +489,6 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
     return value
 
 
-SERVICE_NODES = (
-    "services/platform/tests/quotes/test_quote_service_restore_postgres.py"
-    "::test_real_restore_preserves_version_one_service_effects_and_fresh_replay",
-)
-
-# Fixed public source scope for the six static/contracts commands.
-STATIC_PATHS = (
-    "services/platform/src/cycling_workshop/quotes/effects.py",
-    "services/platform/src/cycling_workshop/quotes/reconstruction.py",
-    "services/platform/src/cycling_workshop/quotes/repository.py",
-    "services/platform/src/cycling_workshop/quotes/responses.py",
-    "services/platform/src/cycling_workshop/quotes/service.py",
-    "services/platform/src/cycling_workshop/sync/writes.py",
-    "services/platform/tests/quotes/test_quote_application_service.py",
-    "services/platform/tests/quotes/test_quote_atomic_effects.py",
-    "services/platform/tests/quotes/test_quote_command_response.py",
-    "services/platform/tests/quotes/test_quote_driver_budgets.py",
-    "services/platform/tests/quotes/test_quote_reconstruction.py",
-    "services/platform/tests/quotes/test_quote_result_codec_once.py",
-    "services/platform/tests/quotes/test_quote_single_pass.py",
-    "scripts/ci/quote_capacity_micro.py",
-    "scripts/ci/quote_collection_regression.py",
-    "scripts/ci/quote_guard_bootstrap.py",
-    "tests/operations/test_quote_capacity_micro.py",
-    "tests/operations/test_quote_service_collection.py",
-    "tests/operations/test_quote_service_static_contracts.py",
-    "services/platform/migrations/versions/0013_quote_order_effect_metadata.py",
-    "services/platform/src/cycling_workshop/db/order_payload_size.py",
-    "services/platform/src/cycling_workshop/events/models.py",
-    "services/platform/src/cycling_workshop/events/outbox.py",
-    "services/platform/src/cycling_workshop/identity/cutover_cli.py",
-    "services/platform/src/cycling_workshop/quotes/models.py",
-    "services/platform/src/cycling_workshop/sync/models.py",
-    "services/platform/src/cycling_workshop/sync/order_projection_integrity.py",
-    "services/platform/tests/branding/test_profile_migration.py",
-    "services/platform/tests/identity/test_administration_postgres.py",
-    "services/platform/tests/identity/test_cutover_migration.py",
-    "services/platform/tests/ops/test_cutover_cli.py",
-    "services/platform/tests/quotes/test_quote_application_service_postgres.py",
-    "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py",
-    "services/platform/tests/quotes/test_quote_effect_metadata.py",
-    "services/platform/tests/quotes/test_quote_historical_upgrade_postgres.py",
-    "services/platform/tests/quotes/test_quote_schema.py",
-    "services/platform/tests/quotes/test_quote_service_restore_postgres.py",
-    "services/platform/tests/sync/test_order_projection_integrity.py",
-    "services/platform/tests/sync/test_prepared_order_change.py",
-)
-STATIC_FAILURE_MARKER = b"OCWP_STATIC_FAILURE_V2:"
-STATIC_FAILURE_LIMIT = 24 * 1024
-SERVICE_REPORT = "/tmp/quote-service-initial-result.json"
-SERVICE_FAILURE_MARKER = b"OCWP_SERVICE_FAILURE_V1:"
-SERVICE_FAILURE_LIMIT = 512
-
-
-def service_argv(cid: str) -> list[str]:
-    """One closed selection; env -i drops inherited pytest/application/PG settings."""
-    return [
-        "docker",
-        "exec",
-        identifier(cid),
-        "env",
-        "-i",
-        "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin",
-        "HOME=/tmp",
-        "PYTHONDONTWRITEBYTECODE=1",
-        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
-        "OCWP_QUOTE_SERVICE_INITIAL=contained",
-        "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
-        "@127.0.0.1:5432/ocwp_quote_micro_test",
-        "/app/.venv/bin/python",
-        "-m",
-        "pytest",
-        "-q",
-        "-o",
-        "addopts=",
-        "-p",
-        "no:cacheprovider",
-        "-p",
-        "scripts.ci.quote_capacity_micro",
-        "--tb=short",
-        "--no-showlocals",
-        "--show-capture=no",
-        "--capture=fd",
-        "--maxfail=1",
-        "--basetemp=/tmp/quote-service-initial",
-        "-W",
-        "error::pytest.PytestUnhandledThreadExceptionWarning",
-        "-W",
-        "error::pytest.PytestUnraisableExceptionWarning",
-        *SERVICE_NODES,
-    ]
-
-
-def strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ProofFailure("service_duplicate_key")
-        result[key] = value
-    return result
-
-
-def reject_constant(_value: str) -> None:
-    raise ProofFailure("service_nonfinite")
-
-
-def postgres_clients(value: object) -> list[dict[str, str]]:
-    """Two exact installed client identities, with no caller-selected executable."""
-    if type(value) is not list or len(value) != 2:
-        raise ProofFailure("service_postgres_identity")
-    for actual, tool in zip(value, ("pg_dump", "pg_restore"), strict=True):
-        if (
-            type(actual) is not dict
-            or set(actual) != {"tool", "path", "version"}
-            or any(type(actual[key]) is not str for key in ("tool", "path", "version"))
-            or actual["tool"] != tool
-            or actual["path"] != f"/usr/lib/postgresql/18/bin/{tool}"
-            or actual["version"]
-            not in {
-                f"{tool} (PostgreSQL) 18.4",
-                f"{tool} (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)",
-            }
-        ):
-            raise ProofFailure("service_postgres_identity")
-    return value
-
-
-def postgres_identity(value: object, node: str) -> dict[str, object]:
-    """One closed restore receipt; final source/target state is observed, not inferred."""
-    if (
-        node not in SERVICE_NODES
-        or type(value) is not dict
-        or set(value) != {"node", "databases", "clients"}
-        or value["node"] != node
-    ):
-        raise ProofFailure("service_postgres_identity")
-    postgres_clients(value["clients"])
-    databases = value["databases"]
-    if type(databases) is not list or len(databases) != 2:
-        raise ProofFailure("service_postgres_identity")
-    suffixes = []
-    for actual, role in zip(databases, ("source", "target"), strict=True):
-        expected = {
-            "node": node,
-            "role": role,
-            "dialect": "postgresql",
-            "driver": "psycopg",
-            "driver_version": "3.3.4",
-            "schema": "public",
-            "search_path": '"$user", public',
-            "server_version_num": 180004,
-            "server_encoding": "UTF8",
-            "client_encoding": "UTF8",
-            "schema_revision": "0013",
-            "probe_connection_closed": True,
-        }
-        if type(actual) is not dict or set(actual) != set(expected) | {"database"}:
-            raise ProofFailure("service_postgres_identity")
-        if any(type(actual[k]) is not type(v) or actual[k] != v for k, v in expected.items()):
-            raise ProofFailure("service_postgres_identity")
-        name = actual["database"]
-        if type(name) is not str:
-            raise ProofFailure("service_postgres_identity")
-        match = re.fullmatch(rf"ocwp_backup_{role}_([0-9a-f]{{32}})_test", name)
-        if match is None:
-            raise ProofFailure("service_postgres_identity")
-        suffixes.append(match[1])
-    if suffixes[0] != suffixes[1]:
-        raise ProofFailure("service_postgres_identity")
-    return value
-
-
-def probe_postgres_identity(engine: object, node: str, role: str) -> dict[str, object]:
-    """Read committed state on one independent connection, closed before returning."""
-    import psycopg
-    from sqlalchemy import text
-
-    with engine.connect() as connection:
-        if not isinstance(connection.connection.driver_connection, psycopg.Connection):
-            raise ProofFailure("service_postgres_identity")
-        observed = connection.execute(
-            text(
-                "SELECT current_database(), current_schema(), current_setting('search_path'), "
-                "current_setting('server_version_num')::integer, "
-                "current_setting('server_encoding'), current_setting('client_encoding'), "
-                "(SELECT version_num FROM public.alembic_version)"
-            )
-        ).one()
-    name, schema, search_path, version, server_encoding, client_encoding, revision = observed
-    return {
-        "node": node,
-        "role": role,
-        "dialect": engine.dialect.name,
-        "driver": engine.dialect.driver,
-        "driver_version": psycopg.__version__,
-        "database": name,
-        "schema": schema,
-        "search_path": search_path,
-        "server_version_num": version,
-        "server_encoding": server_encoding,
-        "client_encoding": client_encoding,
-        "schema_revision": revision,
-        "probe_connection_closed": connection.closed,
-    }
-
-
-def probe_postgres_clients() -> list[dict[str, str]]:
-    clients = []
-    for tool in ("pg_dump", "pg_restore"):
-        found = shutil.which(tool)
-        expected = f"/usr/lib/postgresql/18/bin/{tool}"
-        if found is None or str(Path(found).resolve(strict=True)) != expected:
-            raise ProofFailure("service_postgres_identity")
-        clients.append(
-            dict(tool=tool, path=expected, version=run([expected, "--version"], timeout=2))
-        )
-    return postgres_clients(clients)
-
-
-def observe_postgres(databases: object, request: object) -> Iterator[None]:
-    """Do not open either database until the body has completed its real restore."""
-    from sqlalchemy import create_engine
-    from sqlalchemy.engine import make_url
-
-    node = request.node.nodeid
-    if node not in SERVICE_NODES:
-        raise ProofFailure("service_selection")
-    clients = probe_postgres_clients()
-    yield
-    identities = []
-    for url, role in zip(databases, ("source", "target"), strict=True):
-        engine = create_engine(url, hide_parameters=True)
-        try:
-            identity = probe_postgres_identity(engine, node, role)
-            if identity["database"] != make_url(url).database:
-                raise ProofFailure("service_postgres_identity")
-            identities.append(identity)
-        finally:
-            engine.dispose()
-    receipt = postgres_identity(dict(node=node, databases=identities, clients=clients), node)
-    request.node.user_properties.append(("ocwp_postgres_identity", receipt))
-
-
-def postgres_observer_plugin() -> object:
-    import pytest
-
-    class PostgresObserver:
-        @pytest.fixture(autouse=True)
-        def ocwp_postgres_observer(self, disposable_databases, request):
-            yield from observe_postgres(disposable_databases, request)
-
-    return PostgresObserver()
-
-
-def service_result(raw: str) -> dict[str, object]:
-    """Accept one complete real-restore protocol with its source/target identities."""
-    if len(raw.encode("utf-8")) >= LIMIT:
-        raise ProofFailure("service_report_limit")
-    value = json.loads(raw, object_pairs_hook=strict_object, parse_constant=reject_constant)
-    expected = {
-        "schema": 1,
-        "collection_count": 1,
-        "collection_errors": 0,
-        "unhandled_errors": 0,
-        "protocol_errors": 0,
-        "session_finished": True,
-        "session_exitstatus": 0,
-    }
-    if type(value) is not dict or set(value) != set(expected) | {
-        "nodes",
-        "postgres_identities",
-        "reports",
-    }:
-        raise ProofFailure("service_report_shape")
-    if any(type(value[k]) is not type(v) or value[k] != v for k, v in expected.items()):
-        raise ProofFailure("service_report_outcome")
-    if value["nodes"] != list(SERVICE_NODES):
-        raise ProofFailure("service_selection")
-    reports = value["reports"]
-    if type(reports) is not list or len(reports) != 3:
-        raise ProofFailure("service_report_count")
-    wanted = [(node, when) for node in SERVICE_NODES for when in ("setup", "call", "teardown")]
-    for row, (node, when) in zip(reports, wanted, strict=True):
-        if type(row) is not dict or set(row) != {"node", "when", "outcome", "seconds"}:
-            raise ProofFailure("service_report_shape")
-        if row["node"] != node or row["when"] != when or row["outcome"] != "passed":
-            raise ProofFailure("service_report_outcome")
-        seconds = row["seconds"]
-        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 <= seconds < 20:
-            raise ProofFailure("service_report_duration")
-    identities = value["postgres_identities"]
-    if type(identities) is not list or len(identities) != 1:
-        raise ProofFailure("service_postgres_identity")
-    postgres_identity(identities[0], SERVICE_NODES[0])
-    return value
-
-
-def service_failure_diagnostic(raw: bytes, *, returncode: int) -> dict[str, int]:
-    """Validate a numeric marker; supervisor spool reads require verified stop/reap."""
-    if (
-        type(raw) is not bytes
-        or len(raw) >= SERVICE_OUTPUT_LIMIT
-        or type(returncode) is not int
-        or not 1 <= returncode <= 5
-        or raw.count(SERVICE_FAILURE_MARKER) != 1
-    ):
-        raise ProofFailure("service_diagnostic_invalid")
-    lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(SERVICE_FAILURE_MARKER)]
-    if len(lines) != 1 or len(lines[0]) + 1 > SERVICE_FAILURE_LIMIT:
-        raise ProofFailure("service_diagnostic_invalid")
-    payload = lines[0][len(SERVICE_FAILURE_MARKER) :]
-    try:
-        value = json.loads(
-            payload.decode("ascii"),
-            object_pairs_hook=strict_object,
-            parse_constant=reject_constant,
-        )
-    except (ValueError, RecursionError) as error:
-        raise ProofFailure("service_diagnostic_invalid") from error
-    bounds = {
-        "schema": (1, 1),
-        "stage": (0, 4),
-        "session_exitstatus": (returncode, returncode),
-        "collection_count": (0, 100),
-        "collection_errors": (0, 100),
-        "unhandled_errors": (0, 100),
-        "protocol_errors": (0, 100),
-        "report_count": (0, 18),
-        "setup_reports": (0, 18),
-        "call_reports": (0, 18),
-        "teardown_reports": (0, 18),
-        "failed_reports": (0, 18),
-        "skipped_reports": (0, 18),
-    }
-    if type(value) is not dict or set(value) != set(bounds):
-        raise ProofFailure("service_diagnostic_invalid")
-    if any(
-        type(value[k]) is not int or not low <= value[k] <= high
-        for k, (low, high) in bounds.items()
-    ):
-        raise ProofFailure("service_diagnostic_invalid")
-    if (
-        value["report_count"]
-        != sum(value[f"{when}_reports"] for when in ("setup", "call", "teardown"))
-        or value["failed_reports"] + value["skipped_reports"] > value["report_count"]
-        or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
-    ):
-        raise ProofFailure("service_diagnostic_invalid")
-    return value
-
-
-def static_failure_diagnostic(raw: bytes, *, failure: dict[str, int]) -> dict[str, object]:
-    """Validate bounded public-source tool bytes against the first failed protocol."""
-    if (
-        type(raw) is not bytes
-        or len(raw) >= SERVICE_OUTPUT_LIMIT
-        or raw.count(STATIC_FAILURE_MARKER) != 1
-    ):
-        raise ProofFailure("static_diagnostic_invalid")
-    lines = [line for line in raw.split(b"\n")[:-1] if line.startswith(STATIC_FAILURE_MARKER)]
-    if len(lines) != 1 or len(lines[0]) + 1 > STATIC_FAILURE_LIMIT:
-        raise ProofFailure("static_diagnostic_invalid")
-    payload = lines[0][len(STATIC_FAILURE_MARKER) :]
-    try:
-        value = json.loads(
-            payload.decode("ascii"),
-            object_pairs_hook=strict_object,
-            parse_constant=reject_constant,
-        )
-    except (ValueError, RecursionError) as error:
-        raise ProofFailure("static_diagnostic_invalid") from error
-    bounds = {
-        "schema": (2, 2),
-        "tool": (0, 5),
-        "kind": (1, 4),
-        "output_bytes": (0, LIMIT),
-    }
-    if type(value) is not dict or set(value) != set(bounds) | {
-        "returncode",
-        "output_truncated",
-        "output_base64",
-    }:
-        raise ProofFailure("static_diagnostic_invalid")
-    if any(
-        type(value[k]) is not int or not low <= value[k] <= high
-        for k, (low, high) in bounds.items()
-    ):
-        raise ProofFailure("static_diagnostic_invalid")
-    tool, kind, returncode = value["tool"], value["kind"], value["returncode"]
-    if returncode is not None and (type(returncode) is not int or not -127 <= returncode <= 255):
-        raise ProofFailure("static_diagnostic_invalid")
-    if (
-        type(value["output_truncated"]) is not bool
-        or value["output_truncated"] != (value["output_bytes"] == LIMIT)
-        or value["output_truncated"] != (kind == 3)
-        or (kind != 4 and returncode is None)
-        or (kind == 1 and returncode == 0)
-        or (kind == 4 and (returncode is not None or value["output_bytes"] != 0))
-        or type(value["output_base64"]) is not str
-        or len(value["output_base64"]) > 4 * ((LIMIT + 2) // 3)
-    ):
-        raise ProofFailure("static_diagnostic_invalid")
-    try:
-        output = base64.b64decode(value["output_base64"], validate=True)
-    except ValueError as error:
-        raise ProofFailure("static_diagnostic_invalid") from error
-    if (
-        len(output) != value["output_bytes"]
-        or base64.b64encode(output).decode("ascii") != value["output_base64"]
-        or json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii") != payload
-    ):
-        raise ProofFailure("static_diagnostic_invalid")
-    protocols = tool + 1
-    expected = {
-        "schema": 1,
-        "stage": 3,
-        "session_exitstatus": 1,
-        "collection_count": 6,
-        "collection_errors": 0,
-        "unhandled_errors": 0,
-        "protocol_errors": 0,
-        "report_count": protocols * 3,
-        "setup_reports": protocols,
-        "call_reports": protocols,
-        "teardown_reports": protocols,
-        "failed_reports": 1,
-        "skipped_reports": 0,
-    }
-    if failure != expected or any(type(v) is not int for v in failure.values()):
-        raise ProofFailure("static_diagnostic_protocol")
-    return value
-
-
-class ServiceReportHook:
-    """Small explicit pytest plugin. Retain no payload, trace, exception or captured text."""
-
-    def __init__(self) -> None:
-        # Closed stage codes: 0 bootstrap, 1 collection, 2 setup, 3 call, 4 teardown.
-        self.stage = 0
-        self.failure_stage: int | None = None
-        self.failure_marker_attempted = False
-        self.value: dict[str, object] = {
-            "schema": 1,
-            "nodes": [],
-            "postgres_identities": [],
-            "collection_count": 0,
-            "collection_errors": 0,
-            "unhandled_errors": 0,
-            "protocol_errors": 0,
-            "session_finished": False,
-            "session_exitstatus": -1,
-            "reports": [],
-        }
-
-    def bump(self, field: str) -> None:
-        self.value[field] = min(100, cast(int, self.value[field]) + 1)
-        if self.failure_stage is None:
-            self.failure_stage = self.stage
-
-    def pytest_collectreport(self, report: object) -> None:
-        self.stage = 1
-        if getattr(report, "outcome", None) != "passed":
-            self.bump("collection_errors")
-
-    def pytest_collection_finish(self, session: object) -> None:
-        import pytest
-
-        self.stage = 1
-        nodes = [getattr(item, "nodeid", None) for item in session.items]
-        self.value["collection_count"] = min(100, len(nodes))
-        try:
-            if nodes != list(SERVICE_NODES):
-                raise ProofFailure("service_selection")
-            root = Path(__file__).resolve().parents[2]
-            for item, selector in zip(session.items, SERVICE_NODES, strict=True):
-                source, name = selector.split("::")
-                path = getattr(item, "path", None)
-                if (
-                    not isinstance(path, Path)
-                    or path.resolve() != root / source
-                    or getattr(item, "originalname", None) != name
-                    or hasattr(item, "callspec")
-                ):
-                    raise ProofFailure("service_selection")
-        except (OSError, RuntimeError, ValueError) as error:
-            self.bump("protocol_errors")
-            raise pytest.UsageError("service_selection") from error
-        self.value["nodes"] = nodes
-
-    def pytest_runtest_logreport(self, report: object) -> None:
-        node, when = getattr(report, "nodeid", None), getattr(report, "when", None)
-        outcome, seconds = getattr(report, "outcome", None), getattr(report, "duration", None)
-        rows = cast(list[dict[str, object]], self.value["reports"])
-        if (
-            node not in self.value["nodes"]
-            or when not in {"setup", "call", "teardown"}
-            or outcome not in {"passed", "failed", "skipped"}
-            or len(rows) >= 3
-            or type(seconds) not in (int, float)
-            or not math.isfinite(seconds)
-            or not 0 <= seconds < 20
-            or hasattr(report, "wasxfail")
-        ):
-            self.bump("protocol_errors")
-            return
-        self.stage = {"setup": 2, "call": 3, "teardown": 4}[when]
-        if outcome != "passed" and self.failure_stage is None:
-            self.failure_stage = self.stage
-        rows.append({"node": node, "when": when, "outcome": outcome, "seconds": seconds})
-        if when == "teardown":
-            identities = cast(list[dict[str, object]], self.value["postgres_identities"])
-            properties = getattr(report, "user_properties", [])
-            if type(properties) is not list or len(properties) != 1:
-                self.bump("protocol_errors")
-                return
-            try:
-                pair = properties[0]
-                if (
-                    type(pair) not in (list, tuple)
-                    or len(pair) != 2
-                    or pair[0] != "ocwp_postgres_identity"
-                    or any(identity["node"] == node for identity in identities)
-                ):
-                    raise ProofFailure("service_postgres_identity")
-                identities.append(postgres_identity(pair[1], node))
-            except ProofFailure:
-                self.bump("protocol_errors")
-
-    def pytest_internalerror(self) -> None:
-        self.bump("unhandled_errors")
-
-    def pytest_keyboard_interrupt(self) -> None:
-        self.bump("unhandled_errors")
-
-    def emit_failure_marker(self, session: object) -> None:
-        """Best effort: emit numbers only; never flush captured output or alter failure."""
-        if self.failure_marker_attempted:
-            return
-        self.failure_marker_attempted = True
-        try:
-            rows = cast(list[dict[str, object]], self.value["reports"])
-            value = {
-                key: self.value[key]
-                for key in (
-                    "schema",
-                    "session_exitstatus",
-                    "collection_count",
-                    "collection_errors",
-                    "unhandled_errors",
-                    "protocol_errors",
-                )
-            } | {
-                "stage": self.stage if self.failure_stage is None else self.failure_stage,
-                "report_count": len(rows),
-                **{
-                    f"{when}_reports": sum(row["when"] == when for row in rows)
-                    for when in ("setup", "call", "teardown")
-                },
-                **{
-                    f"{outcome}_reports": sum(row["outcome"] == outcome for row in rows)
-                    for outcome in ("failed", "skipped")
-                },
-            }
-            marker = (
-                SERVICE_FAILURE_MARKER
-                + json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
-                    "ascii"
-                )
-                + b"\n"
-            )
-            service_failure_diagnostic(marker, returncode=cast(int, value["session_exitstatus"]))
-            capture = session.config.pluginmanager.getplugin("capturemanager")
-            # --capture=fd otherwise hides a session hook's print. Suspend only
-            # around this one bounded write; never read/release captured text.
-            with capture.global_and_fixture_disabled():
-                os.write(1, b"\n" + marker)
-        except Exception:
-            # Missing/truncated/invalid output is unavailable, never a new failure.
-            return
-
-    def pytest_sessionfinish(self, session: object, exitstatus: int) -> None:
-        self.value["session_finished"] = True
-        self.value["session_exitstatus"] = int(exitstatus)
-        try:
-            raw = json.dumps(self.value, allow_nan=False, sort_keys=True)
-            if len(raw.encode("utf-8")) >= LIMIT:
-                raise ProofFailure("service_report_limit")
-            Path(SERVICE_REPORT).write_text(raw, encoding="utf-8")
-        finally:
-            if exitstatus:
-                self.emit_failure_marker(session)
-
-
-def pytest_configure(config: object) -> None:
-    # Only the explicitly loaded plugin participates; CLI imports never import pytest.
-    if os.environ.get("OCWP_QUOTE_SERVICE_INITIAL") != "contained":
-        raise ProofFailure("service_hook_context")
-    config.pluginmanager.register(ServiceReportHook(), "quote-service-closed-report")
-    config.pluginmanager.register(postgres_observer_plugin(), "quote-postgres-observer")
-
-
-def cancel_runtime(ids: list[str], execute: Callable[..., str]) -> None:
-    """Caller supplies a single five-second deadline; signal both before any inspection."""
-    if not ids or len(ids) > 2 or len(set(ids)) != len(ids):
-        raise ProofFailure("cancellation_identity")
-    for cid in ids:
-        identifier(cid)
-    targets = list(reversed(ids))
-    # A concurrently stopped container can make kill fail. Only readback proves stopped.
-    with suppress(ProofFailure):
-        execute(["docker", "kill", "--signal", "KILL", *targets], timeout=2)
-    rows = execute(
-        ["docker", "inspect", "--format", "{{.Id}}|{{.State.Running}}", *targets], timeout=3
-    ).splitlines()
-    if rows != [f"{cid}|false" for cid in targets]:
-        raise ProofFailure("cancellation_unverified")
-
-
 def supervise(
     worker_image: str,
     pg_image: str,
@@ -1142,82 +497,27 @@ def supervise(
     owned: Path,
     *,
     single_record: bool = False,
-    service_initial: bool = False,
 ) -> None:
-    if single_record and service_initial:
-        raise ProofFailure("mode_conflict")
     started = time.monotonic()
-    command_deadline = started + (30 if service_initial else 900)
+    command_deadline = started + 900
     micro_deadline = started  # Expired until the fixed workload actually starts.
 
     def execute(args: list[str], *, timeout: float = 5) -> str:
         remaining = command_deadline - time.monotonic()
         if remaining <= 0:
-            if service_initial and report["phase"] in {
-                "service_with_pytest_bootstrap",
-                "service_final_readback",
-            }:
-                cancel_workload()
             raise ProofFailure("wall_budget")
-        if service_initial and report["phase"] in {
-            "service_with_pytest_bootstrap",
-            "service_final_readback",
-        }:
-            result = run(
-                args,
-                timeout=min(timeout, remaining),
-                before_reap=cancel_workload,
-                deadline=command_deadline,
-            )
-        elif service_initial:
-            result = run(args, timeout=min(timeout, remaining), deadline=command_deadline)
-        else:
-            result = run(args, timeout=min(timeout, remaining))
-        if service_initial and time.monotonic() >= command_deadline:
-            if report["phase"] in {"service_with_pytest_bootstrap", "service_final_readback"}:
-                cancel_workload()
-            raise ProofFailure("wall_budget")
-        return result
+        return run(args, timeout=min(timeout, remaining))
 
     ids: list[str] = []
     creation_uncertain = False
-    validated_runtime_ids: list[str] = []
-    cancellation_started = False
     report: dict[str, object] = {
-        "schema": 2 if service_initial else 1,
+        "schema": 1,
         "commit": commit,
-        "mode": (
-            "service_initial"
-            if service_initial
-            else ("single_record_feasibility" if single_record else "micro_only")
-        ),
+        "mode": "single_record_feasibility" if single_record else "micro_only",
         "maximum_capacity_qualified": False,
         "status": "failed",
         "phase": "setup_and_containment",
     }
-
-    def cancel_workload() -> None:
-        nonlocal cancellation_started
-        if cancellation_started or not validated_runtime_ids:
-            return
-        cancellation_started = True
-        deadline = time.monotonic() + 5
-
-        def kill_execute(args: list[str], *, timeout: float = 5) -> str:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise ProofFailure("cancellation_deadline")
-            result = run(args, timeout=min(timeout, remaining), deadline=deadline)
-            if time.monotonic() >= deadline:
-                raise ProofFailure("cancellation_deadline")
-            return result
-
-        try:
-            cancel_runtime(validated_runtime_ids, kill_execute)
-            report["cancellation"] = "verified_stopped"
-        except (ProofFailure, ValueError, OSError):
-            report["cancellation"] = "unverified"
-        report["cancellation_seconds"] = round(time.monotonic() - (deadline - 5), 3)
 
     def interrupt(_signum: int, _frame: FrameType | None) -> None:
         raise ProofFailure("interrupted")
@@ -1339,8 +639,7 @@ def supervise(
                     "--env",
                     "OCWP_QUOTE_MICRO=contained",
                     "--env",
-                    "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic"
-                    "@127.0.0.1:5432/ocwp_quote_micro_test",
+                    "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_micro_test",
                     "--entrypoint",
                     "/app/.venv/bin/python",
                 ]
@@ -1351,12 +650,7 @@ def supervise(
             creation_uncertain = False
             ids.append(cid)
             owned.write_text(json.dumps(ids))
-            if service_initial:
-                inspect_owned(cid, image, label, network, execute)
-                if role != "canary":
-                    validated_runtime_ids.append(cid)
-            else:
-                inspect_owned(cid, image, label, network)
+            inspect_owned(cid, image, label, network)
             execute(["docker", "start", cid])
             snapshots[role] = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
@@ -1379,11 +673,7 @@ def supervise(
                 }
             )
             if role == "canary":
-                canary_resources = (
-                    cancellation_canary(cid, execute, aggregate_deadline=command_deadline)
-                    if service_initial
-                    else cancellation_canary(cid, execute)
-                )
+                canary_resources = cancellation_canary(cid, execute)
                 report["canary_resources"] = canary_resources
                 cpu_delta(
                     {"canary": snapshots["canary"]["cpu_usec"]},
@@ -1414,46 +704,20 @@ def supervise(
                 )
                 break
             except ProofFailure:
-                if time.monotonic() >= min(deadline, command_deadline):
+                if time.monotonic() >= deadline:
                     raise ProofFailure("database_readiness") from None
                 time.sleep(0.2)
-        if service_initial:
-            # Fresh baseline separates PostgreSQL startup from the SQLite workload.
-            snapshots = {
-                role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
-                for cid, role, memory, pids in [
-                    (ids[0], "db", 768, 128),
-                    (ids[1], "worker", 512, 64),
-                ]
-            }
-            if time.monotonic() >= command_deadline:
-                raise ProofFailure("setup_deadline")
-            cpu_delta(
-                {"db": 0, "worker": 0},
-                {role: data["cpu_usec"] for role, data in snapshots.items()},
-                60,
-            )
-            report["environment_overhead_before_workload_cpu_usec"] = {
-                role: data["cpu_usec"] for role, data in snapshots.items()
-            }
-            report["database_role"] = "postgresql18_4_owned_source_target_restore_observed"
         report["setup_seconds"] = round(time.monotonic() - started, 3)
-        report["command_stage"] = "service_initial" if service_initial else "microfixture"
-        report["phase"] = (
-            "service_with_pytest_bootstrap" if service_initial else "micro_with_pytest_bootstrap"
-        )
-        # Only now may pytest import the selected closed specimen.
+        report["command_stage"] = "microfixture"
+        report["phase"] = "micro_with_pytest_bootstrap"
+        # Only now may pytest import the fixed three-operation specimen.
         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
         previous = before
-        spool_limit = SERVICE_OUTPUT_LIMIT if service_initial else LIMIT
         with tempfile.TemporaryFile() as output:
             micro_deadline = time.monotonic() + 20
             command_deadline = micro_deadline
-            micro_started = time.monotonic()
             child = subprocess.Popen(
-                service_argv(ids[1])
-                if service_initial
-                else [
+                [
                     "docker",
                     "exec",
                     ids[1],
@@ -1474,13 +738,14 @@ def supervise(
                 stdout=output,
                 stderr=output,
                 start_new_session=True,
-                preexec_fn=service_output_limit if service_initial else output_limit,
+                preexec_fn=output_limit,
             )
+            micro_started = time.monotonic()
             try:
                 while child.poll() is None:
                     if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
                         raise ProofFailure("wall_budget")
-                    if os.fstat(output.fileno()).st_size >= spool_limit:
+                    if os.fstat(output.fileno()).st_size >= LIMIT:
                         raise ProofFailure("output_limit")
                     current = {}
                     for cid, role, memory, pids in [
@@ -1492,123 +757,43 @@ def supervise(
                         )
                         current[role] = snapshots[role]["cpu_usec"]
                     report["last_sampled_containers"] = dict(snapshots)
-                    cpu_delta(previous, current, 40 if service_initial else 600)
-                    cpu_delta(dict.fromkeys(current, 0), current, 60 if service_initial else 600)
-                    if service_initial:
-                        cpu_delta(before, current, 40)
-                        if sum(current.values()) + canary_resources["cpu_usec"] > 70_000_000:
-                            raise ProofFailure("cpu_budget")
+                    cpu_delta(previous, current, 600)
+                    cpu_delta(dict.fromkeys(current, 0), current, 600)
                     previous = current
                     time.sleep(0.1)
                 if time.monotonic() >= command_deadline:
                     raise ProofFailure("wall_budget")
-                if child.returncode or os.fstat(output.fileno()).st_size >= spool_limit:
+                if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
                     raise ProofFailure("micro_failed", returncode=child.returncode)
-                report["workload_wall_seconds" if service_initial else "micro_wall_seconds"] = (
-                    round(time.monotonic() - micro_started, 3)
-                )
-            except (ProofFailure, ValueError, OSError):
-                if service_initial:
-                    report["service_failure_diagnostic"] = "unavailable_or_invalid"
-                    cancel_workload()
-                raise
+                report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
             finally:
                 if child.poll() is None:
-                    if service_initial:
-                        cancel_workload()
                     os.killpg(child.pid, signal.SIGKILL)
-                    try:
-                        child.wait(timeout=2)
-                    except subprocess.TimeoutExpired:
-                        if service_initial:
-                            report["specimen_client_reap"] = "unverified"
-                        raise ProofFailure("client_reap_unverified") from None
-                if service_initial:
-                    if type(child.returncode) is not int:
-                        raise ProofFailure("specimen_exit_unverified")
-                    report["specimen_returncode"] = child.returncode
-                    report["specimen_client_reap"] = "verified"
-                    if child.returncode and report.get("cancellation") == "verified_stopped":
-                        try:
-                            # Local spool only, after whole-workload stop and client
-                            # reaping. No extra Docker read or deadline extension.
-                            output.seek(0)
-                            failure_output = output.read(SERVICE_OUTPUT_LIMIT)
-                            # Synthetic-only short traceback; no locals, captured
-                            # logs, environment dump or additional subprocess.
-                            retained = failure_output[:LIMIT]
-                            report["service_failure_output"] = {
-                                "output_bytes": len(retained),
-                                "output_truncated": len(failure_output) > LIMIT
-                                or len(failure_output) >= SERVICE_OUTPUT_LIMIT,
-                                "output_base64": base64.b64encode(retained).decode("ascii"),
-                            }
-                            failure_summary = service_failure_diagnostic(
-                                failure_output,
-                                returncode=child.returncode,
-                            )
-                            report["service_failure_diagnostic"] = failure_summary
-                            try:
-                                report["static_failure_diagnostic"] = static_failure_diagnostic(
-                                    failure_output,
-                                    failure=failure_summary,
-                                )
-                            except Exception:
-                                report["static_failure_diagnostic"] = "unavailable_or_invalid"
-                        except Exception:
-                            report["service_failure_diagnostic"] = "unavailable_or_invalid"
-        command_deadline = time.monotonic() + 5 if service_initial else started + 900
-        if service_initial:
-            report["phase"] = "service_final_readback"
+                    child.wait(timeout=2)
+        command_deadline = started + 900
         # Containers remain alive: read final cgroup events after workload exit.
         final = {
             role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
             for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
         }
-        cpu_delta(
-            previous,
-            {role: value["cpu_usec"] for role, value in final.items()},
-            40 if service_initial else 600,
-        )
+        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
-        lifetime_cpu = cpu_delta(
-            dict.fromkeys(final_cpu, 0), final_cpu, 60 if service_initial else 600
-        )
+        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
         report["lifetime_cpu_usec"] = lifetime_cpu
-        if lifetime_cpu + canary_resources["cpu_usec"] > (
-            70_000_000 if service_initial else 600_000_000
-        ):
+        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
             raise ProofFailure("cpu_budget")
-        report["observed_workload_cpu_usec"] = cpu_delta(
-            before, final_cpu, 40 if service_initial else 600
-        )
+        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
         report["containers"] = final
-        if service_initial:
-            report["workload_cpu_usec_by_role"] = {
-                role: final_cpu[role] - before[role] for role in before
-            }
-            report["service"] = service_result(
-                execute(["docker", "exec", ids[1], "cat", SERVICE_REPORT])
-            )
-            if time.monotonic() >= command_deadline:
-                raise ProofFailure("final_readback_deadline")
-            report["phase"] = "service_complete"
-            report["status"] = (
-                "postgresql_service_restore_one_passed_not_production_recovery_or_capacity"
-            )
-        else:
-            micro = micro_result(
-                execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
-                single_record=single_record,
-            )
-            report["micro"] = micro
-            if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
-                raise ProofFailure("cpu_accounting_disagrees")
-            report["phase"] = "micro_complete"
-            report["status"] = "micro_passed_not_capacity"
+        micro = micro_result(
+            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+            single_record=single_record,
+        )
+        report["micro"] = micro
+        if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
+            raise ProofFailure("cpu_accounting_disagrees")
+        report["phase"] = "micro_complete"
+        report["status"] = "micro_passed_not_capacity"
     except (ProofFailure, ValueError, OSError) as error:
-        if service_initial:
-            cancel_workload()
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
         if isinstance(error, ProofFailure) and error.returncode is not None:
             report["client_returncode"] = error.returncode
@@ -1640,8 +825,6 @@ def supervise(
                     else "invalid_evidence"
                 )
     finally:
-        if service_initial:
-            command_deadline = time.monotonic() + 35
         try:
             for role in ("canary", "db", "worker"):
                 cidfile = owned.with_suffix(f".{role}.cid")
@@ -1650,16 +833,10 @@ def supervise(
                     if cid not in ids:
                         ids.append(cid)
             if owned.with_suffix(".owner.json").exists():
-                discovered = (
-                    reconcile_owned(owned, execute) if service_initial else reconcile_owned(owned)
-                )
-                for cid in discovered:
+                for cid in reconcile_owned(owned):
                     if cid not in ids:
                         ids.append(cid)
-            if service_initial:
-                remove_owned(ids, execute)
-            else:
-                remove_owned(ids)
+            remove_owned(ids)
             if creation_uncertain:
                 raise ProofFailure("creation_outcome_uncertain")
             report["cleanup"] = "verified_absent"
@@ -1669,13 +846,584 @@ def supervise(
         report["elapsed_seconds"] = round(time.monotonic() - started, 3)
         evidence.parent.mkdir(parents=True, exist_ok=True)
         evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
-    wanted_status = (
-        "postgresql_service_restore_one_passed_not_production_recovery_or_capacity"
-        if service_initial
-        else "micro_passed_not_capacity"
+    if report["status"] != "micro_passed_not_capacity":
+        raise ProofFailure("micro_unqualified")
+
+
+def full_client(
+    args: list[str],
+    *,
+    timeout: float = 5,
+    limit: int = LIMIT,
+    abort: Callable[[], None] | None = None,
+) -> str:
+    """Bound a full-route control client without an implicit Popen wait.
+
+    The workload and record readers supply stop-before-reap through abort.
+    RLIMIT_FSIZE belongs to this host client, never the container subprocess.
+    """
+    if limit not in {LIMIT, FULL_RECORD_LIMIT} or not 0 < timeout <= 660:
+        raise ProofFailure("client_budget")
+
+    def cap() -> None:
+        resource.setrlimit(resource.RLIMIT_FSIZE, (limit, limit))
+
+    with tempfile.TemporaryFile() as output:
+        child = subprocess.Popen(
+            args, stdout=output, stderr=output, start_new_session=True, preexec_fn=cap
+        )
+        deadline = time.monotonic() + timeout
+        try:
+            while child.poll() is None:
+                if time.monotonic() >= deadline:
+                    raise ProofFailure("command_timeout")
+                if os.fstat(output.fileno()).st_size >= limit:
+                    raise ProofFailure("output_limit")
+                time.sleep(0.02)
+            if time.monotonic() >= deadline:
+                raise ProofFailure("command_timeout")
+            if child.returncode or os.fstat(output.fileno()).st_size >= limit:
+                raise ProofFailure("command_failed", returncode=child.returncode)
+            output.seek(0)
+            return output.read(limit).decode("utf-8", errors="strict").strip()
+        except BaseException:
+            if abort is not None:
+                abort()
+            raise
+        finally:
+            # abort first attempts verified stop and bounded owned reconciliation.
+            # If both fail, client hygiene is still bounded; that attempt cannot pass.
+            if child.poll() is None:
+                os.killpg(child.pid, signal.SIGKILL)
+            child.wait(timeout=2)
+
+
+def full_stop_worker(cid: str, execute: Callable[..., str] = full_client) -> None:
+    """A killed Docker client is not evidence that its container children stopped."""
+    identifier(cid)
+    command = ["docker", "inspect", "--format", "{{.State.Running}}|{{.State.Pid}}", cid]
+    state = execute(command)
+    if state == "false|0":
+        return
+    if not re.fullmatch(r"true\|[1-9][0-9]*", state):
+        raise ProofFailure("worker_stop_unverified")
+    try:
+        execute(["docker", "kill", "--signal", "KILL", cid], timeout=10)
+    finally:
+        if execute(command) != "false|0":
+            raise ProofFailure("worker_stop_unverified")
+
+
+def full_inspect(
+    cid: str, image: str, token: str, network: str, role: str, execute: Callable[..., str]
+) -> None:
+    from scripts.ci.verify_v01 import read_full_python_value
+
+    raw = execute(
+        [
+            "docker", "inspect", "--format",
+            '{"id":{{json .Id}},"image":{{json .Image}},'
+            '"token":{{json (index .Config.Labels "ocwp.quote-micro")}},'
+            '"user":{{json .Config.User}},"host":{{json .HostConfig}},'
+            '"mounts":{{json .Mounts}}}', cid,
+        ]
     )
-    if report["status"] != wanted_status:
-        raise ProofFailure("service_unqualified" if service_initial else "micro_unqualified")
+    value = read_full_python_value(raw)
+    host = value.get("host")
+    if (
+        set(value) != {"id", "image", "token", "user", "host", "mounts"}
+        or value["id"] != cid or value["image"] != image or value["token"] != token
+        or value["user"] != ("postgres" if role == "db" else "10001:10001")
+        or type(host) is not dict
+    ):
+        raise ProofFailure("container_identity")
+    expected = FULL_TMPFS["db" if role == "db" else "worker"]
+    memory, pids = (768, 128) if role == "db" else (512, 64)
+    fixed = {
+        "NetworkMode": network, "Privileged": False, "ReadonlyRootfs": True,
+        "Memory": memory * 1024 * 1024, "MemorySwap": memory * 1024 * 1024,
+        "NanoCpus": 1_000_000_000, "PidsLimit": pids, "ShmSize": FULL_SHM_BYTES,
+        "CgroupnsMode": "private", "CapDrop": ["ALL"],
+        "IpcMode": "private", "PidMode": "", "UTSMode": "",
+        "PublishAllPorts": False,
+        "SecurityOpt": ["no-new-privileges:true"], "Tmpfs": expected,
+    }
+    if any(type(host.get(k)) is not type(v) or host[k] != v for k, v in fixed.items()):
+        raise ProofFailure("container_boundary")
+    if host.get("Binds") or host.get("Devices") or host.get("CapAdd"):
+        raise ProofFailure("container_boundary")
+    if host.get("LogConfig") != {"Type": "none", "Config": {}}:
+        raise ProofFailure("container_boundary")
+    mounts = value["mounts"]
+    if (
+        type(mounts) is not list or len(mounts) != len(expected)
+        or any(type(item) is not dict or item.get("Type") != "tmpfs" for item in mounts)
+        or {item.get("Destination") for item in mounts} != set(expected)
+    ):
+        raise ProofFailure("unexpected_mount")
+
+
+def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
+    """Verify kernel allocation and flags, not only requested Docker options."""
+    expected = FULL_TMPFS["db" if role == "db" else "worker"]
+    paths = [*expected, "/dev/shm"]
+    command = "set -eu; " + "".join(
+        f"stat -f -c '{path}|%T|%S|%b|%f|%c|%d' {path}; "
+        f"stat -c '{path}|%u|%g|%a' {path}; " for path in paths
+    )
+    command += "printf '%s\\n' '---mounts---'; awk '" + " || ".join(
+        f'$5 == "{path}"' for path in paths
+    ) + "' /proc/self/mountinfo"
+    raw = execute(["docker", "exec", cid, "sh", "-c", command])
+    try:
+        stats, mount_rows = raw.split("\n---mounts---\n")
+        lines = stats.splitlines()
+        mounts = [line.split() for line in mount_rows.splitlines()]
+        if len(lines) != 2 * len(paths) or len(mounts) != len(paths):
+            raise ProofFailure("scratch_readback")
+        for index, path in enumerate(paths):
+            values = lines[2 * index].split("|")
+            ownership = lines[2 * index + 1].split("|")
+            if len(values) != 7 or values[:2] != [path, "tmpfs"]:
+                raise ProofFailure("scratch_readback")
+            block, blocks, free, inodes, ifree = map(integer, values[2:])
+            options = dict(
+                option.split("=", 1) if "=" in option else (option, "")
+                for option in expected.get(path, "size=64m,mode=1777").split(",")
+            )
+            if (
+                block * blocks != int(options["size"][:-1]) * 1024 * 1024
+                or not 0 < free <= blocks or not 0 < ifree <= inodes
+                or ("nr_inodes" in options and inodes != int(options["nr_inodes"]))
+                or ownership != [path, options.get("uid", "0"), options.get("gid", "0"),
+                                 options["mode"].lstrip("0")]
+            ):
+                raise ProofFailure("scratch_allocation")
+            matching = [row for row in mounts if len(row) > 9 and row[4] == path]
+            if len(matching) != 1:
+                raise ProofFailure("scratch_mount")
+            row = matching[0]
+            flags = set(row[5].split(","))
+            if (
+                row[row.index("-") + 1] != "tmpfs"
+                or not {"rw", "nosuid", "nodev"} <= flags
+                or ("noexec" in flags) != (path != "/tmp/ocwp-tests")
+            ):
+                raise ProofFailure("scratch_mount")
+    except (ValueError, IndexError, KeyError) as error:
+        raise ProofFailure("scratch_readback") from error
+
+
+def full_reconcile(owned: Path, execute: Callable[..., str]) -> None:
+    """Only exact manifest-owned names/images may be removed, even after ambiguous create."""
+    ids = []
+    for role in ("canary", "db", "worker"):
+        path = owned.with_suffix(f".{role}.cid")
+        if path.exists():
+            ids.append(identifier(path.read_text().strip()))
+    present = execute(["docker", "ps", "--all", "--no-trunc", "--format", "{{.ID}}"])
+    all_ids = [identifier(value) for value in present.splitlines()]
+    found = reconcile_owned(owned, execute) if owned.with_suffix(".owner.json").exists() else []
+    if not set(ids).intersection(all_ids).issubset(found):
+        raise ProofFailure("owned_identity_reconciliation")
+    remove_owned(found, execute)
+
+
+def full_identity(commit: str, worker_image: str, pg_image: str, execute: Callable[..., str]):
+    from scripts.ci.verify_v01 import full_python_identity
+
+    if source_query("head", execute) != commit or source_query("status", execute):
+        raise ProofFailure("source_not_exact_clean_commit")
+    tree = source_query("tree", execute)
+    images = [
+        execute(["docker", "image", "inspect", "--format", "{{.Id}}", name])
+        for name in (worker_image, pg_image)
+    ]
+    if images != [os.environ.get("OCWP_FULL_PYTHON_IMAGE_ID"),
+                  os.environ.get("OCWP_FULL_PYTHON_PG_IMAGE_ID")]:
+        raise ProofFailure("image_identity")
+    if execute(["docker", "image", "inspect", "--format",
+                '{{index .Config.Labels "ocwp.source-tree"}}', images[0]]) != tree:
+        raise ProofFailure("image_source_mismatch")
+    return full_python_identity(
+        commit=commit, tree=tree, image_id=images[0], pg_image_id=images[1],
+        nonce=os.environ.get("OCWP_FULL_PYTHON_NONCE", ""),
+        run_id=os.environ.get("GITHUB_RUN_ID", ""),
+        run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+    )
+
+
+def full_capture_record(cid: str, name: str, execute: Callable[..., str]):
+    from scripts.ci.verify_v01 import read_full_python_value
+
+    if name not in {"collection", "result"}:
+        raise ProofFailure("record_name")
+    reader = (
+        "from pathlib import Path; import json; "
+        "from scripts.ci.verify_v01 import read_full_python_json; "
+        f"p=Path('/tmp/ocwp-proof/{name}.json'); "
+        "v=read_full_python_json(p) if p.exists() else {'pending':True}; "
+        "print(json.dumps(v,sort_keys=True,separators=(',',':')))"
+    )
+    raw = execute(
+        ["docker", "exec", cid, "/app/.venv/bin/python", "-c", reader],
+        limit=FULL_RECORD_LIMIT,
+    )
+    value = read_full_python_value(raw)
+    return None if set(value) == {"pending"} and value["pending"] is True else value
+
+
+def full_save_diagnostic(output, evidence: Path) -> None:
+    """Retain only the already-hosted bounded spool after candidate stop/reap."""
+    from scripts.ci.verify_v01 import write_full_python_json
+
+    size = os.fstat(output.fileno()).st_size
+    output.seek(0)
+    raw = output.read(FULL_SPOOL_LIMIT)
+    temporary = None
+    try:
+        descriptor, temporary = tempfile.mkstemp(prefix=".ocwp-diagnostic-", dir=evidence.parent)
+        with os.fdopen(descriptor, "wb") as destination:
+            destination.write(raw)
+            destination.flush()
+            os.fsync(destination.fileno())
+        os.replace(temporary, evidence.parent / "diagnostic.txt")
+        temporary = None
+    finally:
+        if temporary is not None:
+            os.unlink(temporary)
+    write_full_python_json(
+        evidence.parent / "diagnostic.json",
+        {
+            "schema": 1,
+            "available": True,
+            "retained_bytes": len(raw),
+            "at_limit_or_truncated": size >= FULL_SPOOL_LIMIT,
+        },
+    )
+
+
+def supervise_python(
+    worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path
+) -> None:
+    from scripts.ci.verify_v01 import (
+        FULL_FAILURE_CODES,
+        FULL_POLICY,
+        FULL_PYTHON_ARGS,
+        FullPythonEvidenceError,
+        validate_full_python_collection,
+        validate_full_python_result,
+        write_full_python_json,
+    )
+
+    started = time.monotonic()
+    outer_deadline = started + FULL_OUTER_SECONDS
+    deadline = outer_deadline - 900 - 55  # At most 65 seconds for contained setup.
+    worker = None
+    business = False
+    child = None
+    creation_uncertain = False
+    report = {
+        "schema": 1, "kind": "ocwp.full_python.receipt", "identity": None,
+        "policy": FULL_POLICY, "status": "failed", "failure": "unrun",
+        "collection": None, "result": None, "containment": None,
+        "primary_cleanup": "pending", "independent_cleanup": "pending",
+    }
+    containment = {
+        "canary": "pending", "worker_exit": None, "deadline": "unfinished",
+        "stdout_bytes": 0, "source_read_only": False, "closed_network": False,
+        "scratch_verified": False, "worker_stopped": False, "creation_uncertain": False,
+        "resource_samples": {"worker": 0, "db": 0},
+        "pressure_events": {"worker": 0, "db": 0}, "final_probe": "pending",
+    }
+    report["containment"] = containment
+
+    def stop() -> None:
+        if worker is not None and not containment["worker_stopped"]:
+            stop_deadline = min(outer_deadline, time.monotonic() + 20)
+
+            def control(args, *, timeout=5):
+                remaining = stop_deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ProofFailure("worker_stop_unverified")
+                return full_client(args, timeout=min(timeout, remaining))
+
+            try:
+                full_stop_worker(worker, control)
+                containment["worker_stopped"] = True
+            except (ProofFailure, OSError):
+                # Later absence may clean up, but cannot prove the missed cutoff.
+                report["failure"] = "worker_stop_unverified"
+                try:
+                    full_reconcile(owned, control)
+                except (ProofFailure, OSError, ValueError):
+                    pass
+                raise ProofFailure("worker_stop_unverified") from None
+
+    def execute(args, *, timeout=5, limit=LIMIT):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProofFailure("wall_budget")
+        result = full_client(
+            args, timeout=min(timeout, remaining), limit=limit,
+            abort=stop if business and args[:2] == ["docker", "exec"] else None,
+        )
+        if time.monotonic() >= deadline:
+            raise ProofFailure("wall_budget")
+        return result
+
+    def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        raise ProofFailure("interrupted")
+
+    signal.signal(signal.SIGTERM, interrupt)
+    signal.signal(signal.SIGINT, interrupt)
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    write_full_python_json(evidence, report)  # Never reuse a previous receipt.
+    try:
+        identity = full_identity(commit, worker_image, pg_image, execute)
+        report["identity"] = identity
+        token = uuid4().hex
+        images = {"db": identity["pg_image_id"], "worker": identity["image_id"],
+                  "canary": identity["image_id"]}
+        if owned.with_suffix(".owner.json").exists():
+            raise ProofFailure("owner_already_exists")
+        owned.with_suffix(".owner.json").write_text(json.dumps({"token": token, "images": images}))
+        containers = {}
+        before = {}
+        for role in ("canary", "db", "worker"):
+            memory, pids = (768, 128) if role == "db" else (512, 64)
+            network = f"container:{containers['db']}" if role == "worker" else "none"
+            args = [
+                "docker", "create", "--name", f"ocwp-quote-{token}-{role}",
+                "--cidfile", str(owned.with_suffix(f".{role}.cid")),
+                "--label", f"ocwp.quote-micro={token}", "--pull", "never",
+                "--cgroupns", "private", "--ipc", "private", "--cpus", "1",
+                "--read-only", "--cap-drop", "ALL",
+                "--security-opt", "no-new-privileges:true", "--log-driver", "none",
+                "--memory", f"{memory}m", "--memory-swap", f"{memory}m",
+                "--pids-limit", str(pids), "--network", network, "--shm-size", "64m",
+            ]
+            for path, options in FULL_TMPFS["db" if role == "db" else "worker"].items():
+                args.extend(["--tmpfs", f"{path}:{options}"])
+            if role == "db":
+                args.extend([
+                    "--user", "postgres", "--env", "POSTGRES_PASSWORD=ocwp-synthetic",
+                    "--env", "POSTGRES_USER=ocwp", "--env", "POSTGRES_DB=ocwp_quote_full_test",
+                    images[role], "-c", "max_connections=20", "-c", "shared_buffers=64MB",
+                ])
+            else:
+                args.extend([
+                    "--user", "10001:10001", "--workdir", "/app", "--entrypoint",
+                    "/app/.venv/bin/python", images[role], "-c", "import time; time.sleep(1200)",
+                ])
+            creation_uncertain = True
+            cid = identifier(execute(args))
+            creation_uncertain = False
+            containers[role] = cid
+            if role == "worker":
+                worker = cid
+            full_inspect(cid, images[role], token, network, role, execute)
+            execute(["docker", "start", cid])
+            effective_privileges(cid, role != "db", execute)
+            full_scratch(cid, role, execute)
+            resources = parse_probe(
+                execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+            )
+            if role == "canary":
+                canary = cancellation_canary(cid, execute)
+                cpu_delta({"canary": resources["cpu_usec"]}, {"canary": canary["cpu_usec"]}, 10)
+                containment["canary"] = "passed"
+                owned.with_suffix(".canary.cid").unlink()
+            else:
+                before[role] = resources["cpu_usec"]
+                containment["resource_samples"][role] += 1
+        while True:
+            try:
+                execute(["docker", "exec", containers["db"], "pg_isready", "-U", "ocwp",
+                         "-d", "ocwp_quote_full_test"], timeout=2)
+                break
+            except ProofFailure:
+                if time.monotonic() >= deadline:
+                    raise ProofFailure("database_readiness") from None
+                time.sleep(0.1)
+        containment.update(source_read_only=True, closed_network=True, scratch_verified=True)
+        business = True
+        deadline = min(time.monotonic() + FULL_SECONDS, outer_deadline - 55)
+        environment = [
+            "PATH=/app/.venv/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/tmp/ocwp-tests",
+            "TMPDIR=/tmp/ocwp-tests", "PYTHONDONTWRITEBYTECODE=1", "PYTHONUNBUFFERED=1",
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1", "OCWP_FULL_PYTHON=contained",
+            "OCWP_FULL_PYTHON_IDENTITY="
+            + json.dumps(identity, sort_keys=True, separators=(",", ":")),
+            "OCWP_TEST_DATABASE_URL=postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_full_test",
+            "OCWP_INVENTORY_READ_EVIDENCE_DIR=/tmp/ocwp-tests/evidence",
+        ]
+
+        def cap_output() -> None:
+            resource.setrlimit(resource.RLIMIT_FSIZE, (FULL_SPOOL_LIMIT, FULL_SPOOL_LIMIT))
+
+        def sample() -> None:
+            current = {}
+            for role in ("db", "worker"):
+                memory, pids = (768, 128) if role == "db" else (512, 64)
+                resources = parse_probe(
+                    execute(["docker", "exec", containers[role], "sh", "-c", PROBE]), memory, pids
+                )
+                full_scratch(containers[role], role, execute)
+                containment["resource_samples"][role] += 1
+                current[role] = resources["cpu_usec"]
+            cpu_delta(before, current, FULL_CPU_SECONDS)
+            cpu_delta(dict.fromkeys(current, 0), current, FULL_CPU_SECONDS)
+            if sum(current.values()) + canary["cpu_usec"] > FULL_CPU_SECONDS * 1_000_000:
+                raise ProofFailure("cpu_budget")
+            before.update(current)
+
+        with tempfile.TemporaryFile() as output:
+            child = subprocess.Popen(
+                ["docker", "exec", worker, "env", "-i", *environment,
+                 "/app/.venv/bin/python", "-m", "pytest", *FULL_PYTHON_ARGS],
+                stdout=output, stderr=output, start_new_session=True, preexec_fn=cap_output,
+            )
+            try:
+                while child.poll() is None:
+                    if time.monotonic() >= deadline:
+                        raise ProofFailure("wall_budget")
+                    containment["stdout_bytes"] = os.fstat(output.fileno()).st_size
+                    if containment["stdout_bytes"] >= FULL_SPOOL_LIMIT:
+                        raise ProofFailure("output_limit")
+                    sample()
+                    if report["collection"] is None:
+                        collection = full_capture_record(worker, "collection", execute)
+                        if collection is not None:
+                            validate_full_python_collection(collection, identity)
+                            report["collection"] = collection
+                    time.sleep(min(1, max(0, deadline - time.monotonic())))
+                containment["worker_exit"] = child.returncode
+                containment["stdout_bytes"] = os.fstat(output.fileno()).st_size
+                if child.returncode or containment["stdout_bytes"] >= FULL_SPOOL_LIMIT:
+                    raise ProofFailure("python_failed")
+                sample()
+                for name in ("collection", "result"):
+                    record = full_capture_record(worker, name, execute)
+                    if name == "collection":
+                        validate_full_python_collection(record, identity)
+                    report[name] = record
+                validate_full_python_result(report["result"], identity, report["collection"])
+                sample()  # Include record-reader resource use in the final observation.
+                if time.monotonic() >= deadline:
+                    raise ProofFailure("wall_budget")
+                containment.update(deadline="completed", final_probe="passed")
+                report["failure"] = "independent_cleanup_pending"
+            finally:
+                # Never let Popen.__exit__ wait while candidate descendants remain live.
+                try:
+                    stop()
+                finally:
+                    if child.poll() is None:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    child.wait(timeout=2)
+                    if containment["worker_stopped"]:
+                        full_save_diagnostic(output, evidence)
+                    else:
+                        write_full_python_json(
+                            evidence.parent / "diagnostic.json",
+                            {
+                                "schema": 1,
+                                "available": False,
+                                "retained_bytes": 0,
+                                "at_limit_or_truncated": False,
+                            },
+                        )
+    except (
+        ProofFailure,
+        FullPythonEvidenceError,
+        ValueError,
+        OSError,
+        subprocess.TimeoutExpired,
+    ) as error:
+        code = (
+            str(error)
+            if isinstance(error, (ProofFailure, FullPythonEvidenceError))
+            else "invalid_evidence"
+        )
+        aliases = {
+            "source_not_exact_clean_commit": "source_identity",
+            "image_identity": "source_identity",
+            "image_source_mismatch": "source_identity",
+            "python_failed": "worker_failed",
+            "creation_outcome_uncertain": "creation_uncertain",
+        }
+        code = aliases.get(code, code)
+        report["failure"] = code if code in FULL_FAILURE_CODES else "containment_failed"
+    finally:
+        containment["creation_uncertain"] = creation_uncertain
+        try:
+            stop()
+        except (ProofFailure, OSError):
+            report["failure"] = "worker_stop_unverified"
+        cleanup_deadline = min(outer_deadline, time.monotonic() + 55)
+
+        def cleanup_execute(args, *, timeout=5):
+            remaining = cleanup_deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProofFailure("cleanup_deadline")
+            return full_client(args, timeout=min(timeout, remaining))
+
+        try:
+            full_reconcile(owned, cleanup_execute)
+            report["primary_cleanup"] = "verified_absent"
+            if child is not None:
+                if child.poll() is None:
+                    os.killpg(child.pid, signal.SIGKILL)
+                child.wait(timeout=2)
+        except (ProofFailure, ValueError, OSError):
+            report["primary_cleanup"] = "failed"
+            report["failure"] = "cleanup_failed"
+        finally:
+            if child is not None:
+                if child.poll() is None:
+                    os.killpg(child.pid, signal.SIGKILL)
+                child.wait(timeout=2)
+        if creation_uncertain:
+            report["failure"] = "creation_uncertain"
+        write_full_python_json(evidence, report)
+    if report["failure"] != "independent_cleanup_pending":
+        raise ProofFailure("full_python_unqualified")
+
+
+def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path):
+    from scripts.ci.verify_v01 import (
+        FullPythonEvidenceError,
+        read_full_python_json,
+        validate_full_python_receipt,
+        write_full_python_json,
+    )
+
+    deadline = time.monotonic() + 55
+
+    def execute(args, *, timeout=5):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProofFailure("independent_cleanup_deadline")
+        return full_client(args, timeout=min(timeout, remaining))
+
+    report = None
+    try:
+        full_reconcile(owned, execute)
+        identity = full_identity(commit, worker_image, pg_image, execute)
+        report = read_full_python_json(evidence)
+        validate_full_python_receipt(report, identity, allow_pending_cleanup=True)
+        report.update(status="passed", failure=None, independent_cleanup="verified_absent")
+        validate_full_python_receipt(report, identity)
+        if time.monotonic() >= deadline:
+            raise ProofFailure("independent_cleanup_deadline")
+        write_full_python_json(evidence, report)
+    except (ProofFailure, FullPythonEvidenceError, ValueError, OSError):
+        if report is not None:
+            report.update(status="failed", failure="cleanup_failed",
+                          independent_cleanup="failed")
+            write_full_python_json(evidence, report)
+        raise ProofFailure("full_python_unqualified") from None
 
 
 def main() -> None:
@@ -1685,11 +1433,17 @@ def main() -> None:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--owned", type=Path, required=True)
-    modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--single-record-feasibility", action="store_true")
-    modes.add_argument("--service-initial", action="store_true")
+    parser.add_argument("--single-record-feasibility", action="store_true")
+    parser.add_argument("--full-python", action="store_true")
+    parser.add_argument("--finalize-full-python", action="store_true")
     args = parser.parse_args()
     try:
+        if sum((args.single_record_feasibility, args.full_python, args.finalize_full_python)) > 1:
+            raise ProofFailure("mode_conflict")
+        if args.full_python or args.finalize_full_python:
+            operation = finalize_python if args.finalize_full_python else supervise_python
+            operation(args.worker_image, args.pg_image, args.commit, args.evidence, args.owned)
+            return
         supervise(
             args.worker_image,
             args.pg_image,
@@ -1697,7 +1451,6 @@ def main() -> None:
             args.evidence,
             args.owned,
             single_record=args.single_record_feasibility,
-            service_initial=args.service_initial,
         )
     except ProofFailure:
         raise SystemExit(1) from None

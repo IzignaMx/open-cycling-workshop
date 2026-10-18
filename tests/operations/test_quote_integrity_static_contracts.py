@@ -14,17 +14,54 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ci.quote_capacity_micro import (
-    LIMIT,
-    STATIC_FAILURE_LIMIT,
-    STATIC_FAILURE_MARKER,
-    STATIC_PATHS,
-)
-
 ROOT = Path(__file__).resolve().parents[2]
 PYTHON = "/app/.venv/bin/python"
 RUFF = "/app/.venv/bin/ruff"
 MYPY = "/app/.venv/bin/mypy"
+LIMIT = 16 * 1024
+STATIC_FAILURE_MARKER = b"OCWP_STATIC_FAILURE_V2:"
+STATIC_FAILURE_LIMIT = 24 * 1024
+STATIC_PATHS = (
+    "services/platform/src/cycling_workshop/quotes/effects.py",
+    "services/platform/src/cycling_workshop/quotes/reconstruction.py",
+    "services/platform/src/cycling_workshop/quotes/repository.py",
+    "services/platform/src/cycling_workshop/quotes/responses.py",
+    "services/platform/src/cycling_workshop/quotes/service.py",
+    "services/platform/src/cycling_workshop/sync/writes.py",
+    "services/platform/tests/quotes/test_quote_application_service.py",
+    "services/platform/tests/quotes/test_quote_atomic_effects.py",
+    "services/platform/tests/quotes/test_quote_command_response.py",
+    "services/platform/tests/quotes/test_quote_driver_budgets.py",
+    "services/platform/tests/quotes/test_quote_reconstruction.py",
+    "services/platform/tests/quotes/test_quote_result_codec_once.py",
+    "services/platform/tests/quotes/test_quote_single_pass.py",
+    "scripts/ci/quote_capacity_micro.py",
+    "scripts/ci/quote_collection_regression.py",
+    "scripts/ci/quote_guard_bootstrap.py",
+    "tests/operations/test_quote_capacity_micro.py",
+    "tests/operations/test_quote_service_collection.py",
+    "tests/operations/test_quote_service_static_contracts.py",
+    "services/platform/migrations/versions/0013_quote_order_effect_metadata.py",
+    "services/platform/src/cycling_workshop/db/order_payload_size.py",
+    "services/platform/src/cycling_workshop/events/models.py",
+    "services/platform/src/cycling_workshop/events/outbox.py",
+    "services/platform/src/cycling_workshop/identity/cutover_cli.py",
+    "services/platform/src/cycling_workshop/quotes/models.py",
+    "services/platform/src/cycling_workshop/sync/models.py",
+    "services/platform/src/cycling_workshop/sync/order_projection_integrity.py",
+    "services/platform/tests/branding/test_profile_migration.py",
+    "services/platform/tests/identity/test_administration_postgres.py",
+    "services/platform/tests/identity/test_cutover_migration.py",
+    "services/platform/tests/ops/test_cutover_cli.py",
+    "services/platform/tests/quotes/test_quote_application_service_postgres.py",
+    "services/platform/tests/quotes/test_quote_bounded_effects_postgres.py",
+    "services/platform/tests/quotes/test_quote_effect_metadata.py",
+    "services/platform/tests/quotes/test_quote_historical_upgrade_postgres.py",
+    "services/platform/tests/quotes/test_quote_schema.py",
+    "services/platform/tests/quotes/test_quote_service_restore_postgres.py",
+    "services/platform/tests/sync/test_order_projection_integrity.py",
+    "services/platform/tests/sync/test_prepared_order_change.py",
+)
 COMMANDS = (
     (PYTHON, "scripts/ci/verify_repository.py"),
     (
@@ -36,6 +73,8 @@ COMMANDS = (
         "--output-format",
         "concise",
         *STATIC_PATHS,
+        "scripts/ci/verify_v01.py",
+        "tests/ci/test_verify_v01.py",
         "scripts/ci/quote_integration_checks.py",
         "scripts/ci/quote_integrity_checks.py",
         "scripts/ci/quote_integrity_postgres.py",
@@ -56,6 +95,8 @@ COMMANDS = (
         "--diff",
         "--no-cache",
         *STATIC_PATHS,
+        "scripts/ci/verify_v01.py",
+        "tests/ci/test_verify_v01.py",
         "scripts/ci/quote_integration_checks.py",
         "scripts/ci/quote_integrity_checks.py",
         "scripts/ci/quote_integrity_postgres.py",

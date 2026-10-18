@@ -1,7 +1,24 @@
 # Quote-only oracle adapter correction
 
-Status: exact correction and qualification source independently reviewed;
-collection and runtime pending.
+Status: all 66 functional cases passed; the combined static group failed
+formatting after its mocks, repository and lint checks passed.
+
+## Recorded corrected-source result
+
+[Run 39082181517](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39082181517)
+executed once on commit `b353c4b4d364ebfbcd1dc98134017c8bc6aae609`, tree
+`7136fdb0d7d5642839af9963caa09461571d8775`, attempt 1/1.
+Its four artifacts and primary/independent cleanup receipts were reviewed.
+The three functional groups passed 26, 15 and 25 cases respectively. The final
+group passed six mocks, repository verification and Ruff, then retained the
+complete 9,755-byte formatter output: 15 layout hunks in three auxiliary files,
+with 46 other files already formatted. Typing and both contracts were unrun.
+The 78-check selection therefore records 74 passes, one failure and three unrun
+checks. It remains a failed workflow, with the original failures preserved.
+
+The observed argument-binding failures are resolved on this source. The next
+correction applies only that retained formatting diff and qualifies the
+mock/static group separately; it does not rerun these 66 functional cases.
 
 ## Observed failures and minimal correction
 
@@ -30,6 +47,9 @@ history-byte test module explicitly to the fixed lint/format scope.
 
 ## Corrected-source qualification
 
+The following fixed selection records the historical preparation plan for that
+executed run. Its resource limits remain applicable to the recorded evidence.
+
 Prepare one distinct fixed selection using the existing contained mechanism:
 
 - `sqlite_single_pass26`: 26 existing cases
@@ -44,9 +64,9 @@ cleanup remain separate bounded phases. The original 23-group run, workflow
 and evidence remain preserved.
 
 Exact source pins, explicit new branch/workflow scope, complete bounded reports
-and unchanged cancellation/cleanup passed independent source review. No runtime
-success is claimed in this preparation
-entry. A new failure remains failed and must be diagnosed before another action.
+and unchanged cancellation/cleanup passed independent source review. The result
+above records its actual partial qualification. A new failure remains failed
+and must be diagnosed before another action.
 
 Product code, schema and command activation are unchanged. The final clean
 integration tree and full-suite containment gate remain separate obligations.
