@@ -1,7 +1,53 @@
 schema: 1
 
-full_python_immutable_legacy_source_20261018:
+full_python_synthetic_repository_invocation_20261018:
   status: prepared_unrun
+  source_base: db5cc27a73d1c8567d1c77c5e57bd0ec360b0e55
+  seventh_attempt:
+    run_id: 39151218879
+    source_commit: 418de1e9f2e427dbdd9baccf344b59b988cc9a56
+    source_tree: a4025706a4cfded68b6d9cbb8f7a5ee061d64db4
+    artifact_id: 12145775293
+    artifact_sha256: 6b0c7db13972ec6c735e5041e61635c5b892aa9cd3bb16677d851905b6e7a286
+    collected: 4427
+    collection_errors_and_deselections: 0
+    passed: 948
+    skipped: 5
+    failed: 1
+    unreached: 3473
+    historical_codec_fixture_and_five_loader_cases: passed
+    eight_canonical_scratch_mocks_and_existing_preflight_case: passed
+    seven_containment_observer_and_three_dirty_source_cases: passed
+    mandatory_database_and_branding_restores: three_passed
+    mandatory_quote_restores: three_unreached
+    failure: synthetic_publication_bash_exit_1
+    subprocess_stdout_stderr_and_exact_failing_command: unavailable
+    diagnostic_bytes: 2966
+    diagnostic_truncated: false
+    final_result_and_final_resource_counters: unavailable
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879
+  prepared_correction:
+    test_script_cwd: existing_synthetic_source_repository
+    demonstrated_prerequisite: git_bundle_verify_requires_current_repository_before_clone
+    prior_audit_limitation: synthetic_objects_identified_but_inherited_cwd_missed
+    production_script_bytes_and_publication_assertions: unchanged
+    failure_diagnostic_scope: public_synthetic_test_module_only
+    retained_reencoded_utf8_bytes_per_stdout_stderr_tail: 2048
+    counts_offsets_availability_and_truncation: explicit
+    original_raw_subprocess_byte_counts: not_claimed
+    json_escaping: may_expand_beyond_retained_utf8_bytes
+    original_exception_and_returncode: preserved
+    additional_mock_cases: 3
+    mock_execution: unrun
+    equivalent_other_shell_defects_identified: none
+    workflows_resources_deadlines_skips_and_restores: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_immutable_legacy_source_20261018:
+  checkpoint: historical_preparation_before_run_39151218879
+  status_at_checkpoint: prepared_unrun
   source_base: 68d9c50184fd4f9ecd56b2137f14d66627481f34
   sixth_attempt:
     run_id: 39149558971
@@ -1390,6 +1436,8 @@ authoritative_restore_script:
   test: tests/repository/test_publish_authoritative_bundle.py
   local_bare_remote_restore: passed_hermetic_windows_and_posix
   retained_for: future_integrity_preserving_restores_and_disaster_recovery
+  invocation_requirement: existing_git_repository_as_current_directory_for_preclone_bundle_verify
+  standalone_outside_repository_invocation: unsupported_by_current_script
 
 # Corrective increment; does not supersede historical release evidence above.
 effective_identity_sync_authority_2026_10_14:
