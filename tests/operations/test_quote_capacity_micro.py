@@ -375,11 +375,24 @@ def full_inspect_value():
             "Tmpfs": module.FULL_TMPFS["worker"],
             "LogConfig": {"Type": "none", "Config": {}},
         },
-        "mounts": [{"Type": "tmpfs", "Destination": path} for path in module.FULL_TMPFS["worker"]],
+        "mounts": [],
     }
 
 
-@pytest.mark.parametrize("fault", [None, "shm", "memory", "exec_root", "bind", "extra_mount"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "shm",
+        "memory",
+        "exec_root",
+        "bind",
+        "extra_mount",
+        "host_mount",
+        "mount_shape",
+        "tmpfs",
+    ],
+)
 def test_full_boundary_has_fixed_memory_shm_and_only_declared_scratch(fault):
     import json
 
@@ -394,13 +407,32 @@ def test_full_boundary_has_fixed_memory_shm_and_only_declared_scratch(fault):
         value["host"]["Binds"] = ["/host:/app"]
     elif fault == "extra_mount":
         value["mounts"].append({"Type": "volume", "Destination": "/other"})
+    elif fault == "host_mount":
+        value["host"]["Mounts"] = [{"Type": "tmpfs", "Target": "/other"}]
+    elif fault == "mount_shape":
+        value["mounts"] = None
+    elif fault == "tmpfs":
+        value["host"]["Tmpfs"] = {}
 
     def execute(*args, **kwargs):
         return json.dumps(value)
 
     if fault:
-        with pytest.raises(module.ProofFailure):
+        with pytest.raises(module.ProofFailure) as caught:
             module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "canary", execute)
+        assert (
+            caught.value.check
+            == {
+                "shm": "ShmSize",
+                "memory": "Memory",
+                "exec_root": "ReadonlyRootfs",
+                "bind": "attachments",
+                "extra_mount": "Mounts",
+                "host_mount": "HostConfig.Mounts",
+                "mount_shape": "Mounts",
+                "tmpfs": "Tmpfs",
+            }[fault]
+        )
     else:
         module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "canary", execute)
 
@@ -552,7 +584,10 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
     )
 
 
-@pytest.mark.parametrize("fault", [None, "workload", "stop", "cleanup", "create"])
+@pytest.mark.parametrize(
+    "fault",
+    [None, "workload", "stop", "cleanup", "create", "inspect", "scratch", "inspect_cleanup"],
+)
 def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     tmp_path, monkeypatch, fault
 ):
@@ -566,8 +601,17 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     identity = {"image_id": "sha256:" + "b" * 64, "pg_image_id": "sha256:" + "c" * 64}
     monkeypatch.setattr(module, "full_identity", lambda *args: identity)
     monkeypatch.setattr(module.signal, "signal", lambda *args: None)
-    monkeypatch.setattr(module, "full_inspect", lambda *args: None)
-    monkeypatch.setattr(module, "full_scratch", lambda *args: None)
+
+    def inspect(*args):
+        if fault in {"inspect", "inspect_cleanup"}:
+            raise module.ProofFailure("container_boundary", check="Memory")
+
+    def scratch(*args):
+        if fault == "scratch":
+            raise module.ProofFailure("scratch_allocation")
+
+    monkeypatch.setattr(module, "full_inspect", inspect)
+    monkeypatch.setattr(module, "full_scratch", scratch)
     monkeypatch.setattr(module, "effective_privileges", lambda *args: None)
     monkeypatch.setattr(
         module, "cancellation_canary", lambda *args: {"cpu_usec": 100, "memory_peak": 8192}
@@ -608,7 +652,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def reconcile(*args):
         events.append("cleanup")
-        if fault == "cleanup":
+        if fault in {"cleanup", "inspect_cleanup"}:
             raise module.ProofFailure("cleanup_failed")
 
     def launch(args, **kwargs):
@@ -642,11 +686,74 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         assert value["failure"] != "independent_cleanup_pending"
     if fault in {"workload", "create"}:
         assert "capture" not in events
+    if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
+        assert "pytest" not in events
+        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert diagnostic["kind"] == "ocwp.full_python.preflight_failure"
+        assert diagnostic["qualification"] == "not_a_receipt"
+        assert diagnostic["status"] == "unqualified"
+        assert diagnostic["identity"] == identity
+        assert diagnostic["role"] == "canary"
+        assert (
+            diagnostic["stage"]
+            == {
+                "inspect": "inspect",
+                "inspect_cleanup": "inspect",
+                "scratch": "scratch",
+                "create": "create",
+            }[fault]
+        )
+        assert (
+            diagnostic["failure"]
+            == {
+                "inspect": "container_boundary",
+                "inspect_cleanup": "container_boundary",
+                "scratch": "scratch_allocation",
+                "create": "command_timeout",
+            }[fault]
+        )
+        assert diagnostic["failed_field"] == (
+            "Memory" if fault in {"inspect", "inspect_cleanup"} else None
+        )
+        assert diagnostic["returncode"] is None
+        assert value["primary_cleanup"] == (
+            "failed" if fault == "inspect_cleanup" else "verified_absent"
+        )
+        assert value["collection"] is value["result"] is None
     if fault == "stop":
         assert not (tmp_path / "diagnostic.txt").exists()
         assert json.loads((tmp_path / "diagnostic.json").read_text())["available"] is False
     if "reap" in events:
         assert events.index("stop") < events.index("reap")
+
+
+def test_preflight_diagnostic_is_closed_bounded_and_not_raw_output(tmp_path):
+    import json
+
+    evidence = tmp_path / "receipt.json"
+    module.full_preflight_diagnostic(
+        evidence, None, "start", "canary", module.ProofFailure("command_failed", returncode=-25)
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["returncode"] == -25
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "untrusted-stage",
+        "untrusted-role",
+        module.ProofFailure("untrusted-output", check="untrusted-field", returncode=2**32),
+    )
+    raw = (tmp_path / "diagnostic.json").read_text()
+    value = json.loads(raw)
+    assert "untrusted" not in raw
+    assert value["stage"] == "unavailable"
+    assert value["failure"] == "invalid_evidence"
+    assert value["role"] is value["failed_field"] is value["returncode"] is None
+    assert len(raw.encode("utf-8")) < module.LIMIT
+    with pytest.raises(module.ProofFailure, match="preflight_diagnostic_limit"):
+        module.full_preflight_diagnostic(
+            evidence, "x" * module.LIMIT, "inspect", "canary", ValueError()
+        )
+    assert (tmp_path / "diagnostic.json").read_text() == raw
 
 
 @pytest.mark.parametrize(

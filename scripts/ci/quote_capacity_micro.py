@@ -61,9 +61,12 @@ FULL_TMPFS = {
 
 
 class ProofFailure(RuntimeError):
-    def __init__(self, reason: str, *, returncode: int | None = None) -> None:
+    def __init__(
+        self, reason: str, *, returncode: int | None = None, check: str | None = None
+    ) -> None:
         super().__init__(reason)
         self.returncode = returncode
+        self.check = check
 
 
 def identifier(value: str) -> str:
@@ -1061,7 +1064,7 @@ def full_inspect(
         or value["user"] != ("postgres" if role == "db" else "10001:10001")
         or type(host) is not dict
     ):
-        raise ProofFailure("container_identity")
+        raise ProofFailure("container_identity", check="identity")
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
     memory, pids = (768, 128) if role == "db" else (512, 64)
     fixed = {
@@ -1082,20 +1085,20 @@ def full_inspect(
         "SecurityOpt": ["no-new-privileges:true"],
         "Tmpfs": expected,
     }
-    if any(type(host.get(k)) is not type(v) or host[k] != v for k, v in fixed.items()):
-        raise ProofFailure("container_boundary")
+    for key, expected_value in fixed.items():
+        if type(host.get(key)) is not type(expected_value) or host[key] != expected_value:
+            raise ProofFailure("container_boundary", check=key)
     if host.get("Binds") or host.get("Devices") or host.get("CapAdd"):
-        raise ProofFailure("container_boundary")
+        raise ProofFailure("container_boundary", check="attachments")
+    if host.get("Mounts") not in (None, []):
+        raise ProofFailure("unexpected_mount", check="HostConfig.Mounts")
     if host.get("LogConfig") != {"Type": "none", "Config": {}}:
-        raise ProofFailure("container_boundary")
+        raise ProofFailure("container_boundary", check="LogConfig")
     mounts = value["mounts"]
-    if (
-        type(mounts) is not list
-        or len(mounts) != len(expected)
-        or any(type(item) is not dict or item.get("Type") != "tmpfs" for item in mounts)
-        or {item.get("Destination") for item in mounts} != set(expected)
-    ):
-        raise ProofFailure("unexpected_mount")
+    # Docker's --tmpfs map is separate from inspect's MountPoints-derived Mounts.
+    # The exact map above and post-start kernel checks prove the scratch mounts.
+    if type(mounts) is not list or mounts:
+        raise ProofFailure("unexpected_mount", check="Mounts")
 
 
 def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
@@ -1262,6 +1265,105 @@ def full_save_diagnostic(output, evidence: Path) -> None:
     )
 
 
+def full_preflight_diagnostic(
+    evidence: Path, identity: object, stage: str, role: str | None, error: BaseException
+) -> None:
+    """Retain only fixed preflight identifiers; never raw inspect/config output."""
+    from scripts.ci.verify_v01 import write_full_python_json
+
+    codes = {
+        "source_not_exact_clean_commit",
+        "image_identity",
+        "image_source_mismatch",
+        "owner_already_exists",
+        "container_identity",
+        "container_boundary",
+        "unexpected_mount",
+        "scratch_readback",
+        "scratch_allocation",
+        "scratch_mount",
+        "effective_privileges_unavailable",
+        "effective_privilege_boundary",
+        "cgroup_unavailable",
+        "limits_not_enforced",
+        "memory_counter_invalid",
+        "counter_invalid",
+        "cpu_unavailable",
+        "memory_events_unavailable",
+        "pids_events_unavailable",
+        "resource_pressure",
+        "probe_invalid",
+        "canary_readiness",
+        "canary_process_observer",
+        "canary_descendants_missing",
+        "canary_cpu_budget",
+        "cpu_budget",
+        "cpu_counter_regressed",
+        "command_timeout",
+        "command_failed",
+        "output_limit",
+        "wall_budget",
+        "interrupted",
+        "database_readiness",
+        "cleanup_failed",
+    }
+    fields = {
+        "identity",
+        "NetworkMode",
+        "Privileged",
+        "ReadonlyRootfs",
+        "Memory",
+        "MemorySwap",
+        "NanoCpus",
+        "PidsLimit",
+        "ShmSize",
+        "CgroupnsMode",
+        "CapDrop",
+        "IpcMode",
+        "PidMode",
+        "UTSMode",
+        "PublishAllPorts",
+        "SecurityOpt",
+        "Tmpfs",
+        "attachments",
+        "LogConfig",
+        "HostConfig.Mounts",
+        "Mounts",
+    }
+    stages = {
+        "identity",
+        "ownership",
+        "create",
+        "inspect",
+        "start",
+        "privileges",
+        "scratch",
+        "probe",
+        "canary",
+        "database_readiness",
+    }
+    code = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
+    check = error.check if isinstance(error, ProofFailure) else None
+    returncode = error.returncode if isinstance(error, ProofFailure) else None
+    value = {
+        "schema": 1,
+        "kind": "ocwp.full_python.preflight_failure",
+        "status": "unqualified",
+        "qualification": "not_a_receipt",
+        "identity": identity,
+        "stage": stage if stage in stages else "unavailable",
+        "role": role if role in {"canary", "db", "worker"} else None,
+        "failure": code if code in codes else "invalid_evidence",
+        "failed_field": check if check in fields else None,
+        "returncode": returncode
+        if type(returncode) is int and -(2**31) <= returncode < 2**31
+        else None,
+    }
+    if len(json.dumps(value, sort_keys=True).encode("utf-8")) + 1 >= LIMIT:
+        raise ProofFailure("preflight_diagnostic_limit")
+    write_full_python_json(evidence.parent / "diagnostic.json", value)
+
+
 def supervise_python(
     worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path
 ) -> None:
@@ -1282,6 +1384,8 @@ def supervise_python(
     business = False
     child = None
     creation_uncertain = False
+    stage = "identity"
+    role = None
     report = {
         "schema": 1,
         "kind": "ocwp.full_python.receipt",
@@ -1361,6 +1465,7 @@ def supervise_python(
             "worker": identity["image_id"],
             "canary": identity["image_id"],
         }
+        stage = "ownership"
         if owned.with_suffix(".owner.json").exists():
             raise ProofFailure("owner_already_exists")
         owned.with_suffix(".owner.json").write_text(json.dumps({"token": token, "images": images}))
@@ -1439,19 +1544,26 @@ def supervise_python(
                     ]
                 )
             creation_uncertain = True
+            stage = "create"
             cid = identifier(execute(args))
             creation_uncertain = False
             containers[role] = cid
             if role == "worker":
                 worker = cid
+            stage = "inspect"
             full_inspect(cid, images[role], token, network, role, execute)
+            stage = "start"
             execute(["docker", "start", cid])
+            stage = "privileges"
             effective_privileges(cid, role != "db", execute)
+            stage = "scratch"
             full_scratch(cid, role, execute)
+            stage = "probe"
             resources = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
             )
             if role == "canary":
+                stage = "canary"
                 canary = cancellation_canary(cid, execute)
                 cpu_delta({"canary": resources["cpu_usec"]}, {"canary": canary["cpu_usec"]}, 10)
                 containment["canary"] = "passed"
@@ -1459,6 +1571,8 @@ def supervise_python(
             else:
                 before[role] = resources["cpu_usec"]
                 containment["resource_samples"][role] += 1
+        stage = "database_readiness"
+        role = "db"
         while True:
             try:
                 execute(
@@ -1591,6 +1705,9 @@ def supervise_python(
         OSError,
         subprocess.TimeoutExpired,
     ) as error:
+        if not business:
+            with suppress(ProofFailure, OSError, ValueError):
+                full_preflight_diagnostic(evidence, report["identity"], stage, role, error)
         code = (
             str(error)
             if isinstance(error, (ProofFailure, FullPythonEvidenceError))

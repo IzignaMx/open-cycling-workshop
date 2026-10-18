@@ -1,7 +1,45 @@
 schema: 1
 
-full_python_image_entry_and_workspace_20261018:
+full_python_containment_observation_20261018:
   status: prepared_unrun
+  source_base: e98ba57e106849fd4830fc955e7c7139663a691f
+  fourth_attempt:
+    run_id: 39145603647
+    source_commit: 2a906c7fc276639f422b5f7b4ad4dd3384e19d5e
+    source_tree: 4059c1bd6d7bf6e23438785622c3258997bbd342
+    artifact_id: 12143540648
+    artifact_sha256: c575f4012bff2455e8c1ba0f2d587d7412d490509089230959417aa934cc90c2
+    image_preparation: passed
+    supervisor: failed_before_completed_canary_and_business_launch
+    receipt_failure: containment_failed
+    original_failed_check: unavailable
+    collection_and_result: null
+    database_worker_resource_samples: 0
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39145603647
+  prepared_correction:
+    advertised_docker_client_server: 28.0.4
+    source_demonstrated_defect: tmpfs_map_not_top_level_mounts
+    historical_first_failure_attribution: unknown
+    tmpfs_configuration: exact_unchanged
+    alternate_mounts: rejected
+    inspection_order: unchanged_before_start
+    kernel_scratch_enforcement: unchanged_after_start_and_during_sampling
+    preflight_diagnostic: existing_uploaded_diagnostic_json
+    diagnostic_fields: fixed_stage_role_failure_check_and_bounded_returncode
+    diagnostic_limit_bytes_exclusive: 16384
+    raw_configuration_arguments_environment_exception_payloads: excluded
+    diagnostic_qualification: not_a_receipt
+    first_refusal_retention: preserved_across_cleanup
+    receipt_acceptance_and_resource_budgets: unchanged
+    additional_mocked_cases: 7
+    mocked_execution: unrun
+    next_attempt: held_for_exact_review_and_terminal_current_runs
+
+full_python_image_entry_and_workspace_20261018:
+  checkpoint: historical_preparation_before_run_39145603647
+  status_at_checkpoint: prepared_unrun
   source_base: 7c436d9d94ff1b63e4eb78f39a8443426756f428
   third_preparation_attempt:
     run_id: 39143857377
@@ -128,7 +166,7 @@ full_python_preparation_diagnostics_20261018:
   further_execution_at_checkpoint: pending_technical_review_no_retry
 
 clean_quote_service_integration_20261018:
-  status: three_preparation_attempts_failed_final_tree_qualification_pending
+  status: image_prepared_containment_setup_failed_final_tree_qualification_pending
   intended_branch: codex/quote-service-clean-integration
   integration_base: 8a7eeecc39b0a43097484d10dc30af541ae38156
   historical_clean_tree: d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f
@@ -170,8 +208,8 @@ clean_quote_service_integration_20261018:
     locked_inputs: 4
     primary_and_independent_cleanup: verified_absent
     evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481
-  final_clean_tree_runtime: all_three_attempts_failed_before_pytest
-  full_image_preparation: third_attempt_pnpm_entry_permission_denied
+  final_clean_tree_runtime: fourth_attempt_failed_containment_before_pytest
+  full_image_preparation: fourth_attempt_passed
   full_python_suite: unrun
   full_python_business_seconds: 900
   worker_cpus: 1
