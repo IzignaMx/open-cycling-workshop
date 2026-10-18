@@ -1391,7 +1391,11 @@ def test_metadata_observer_and_bridge_registration(pg, monkeypatch):
 
 
 def test_numeric_failure_bounds_and_static_exactness(pg, monkeypatch):
+    from test_quote_integrity_static_contracts import COMMANDS
+
     assert pg.STATIC_FAILURE_LIMIT == 24 * 1024
+    assert "services/platform/tests/quotes/test_quote_history_byte_reuse.py" in COMMANDS[1]
+    assert "services/platform/tests/quotes/test_quote_history_byte_reuse.py" in COMMANDS[2]
     for group, ceiling in (
         ("metadata_sync", 21),
         ("metadata_outbox", 21),
@@ -1542,7 +1546,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         assert module.PYTEST[-len(module.NODES) :] == list(module.NODES)
         assert module.PYTEST[:2] == ["env", "-i"]
         if group in EXISTING_JUNIT_SELECTIONS:
-            assert module.SELECTION == EXISTING_JUNIT_SELECTIONS[group]
+            assert EXISTING_JUNIT_SELECTIONS[group] == module.SELECTION
         if group.startswith("sqlite_"):
             assert module.PYTEST[module.PYTEST.index("-k") + 1] == "not postgres"
         else:
@@ -1731,10 +1735,19 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
     )
     assert combined.EXISTING_BRANCH == "refs/heads/codex/quote-existing-integration-checks"
     assert combined.EXISTING_WORKFLOW == ".github/workflows/quote-existing-integration-checks.yml"
-    assert combined.EXISTING_GROUPS == (*EXISTING_JUNIT_SELECTIONS, "selection_static12")
-    assert combined.SQLITE_GROUPS == tuple(
-        key for key in EXISTING_JUNIT_SELECTIONS if key.startswith("sqlite_")
+    assert (*EXISTING_JUNIT_SELECTIONS, "selection_static12") == combined.EXISTING_GROUPS
+    assert combined.ORACLE_BRANCH == "refs/heads/codex/quote-oracle-adapter-checks"
+    assert combined.ORACLE_WORKFLOW == ".github/workflows/quote-oracle-adapter-checks.yml"
+    assert combined.ORACLE_GROUPS == (
+        "sqlite_single_pass26",
+        "sqlite_codec15",
+        "sqlite_bytes_reads25",
+        "selection_static12",
     )
+    assert sum(JUNIT_COUNTS[group] for group in combined.ORACLE_GROUPS) == 78
+    assert tuple(
+        key for key in EXISTING_JUNIT_SELECTIONS if key.startswith("sqlite_")
+    ) == combined.SQLITE_GROUPS
     assert combined.SEMANTIC_FORMAT_BRANCH == "refs/heads/codex/quote-semantic-format-checks"
     assert combined.SEMANTIC_FORMAT_WORKFLOW == ".github/workflows/quote-semantic-format-checks.yml"
     assert combined.SEMANTIC_STYLE_BRANCH == "refs/heads/codex/quote-semantic-style-checks"
@@ -1765,6 +1778,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
         (combined.SEMANTIC_STYLE_BRANCH, combined.SEMANTIC_STYLE_WORKFLOW),
         (combined.SEMANTIC_FORMAT_BRANCH, combined.SEMANTIC_FORMAT_WORKFLOW),
         (combined.EXISTING_BRANCH, combined.EXISTING_WORKFLOW),
+        (combined.ORACLE_BRANCH, combined.ORACLE_WORKFLOW),
     )
     for group, module in modules.items():
         for branch, workflow in branches:
@@ -1793,6 +1807,7 @@ def test_fixed_junit_maps_and_parser(monkeypatch, tmp_path):
                     and group == "selection_static12"
                 )
                 or (branch == combined.EXISTING_BRANCH and group in combined.EXISTING_GROUPS)
+                or (branch == combined.ORACLE_BRANCH and group in combined.ORACLE_GROUPS)
             )
             if accepted:
                 module.gate()

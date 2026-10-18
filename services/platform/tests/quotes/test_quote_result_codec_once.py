@@ -18,7 +18,7 @@ from test_identity_migration import identity_migration_database as identity_migr
 from test_quote_reconstruction import records as records
 from test_quote_repository import admitted, creation, decision, revision
 from test_quote_repository import database as database
-from test_quote_single_pass import collect_rows
+from test_quote_single_pass import collect_rows, quote_only_oracle_adapter
 from test_quote_storage import NOW, uid
 
 
@@ -303,7 +303,13 @@ def test_corrupt_history_rejection_has_zero_database_writes(database, monkeypatc
             }:
                 writes.append(statement)
 
-        monkeypatch.setattr(repository, "_reconstruct_with_bytes", module._reconstruct_with_bytes)
+        monkeypatch.setattr(
+            repository,
+            "_reconstruct_with_bytes",
+            quote_only_oracle_adapter(oracle)
+            if module is oracle
+            else module._reconstruct_with_bytes,
+        )
         event.listen(database, "before_cursor_execute", capture)
         try:
             for command in (creation(), revision()):

@@ -1,9 +1,39 @@
 # Existing quote integration regressions
 
-Status: selection design and exact implementation independently reviewed;
-execution pending.
+Status: executed with four failed groups; exact evidence independently reviewed.
+
+## Recorded result
+
+[Run 39080692255](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39080692255)
+executed once on commit `dea1a661c81fee3aa1ce907f095a1709edb82d6e`, tree
+`01a92e4597bcc742568ebe1cc02b737f79c96f6c`, attempt 1/1.
+All 23 artifacts and primary/independent cleanup receipts were checked.
+
+- Nineteen complete passing groups establish 259 functional cases, including
+  all 39 selected PostgreSQL nodes and 117 ordered phases.
+- Three other functional groups retain 35 partial passes and three failures;
+  their remaining 28 cases were not run after fail-fast termination.
+- The combined group passed six selection mocks and the repository contract,
+  then Ruff reported three SIM300 comparisons. Formatting, typing and both
+  contracts after lint were unrun.
+- Across the 337 planned checks, the retained evidence records 301 observed
+  passes, four failures and 32 unrun checks. This is not a completed green gate.
+
+The functional failures occur at stale test-only callable boundaries: two
+frozen-oracle adapters and one injected-error double reject the new
+`order_events` keyword before their intended assertions. The original frozen
+oracles remain unchanged. The static failure contains all three diagnostics
+without truncation. A separately reviewed correction targets those boundaries
+and comparisons; it does not rerun this consumed workflow.
+
+The full 37-case corruption function completed in 14.231 seconds. This measured
+result applies only to that fixed group and source, not broader capacity.
 
 ## Purpose and source
+
+This section and the following fixed-scope/resource sections retain the
+historical preparation plan. The recorded result above is authoritative for
+execution status; uncertainty statements below describe the pre-run assessment.
 
 The private quote service, bounded effect reconstruction and migration 0013
 have separate finite functional evidence. The next step checks their affected
@@ -78,13 +108,14 @@ intermediate migration, locking or rollback assertions.
 
 The source review covered exact selectors, typed PostgreSQL parameter matrices,
 fixture ownership, complete bounded reports, unchanged limits and the full
-source diff. After execution, independently verify the exact commit/tree,
-case and phase counts, failures/skips, resource receipts and cleanup before
-recording any passed scope here.
+source diff. The terminal review checked the exact commit/tree, case and phase
+counts, failures/skips, resource receipts and cleanup before recording the
+passed scope above.
 
-This page currently records preparation only. No new run, artifact or passing
-case is claimed. The final clean integration candidate still requires its own
-source-equivalence review and aggregate integration gate.
+The preceding fixed scope and boundaries describe the executed selection.
+The failed groups remain open until corrected-source evidence is reviewed.
+The final clean integration candidate still requires its own source-equivalence
+review and aggregate integration gate.
 
 Capacity and ordinary-operation latency, total Python deadline enforcement,
 broader contention, complete pre-reopen history validation, HTTP/API/UI,

@@ -1,8 +1,14 @@
 # Changelog
 
+## Quote-only oracle adapter correction · 2026-10-18
+
+- Preserve the existing regression run 39080692255: 259 cases in complete passing groups, including 39 PostgreSQL cases; four failed groups and all cleanup evidence retained.
+- Correct only three stale test-callable boundaries and three reported SIM300 comparisons. Frozen oracles and product behavior remain unchanged.
+- Prepare the same three affected groups plus six mocks/six static commands, 78 checks under unchanged per-group limits. [Evidence and scope](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md).
+
 ## Existing quote integration regression preparation · 2026-10-17
 
-- Prepare the selected existing repository/oracle, schema, sync/outbox and cutover regressions: 325 functional cases plus six existing mocks and six static commands, in 23 bounded groups. Execution is pending.
+- Historical preparation: selected repository/oracle, schema, sync/outbox and cutover regressions comprised 325 functional cases plus six existing mocks and six static commands in 23 bounded groups. Execution was pending at that checkpoint; the 2026-10-18 entry records its result.
 - Correct the obsolete unsupported cutover revision specimen from 0013 to 0014; the production supported revisions and positive matrix remain unchanged. No observed failing-before result is claimed.
 - [Selection, evidence boundaries and pending integration gate](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md).
 

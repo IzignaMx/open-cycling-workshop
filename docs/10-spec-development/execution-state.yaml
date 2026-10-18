@@ -1,9 +1,37 @@
 schema: 1
 
+quote_oracle_adapter_correction_20261018:
+  status: exact_source_independently_reviewed_runtime_pending
+  source_base: dea1a661c81fee3aa1ce907f095a1709edb82d6e
+  original_failed_run: 39080692255
+  product_change: none
+  frozen_oracles: unchanged
+  planned_checks: 78
+  planned_groups: 4
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 80
+  runtime: unexecuted
+  evidence: docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md
+
 quote_existing_integration_checks_20261017:
-  status: independently_reviewed_pending_execution
+  status: executed_four_failed_groups_independently_reviewed
   selection_design: independently_reviewed
   exact_implementation: independently_reviewed
+  run_id: 39080692255
+  source_commit: dea1a661c81fee3aa1ce907f095a1709edb82d6e
+  source_tree: 01a92e4597bcc742568ebe1cc02b737f79c96f6c
+  complete_passing_groups: 19
+  complete_functional_cases_passed: 259
+  postgres_cases_passed: 39
+  postgres_phases_passed: 117
+  partial_functional_passes: 35
+  selection_mock_passes: 6
+  repository_contract: passed
+  observed_passes: 301
+  failures: 4
+  unrun_checks: 32
+  artifact_count: 23
+  cleanup: all_primary_and_independent_absence_verified
   source_base: 03e11cd8c0ea6e22955c748fc58abe00c90405b5
   source_base_tree: f0ef88823094bc4e74bdfa8795e4d68597efb751
   existing_functional_cases_planned: 325
@@ -13,7 +41,7 @@ quote_existing_integration_checks_20261017:
   serialized_groups_planned: 23
   workload_seconds_per_group: 20
   maximum_business_allocation_seconds: 460
-  runtime: unexecuted
+  runtime: partial_failed_test_adapters_and_lint
   product_change: none
   test_data_correction: unsupported_cutover_revision_0013_to_0014
   excluded_specimens: large_100_line_proof_and_26_revision_pagination

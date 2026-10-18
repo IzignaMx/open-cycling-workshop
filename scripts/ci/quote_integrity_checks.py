@@ -35,7 +35,7 @@ CANDIDATE_SHA = {
         "39f60d861187048878b32b55f3834168ca19f199c1e090d38bffb37fe9db0d6b"
     ),
     "tests/operations/test_quote_integrity_static_contracts.py": (
-        "f9b40338f3cbec87b6a5d04d4d415cfc2964609212c01db4e0889cfce6f8c440"
+        "859c73712905b69aab4cef4ffd826d9d1f647590123629d3fb43070afbc1532b"
     ),
     "services/platform/src/cycling_workshop/quotes/repository.py": (
         "8a672931a4b5a8cff831f1466e7bd97bd1b31d2991f77b6160ebce69501bbe91"
@@ -62,7 +62,7 @@ CANDIDATE_SHA = {
         "7cf77d3ac510e397c1c875b2e5c21edae4dcb105961e1ed1506f453bb44268d6"
     ),
     "tests/operations/test_quote_integrity_selection.py": (
-        "b6a22a814f90048b532199a80bff690e8f339ca5cc639862ea8ed8aaa00fef76"
+        "e7880085e2d19ff3f55b6afff1c594ca7579cb1b87f89b3a32abf109d2fa5055"
     ),
     ".github/workflows/quote-integrity-checks.yml": (
         "cdf6b937fdc92fc90646fcc7f400594bf6c392b9794643e50f54e49af96b8616"
@@ -112,6 +112,9 @@ CANDIDATE_SHA = {
     ".github/workflows/quote-existing-integration-checks.yml": (
         "754798da585c598a6c98ce615d412dd108490ac0debaf49581775a924211c682"
     ),
+    ".github/workflows/quote-oracle-adapter-checks.yml": (
+        "11cc3ec404f87a6e6509d70b2c5cc97c4cfb5a627423f8fb7b05668891d0d897"
+    ),
     "services/platform/tests/branding/test_profile_migration.py": (
         "600410d91d8854f12c55231bf7678a95d7589a1dacfd0deaefa1862ed53d5f50"
     ),
@@ -131,7 +134,7 @@ CANDIDATE_SHA = {
         "a761699b2bf1e68fd18d8888a79717e2e9666fd0d1ed65e0b8f02bea46306157"
     ),
     "services/platform/tests/quotes/test_quote_history_byte_reuse.py": (
-        "a001241a760f52e16f355ab83d6cc7594174ecc2835c13154e3f95c201093d6b"
+        "3e7b2218dcada35471980e99d3286c857d572c6ef9d5267009a1f0116fdaf9ba"
     ),
     "services/platform/tests/quotes/test_quote_reads.py": (
         "4e37af395a2359c7c67127058925319011d3c97e8681fd51843239445a6c9aae"
@@ -146,13 +149,13 @@ CANDIDATE_SHA = {
         "f8be5679ceeb1879e3af245553401adbcbd68dd0bf3c5b1e86050037d919f57d"
     ),
     "services/platform/tests/quotes/test_quote_result_codec_once.py": (
-        "812bafe298b84962b7c467b4f3e7da61c02e3c9805e1d8ee1525e6e00b95373c"
+        "2a2ba6b2d303d9af700ec7397a365ba6f950c78e97d06bf34811b1a3c7a4f3a7"
     ),
     "services/platform/tests/quotes/test_quote_schema.py": (
         "bd49accbfebf5f113277382a952060a777140c4f20ef493cb5578b424843285c"
     ),
     "services/platform/tests/quotes/test_quote_single_pass.py": (
-        "90c29644182e43b108b27ccb4731348e82794087c7426be882ffac3a0df44a97"
+        "a60cbfa30095c7869e3436013aac9d15b520f1ca38dac313b2ebfdfa8be62b79"
     ),
     "services/platform/tests/service_orders/test_order_sync_service.py": (
         "9a56f33c030427f996d32d7e1494c97d4b3f952628b513b94ff8017daf78bb61"
@@ -193,6 +196,8 @@ SEMANTIC_FORMAT_BRANCH = "refs/heads/codex/quote-semantic-format-checks"
 SEMANTIC_FORMAT_WORKFLOW = ".github/workflows/quote-semantic-format-checks.yml"
 EXISTING_BRANCH = "refs/heads/codex/quote-existing-integration-checks"
 EXISTING_WORKFLOW = ".github/workflows/quote-existing-integration-checks.yml"
+ORACLE_BRANCH = "refs/heads/codex/quote-oracle-adapter-checks"
+ORACLE_WORKFLOW = ".github/workflows/quote-oracle-adapter-checks.yml"
 IMAGE_PREFIX = "ocwp-quote-integrity-"
 SERVICE_PATH = "services/platform/tests/quotes/test_quote_application_service.py"
 ATOMIC_PATH = "services/platform/tests/quotes/test_quote_atomic_effects.py"
@@ -702,6 +707,12 @@ EXISTING_GROUPS = (
     "cutover_cas_audit16",
     "selection_static12",
 )
+ORACLE_GROUPS = (
+    "sqlite_single_pass26",
+    "sqlite_codec15",
+    "sqlite_bytes_reads25",
+    "selection_static12",
+)
 SQLITE_GROUPS = (
     "sqlite_repository24",
     "sqlite_reconstruction_corrupt37",
@@ -827,6 +838,9 @@ def gate() -> None:
     elif os.environ.get("GITHUB_REF") == EXISTING_BRANCH:
         require(GROUP_KEY in EXISTING_GROUPS)
         branch, workflow = EXISTING_BRANCH, EXISTING_WORKFLOW
+    elif os.environ.get("GITHUB_REF") == ORACLE_BRANCH:
+        require(GROUP_KEY in ORACLE_GROUPS)
+        branch, workflow = ORACLE_BRANCH, ORACLE_WORKFLOW
     else:
         require(GROUP_KEY not in EXISTING_GROUPS)
     require(os.environ.get("GITHUB_REF") == branch)
