@@ -651,6 +651,13 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
         "workload",
         "workload_storage_timeout",
         "workload_deadline",
+        "memory_oom",
+        "memory_malformed",
+        "memory_timeout",
+        "memory_unavailable",
+        "memory_fast_exit",
+        "memory_stop",
+        "memory_live_deadline",
         "stop",
         "cleanup",
         "create",
@@ -707,6 +714,38 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
                     raise module.ProofFailure("command_timeout")
                 return "4096|131072|100000|12345\n33554432|83886080\n"
             if args[-1] == module.PROBE:
+                # No observation may postpone stop after exec exit is known.
+                assert "pytest_exit" not in events
+                role = (
+                    "worker"
+                    if len(created) == 3 and args[2] == created[2]
+                    else "db"
+                    if len(created) > 1 and args[2] == created[1]
+                    else "canary"
+                )
+                events.append("probe_" + role)
+                if role == "worker" and "pytest" in events:
+                    raw = probe().replace(
+                        "---memory.current---\n4096", "---memory.current---\n8192"
+                    )
+                    raw = raw.replace("---memory.peak---\n8192", "---memory.peak---\n16384")
+                    if events.count("probe_worker") == 3:
+                        if fault == "memory_timeout":
+                            kwargs["abort"]()
+                            raise module.ProofFailure("command_timeout")
+                        if fault == "memory_unavailable":
+                            raise OSError("synthetic private error")
+                        if fault == "memory_malformed":
+                            return "synthetic private output"
+                        if fault == "memory_oom":
+                            return (
+                                raw.replace("oom 0\noom_kill 0\nmax 0", "oom 2\noom_kill 1\nmax 9")
+                                .replace(
+                                    "---memory.current---\n8192", "---memory.current---\n524288000"
+                                )
+                                .replace("---memory.peak---\n16384", "---memory.peak---\n536870912")
+                            )
+                    return raw
                 if len(created) > 1 and args[2] == created[1]:
                     return (
                         probe()
@@ -723,7 +762,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def stop(*args):
         events.append("stop")
-        if fault == "stop":
+        if fault in {"stop", "memory_stop"}:
             raise module.ProofFailure("worker_stop_unverified")
 
     def reconcile(*args):
@@ -733,14 +772,32 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def launch(args, **kwargs):
         events.append("pytest")
-        if fault == "workload_deadline":
+        if fault in {"workload_deadline", "memory_live_deadline"}:
             expired = module.time.monotonic() + module.FULL_SECONDS + 1
             monkeypatch.setattr(module.time, "monotonic", lambda: expired)
         assert args[-len(verify_v01.FULL_PYTHON_ARGS) :] == list(verify_v01.FULL_PYTHON_ARGS)
         assert "OCWP_QUOTE_MICRO=contained" not in args
+        polls = []
+
+        def poll():
+            if fault and fault.startswith("memory_"):
+                if "stop" in events:
+                    return 137
+                if fault == "memory_live_deadline":
+                    return None
+                polls.append(True)
+                count = 1 if fault in {"memory_fast_exit", "memory_stop"} else 2
+                if len(polls) <= count:
+                    return None
+                events.append("pytest_exit")
+                return 137
+            return 0
+
         return SimpleNamespace(
-            returncode=1 if fault and fault.startswith("workload") else 0,
-            poll=lambda: 0,
+            returncode=137
+            if fault and fault.startswith("memory_")
+            else (1 if fault and fault.startswith("workload") else 0),
+            poll=poll,
             wait=lambda **kwargs: events.append("reap"),
         )
 
@@ -748,6 +805,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     monkeypatch.setattr(module, "full_stop_worker", stop)
     monkeypatch.setattr(module, "full_reconcile", reconcile)
     monkeypatch.setattr(module.subprocess, "Popen", launch)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
     receipt = tmp_path / "receipt.json"
     if fault:
         with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
@@ -775,6 +833,66 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             assert "storage" not in events
         else:
             assert events.index("reap") < events.index("storage") < events.index("cleanup")
+    if fault and fault.startswith("memory_"):
+        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())["memory"]
+        assert diagnostic["qualification"] == "not_a_receipt"
+        assert diagnostic["atomic"] is False
+        assert diagnostic["terminal_observation"] == "not_taken"
+        successful = diagnostic["last_successful"]["worker"]
+        observed = diagnostic["last_observed"]["worker"]
+        phase = "preflight" if fault == "memory_live_deadline" else "workload_poll"
+        assert successful == {
+            "phase": phase,
+            "status": "captured",
+            "memory_current_bytes": 4096 if phase == "preflight" else 8192,
+            "memory_peak_bytes": 8192 if phase == "preflight" else 16384,
+            "memory_max_bytes": 536870912,
+            "memory_events": {"max": 0, "oom": 0, "oom_kill": 0},
+        }
+        if fault == "memory_oom":
+            assert observed == successful | {
+                "memory_current_bytes": 524288000,
+                "memory_peak_bytes": 536870912,
+                "memory_events": {"max": 9, "oom": 2, "oom_kill": 1},
+            }
+        elif fault in {"memory_malformed", "memory_timeout", "memory_unavailable"}:
+            assert observed == {
+                "phase": "workload_poll",
+                "status": "unavailable",
+                "reason": "invalid_output" if fault == "memory_malformed" else "probe_incomplete",
+            }
+        else:
+            assert observed == successful
+        assert (
+            value["failure"]
+            == {
+                "memory_oom": "resource_pressure",
+                "memory_malformed": "containment_failed",
+                "memory_timeout": "containment_failed",
+                "memory_unavailable": "invalid_evidence",
+                "memory_fast_exit": "worker_failed",
+                "memory_stop": "worker_stop_unverified",
+                "memory_live_deadline": "wall_budget",
+            }[fault]
+        )
+        exited = fault in {"memory_fast_exit", "memory_stop"}
+        polls = 0 if fault == "memory_live_deadline" else 1 if exited else 2
+        assert events.count("probe_worker") == events.count("probe_db") == polls + 1
+        assert value["containment"]["resource_samples"] == {
+            "worker": 1 if polls == 0 else 2,
+            "db": polls + 1,
+        }
+        assert value["containment"]["worker_exit"] == (137 if exited else None)
+        assert value["containment"]["final_probe"] == "pending"
+        assert value["result"] is None
+        if exited:
+            assert events[events.index("pytest_exit") + 1] == "stop"
+        assert events.index("stop") < events.index("reap")
+        if fault == "memory_stop":
+            assert events.index("stop") < events.index("cleanup") < events.index("reap")
+        else:
+            assert events.index("reap") < events.index("cleanup")
+        assert "synthetic private" not in json.dumps(diagnostic)
     if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
         assert "pytest" not in events
         diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
@@ -1642,3 +1760,49 @@ def test_postgres_storage_diagnostic_composes_with_real_client(monkeypatch, over
     else:
         assert module.full_postgres_storage("a" * 64, module.full_client)["status"] == "captured"
     assert events == ["spawn", "reap"]
+
+
+def test_memory_observation_keeps_pressure_without_weakening_qualification():
+    raw = probe().replace("oom 0\noom_kill 0\nmax 0", "oom 2\noom_kill 1\nmax 9")
+    assert module.full_memory_observation(raw) == {
+        "memory_current_bytes": 4096,
+        "memory_peak_bytes": 8192,
+        "memory_max_bytes": 536870912,
+        "memory_events": {"max": 9, "oom": 2, "oom_kill": 1},
+    }
+    with pytest.raises(module.ProofFailure, match="resource_pressure"):
+        module.parse_probe(raw, 512, 64)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "",
+        "private output",
+        probe().replace("0::/", "0::/private"),
+        probe().replace("oom 0", "oom -1"),
+        probe().replace("oom 0", "oom 0\noom 0"),
+        probe().replace("oom_kill 0", "missing 0"),
+        probe().replace("oom_kill 0", "oom_kill 0 private"),
+        probe().replace("8192", str(2**64)),
+        probe().replace("4096", "-1"),
+        probe().replace("536870912", "max"),
+        probe() + "x" * module.LIMIT,
+    ],
+    ids=[
+        "empty",
+        "private",
+        "wrong_cgroup",
+        "negative_event",
+        "duplicate_event",
+        "missing_event",
+        "malformed_event",
+        "overflow",
+        "negative_current",
+        "non_numeric_max",
+        "oversized",
+    ],
+)
+def test_memory_observation_rejects_malformed_or_unbounded_values(raw):
+    with pytest.raises(ValueError):
+        module.full_memory_observation(raw)

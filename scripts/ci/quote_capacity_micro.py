@@ -1287,6 +1287,36 @@ def full_capture_record(cid: str, name: str, execute: Callable[..., str]):
     return None if set(value) == {"pending"} and value["pending"] is True else value
 
 
+def full_memory_observation(raw: str) -> dict[str, object]:
+    """Numeric diagnostics, not a substitute for the fail-closed parse_probe."""
+    if len(raw.encode("utf-8")) > LIMIT:
+        raise ValueError("memory_diagnostic_size")
+    sections = re.split(r"\n---([a-z.]+)---\n", raw.strip())
+    if sections[0].strip() != "0::/" or sections[1::2] != list(FIELDS):
+        raise ValueError("memory_diagnostic_shape")
+    values = dict(zip(sections[1::2], (v.strip() for v in sections[2::2]), strict=True))
+
+    def counter(value: str) -> int:
+        if not re.fullmatch(r"0|[1-9][0-9]{0,19}", value) or int(value) >= 2**64:
+            raise ValueError("memory_diagnostic_counter")
+        return int(value)
+
+    pairs = [line.split() for line in values["memory.events"].splitlines()]
+    if any(len(pair) != 2 for pair in pairs) or len({p[0] for p in pairs}) != len(pairs):
+        raise ValueError("memory_diagnostic_events")
+    events = {key: counter(value) for key, value in pairs}
+    if not {"max", "oom", "oom_kill"} <= events.keys():
+        raise ValueError("memory_diagnostic_events")
+    # Preserve nonzero pressure counters, including after an OOM. These reads
+    # are non-atomic and cannot attribute a kill to a particular process.
+    return {
+        "memory_current_bytes": counter(values["memory.current"]),
+        "memory_peak_bytes": counter(values["memory.peak"]),
+        "memory_max_bytes": counter(values["memory.max"]),
+        "memory_events": {key: events[key] for key in ("max", "oom", "oom_kill")},
+    }
+
+
 def full_postgres_storage(cid: str, execute: Callable[..., str]) -> dict[str, object]:
     """Post-stop numeric diagnostics only; never a peak or qualification receipt."""
     identifier(cid)
@@ -1554,6 +1584,18 @@ def supervise_python(
         "final_probe": "pending",
     }
     report["containment"] = containment
+    memory_successful: dict[str, dict[str, object] | None] = {"worker": None, "db": None}
+    memory_observed: dict[str, dict[str, object]] = {
+        role: {"status": "unavailable", "phase": "preflight", "reason": "not_attempted"}
+        for role in ("worker", "db")
+    }
+    memory_diagnostic: dict[str, object] = {
+        "qualification": "not_a_receipt",
+        "atomic": False,
+        "terminal_observation": "not_taken",
+        "last_successful": memory_successful,
+        "last_observed": memory_observed,
+    }
 
     def stop() -> None:
         if worker is not None and not containment["worker_stopped"]:
@@ -1588,6 +1630,33 @@ def supervise_python(
         if time.monotonic() >= deadline:
             raise ProofFailure("wall_budget")
         return result
+
+    def probe_resources(cid: str, role: str, phase: str) -> dict[str, int]:
+        # Wrap the existing probe only: no added calls, polling, or post-exit
+        # work before stop. A fast terminal OOM can still escape these samples.
+        if role in memory_observed:
+            memory_observed[role] = {
+                "status": "unavailable",
+                "phase": phase,
+                "reason": "probe_incomplete",
+            }
+        raw = execute(["docker", "exec", cid, "sh", "-c", PROBE])
+        if role in memory_observed:
+            try:
+                memory_observed[role] = {
+                    "status": "captured",
+                    "phase": phase,
+                    **full_memory_observation(raw),
+                }
+            except ValueError:
+                memory_observed[role]["reason"] = "invalid_output"
+        # Retain a numeric pressure observation even when qualification rejects
+        # it. "Successful" means this parser passed, not that the run qualified.
+        memory, pids = (1024, 128) if role == "db" else (512, 64)
+        resources = parse_probe(raw, memory, pids)
+        if role in memory_observed and memory_observed[role]["status"] == "captured":
+            memory_successful[role] = memory_observed[role]
+        return resources
 
     def interrupt(_signum: int, _frame: FrameType | None) -> None:
         raise ProofFailure("interrupted")
@@ -1701,9 +1770,7 @@ def supervise_python(
             stage = "scratch"
             full_scratch(cid, role, execute)
             stage = "probe"
-            resources = parse_probe(
-                execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
-            )
+            resources = probe_resources(cid, role, "preflight")
             if role == "canary":
                 stage = "canary"
                 canary = cancellation_canary(cid, execute)
@@ -1758,10 +1825,7 @@ def supervise_python(
         def sample() -> None:
             current = {}
             for role in ("db", "worker"):
-                memory, pids = (1024, 128) if role == "db" else (512, 64)
-                resources = parse_probe(
-                    execute(["docker", "exec", containers[role], "sh", "-c", PROBE]), memory, pids
-                )
+                resources = probe_resources(containers[role], role, "workload_poll")
                 full_scratch(containers[role], role, execute)
                 containment["resource_samples"][role] += 1
                 current[role] = resources["cpu_usec"]
@@ -1891,6 +1955,7 @@ def supervise_python(
             with suppress(ProofFailure, FullPythonEvidenceError, OSError, ValueError):
                 metadata = read_full_python_json(evidence.parent / "diagnostic.json")
                 metadata["postgres_storage"] = diagnostic
+                metadata["memory"] = memory_diagnostic
                 write_full_python_json(evidence.parent / "diagnostic.json", metadata)
         cleanup_deadline = min(outer_deadline, time.monotonic() + 55)
 
