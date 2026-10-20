@@ -1,5 +1,55 @@
 schema: 1
 
+full_python_fixed_postgres_and_scanner_correction_20261020:
+  status: implemented_pending_evidence
+  source_base: b6a614deea41440973d1645f17f9b98e8078fc16
+  previous_ci:
+    run_id: 39153233846
+    collected: 4430
+    passed: 1371
+    skipped: 6
+    failed: 1
+    unreached: 3052
+    failure: postgres_data_tmpfs_full_during_200000_row_fixture
+    complete_qualification_and_product_capacity: not_established
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39153233846
+  previous_security:
+    run_id: 39153233900
+    status: failed_generic_api_key_public_documentation_prose
+    later_reuse_pip_audit_trivy: skipped
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39153233900
+  fixed_full_suite_budget:
+    postgres_data_tmpfs_mib: 512
+    postgres_memory_mib: 1024
+    worker_memory_mib: 512
+    cpus_per_container: 1
+    swap_bytes: 0
+    python_seconds: 900
+    postgres_data_inodes: 32768
+    finite_microfixture_limits: unchanged
+    ordinary_large_fixtures: unchanged_200000_and_100000_rows
+    intentional_skip_identities: 58
+    mandatory_restore_cases: 6
+    primary_and_independent_cleanup: required
+  scanner_correction:
+    rule: generic-api-key
+    path: docs/10-spec-development/execution-state.yaml
+    exception: exact_public_prose_value_conjoined_with_exact_path
+    additional_actual_scanner_canaries: 3
+    local_actual_scanner_version: 8.30.1
+    local_canaries_passed: 10
+    local_policy_and_wrapper_tests_passed: 52
+    local_scanner_test_skips: 0
+    each_exception_negative_mutations: passed
+    hosted_full_history_security_result: pending
+  local_budget_checks:
+    passed: 258
+    added_cases: 8
+    observed_prefixed_failures: 5
+    hosted_resource_behavior: not_claimed
+  exact_source_full_python_security_and_other_ci: pending
+  merge_deployment_and_quote_activation: excluded
+
 full_python_synthetic_repository_invocation_20261018:
   status: prepared_unrun
   source_base: db5cc27a73d1c8567d1c77c5e57bd0ec360b0e55

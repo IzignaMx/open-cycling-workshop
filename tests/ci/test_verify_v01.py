@@ -887,3 +887,19 @@ def test_full_python_aggregate_never_falls_back_and_allow_blocked_cannot_pass(
     required = [item for item in decoded["checks"] if item["name"] in MODULE.FULL_CHECK_NAMES]
     assert len(required) == 3 and all(item["status"] == "fail" for item in required)
     assert commands
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("postgres_memory_mib", 768),
+        ("postgres_memory_mib", 2048),
+        ("postgres_tmpfs_bytes", [67108864, 268435456, 16777216]),
+        ("postgres_tmpfs_bytes", [67108864, 1073741824, 16777216]),
+    ],
+)
+def test_full_python_rejects_old_or_widened_postgres_budget(field, value):
+    receipt = full_python_receipt()
+    receipt["policy"][field] = value
+    with pytest.raises(MODULE.FullPythonEvidenceError):
+        MODULE.validate_full_python_receipt(receipt, receipt["identity"])

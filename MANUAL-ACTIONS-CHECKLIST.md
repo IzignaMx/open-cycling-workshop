@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Fixed CI correction qualification · 2026-10-20
+
+- [x] Verify PR #58 source `b6a614deea41440973d1645f17f9b98e8078fc16` and preserve its failed Python and security evidence.
+- [x] Pass 258 local full-suite supervisor/receipt checks for the fixed PostgreSQL budget, including eight new cases and five observed pre-fix failures.
+- [ ] Obtain exact-source complete Python qualification with PostgreSQL data tmpfs 512 MiB and memory 1 GiB; worker 512 MiB, one CPU each, zero swap, Python 900 seconds, exact 58 intentional skips, all six restore cases and both cleanup proofs remain required.
+- [x] Pass ten actual native Gitleaks 8.30.1 canaries and all 52 local policy/security-wrapper tests, including per-exception negative mutations, with no skipped cases.
+- [ ] Complete hosted pinned-scanner canaries, full-history scanning, REUSE, dependency audit and Trivy on the corrected source. Do not inherit earlier security passes.
+- [ ] Preserve the separate integration, physical-device, migration/recovery and quote-activation gates. No merge or deployment is authorized by this correction.
+
 ## Clean quote service integration · 2026-10-18
 
 - [x] Preserve the original 214-case evidence and both failed static runs: [39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151) and [39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007). The latter has complete outer diagnostics but truncated inner formatter output; neither failed static run supplies final workload metrics.
@@ -21,7 +30,7 @@
 - [ ] Review and qualify the minimal executable-entry correction and CI-only runner-temp branding asset placement. Preserve the production asset default and strict clean-source check. The earlier direct browser 80/80 and final verifier 24 pass/three `identity_dirty` rejections remain source-bound evidence, not a full-Python pass. Bounded path/status diagnostics retain rejection and explicit truncation without file contents; their three mocked cases passed in [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879). Complete-suite qualification remains pending.
 - [ ] Qualify the prepared diagnostic regressions and complete containment setup on the final source. The image recipe passed on the fourth and fifth attempts; all fixed build/workload/record limits remain unchanged from the reviewed plain-progress route. Missing ownership/image/receipt still fails closed, and builder cleanup remains unqualified.
 - [ ] Qualify the final clean tree through fixed full-image preparation and one complete source-bound Python receipt; do not relabel earlier results as final-tree execution.
-- [ ] Preserve the 900-second business limit, one-CPU 512-MiB worker, one-CPU 768-MiB database, bounded scratch/output, exactly 58 intentional skips and all six required restore cases. Keep both ordinary larger specimens in the complete collection.
+- [ ] Preserve the 900-second business limit, one-CPU 512-MiB worker, one-CPU 1024-MiB database with 512-MiB data tmpfs, bounded scratch/output, exactly 58 intentional skips and all six required restore cases. Keep both ordinary larger specimens in the complete collection.
 - [ ] Complete technical review of the corrected source before any later execution. The first draft PR triggered ordinary CI, Security/DCO, Local runtime/native ARM64, QEMU diagnostics and the existing quote microfixtures; those scopes remain separate from the full-Python worker.
 - [ ] Complete the full-history pre-reopen validator, real-installation inventory, physical-restore/corruption and capacity/activation obligations separately.
 

@@ -70,12 +70,12 @@ FULL_POLICY = {
     "worker_memory_mib": 512,
     "worker_pids": 64,
     "postgres_cpu": 1,
-    "postgres_memory_mib": 768,
+    "postgres_memory_mib": 1024,
     "postgres_pids": 128,
     "shared_memory_bytes": 67108864,
     "worker_tmpfs_bytes": [67108864, 67108864, 16777216],
     "worker_tmpfs_inodes": [16384, 16384, 32],
-    "postgres_tmpfs_bytes": [67108864, 268435456, 16777216],
+    "postgres_tmpfs_bytes": [67108864, 536870912, 16777216],
     "postgres_tmpfs_inodes": [16384, 32768, 128],
 }
 FULL_PREFLIGHT = {

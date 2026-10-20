@@ -1,5 +1,26 @@
 # Changelog
 
+## Fixed full-Python PostgreSQL budget and scanner policy · 2026-10-20
+
+- Preserve failed CI 39153233846: 4,430 collected, 1,371 passed, six skipped,
+  one PostgreSQL `DiskFull` failure and 3,052 unreached cases. This is not a
+  completed qualification or a product-capacity measurement.
+- Set only the full-Python PostgreSQL data tmpfs to 512 MiB and memory to
+  1 GiB. Match creation, Docker inspection, cgroup observation and receipt
+  policy. Preserve one CPU per container, zero swap, the 512-MiB worker,
+  900-second Python deadline, fixed inode limits and mandatory cleanup.
+  Finite microfixture budgets and both large synthetic fixtures are unchanged.
+- Add a conjunctive exact rule/path/value exception for the public JSON-size
+  documentation phrase flagged by `generic-api-key`, with actual-scanner
+  canaries for the allowed phrase, a changed value and a different path.
+  This does not exempt the file or disable default rules.
+- Local runner/receipt checks: 258 passed, including eight new budget cases;
+  five targeted cases first failed on the old budget. Also passed 52 scanner
+  policy/security-wrapper tests with native Gitleaks 8.30.1, including all ten
+  actual-scanner canaries and each exception's negative mutations. Hosted
+  complete-suite and full-history security evidence remains pending.
+  No merge, deployment or quote API/UI activation is included.
+
 ## Full-Python synthetic repository invocation · 2026-10-18
 
 - Preserve [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879), published head `db5cc27a73d1c8567d1c77c5e57bd0ec360b0e55`, tested merge `418de1e9f2e427dbdd9baccf344b59b988cc9a56`, tree `a4025706a4cfded68b6d9cbb8f7a5ee061d64db4`. Actual pytest collected 4,427 cases without collection errors or deselections and reported 948 passed, five skipped and one failed, leaving 3,473 unreached. The real historical codec/cutover fixture, all five source-loader cases and three required database/branding restores passed; three required quote restores were unreached. The repository publication test then observed Bash exit 1, with its captured stdout/stderr absent from the complete 2,966-byte short trace. No exact failing shell command is retrospectively asserted. Final result/resource counters are absent; both manifest-owned cleanups verified absence, while builder cleanup remains unassessed.

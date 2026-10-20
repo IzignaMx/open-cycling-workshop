@@ -694,7 +694,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
                 if len(created) > 1 and args[2] == created[1]:
                     return (
                         probe()
-                        .replace("536870912", "805306368")
+                        .replace("536870912", "1073741824")
                         .replace("---pids.max---\n64", "---pids.max---\n128")
                     )
                 return probe()
@@ -1495,3 +1495,39 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
     value = dict(stage="create_decode", failure_type="value_error", byte_counts={}) | change
     with pytest.raises(module.ProofFailure):
         module.record_diagnostic(json.dumps(value))
+
+
+@pytest.mark.parametrize("memory_mib", [768, 1024, 2048])
+def test_full_postgres_inspection_accepts_only_fixed_one_gib(memory_mib):
+    import json
+
+    value = full_inspect_value()
+    value["user"] = "postgres"
+    value["host"].update(
+        Memory=memory_mib * 1024 * 1024,
+        MemorySwap=memory_mib * 1024 * 1024,
+        PidsLimit=128,
+        Tmpfs=module.FULL_TMPFS["db"],
+    )
+
+    def execute(*args, **kwargs):
+        return json.dumps(value)
+
+    if memory_mib == 1024:
+        module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "db", execute)
+    else:
+        with pytest.raises(module.ProofFailure, match="container_boundary"):
+            module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "db", execute)
+
+
+def test_full_postgres_storage_budget_preserves_other_containment():
+    from scripts.ci.verify_v01 import FULL_POLICY
+
+    assert module.FULL_TMPFS["db"]["/var/lib/postgresql"] == (
+        "rw,noexec,nosuid,nodev,size=512m,nr_inodes=32768,mode=1777"
+    )
+    assert FULL_POLICY["postgres_tmpfs_bytes"] == [67108864, 536870912, 16777216]
+    assert FULL_POLICY["postgres_memory_mib"] == 1024
+    assert FULL_POLICY["worker_memory_mib"] == 512
+    assert FULL_POLICY["workload_seconds"] == module.FULL_SECONDS == 900
+    assert FULL_POLICY["postgres_cpu"] == FULL_POLICY["worker_cpu"] == 1

@@ -54,7 +54,7 @@ FULL_TMPFS = {
     },
     "db": {
         "/tmp": "rw,noexec,nosuid,nodev,size=64m,nr_inodes=16384,mode=1777",
-        "/var/lib/postgresql": "rw,noexec,nosuid,nodev,size=256m,nr_inodes=32768,mode=1777",
+        "/var/lib/postgresql": "rw,noexec,nosuid,nodev,size=512m,nr_inodes=32768,mode=1777",
         "/var/run/postgresql": "rw,noexec,nosuid,nodev,size=16m,nr_inodes=128,mode=1777",
     },
 }
@@ -1072,7 +1072,7 @@ def full_inspect(
     ):
         raise ProofFailure("container_identity", check="identity")
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
-    memory, pids = (768, 128) if role == "db" else (512, 64)
+    memory, pids = (1024, 128) if role == "db" else (512, 64)
     fixed = {
         "NetworkMode": network,
         "Privileged": False,
@@ -1575,7 +1575,7 @@ def supervise_python(
         containers = {}
         before = {}
         for role in ("canary", "db", "worker"):
-            memory, pids = (768, 128) if role == "db" else (512, 64)
+            memory, pids = (1024, 128) if role == "db" else (512, 64)
             network = f"container:{containers['db']}" if role == "worker" else "none"
             args = [
                 "docker",
@@ -1719,7 +1719,7 @@ def supervise_python(
         def sample() -> None:
             current = {}
             for role in ("db", "worker"):
-                memory, pids = (768, 128) if role == "db" else (512, 64)
+                memory, pids = (1024, 128) if role == "db" else (512, 64)
                 resources = parse_probe(
                     execute(["docker", "exec", containers[role], "sh", "-c", PROBE]), memory, pids
                 )
