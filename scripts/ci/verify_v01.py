@@ -18,7 +18,7 @@ import tempfile
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -57,6 +57,16 @@ FULL_PYTHON_ARGS = (
     "tests",
     "services/platform/tests",
 )
+FULL_POSTGRES_SETTINGS = {
+    "max_wal_size": "128MB",
+    "min_wal_size": "80MB",
+    "checkpoint_timeout": "5min",
+    "checkpoint_completion_target": "0.9",
+    "fsync": "on",
+    "full_page_writes": "on",
+    "synchronous_commit": "on",
+    "wal_level": "replica",
+}
 FULL_POLICY = {
     "version": 1,
     "roots": ["tests", "services/platform/tests"],
@@ -71,6 +81,7 @@ FULL_POLICY = {
     "worker_pids": 64,
     "postgres_cpu": 1,
     "postgres_memory_mib": 1024,
+    "postgres_wal_checkpoint_trigger_mib": 128,
     "postgres_pids": 128,
     "shared_memory_bytes": 67108864,
     "worker_tmpfs_bytes": [67108864, 67108864, 16777216],
@@ -94,6 +105,7 @@ FULL_PREFLIGHT = {
         "database": "ocwp_quote_full_test",
         "server_encoding": "UTF8",
         "client_encoding": "UTF8",
+        "settings": FULL_POSTGRES_SETTINGS,
     },
 }
 FULL_DATABASE_URL = "postgresql+psycopg://ocwp:ocwp-synthetic@127.0.0.1:5432/ocwp_quote_full_test"
@@ -1025,6 +1037,21 @@ def full_python_route_checks(path: Path | None, env: dict[str, str]) -> list[Che
         return _full_failed_checks(str(error), error.source_status)
 
 
+def full_postgres_settings(rows: object) -> dict[str, str]:
+    _full_require(
+        type(rows) is list
+        and len(rows) == len(FULL_POSTGRES_SETTINGS)
+        and all(
+            type(row) is tuple and len(row) == 2 and all(type(value) is str for value in row)
+            for row in rows
+        ),
+        "database_settings",
+    )
+    settings = dict(cast(list[tuple[str, str]], rows))
+    _full_require(settings == FULL_POSTGRES_SETTINGS, "database_settings")
+    return settings
+
+
 def _full_worker_preflight() -> dict[str, Any]:
     """Use only fixed local tools and the supervisor's owned synthetic database."""
     _full_require(Path("/app") == ROOT and Path.cwd() == ROOT, "worker_directory")
@@ -1100,6 +1127,11 @@ def _full_worker_preflight() -> dict[str, Any]:
                     "current_setting('server_encoding'), current_setting('client_encoding')"
                 )
                 row = cursor.fetchone()
+                cursor.execute(
+                    "SELECT name, current_setting(name) FROM pg_settings WHERE name = ANY(%s)",
+                    (list(FULL_POSTGRES_SETTINGS),),
+                )
+                settings = full_postgres_settings(cursor.fetchall())
             _full_require(type(row) is tuple and len(row) == 4, "database_identity")
             values["database"] = {
                 "server_version_num": int(row[0]),
@@ -1108,6 +1140,7 @@ def _full_worker_preflight() -> dict[str, Any]:
                 "database": row[1],
                 "server_encoding": row[2],
                 "client_encoding": row[3],
+                "settings": settings,
             }
     except FullPythonEvidenceError:
         raise

@@ -1,5 +1,24 @@
 # Changelog
 
+## Fixed full-suite WAL checkpoint candidate · 2026-10-20
+
+- Preserve CI 39376683110 on tree `8820a3ed`: 4,438 collected; diagnostic
+  output reports 2,390 passed, 11 skipped, one failure and a teardown error
+  after 388.12 seconds. The 20,001-product/100,000-movement fixture committed,
+  but its catalog query could not allocate a temporary sort file, and teardown
+  could not allocate WAL. The final receipt is unqualified; both owned-container
+  cleanup checks verified absence. No final result or peak-resource proof exists.
+- Candidate: set only full-suite PostgreSQL `max_wal_size=128MB`, with exact
+  runtime readback and unchanged durability settings. This is a soft checkpoint
+  trigger, not a WAL cap. WAL retention is a hypothesis because the failed
+  attempt did not retain a storage breakdown. No fixture, index, query, hard
+  resource limit, skip/restore requirement or finite-microfixture tuning changes.
+- Failed attempts may retain fixed numeric post-stop storage counters when
+  unused workload time permits; diagnostics are non-atomic, nonqualifying and
+  never consume the cleanup reserve or replace the original failure.
+- Local supervisor/receipt suite: 283 passed, including 25 additional cases.
+  Fresh full-suite qualification of this candidate remains pending.
+
 ## Fixed full-Python PostgreSQL budget and scanner policy · 2026-10-20
 
 - Preserve failed CI 39153233846: 4,430 collected, 1,371 passed, six skipped,

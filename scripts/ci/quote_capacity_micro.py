@@ -1287,6 +1287,41 @@ def full_capture_record(cid: str, name: str, execute: Callable[..., str]):
     return None if set(value) == {"pending"} and value["pending"] is True else value
 
 
+def full_postgres_storage(cid: str, execute: Callable[..., str]) -> dict[str, object]:
+    """Post-stop numeric diagnostics only; never a peak or qualification receipt."""
+    identifier(cid)
+    command = (
+        "set -eu; stat -f -c '%S|%b|%f|%d' /var/lib/postgresql; "
+        "psql --no-psqlrc --no-password --username=ocwp "
+        "--dbname=ocwp_quote_full_test --tuples-only --no-align "
+        '--command="SELECT pg_database_size(current_database()), '
+        'COALESCE((SELECT SUM(size) FROM pg_ls_waldir()),0)::bigint"'
+    )
+    raw = execute(["docker", "exec", cid, "sh", "-c", command], timeout=3, limit=LIMIT)
+    if len(raw.encode("utf-8")) > 1024:
+        raise ProofFailure("storage_diagnostic_size")
+    rows = raw.strip().splitlines()
+    if len(rows) != 2 or len(rows[0].split("|")) != 4 or len(rows[1].split("|")) != 2:
+        raise ProofFailure("storage_diagnostic_shape")
+    values = [integer(value) for row in rows for value in row.split("|")]
+    if any(value >= 2**64 for value in values):
+        raise ProofFailure("storage_diagnostic_scalar")
+    block, blocks, free, inodes, database, wal = values
+    if block <= 0 or blocks <= 0 or free > blocks:
+        raise ProofFailure("storage_diagnostic_scalar")
+    return {
+        "status": "captured",
+        "phase": "post_worker_stop",
+        "atomic": False,
+        "qualification": "not_a_receipt",
+        "data_mount_bytes": block * blocks,
+        "data_mount_free_bytes": block * free,
+        "data_mount_free_inodes": inodes,
+        "database_bytes": database,
+        "wal_bytes": wal,
+    }
+
+
 def full_save_diagnostic(output, evidence: Path) -> None:
     """Retain only the already-hosted bounded spool after candidate stop/reap."""
     from scripts.ci.verify_v01 import write_full_python_json
@@ -1473,8 +1508,10 @@ def supervise_python(
     from scripts.ci.verify_v01 import (
         FULL_FAILURE_CODES,
         FULL_POLICY,
+        FULL_POSTGRES_SETTINGS,
         FULL_PYTHON_ARGS,
         FullPythonEvidenceError,
+        read_full_python_json,
         validate_full_python_collection,
         validate_full_python_result,
         write_full_python_json,
@@ -1630,6 +1667,8 @@ def supervise_python(
                         "max_connections=20",
                         "-c",
                         "shared_buffers=64MB",
+                        "-c",
+                        "max_wal_size=" + FULL_POSTGRES_SETTINGS["max_wal_size"],
                     ]
                 )
             else:
@@ -1831,6 +1870,28 @@ def supervise_python(
             stop()
         except (ProofFailure, OSError):
             report["failure"] = "worker_stop_unverified"
+        # Optional failed-run observation uses only unused workload time, never
+        # the reserved cleanup interval. full_client may need two more seconds
+        # to reap a timed-out observer after its three-second command budget.
+        if business and report["failure"] != "independent_cleanup_pending":
+            diagnostic = {
+                "status": "unavailable",
+                "phase": "post_worker_stop",
+                "atomic": False,
+                "qualification": "not_a_receipt",
+            }
+            if (
+                containment["worker_stopped"]
+                and child is not None
+                and child.poll() is not None
+                and time.monotonic() + 5 < deadline
+            ):
+                with suppress(ProofFailure, OSError, ValueError, subprocess.TimeoutExpired):
+                    diagnostic = full_postgres_storage(containers["db"], execute)
+            with suppress(ProofFailure, FullPythonEvidenceError, OSError, ValueError):
+                metadata = read_full_python_json(evidence.parent / "diagnostic.json")
+                metadata["postgres_storage"] = diagnostic
+                write_full_python_json(evidence.parent / "diagnostic.json", metadata)
         cleanup_deadline = min(outer_deadline, time.monotonic() + 55)
 
         def cleanup_execute(args, *, timeout=5):

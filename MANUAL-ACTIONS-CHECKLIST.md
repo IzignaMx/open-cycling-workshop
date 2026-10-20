@@ -1,5 +1,12 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Full-suite WAL checkpoint candidate · 2026-10-20
+
+- [x] Preserve the ninth failed full-suite attempt, [39376683110](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39376683110), including its valid source identity and both absence proofs. Logged pytest counts are not a validated final receipt.
+- [x] Keep the 512-MiB PostgreSQL data mount, 1-GiB database memory, 512-MiB worker, CPU/swap/deadline/fixture and cleanup boundaries unchanged; pass 283 local supervisor/receipt tests.
+- [ ] Independently review and qualify the full-suite-only `max_wal_size=128MB` candidate, including live settings readback and preserved durability. Do not label this soft checkpoint trigger a disk cap or claim the unmeasured prior WAL footprint.
+- [ ] Require full collection, exact intentional skips, all mandatory restores and final containment before accepting the rerun. No limit widening, forced checkpoint/vacuum, product changes, merge or deployment is included.
+
 ## Fixed CI correction qualification · 2026-10-20
 
 - [x] Verify PR #58 source `b6a614deea41440973d1645f17f9b98e8078fc16` and preserve its failed Python and security evidence.

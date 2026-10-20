@@ -903,3 +903,31 @@ def test_full_python_rejects_old_or_widened_postgres_budget(field, value):
     receipt["policy"][field] = value
     with pytest.raises(MODULE.FullPythonEvidenceError):
         MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+
+
+@pytest.mark.parametrize("field", list(MODULE.FULL_POSTGRES_SETTINGS))
+def test_full_python_rejects_changed_postgres_runtime_setting(field):
+    receipt = full_python_receipt()
+    receipt["result"]["preflight"]["database"]["settings"][field] = "unexpected"
+    with pytest.raises(MODULE.FullPythonEvidenceError, match="preflight_failed"):
+        MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+
+
+@pytest.mark.parametrize("fault", [None, "missing", "duplicate", "wider", "durability", "type"])
+def test_postgres_runtime_readback_is_closed_and_exact(fault):
+    rows = list(MODULE.FULL_POSTGRES_SETTINGS.items())
+    if fault == "missing":
+        rows.pop()
+    elif fault == "duplicate":
+        rows.append(rows[0])
+    elif fault == "wider":
+        rows[0] = ("max_wal_size", "1GB")
+    elif fault == "durability":
+        rows[4] = ("fsync", "off")
+    elif fault == "type":
+        rows[0] = ("max_wal_size", 128)
+    if fault:
+        with pytest.raises(MODULE.FullPythonEvidenceError, match="database_settings"):
+            MODULE.full_postgres_settings(rows)
+    else:
+        assert MODULE.full_postgres_settings(rows) == MODULE.FULL_POSTGRES_SETTINGS

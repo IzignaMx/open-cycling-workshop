@@ -646,7 +646,18 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
 
 @pytest.mark.parametrize(
     "fault",
-    [None, "workload", "stop", "cleanup", "create", "inspect", "scratch", "inspect_cleanup"],
+    [
+        None,
+        "workload",
+        "workload_storage_timeout",
+        "workload_deadline",
+        "stop",
+        "cleanup",
+        "create",
+        "inspect",
+        "scratch",
+        "inspect_cleanup",
+    ],
 )
 def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     tmp_path, monkeypatch, fault
@@ -690,6 +701,11 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         if args[:2] == ["docker", "start"]:
             return ""
         if args[:2] == ["docker", "exec"]:
+            if "pg_ls_waldir" in args[-1]:
+                events.append("storage")
+                if fault == "workload_storage_timeout":
+                    raise module.ProofFailure("command_timeout")
+                return "4096|131072|100000|12345\n33554432|83886080\n"
             if args[-1] == module.PROBE:
                 if len(created) > 1 and args[2] == created[1]:
                     return (
@@ -717,10 +733,13 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def launch(args, **kwargs):
         events.append("pytest")
+        if fault == "workload_deadline":
+            expired = module.time.monotonic() + module.FULL_SECONDS + 1
+            monkeypatch.setattr(module.time, "monotonic", lambda: expired)
         assert args[-len(verify_v01.FULL_PYTHON_ARGS) :] == list(verify_v01.FULL_PYTHON_ARGS)
         assert "OCWP_QUOTE_MICRO=contained" not in args
         return SimpleNamespace(
-            returncode=1 if fault == "workload" else 0,
+            returncode=1 if fault and fault.startswith("workload") else 0,
             poll=lambda: 0,
             wait=lambda **kwargs: events.append("reap"),
         )
@@ -744,8 +763,18 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         assert value["primary_cleanup"] == "verified_absent"
     else:
         assert value["failure"] != "independent_cleanup_pending"
-    if fault in {"workload", "create"}:
+    if fault in {"workload", "workload_storage_timeout", "workload_deadline", "create"}:
         assert "capture" not in events
+    if fault in {"workload", "workload_storage_timeout", "workload_deadline"}:
+        assert value["failure"] == "worker_failed"
+        assert value["primary_cleanup"] == "verified_absent"
+        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        expected = "captured" if fault == "workload" else "unavailable"
+        assert diagnostic["postgres_storage"]["status"] == expected
+        if fault == "workload_deadline":
+            assert "storage" not in events
+        else:
+            assert events.index("reap") < events.index("storage") < events.index("cleanup")
     if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
         assert "pytest" not in events
         diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
@@ -1531,3 +1560,85 @@ def test_full_postgres_storage_budget_preserves_other_containment():
     assert FULL_POLICY["worker_memory_mib"] == 512
     assert FULL_POLICY["workload_seconds"] == module.FULL_SECONDS == 900
     assert FULL_POLICY["postgres_cpu"] == FULL_POLICY["worker_cpu"] == 1
+
+
+def test_full_postgres_checkpoint_trigger_leaves_microfixture_unchanged():
+    import inspect
+
+    from scripts.ci.verify_v01 import FULL_POLICY, FULL_POSTGRES_SETTINGS
+
+    assert FULL_POSTGRES_SETTINGS == {
+        "max_wal_size": "128MB",
+        "min_wal_size": "80MB",
+        "checkpoint_timeout": "5min",
+        "checkpoint_completion_target": "0.9",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+    }
+    assert FULL_POLICY["postgres_wal_checkpoint_trigger_mib"] == 128
+    assert '"max_wal_size=" + FULL_POSTGRES_SETTINGS["max_wal_size"]' in inspect.getsource(
+        module.supervise_python
+    )
+    assert "max_wal_size" not in inspect.getsource(module.supervise)
+
+
+@pytest.mark.parametrize(
+    "raw", ["", "private text", "1|2|3|4\n5|6", "4096|100|101|20\n1|2", "4096|100|80|20\n1|-2"]
+)
+def test_postgres_storage_diagnostic_rejects_untrusted_or_invalid_scalars(raw):
+    with pytest.raises((module.ProofFailure, ValueError)):
+        module.full_postgres_storage("a" * 64, lambda *args, **kwargs: raw)
+
+
+def test_postgres_storage_diagnostic_is_fixed_bounded_and_nonqualifying():
+    calls = []
+
+    def execute(args, **kwargs):
+        calls.append((args, kwargs))
+        return "4096|131072|100000|12345\n33554432|83886080\n"
+
+    observed = module.full_postgres_storage("a" * 64, execute)
+    assert observed == {
+        "status": "captured",
+        "phase": "post_worker_stop",
+        "atomic": False,
+        "qualification": "not_a_receipt",
+        "data_mount_bytes": 536870912,
+        "data_mount_free_bytes": 409600000,
+        "data_mount_free_inodes": 12345,
+        "database_bytes": 33554432,
+        "wal_bytes": 83886080,
+    }
+    assert calls[0][1] == {"timeout": 3, "limit": module.LIMIT}
+    assert calls[0][0][:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+    assert "pg_ls_waldir" in calls[0][0][-1]
+    assert "CHECKPOINT" not in calls[0][0][-1] and "VACUUM" not in calls[0][0][-1]
+
+
+@pytest.mark.parametrize("oversized", [False, True])
+def test_postgres_storage_diagnostic_composes_with_real_client(monkeypatch, oversized):
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"4096|131072|100000|12345\n33554432|83886080"
+    if oversized:
+        raw += b"0" * 1024
+
+    def launch(args, **kwargs):
+        events.append("spawn")
+        assert args[:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        return SimpleNamespace(
+            returncode=0, poll=lambda: 0, wait=lambda **kwargs: events.append("reap")
+        )
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    if oversized:
+        with pytest.raises(module.ProofFailure, match="storage_diagnostic_size"):
+            module.full_postgres_storage("a" * 64, module.full_client)
+    else:
+        assert module.full_postgres_storage("a" * 64, module.full_client)["status"] == "captured"
+    assert events == ["spawn", "reap"]

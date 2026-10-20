@@ -1,5 +1,51 @@
 schema: 1
 
+full_python_wal_checkpoint_candidate_20261020:
+  status: implemented_pending_evidence
+  source_base: c18c9475a46fb89325651af423cb3b2afbe0b728
+  preserved_failed_run:
+    run_id: 39376683110
+    source_tree: 8820a3ed2e5dddc9ddb2f6eaf842330b0c7cb0ab
+    source_commit: 28dc2b8bd26ef76d0ef0bac50c1c188b8e7d4aef
+    artifact_id: 12244121042
+    artifact_sha256: f57cb58cbe60315d2132279af1fdbbcc3dcc0e6d649191509da7c367cde514e5
+    collected: 4438
+    logged_passed: 2390
+    logged_skipped: 11
+    logged_failed: 1
+    logged_teardown_errors: 1
+    unreached_cases: 2036
+    logged_seconds: 388.12
+    failure: data_tmpfs_full_during_inventory_catalog_sort_then_teardown_wal_allocation
+    fixture_counts: products_20001_and_movements_100000_committed
+    final_receipt_status: failed_containment_failed
+    worker_exit_final_probe_and_result: unavailable
+    primary_and_independent_cleanup: verified_absent
+    storage_breakdown_and_wal_dominance: not_measured
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39376683110
+  candidate:
+    only_changed_server_setting: max_wal_size_128MB
+    setting_semantics: soft_checkpoint_trigger_not_a_wal_or_disk_cap
+    inherited_max_wal_size_expected_default: 1GB_not_runtime_observed
+    min_wal_size: unchanged_80MB
+    checkpoint_timeout: unchanged_5min
+    checkpoint_completion_target: unchanged_0_9
+    fsync_full_page_writes_synchronous_commit: remain_on_and_live_readback_required
+    wal_level: unchanged_replica
+    postgres_data_mib: 512
+    postgres_memory_mib: 1024
+    worker_memory_mib: 512
+    workload_seconds: 900
+    other_limits_large_fixtures_indexes_queries_skips_restores_and_microfixtures: unchanged
+    forced_checkpoint_vacuum_or_test_isolation_changes: none
+    failed_run_storage_diagnostic: fixed_numeric_post_stop_non_atomic_nonqualifying
+    diagnostic_budget: unused_workload_time_only_3_second_command_plus_2_second_reap
+    diagnostic_failure: never_changes_original_failure_or_cleanup
+  local_supervisor_and_receipt_cases_passed: 283
+  additional_cases: 25
+  runtime_result: pending
+  merge_and_deployment: excluded
+
 full_python_fixed_postgres_and_scanner_correction_20261020:
   status: implemented_pending_evidence
   source_base: b6a614deea41440973d1645f17f9b98e8078fc16
