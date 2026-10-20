@@ -1,5 +1,11 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Proposed worker-only memory experiment · 2026-10-20
+
+- [x] Preserve [diagnostic CI 39416676359](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39416676359): exit 137, 4,486 collected, no final result, both cleanup absence proofs, worker sampled peak 511.93 MiB under its 512-MiB cap. Zero sampled OOM counters and no terminal observation do not confirm or exclude OOM.
+- [ ] Obtain specific approval before publishing and running one 768-MiB Python-worker experiment. PostgreSQL 1 GiB/data 512 MiB, Python 900 seconds, CPU/swap, tests and cleanup remain unchanged; the separate canary remains 512 MiB.
+- [ ] Require exact-source full collection, intentional skip identities, all restores and final containment. A larger worker cap is not a guaranteed fix, product-capacity result, merge or deployment approval.
+
 ## Direct writer-matrix fixture correction · 2026-10-20
 
 - [x] Preserve [CI 39379037252](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39379037252): 4,463 collected, partial 4,298 dot and 58 skip observations, 107 cases without completed markers, `wall_budget`, both cleanup absence proofs. No validated final result exists.

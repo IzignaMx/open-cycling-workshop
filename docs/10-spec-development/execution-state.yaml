@@ -1,5 +1,52 @@
 schema: 1
 
+full_python_worker_memory_experiment_proposal_20261020:
+  status: prepared_pending_specific_approval
+  source_base: 35018747154c83af6b76cc6b3ce43f81a3dc15b0
+  preserved_failed_run:
+    run_id: 39416676359
+    source_tree: b43c307cba0a81066a6d61607f139720627334a7
+    source_commit: fb7f4bd5f949d9849d26715779d845291387c2ee
+    artifact_id: 12263175747
+    artifact_sha256: 1b9b2052d339a254bfc347a92ba86e1236aa343d4c520f9f9dd6eace29ba371d
+    collected: 4486
+    diagnostic_pass_dots: 4234
+    diagnostic_skip_markers: 58
+    cases_without_completed_markers: 194
+    progress_is_not_a_final_result_or_exact_skip_proof: true
+    failure: worker_failed
+    worker_exit: 137
+    worker_last_current_bytes: 529096704
+    worker_last_peak_bytes: 536797184
+    worker_limit_bytes: 536870912
+    worker_peak_to_cap_margin_bytes: 73728
+    worker_observed_max_oom_and_oom_kill: 0
+    terminal_observation: not_taken
+    oom_cause: plausible_not_confirmed
+    database_last_peak_bytes: 381833216
+    post_stop_data_mount_free_bytes: 290512896
+    storage_snapshot: non_atomic_nonqualifying
+    final_result_and_final_probe: unavailable
+    primary_and_independent_cleanup: verified_absent
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39416676359
+  proposed_single_experiment:
+    worker_memory_mib: 768
+    previous_worker_memory_mib: 512
+    increase_mib: 256
+    increase_percent: 50
+    postgres_memory_mib: 1024
+    postgres_data_mib: 512
+    canary_memory_mib: 512
+    canary_removed_before_database_and_worker: true
+    concurrent_database_and_worker_caps_mib: 1792
+    previous_concurrent_caps_mib: 1536
+    host_daemon_and_build_overhead: excluded_not_a_total_host_peak
+    workload_seconds: 900
+    cpu_swap_tests_assertions_skips_restores_large_fixtures_and_cleanup: unchanged
+    success_or_sufficiency: not_proven
+    requires_specific_publication_and_run_approval: true
+  merge_and_deployment: excluded
+
 full_python_direct_writer_fixture_correction_20261020:
   status: implemented_pending_evidence
   source_base: 15f2290f6ca095d59f575a630be6945662737a79

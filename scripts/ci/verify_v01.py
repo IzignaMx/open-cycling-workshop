@@ -77,7 +77,7 @@ FULL_POLICY = {
     "maximum_nodes": FULL_MAX_NODES,
     "expected_skips": 58,
     "worker_cpu": 1,
-    "worker_memory_mib": 512,
+    "worker_memory_mib": 768,
     "worker_pids": 64,
     "postgres_cpu": 1,
     "postgres_memory_mib": 1024,

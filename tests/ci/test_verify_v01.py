@@ -905,6 +905,29 @@ def test_full_python_rejects_old_or_widened_postgres_budget(field, value):
         MODULE.validate_full_python_receipt(receipt, receipt["identity"])
 
 
+@pytest.mark.parametrize("record", ["receipt", "collection", "result"])
+@pytest.mark.parametrize("memory_mib", [512, 1024])
+def test_full_python_rejects_old_or_widened_worker_budget(record, memory_mib):
+    receipt = full_python_receipt()
+    target = receipt if record == "receipt" else receipt[record]
+    target["policy"]["worker_memory_mib"] = memory_mib
+    with pytest.raises(MODULE.FullPythonEvidenceError, match="policy"):
+        MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+
+
+def test_full_python_receipt_binds_exact_worker_experiment_without_other_budget_changes():
+    receipt = full_python_receipt()
+    for record in (receipt, receipt["collection"], receipt["result"]):
+        assert record["policy"]["worker_memory_mib"] == 768
+        assert record["policy"]["postgres_memory_mib"] == 1024
+        assert record["policy"]["postgres_tmpfs_bytes"] == [67108864, 536870912, 16777216]
+        assert record["policy"]["worker_cpu"] == record["policy"]["postgres_cpu"] == 1
+        assert record["policy"]["workload_seconds"] == 900
+        assert record["policy"]["supervisor_seconds"] == 1020
+        assert record["policy"]["expected_skips"] == 58
+    MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+
+
 @pytest.mark.parametrize("field", list(MODULE.FULL_POSTGRES_SETTINGS))
 def test_full_python_rejects_changed_postgres_runtime_setting(field):
     receipt = full_python_receipt()

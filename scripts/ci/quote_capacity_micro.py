@@ -1043,6 +1043,21 @@ def full_stop_worker(cid: str, execute: Callable[..., str] = full_client) -> Non
             raise ProofFailure("worker_stop_unverified")
 
 
+def full_role_limits(role: str) -> tuple[int, int]:
+    """Keep the cancellation canary separate from the full-workload policy."""
+    from scripts.ci.verify_v01 import FULL_POLICY
+
+    if role == "canary":
+        return 512, 64
+    prefix = {"db": "postgres", "worker": "worker"}.get(role)
+    if prefix is None:
+        raise ProofFailure("container_role")
+    return (
+        cast(int, FULL_POLICY[f"{prefix}_memory_mib"]),
+        cast(int, FULL_POLICY[f"{prefix}_pids"]),
+    )
+
+
 def full_inspect(
     cid: str, image: str, token: str, network: str, role: str, execute: Callable[..., str]
 ) -> None:
@@ -1072,7 +1087,7 @@ def full_inspect(
     ):
         raise ProofFailure("container_identity", check="identity")
     expected = FULL_TMPFS["db" if role == "db" else "worker"]
-    memory, pids = (1024, 128) if role == "db" else (512, 64)
+    memory, pids = full_role_limits(role)
     fixed = {
         "NetworkMode": network,
         "Privileged": False,
@@ -1652,7 +1667,7 @@ def supervise_python(
                 memory_observed[role]["reason"] = "invalid_output"
         # Retain a numeric pressure observation even when qualification rejects
         # it. "Successful" means this parser passed, not that the run qualified.
-        memory, pids = (1024, 128) if role == "db" else (512, 64)
+        memory, pids = full_role_limits(role)
         resources = parse_probe(raw, memory, pids)
         if role in memory_observed and memory_observed[role]["status"] == "captured":
             memory_successful[role] = memory_observed[role]
@@ -1681,7 +1696,7 @@ def supervise_python(
         containers = {}
         before = {}
         for role in ("canary", "db", "worker"):
-            memory, pids = (1024, 128) if role == "db" else (512, 64)
+            memory, pids = full_role_limits(role)
             network = f"container:{containers['db']}" if role == "worker" else "none"
             args = [
                 "docker",

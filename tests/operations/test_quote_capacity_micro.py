@@ -658,6 +658,7 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
         "memory_fast_exit",
         "memory_stop",
         "memory_live_deadline",
+        "canary_absence",
         "stop",
         "cleanup",
         "create",
@@ -676,6 +677,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     events = []
     created = []
+    allocations = []
     identity = {"image_id": "sha256:" + "b" * 64, "pg_image_id": "sha256:" + "c" * 64}
     monkeypatch.setattr(module, "full_identity", lambda *args: identity)
     monkeypatch.setattr(module.signal, "signal", lambda *args: None)
@@ -691,9 +693,16 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     monkeypatch.setattr(module, "full_inspect", inspect)
     monkeypatch.setattr(module, "full_scratch", scratch)
     monkeypatch.setattr(module, "effective_privileges", lambda *args: None)
-    monkeypatch.setattr(
-        module, "cancellation_canary", lambda *args: {"cpu_usec": 100, "memory_peak": 8192}
-    )
+
+    def canary(*args):
+        assert len(created) == 1 and allocations == [512]
+        if fault == "canary_absence":
+            raise module.ProofFailure("cleanup_failed")
+        events.append("canary_absent")
+        allocations.append(0)
+        return {"cpu_usec": 100, "memory_peak": 8192}
+
+    monkeypatch.setattr(module, "cancellation_canary", canary)
     monkeypatch.setattr(verify_v01, "validate_full_python_result", lambda *args: {})
     monkeypatch.setattr(verify_v01, "validate_full_python_collection", lambda *args: {})
 
@@ -701,6 +710,15 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         if args[:2] == ["docker", "create"]:
             if fault == "create":
                 raise module.ProofFailure("command_timeout")
+            role = ("canary", "db", "worker")[len(created)]
+            memory, pids = {"canary": (512, 64), "db": (1024, 128), "worker": (768, 64)}[role]
+            assert args[args.index("--memory") + 1] == f"{memory}m"
+            assert args[args.index("--memory-swap") + 1] == f"{memory}m"
+            assert args[args.index("--pids-limit") + 1] == str(pids)
+            assert args[args.index("--cpus") + 1] == "1"
+            if role != "canary":
+                assert "canary_absent" in events
+            allocations.append(memory + (allocations[-1] if allocations else 0))
             cid = str(len(created) + 1) * 64
             created.append(cid)
             Path(args[args.index("--cidfile") + 1]).write_text(cid)
@@ -725,8 +743,10 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
                 )
                 events.append("probe_" + role)
                 if role == "worker" and "pytest" in events:
-                    raw = probe().replace(
-                        "---memory.current---\n4096", "---memory.current---\n8192"
+                    raw = (
+                        probe()
+                        .replace("536870912", "805306368")
+                        .replace("---memory.current---\n4096", "---memory.current---\n8192")
                     )
                     raw = raw.replace("---memory.peak---\n8192", "---memory.peak---\n16384")
                     if events.count("probe_worker") == 3:
@@ -752,7 +772,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
                         .replace("536870912", "1073741824")
                         .replace("---pids.max---\n64", "---pids.max---\n128")
                     )
-                return probe()
+                return probe().replace("536870912", "805306368") if role == "worker" else probe()
             if "pg_isready" in args:
                 return ""
             if args[-2] == "-c":
@@ -813,6 +833,14 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     else:
         module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json")
     value = json.loads(receipt.read_text())
+    assert value["policy"]["worker_memory_mib"] == 768
+    if len(created) == 3:
+        assert allocations == [512, 0, 1024, 1792]
+        assert max(allocations) == 1792
+    if fault == "canary_absence":
+        assert len(created) == 1
+        assert "pytest" not in events
+        assert "canary_absent" not in events
     assert value["status"] == "failed"
     assert value["independent_cleanup"] == "pending"
     if fault is None:
@@ -846,7 +874,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             "status": "captured",
             "memory_current_bytes": 4096 if phase == "preflight" else 8192,
             "memory_peak_bytes": 8192 if phase == "preflight" else 16384,
-            "memory_max_bytes": 536870912,
+            "memory_max_bytes": 805306368,
             "memory_events": {"max": 0, "oom": 0, "oom_kill": 0},
         }
         if fault == "memory_oom":
@@ -1675,7 +1703,7 @@ def test_full_postgres_storage_budget_preserves_other_containment():
     )
     assert FULL_POLICY["postgres_tmpfs_bytes"] == [67108864, 536870912, 16777216]
     assert FULL_POLICY["postgres_memory_mib"] == 1024
-    assert FULL_POLICY["worker_memory_mib"] == 512
+    assert FULL_POLICY["worker_memory_mib"] == 768
     assert FULL_POLICY["workload_seconds"] == module.FULL_SECONDS == 900
     assert FULL_POLICY["postgres_cpu"] == FULL_POLICY["worker_cpu"] == 1
 
@@ -1806,3 +1834,55 @@ def test_memory_observation_keeps_pressure_without_weakening_qualification():
 def test_memory_observation_rejects_malformed_or_unbounded_values(raw):
     with pytest.raises(ValueError):
         module.full_memory_observation(raw)
+
+
+@pytest.mark.parametrize(
+    "role,memory_mib,swap_mib",
+    [
+        ("worker", 768, 768),
+        ("worker", 512, 512),
+        ("worker", 1024, 1024),
+        ("worker", 768, 512),
+        ("worker", 768, 1024),
+        ("canary", 512, 512),
+        ("canary", 768, 768),
+        ("db", 1024, 1024),
+        ("db", 768, 768),
+    ],
+)
+def test_full_worker_budget_inspection_is_role_specific(role, memory_mib, swap_mib):
+    import json
+
+    value = full_inspect_value()
+    value["host"].update(Memory=memory_mib * 1024**2, MemorySwap=swap_mib * 1024**2)
+    if role == "db":
+        value["user"] = "postgres"
+        value["host"].update(PidsLimit=128, Tmpfs=module.FULL_TMPFS["db"])
+    expected = {"canary": 512, "db": 1024, "worker": 768}[role]
+
+    def execute(*args, **kwargs):
+        return json.dumps(value)
+
+    if memory_mib == swap_mib == expected:
+        module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", role, execute)
+    else:
+        with pytest.raises(module.ProofFailure, match="container_boundary"):
+            module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", role, execute)
+
+
+@pytest.mark.parametrize("memory_mib", [512, 768, 1024])
+def test_full_worker_budget_cgroup_probe_is_exact(memory_mib):
+    assert module.full_role_limits("worker") == (768, 64)
+    assert module.full_role_limits("canary") == (512, 64)
+    assert module.full_role_limits("db") == (1024, 128)
+    raw = probe().replace("536870912", str(memory_mib * 1024**2))
+    if memory_mib == 768:
+        assert module.parse_probe(raw, *module.full_role_limits("worker"))["memory_peak"] == 8192
+    else:
+        with pytest.raises(module.ProofFailure, match="limits_not_enforced"):
+            module.parse_probe(raw, *module.full_role_limits("worker"))
+
+
+def test_full_role_limits_reject_unknown_role():
+    with pytest.raises(module.ProofFailure, match="container_role"):
+        module.full_role_limits("other")

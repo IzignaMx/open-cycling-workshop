@@ -1,5 +1,23 @@
 # Changelog
 
+## Proposed bounded Python-worker memory experiment · 2026-10-20
+
+- Preserve diagnostic CI 39416676359 on tree `b43c307c`: 4,486 collected,
+  partial 4,234 pass dots and 58 skip markers, 194 cases without markers,
+  `worker_failed` with exit 137, no final result, and both cleanup absence
+  proofs. The last sampled worker peak was 536,797,184 bytes, 72 KiB below
+  its 512-MiB cap; sampled current was 529,096,704 bytes. Observed OOM
+  counters were zero and no terminal sample exists, so OOM is not confirmed.
+- Propose one explicitly approved experiment with only the full-suite Python
+  worker raised to 768 MiB (+256 MiB, +50%). PostgreSQL memory remains 1 GiB,
+  data tmpfs 512 MiB, Python 900 seconds, one CPU each and zero swap. Canary
+  remains 512 MiB and is removed before database/worker creation. Their
+  concurrent caps total 1,792 MiB, excluding host, daemon and build overhead.
+- Preserve every test, assertion, intentional skip, restore and large fixture;
+  reject mismatched worker creation, inspection, cgroup or receipt budgets.
+  This is a diagnostic experiment, not a proven fix or capacity qualification.
+  Publication and a fresh run require specific approval; no merge or deployment.
+
 ## Direct writer-matrix fixture correction · 2026-10-20
 
 - Preserve CI 39379037252 on tree `c1729214`: 4,463 collected and a
