@@ -1,5 +1,25 @@
 # Changelog
 
+## Direct writer-matrix fixture correction · 2026-10-20
+
+- Preserve CI 39379037252 on tree `c1729214`: 4,463 collected and a
+  `wall_budget` failure at the unchanged 900-second boundary. Diagnostic output
+  has 4,298 pass dots and 58 skip markers; 107 cases have no completed marker.
+  These are partial observations, not a validated final result or exact skip
+  proof. Both owned-container cleanup checks verified absence.
+- The progress boundary is in the SQLite-only direct writer authorization
+  matrix, after both large PostgreSQL specimens and all six restore call
+  markers. Its 125 grant combinations, real lock call and exact assertion are
+  unchanged. Each case still gets a fresh database, complete schema and the
+  original seed; unused FastAPI/TestClient/JWT construction is removed only
+  from that direct-call matrix. HTTP and savepoint regressions are unchanged.
+- Four new regressions prove no HTTP construction, unchanged seed/session
+  configuration, fresh isolation and disposal. Local related tests: 224 passed,
+  zero skipped. Identical local profiled matrix commands: 25.58 seconds before,
+  7.25 seconds after; 125 seed and real lock calls remain. These timings are
+  not hosted capacity evidence. Collection retains all 4,463 original identities
+  in order plus four new cases; fresh fixed-budget qualification is pending.
+
 ## Fixed full-suite WAL checkpoint candidate · 2026-10-20
 
 - Preserve CI 39376683110 on tree `8820a3ed`: 4,438 collected; diagnostic

@@ -1,5 +1,11 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Direct writer-matrix fixture correction · 2026-10-20
+
+- [x] Preserve [CI 39379037252](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39379037252): 4,463 collected, partial 4,298 dot and 58 skip observations, 107 cases without completed markers, `wall_budget`, both cleanup absence proofs. No validated final result exists.
+- [x] Remove only unused HTTP infrastructure from the 125-case direct SQLite writer matrix, preserving fresh seed/schema, all combinations, real lock calls and exact assertions; pass 224 related tests with zero skips and retain every prior collection identity.
+- [ ] Independently review the exact correction and obtain complete fresh hosted evidence within the unchanged 900 seconds, 512-MiB database data mount and 1-GiB database memory. No test omission, limit increase, production change, merge or deployment is included.
+
 ## Full-suite WAL checkpoint candidate · 2026-10-20
 
 - [x] Preserve the ninth failed full-suite attempt, [39376683110](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39376683110), including its valid source identity and both absence proofs. Logged pytest counts are not a validated final receipt.

@@ -1,5 +1,45 @@
 schema: 1
 
+full_python_direct_writer_fixture_correction_20261020:
+  status: implemented_pending_evidence
+  source_base: 15f2290f6ca095d59f575a630be6945662737a79
+  preserved_failed_run:
+    run_id: 39379037252
+    source_tree: c172921493aac00a9b146aa6855a5feb1e319ba9
+    source_commit: aab3887450756e313a8b45af0f42c1cf6b93e2a4
+    artifact_id: 12244384233
+    artifact_sha256: d3b35b51973f5ee1b1f47b46991124f4486779504eb7e52093f63dbb8ef5f57b
+    collected: 4463
+    diagnostic_pass_dots: 4298
+    diagnostic_skip_markers: 58
+    cases_without_completed_markers: 107
+    progress_is_not_a_final_result_or_exact_skip_proof: true
+    failure: wall_budget
+    workload_seconds: 900
+    final_result_worker_exit_and_final_probe: unavailable
+    primary_and_independent_cleanup: verified_absent
+    storage_diagnostic: unavailable_no_unused_workload_time
+    boundary: sqlite_writer_grant_matrix_last_teardown_or_next_setup_call_unknown
+    large_postgres_and_six_restore_call_markers: precede_boundary_not_final_qualification
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39379037252
+  candidate:
+    scope: remove_unused_http_app_client_and_jwt_from_direct_125_case_matrix_only
+    fresh_database_full_schema_original_seed_and_session_configuration: preserved
+    grant_combinations_lock_calls_assertions_http_tests_and_savepoint_test: unchanged
+    engine_disposal: required_per_case
+    production_code_hard_limits_skips_restores_and_large_fixtures: unchanged
+    full_collection: 4467
+    previous_4463_node_identities_and_relative_order: preserved
+    additional_fixture_regressions: 4
+    related_tests_passed: 224
+    related_tests_skipped: 0
+    profiled_matrix_seconds_before: 25.58
+    profiled_matrix_seconds_after: 7.25
+    seed_and_real_lock_calls_before_and_after: 125
+    timings_are_not_hosted_capacity_evidence: true
+  runtime_result: pending
+  merge_and_deployment: excluded
+
 full_python_wal_checkpoint_candidate_20261020:
   status: implemented_pending_evidence
   source_base: c18c9475a46fb89325651af423cb3b2afbe0b728
