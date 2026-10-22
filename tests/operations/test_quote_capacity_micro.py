@@ -658,6 +658,12 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
         "memory_fast_exit",
         "memory_stop",
         "memory_live_deadline",
+        "observer_scratch_timeout",
+        "observer_scratch_readback",
+        "observer_scratch_stop",
+        "observer_cpu",
+        "observer_wait",
+        "observer_poll",
         "canary_absence",
         "stop",
         "cleanup",
@@ -689,10 +695,33 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     def scratch(*args):
         if fault == "scratch":
             raise module.ProofFailure("scratch_allocation")
+        if (
+            "pytest" in events
+            and args[1] == "db"
+            and fault
+            in {
+                "observer_scratch_timeout",
+                "observer_scratch_stop",
+                "observer_scratch_readback",
+            }
+        ):
+            events.append("scratch_failure")
+            raise module.ProofFailure(
+                "scratch_readback" if fault == "observer_scratch_readback" else "command_timeout"
+            )
 
     monkeypatch.setattr(module, "full_inspect", inspect)
     monkeypatch.setattr(module, "full_scratch", scratch)
     monkeypatch.setattr(module, "effective_privileges", lambda *args: None)
+    original_cpu_delta = module.cpu_delta
+
+    def cpu_delta(*args):
+        if fault == "observer_cpu" and "pytest" in events:
+            events.append("cpu_failure")
+            raise module.ProofFailure("cpu_counter_regressed")
+        return original_cpu_delta(*args)
+
+    monkeypatch.setattr(module, "cpu_delta", cpu_delta)
 
     def canary(*args):
         assert len(created) == 1 and allocations == [512]
@@ -782,7 +811,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
 
     def stop(*args):
         events.append("stop")
-        if fault in {"stop", "memory_stop"}:
+        if fault in {"stop", "memory_stop", "observer_scratch_stop"}:
             raise module.ProofFailure("worker_stop_unverified")
 
     def reconcile(*args):
@@ -800,6 +829,15 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         polls = []
 
         def poll():
+            if fault and fault.startswith("observer_"):
+                if (
+                    fault == "observer_poll"
+                    and events.count("probe_db") == 2
+                    and "stop" not in events
+                ):
+                    events.append("poll_failure")
+                    raise OSError("private poll error")
+                return 137 if "stop" in events else None
             if fault and fault.startswith("memory_"):
                 if "stop" in events:
                     return 137
@@ -825,7 +863,13 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     monkeypatch.setattr(module, "full_stop_worker", stop)
     monkeypatch.setattr(module, "full_reconcile", reconcile)
     monkeypatch.setattr(module.subprocess, "Popen", launch)
-    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    def sleep(_seconds):
+        if fault == "observer_wait" and "pytest" in events:
+            events.append("wait_failure")
+            raise module.ProofFailure("interrupted")
+
+    monkeypatch.setattr(module.time, "sleep", sleep)
     receipt = tmp_path / "receipt.json"
     if fault:
         with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
@@ -855,6 +899,12 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         assert value["failure"] == "worker_failed"
         assert value["primary_cleanup"] == "verified_absent"
         diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert diagnostic["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": "python_failed",
+            "stage": "worker_exit",
+            "role": "worker",
+        }
         expected = "captured" if fault == "workload" else "unavailable"
         assert diagnostic["postgres_storage"]["status"] == expected
         if fault == "workload_deadline":
@@ -862,7 +912,30 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         else:
             assert events.index("reap") < events.index("storage") < events.index("cleanup")
     if fault and fault.startswith("memory_"):
-        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())["memory"]
+        metadata = json.loads((tmp_path / "diagnostic.json").read_text())
+        expected_reason = {
+            "memory_oom": "resource_pressure",
+            "memory_malformed": "cgroup_unavailable",
+            "memory_timeout": "command_timeout",
+            "memory_unavailable": "unavailable",
+            "memory_fast_exit": "python_failed",
+            "memory_stop": "python_failed",
+            "memory_live_deadline": "wall_budget",
+        }[fault]
+        expected_stage = (
+            "workload_guard"
+            if fault == "memory_live_deadline"
+            else "worker_exit"
+            if fault in {"memory_fast_exit", "memory_stop"}
+            else "resource_probe"
+        )
+        assert metadata["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": expected_reason,
+            "stage": expected_stage,
+            "role": "worker",
+        }
+        diagnostic = metadata["memory"]
         assert diagnostic["qualification"] == "not_a_receipt"
         assert diagnostic["atomic"] is False
         assert diagnostic["terminal_observation"] == "not_taken"
@@ -920,7 +993,52 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             assert events.index("stop") < events.index("cleanup") < events.index("reap")
         else:
             assert events.index("reap") < events.index("cleanup")
-        assert "synthetic private" not in json.dumps(diagnostic)
+        assert "synthetic private" not in json.dumps(metadata)
+    if fault and fault.startswith("observer_"):
+        metadata = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert metadata["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": {
+                "observer_scratch_timeout": "command_timeout",
+                "observer_scratch_stop": "command_timeout",
+                "observer_scratch_readback": "scratch_readback",
+                "observer_cpu": "cpu_counter_regressed",
+                "observer_wait": "interrupted",
+                "observer_poll": "unavailable",
+            }[fault],
+            "stage": "cpu_check"
+            if fault == "observer_cpu"
+            else "workload_guard"
+            if fault in {"observer_wait", "observer_poll"}
+            else "scratch_check",
+            "role": None
+            if fault == "observer_cpu"
+            else "worker"
+            if fault in {"observer_wait", "observer_poll"}
+            else "db",
+        }
+        assert "supervisor_failure" not in value
+        assert value["failure"] == {
+            "observer_scratch_stop": "worker_stop_unverified",
+            "observer_wait": "interrupted",
+            "observer_poll": "invalid_evidence",
+        }.get(fault, "containment_failed")
+        assert value["primary_cleanup"] == "verified_absent"
+        assert value["containment"]["worker_exit"] is None
+        assert value["result"] is None
+        assert events.count("probe_db") == 2
+        assert events.count("probe_worker") == (
+            2 if fault in {"observer_cpu", "observer_wait", "observer_poll"} else 1
+        )
+        failed = {
+            "observer_cpu": "cpu_failure",
+            "observer_wait": "wait_failure",
+            "observer_poll": "poll_failure",
+        }.get(fault, "scratch_failure")
+        assert events[events.index(failed) + 1] == "stop"
+        assert events.index("stop") < events.index("reap")
+        if fault != "observer_scratch_stop":
+            assert events.index("reap") < events.index("cleanup")
     if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
         assert "pytest" not in events
         diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
@@ -957,9 +1075,56 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         assert value["collection"] is value["result"] is None
     if fault == "stop":
         assert not (tmp_path / "diagnostic.txt").exists()
-        assert json.loads((tmp_path / "diagnostic.json").read_text())["available"] is False
+        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert diagnostic["available"] is False
+        assert diagnostic["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": "worker_stop_unverified",
+            "stage": "worker_stop",
+            "role": "worker",
+        }
     if "reap" in events:
         assert events.index("stop") < events.index("reap")
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "command_timeout",
+        "command_failed",
+        "scratch_allocation",
+        "limits_not_enforced",
+        "cpu_budget",
+    ],
+)
+def test_supervisor_failure_diagnostic_preserves_only_fixed_identifiers(reason):
+    assert module.full_failure_observation(
+        module.ProofFailure(reason, check="private", scratch={"private": "secret"}),
+        "scratch_check",
+        "db",
+    ) == {
+        "qualification": "not_a_receipt",
+        "reason": reason,
+        "stage": "scratch_check",
+        "role": "db",
+    }
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        module.ProofFailure("private exception " + "x" * module.LIMIT),
+        OSError("command_timeout"),
+        ValueError("private exception"),
+    ],
+)
+def test_supervisor_failure_diagnostic_never_retains_unknown_text(error):
+    assert module.full_failure_observation(error, "private stage", "private role") == {
+        "qualification": "not_a_receipt",
+        "reason": "unavailable",
+        "stage": "unavailable",
+        "role": None,
+    }
 
 
 def test_preflight_diagnostic_is_closed_bounded_and_not_raw_output(tmp_path):

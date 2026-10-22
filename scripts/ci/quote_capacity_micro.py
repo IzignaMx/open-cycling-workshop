@@ -1547,6 +1547,58 @@ def full_preflight_diagnostic(
     write_full_python_json(evidence.parent / "diagnostic.json", value)
 
 
+def full_failure_observation(
+    error: BaseException, stage: str, role: str | None
+) -> dict[str, object]:
+    """Describe a caught failure, not its root cause; never retain exception payloads."""
+    reasons = {
+        "command_timeout",
+        "command_failed",
+        "output_limit",
+        "wall_budget",
+        "python_failed",
+        "interrupted",
+        "worker_stop_unverified",
+        "cgroup_unavailable",
+        "limits_not_enforced",
+        "memory_counter_invalid",
+        "counter_invalid",
+        "cpu_unavailable",
+        "memory_events_unavailable",
+        "pids_events_unavailable",
+        "resource_pressure",
+        "probe_invalid",
+        "scratch_readback",
+        "scratch_allocation",
+        "scratch_mount",
+        "cpu_budget",
+        "cpu_counter_regressed",
+    }
+    stages = {
+        "worker_launch",
+        "workload_guard",
+        "resource_probe",
+        "scratch_check",
+        "cpu_check",
+        "collection_read",
+        "collection_validate",
+        "worker_exit",
+        "result_read",
+        "result_validate",
+        "final_deadline",
+        "worker_stop",
+        "client_reap",
+        "diagnostic_save",
+    }
+    reason = str(error) if isinstance(error, ProofFailure) else None
+    return {
+        "qualification": "not_a_receipt",
+        "reason": reason if reason in reasons else "unavailable",
+        "stage": stage if stage in stages else "unavailable",
+        "role": role if role in {"db", "worker"} else None,
+    }
+
+
 def supervise_python(
     worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path
 ) -> None:
@@ -1611,6 +1663,7 @@ def supervise_python(
         "last_successful": memory_successful,
         "last_observed": memory_observed,
     }
+    failure_observed: dict[str, object] | None = None
 
     def stop() -> None:
         if worker is not None and not containment["worker_stopped"]:
@@ -1838,12 +1891,16 @@ def supervise_python(
             resource.setrlimit(resource.RLIMIT_FSIZE, (FULL_SPOOL_LIMIT, FULL_SPOOL_LIMIT))
 
         def sample() -> None:
+            nonlocal stage, role
             current = {}
             for role in ("db", "worker"):
+                stage = "resource_probe"
                 resources = probe_resources(containers[role], role, "workload_poll")
+                stage = "scratch_check"
                 full_scratch(containers[role], role, execute)
                 containment["resource_samples"][role] += 1
                 current[role] = resources["cpu_usec"]
+            stage, role = "cpu_check", None
             cpu_delta(before, current, FULL_CPU_SECONDS)
             cpu_delta(dict.fromkeys(current, 0), current, FULL_CPU_SECONDS)
             if sum(current.values()) + canary["cpu_usec"] > FULL_CPU_SECONDS * 1_000_000:
@@ -1851,6 +1908,7 @@ def supervise_python(
             before.update(current)
 
         with tempfile.TemporaryFile() as output:
+            stage, role = "worker_launch", "worker"
             child = subprocess.Popen(
                 [
                     "docker",
@@ -1870,7 +1928,9 @@ def supervise_python(
                 preexec_fn=cap_output,
             )
             try:
+                stage, role = "workload_guard", "worker"
                 while child.poll() is None:
+                    stage, role = "workload_guard", "worker"
                     if time.monotonic() >= deadline:
                         raise ProofFailure("wall_budget")
                     containment["stdout_bytes"] = os.fstat(output.fileno()).st_size
@@ -1878,35 +1938,61 @@ def supervise_python(
                         raise ProofFailure("output_limit")
                     sample()
                     if report["collection"] is None:
+                        stage, role = "collection_read", "worker"
                         collection = full_capture_record(worker, "collection", execute)
                         if collection is not None:
+                            stage = "collection_validate"
                             validate_full_python_collection(collection, identity)
                             report["collection"] = collection
+                    stage, role = "workload_guard", "worker"
                     time.sleep(min(1, max(0, deadline - time.monotonic())))
+                stage, role = "worker_exit", "worker"
                 containment["worker_exit"] = child.returncode
                 containment["stdout_bytes"] = os.fstat(output.fileno()).st_size
                 if child.returncode or containment["stdout_bytes"] >= FULL_SPOOL_LIMIT:
                     raise ProofFailure("python_failed")
                 sample()
                 for name in ("collection", "result"):
+                    stage, role = name + "_read", "worker"
                     record = full_capture_record(worker, name, execute)
                     if name == "collection":
+                        stage = "collection_validate"
                         validate_full_python_collection(record, identity)
                     report[name] = record
+                stage = "result_validate"
                 validate_full_python_result(report["result"], identity, report["collection"])
                 sample()  # Include record-reader resource use in the final observation.
+                stage, role = "final_deadline", "worker"
                 if time.monotonic() >= deadline:
                     raise ProofFailure("wall_budget")
                 containment.update(deadline="completed", final_probe="passed")
                 report["failure"] = "independent_cleanup_pending"
+            except (
+                ProofFailure,
+                FullPythonEvidenceError,
+                ValueError,
+                OSError,
+                subprocess.TimeoutExpired,
+            ) as error:
+                # Capture before stop/reap can replace the caught exception.
+                # A failure already masked inside full_client remains unknown.
+                failure_observed = full_failure_observation(error, stage, role)
+                raise
             finally:
                 # Never let Popen.__exit__ wait while candidate descendants remain live.
                 try:
+                    stage, role = "worker_stop", "worker"
                     stop()
+                except (ProofFailure, OSError) as error:
+                    if failure_observed is None:
+                        failure_observed = full_failure_observation(error, stage, role)
+                    raise
                 finally:
+                    stage = "client_reap"
                     if child.poll() is None:
                         os.killpg(child.pid, signal.SIGKILL)
                     child.wait(timeout=2)
+                    stage, role = "diagnostic_save", None
                     if containment["worker_stopped"]:
                         full_save_diagnostic(output, evidence)
                     else:
@@ -1926,6 +2012,8 @@ def supervise_python(
         OSError,
         subprocess.TimeoutExpired,
     ) as error:
+        if business and failure_observed is None:
+            failure_observed = full_failure_observation(error, stage, role)
         if not business:
             with suppress(ProofFailure, OSError, ValueError):
                 full_preflight_diagnostic(evidence, report["identity"], stage, role, error)
@@ -1971,6 +2059,7 @@ def supervise_python(
                 metadata = read_full_python_json(evidence.parent / "diagnostic.json")
                 metadata["postgres_storage"] = diagnostic
                 metadata["memory"] = memory_diagnostic
+                metadata["supervisor_failure"] = failure_observed
                 write_full_python_json(evidence.parent / "diagnostic.json", metadata)
         cleanup_deadline = min(outer_deadline, time.monotonic() + 55)
 
