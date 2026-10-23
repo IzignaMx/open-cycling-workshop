@@ -1,5 +1,13 @@
 # Changelog
 
+## Serial Python qualification and dependency correction · 2026-10-23
+
+- Preserve [CI 39743798095](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798095), tree `9cd12a9f`: the exact-source diagnostic identified `wall_budget` at `workload_guard` while the worker remained live. Of 4,521 collected cases, output retained 3,614 pass dots and 50 skip markers, leaving 857 unmarked. These are progress observations, not final results. Both owned-container cleanups verified absence; the aggregate correctly retained 24 passes and three `receipt_failed` rejections.
+- Preserve [Security 39743798122](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798122): 25 advisory entries across locked certifi 2026.7.22 and Pillow 12.3.0. Secret scanning and REUSE passed; Trivy was skipped after dependency-audit failure. Advisory counts do not establish production exploitability.
+- Pin Pillow 13.0.0 and lock development-transitive certifi 2026.10.19, consistently rejecting old installed-decoder and receipt versions. Verify all 15 corrected artifacts against official PyPI metadata; preserve the other 41 registry records and the production PNG decoder unchanged. Fresh local dependency audit covers all 41 active Linux/Python-3.13 packages with zero findings; two Windows-only packages are explicitly marker-excluded. Local focused tests pass 394 cases with 28 existing PostgreSQL-environment skips; independent decoder/security selection passes 301 with zero skips. These are not hosted PostgreSQL or native ARM evidence.
+- Implement the approved two fixed serial Python shards. Each retains 900 seconds, worker 768 MiB, PostgreSQL 1 GiB memory and 512 MiB data, one CPU each, zero swap and unchanged stop/cleanup bounds. The pair has an explicit 1,800-second workload ceiling and a 55-minute Python-job ceiling including preparation. Concurrent candidate memory caps remain 1,792 MiB, excluding host/build overhead.
+- Require an exact-source disjoint, exhaustive, ordered collection union, all 58 intentional skip identities and all six mandatory restores. No test bodies, assertions or large fixtures are removed; no advisory suppression, retry, merge or deployment is included. Local protocol tests pass 458 cases without skips. Collection has 4,649 nodes (2,656 + 1,993), preserving all 4,521 prior node identities/order and adding 128 regressions. Local verification and hosted qualification remain separate; the serial fit is not yet proven.
+
 ## Proposed bounded Python-worker memory experiment · 2026-10-20
 
 - Preserve diagnostic CI 39416676359 on tree `b43c307c`: 4,486 collected,

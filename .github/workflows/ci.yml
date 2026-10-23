@@ -12,9 +12,10 @@ permissions:
 jobs:
   python-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
     outputs:
-      nonce: ${{ steps.identity.outputs.nonce }}
+      nonce_a: ${{ steps.identity.outputs.nonce_a }}
+      nonce_b: ${{ steps.identity.outputs.nonce_b }}
       image_id: ${{ steps.prepare.outputs.image_id }}
       pg_image_id: ${{ steps.prepare.outputs.pg_image_id }}
     steps:
@@ -29,8 +30,10 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain)"
-          nonce="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
-          printf 'nonce=%s\n' "$nonce" >> "$GITHUB_OUTPUT"
+          nonce_a="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+          nonce_b="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+          test "$nonce_a" != "$nonce_b"
+          printf 'nonce_a=%s\nnonce_b=%s\n' "$nonce_a" "$nonce_b" >> "$GITHUB_OUTPUT"
       - name: Prepare the fixed locked full-Python image and matching PostgreSQL clients
         id: prepare
         timeout-minutes: 12
@@ -133,45 +136,85 @@ jobs:
                   image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], stage=stage)
                   output.write(f'{key}={image}\n')
           PY
-      - name: Run the complete pytest collection once inside the fixed resource boundary
+      - name: Run fixed pytest shard A
+        id: run_a
         timeout-minutes: 18
         env:
-          OCWP_FULL_PYTHON_NONCE: ${{ steps.identity.outputs.nonce }}
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
           OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
           OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=30s 1020s python3 -m scripts.ci.quote_capacity_micro \
-            --full-python --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
-            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-owned.json" \
-            --evidence artifacts/full-python/receipt.json
-      - name: Independently remove owned containers and seal only complete same-source proof
+            --full-python --full-python-shard a --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-a-owned.json" \
+            --evidence artifacts/full-python/a/receipt.json
+      - name: Independently remove shard A containers and seal only complete proof
+        id: finalize_a
         if: always()
         timeout-minutes: 1
         env:
-          OCWP_FULL_PYTHON_NONCE: ${{ steps.identity.outputs.nonce }}
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
           OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
           OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
         shell: bash
         run: |
           set -euo pipefail
           timeout --signal=TERM --kill-after=5s 55s python3 -m scripts.ci.quote_capacity_micro \
-            --finalize-full-python --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
-            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-owned.json" \
-            --evidence artifacts/full-python/receipt.json
-      - name: Upload the bounded full-Python receipt
+            --finalize-full-python --full-python-shard a --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-a-owned.json" \
+            --evidence artifacts/full-python/a/receipt.json
+      - name: Run fixed pytest shard B
+        id: run_b
+        if: ${{ !cancelled() && steps.finalize_a.outputs.cleanup_verified == 'true' }}
+        timeout-minutes: 18
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 1020s python3 -m scripts.ci.quote_capacity_micro \
+            --full-python --full-python-shard b --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-b-owned.json" \
+            --evidence artifacts/full-python/b/receipt.json
+      - name: Independently remove shard B containers and seal only complete proof
+        id: finalize_b
+        if: always()
+        timeout-minutes: 1
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s python3 -m scripts.ci.quote_capacity_micro \
+            --finalize-full-python --full-python-shard b --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-b-owned.json" \
+            --evidence artifacts/full-python/b/receipt.json
+      - name: Upload both bounded full-Python shard proofs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: full-python-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
           path: |
-            artifacts/full-python/receipt.json
-            artifacts/full-python/diagnostic.txt
-            artifacts/full-python/diagnostic.json
             artifacts/full-python/preparation.txt
             artifacts/full-python/preparation.json
-            artifacts/full-python/independent-cleanup.json
+            artifacts/full-python/a/receipt.json
+            artifacts/full-python/a/diagnostic.txt
+            artifacts/full-python/a/diagnostic.json
+            artifacts/full-python/a/independent-cleanup.json
+            artifacts/full-python/b/receipt.json
+            artifacts/full-python/b/diagnostic.txt
+            artifacts/full-python/b/diagnostic.json
+            artifacts/full-python/b/independent-cleanup.json
           if-no-files-found: error
   verify:
     needs: python-tests
@@ -254,7 +297,7 @@ jobs:
         run: pnpm exec eslint .
       - name: Run formatting check
         run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
-      - name: Download this attempt's single full-Python result
+      - name: Download this attempt's full-Python shard pair
         if: always()
         continue-on-error: true # The always-run aggregate fails missing or invalid proof.
         uses: actions/download-artifact@v4
@@ -389,11 +432,12 @@ jobs:
       - name: Run V0.1 qualification verifier
         if: always()
         env:
-          OCWP_FULL_PYTHON_NONCE: ${{ needs.python-tests.outputs.nonce }}
+          OCWP_FULL_PYTHON_NONCE_A: ${{ needs.python-tests.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ needs.python-tests.outputs.nonce_b }}
           OCWP_FULL_PYTHON_IMAGE_ID: ${{ needs.python-tests.outputs.image_id }}
           OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ needs.python-tests.outputs.pg_image_id }}
         run: |
-          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked --full-python-receipt artifacts/full-python/receipt.json
+          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked --full-python-receipt artifacts/full-python
           uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
       - name: Upload V0.1 qualification artifact
         if: always()

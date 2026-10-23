@@ -224,7 +224,7 @@ def mock_installed_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
         },
     )
     monkeypatch.setattr(probe.sys, "prefix", str(Path(images.__file__).resolve().parent))
-    monkeypatch.setattr(probe.importlib.metadata, "version", lambda name: "12.3.0")
+    monkeypatch.setattr(probe.importlib.metadata, "version", lambda name: "13.0.0")
     monkeypatch.setattr(probe, "run_diagnostic", Mock(return_value={"diagnostic_only": True}))
 
 
@@ -1145,3 +1145,21 @@ def test_native_workflow_runs_immutable_image_and_binds_worker_to_commit() -> No
     native = workflow.split("  arm64-native-decoder:\n", 1)[1].split("  arm64-build:\n", 1)[0]
     assert '--init --entrypoint python -i "$image_id" -I -' in native
     assert 'git show "$commit:services/platform/src/cycling_workshop/branding/images.py"' in native
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_old_installed_pillow_is_refused_before_decoder_launch(
+    monkeypatch: pytest.MonkeyPatch, native: bool
+) -> None:
+    from cycling_workshop.branding import images
+
+    mock_installed_runtime(monkeypatch)
+    monkeypatch.setattr(probe.importlib.metadata, "version", lambda name: "12.3.0")
+    decoder = Mock()
+    monkeypatch.setattr(images, "canonicalize_logo", decoder)
+    result = probe.run_probe(SHA, IMAGE_ID, "linux/arm64", *([NATIVE, HOST] if native else []))
+    assert result["status"] == "failed"
+    assert result["failure"] == "installed_decoder"
+    assert "pillow_version" not in result
+    assert "qualifying_attempt" not in result
+    decoder.assert_not_called()

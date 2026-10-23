@@ -1,5 +1,13 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Serial qualification and corrected dependencies · 2026-10-23
+
+- [x] Preserve the explicit 900-second failure and both scoped cleanup proofs in [CI 39743798095](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798095), and the 25 advisory entries in [Security 39743798122](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798122).
+- [x] Obtain approval for corrected Pillow/certifi dependencies, related tests, two serial exhaustive 900-second shards at unchanged per-container budgets, a 55-minute Python job and one complete hosted validation. No merge or deployment.
+- [ ] Independently review the final dependency/serial-protocol diff and local evidence, including old-version rejection, unchanged decoder isolation, exact union/skip/restore proof, stale/missing/duplicate shard rejection and cleanup gating.
+- [ ] Qualify the fresh corrected images and complete source-bound shard pair; preserve failed artifacts without retries or budget escalation. Prior runtime/browser/security evidence is not inherited by this candidate.
+- [ ] Keep physical-device, installation-specific recovery, quote activation and product-capacity gates separate. Serial qualification is not a measured capacity result.
+
 ## Proposed worker-only memory experiment · 2026-10-20
 
 - [x] Preserve [diagnostic CI 39416676359](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39416676359): exit 137, 4,486 collected, no final result, both cleanup absence proofs, worker sampled peak 511.93 MiB under its 512-MiB cap. Zero sampled OOM counters and no terminal observation do not confirm or exclude OOM.

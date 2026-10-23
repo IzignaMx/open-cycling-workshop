@@ -564,9 +564,11 @@ def test_independent_absence_cannot_promote_failed_or_missing_proof(tmp_path, mo
     import json
 
     monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
-    monkeypatch.setattr(module, "full_identity", lambda *args: {})
+    identity = serial_identity("a")
+    serial_environment(monkeypatch, identity)
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
     receipt = tmp_path / "receipt.json"
-    (tmp_path / "owned.owner.json").write_text("{}")
+    (tmp_path / "owned.owner.json").write_text(json.dumps(serial_owner(identity)))
     receipt.write_text(json.dumps({"status": "failed", "failure": "wall_budget"}))
     with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
         module.finalize_python("worker", "postgres", "c" * 40, receipt, tmp_path / "owned.json")
@@ -584,8 +586,10 @@ def test_finalizer_retains_cleanup_evidence_without_qualification(tmp_path, monk
 
     receipt = tmp_path / "receipt.json"
     owned = tmp_path / "owned.json"
+    expected_identity = serial_identity("a")
+    serial_environment(monkeypatch, expected_identity)
     if fault != "owner":
-        owned.with_suffix(".owner.json").write_text("{}")
+        owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(expected_identity)))
 
     def reconcile(*args):
         if fault == "cleanup":
@@ -597,7 +601,7 @@ def test_finalizer_retains_cleanup_evidence_without_qualification(tmp_path, monk
         assert cleanup["outcome"] == "verified_absent"
         if fault == "image":
             raise module.ProofFailure("image_identity")
-        return {}
+        return expected_identity
 
     monkeypatch.setattr(module, "full_reconcile", reconcile)
     monkeypatch.setattr(module, "full_identity", identity)
@@ -623,13 +627,15 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
     receipt = tmp_path / "receipt.json"
     receipt.write_text(json.dumps({"status": "failed", "failure": "independent_cleanup_pending"}))
     owned = tmp_path / "owned.json"
-    owned.with_suffix(".owner.json").write_text("{}")
+    expected_identity = serial_identity("a")
+    serial_environment(monkeypatch, expected_identity)
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(expected_identity)))
     calls = []
     monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
-    monkeypatch.setattr(module, "full_identity", lambda *args: {"exact": True})
+    monkeypatch.setattr(module, "full_identity", lambda *args: expected_identity)
 
     def validate(report, identity, *, allow_pending_cleanup=False):
-        assert identity == {"exact": True}
+        assert identity == expected_identity
         assert report["status"] == ("failed" if allow_pending_cleanup else "passed")
         calls.append(allow_pending_cleanup)
 
@@ -674,7 +680,7 @@ def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch
     ],
 )
 def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
-    tmp_path, monkeypatch, fault
+    tmp_path, monkeypatch, fault, *, shard="a"
 ):
     import json
     from types import SimpleNamespace
@@ -684,7 +690,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     events = []
     created = []
     allocations = []
-    identity = {"image_id": "sha256:" + "b" * 64, "pg_image_id": "sha256:" + "c" * 64}
+    identity = serial_identity(shard)
     monkeypatch.setattr(module, "full_identity", lambda *args: identity)
     monkeypatch.setattr(module.signal, "signal", lambda *args: None)
 
@@ -824,7 +830,8 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         if fault in {"workload_deadline", "memory_live_deadline"}:
             expired = module.time.monotonic() + module.FULL_SECONDS + 1
             monkeypatch.setattr(module.time, "monotonic", lambda: expired)
-        assert args[-len(verify_v01.FULL_PYTHON_ARGS) :] == list(verify_v01.FULL_PYTHON_ARGS)
+        expected_args = verify_v01.full_python_args(shard)
+        assert args[-len(expected_args) :] == list(expected_args)
         assert "OCWP_QUOTE_MICRO=contained" not in args
         polls = []
 
@@ -870,13 +877,27 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             raise module.ProofFailure("interrupted")
 
     monkeypatch.setattr(module.time, "sleep", sleep)
-    receipt = tmp_path / "receipt.json"
+    receipt = tmp_path / shard / "receipt.json"
+    predecessor = None
+    if shard == "b":
+        before = serial_identity("a")
+        monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", before["nonce"])
+        prior = tmp_path / "a" / "independent-cleanup.json"
+        prior.parent.mkdir()
+        record = serial_cleanup(before)
+        prior.write_text(json.dumps(record))
+        predecessor = verify_v01.validate_full_python_cleanup(record, before)
     if fault:
         with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
-            module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json")
+            module.supervise_python(
+                "worker", "pg", "d" * 40, receipt, tmp_path / "owned.json", shard
+            )
     else:
-        module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json")
+        module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json", shard)
     value = json.loads(receipt.read_text())
+    assert value["containment"]["predecessor_cleanup_sha256"] == predecessor
+    owner = json.loads((tmp_path / "owned.owner.json").read_text())
+    assert owner == serial_owner(identity)
     assert value["policy"]["worker_memory_mib"] == 768
     if len(created) == 3:
         assert allocations == [512, 0, 1024, 1792]
@@ -898,7 +919,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     if fault in {"workload", "workload_storage_timeout", "workload_deadline"}:
         assert value["failure"] == "worker_failed"
         assert value["primary_cleanup"] == "verified_absent"
-        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
         assert diagnostic["supervisor_failure"] == {
             "qualification": "not_a_receipt",
             "reason": "python_failed",
@@ -912,7 +933,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         else:
             assert events.index("reap") < events.index("storage") < events.index("cleanup")
     if fault and fault.startswith("memory_"):
-        metadata = json.loads((tmp_path / "diagnostic.json").read_text())
+        metadata = json.loads((receipt.parent / "diagnostic.json").read_text())
         expected_reason = {
             "memory_oom": "resource_pressure",
             "memory_malformed": "cgroup_unavailable",
@@ -995,7 +1016,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             assert events.index("reap") < events.index("cleanup")
         assert "synthetic private" not in json.dumps(metadata)
     if fault and fault.startswith("observer_"):
-        metadata = json.loads((tmp_path / "diagnostic.json").read_text())
+        metadata = json.loads((receipt.parent / "diagnostic.json").read_text())
         assert metadata["supervisor_failure"] == {
             "qualification": "not_a_receipt",
             "reason": {
@@ -1041,7 +1062,7 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
             assert events.index("reap") < events.index("cleanup")
     if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
         assert "pytest" not in events
-        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
         assert diagnostic["kind"] == "ocwp.full_python.preflight_failure"
         assert diagnostic["qualification"] == "not_a_receipt"
         assert diagnostic["status"] == "unqualified"
@@ -1074,8 +1095,8 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         )
         assert value["collection"] is value["result"] is None
     if fault == "stop":
-        assert not (tmp_path / "diagnostic.txt").exists()
-        diagnostic = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert not (receipt.parent / "diagnostic.txt").exists()
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
         assert diagnostic["available"] is False
         assert diagnostic["supervisor_failure"] == {
             "qualification": "not_a_receipt",
@@ -2051,3 +2072,279 @@ def test_full_worker_budget_cgroup_probe_is_exact(memory_mib):
 def test_full_role_limits_reject_unknown_role():
     with pytest.raises(module.ProofFailure, match="container_role"):
         module.full_role_limits("other")
+
+
+def serial_identity(shard):
+    from scripts.ci.verify_v01 import full_python_identity
+
+    return full_python_identity(
+        commit="c" * 40,
+        tree="d" * 40,
+        image_id="sha256:" + "e" * 64,
+        pg_image_id="sha256:" + "f" * 64,
+        nonce={"a": "a" * 32, "b": "b" * 32}[shard],
+        run_id="123",
+        run_attempt="1",
+        shard=shard,
+    )
+
+
+def serial_environment(monkeypatch, identity):
+    monkeypatch.setenv("GITHUB_RUN_ID", identity["run_id"])
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", identity["run_attempt"])
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+
+def serial_owner(identity):
+    return {
+        "token": identity["nonce"],
+        "images": {
+            "db": identity["pg_image_id"],
+            "worker": identity["image_id"],
+            "canary": identity["image_id"],
+        },
+    }
+
+
+def serial_cleanup(identity):
+    return {
+        "schema": 2,
+        "kind": "ocwp.full_python.independent_cleanup",
+        "status": "unqualified",
+        "expected_commit": identity["commit"],
+        "run_id": identity["run_id"],
+        "run_attempt": identity["run_attempt"],
+        "scope": "manifest_owned_canary_database_worker",
+        "owner_manifest_present": True,
+        "owner_token": identity["nonce"],
+        "identity": identity,
+        "outcome": "verified_absent",
+        "build_resource_cleanup": "not_assessed",
+        "qualification": "not_a_receipt",
+    }
+
+
+@pytest.mark.parametrize("shard", ["a", "b"])
+def test_full_serial_identity_uses_only_the_selected_fresh_nonce(monkeypatch, shard):
+    from scripts.ci import verify_v01
+
+    wanted = serial_identity(shard)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", "a" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_B", "b" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE", "0" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_IMAGE_ID", wanted["image_id"])
+    monkeypatch.setenv("OCWP_FULL_PYTHON_PG_IMAGE_ID", wanted["pg_image_id"])
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
+    monkeypatch.setattr(
+        module,
+        "source_query",
+        lambda kind, execute: {"head": wanted["commit"], "tree": wanted["tree"], "status": ""}[
+            kind
+        ],
+    )
+
+    def execute(args):
+        if "ocwp.source-tree" in args[-2]:
+            return wanted["tree"]
+        return wanted["image_id"] if args[-1] == "worker" else wanted["pg_image_id"]
+
+    observed = module.full_identity(wanted["commit"], "worker", "postgres", execute, shard)
+    assert observed == wanted
+    assert (
+        observed["command_sha256"]
+        == verify_v01.full_python_peer_identity(wanted, shard, wanted["nonce"])["command_sha256"]
+    )
+
+
+@pytest.mark.parametrize("fault", [None, "nonce", "image", "extra", "missing", "symlink"])
+def test_full_serial_cleanup_owner_is_bound_to_expected_invocation(tmp_path, fault):
+    import json
+
+    from scripts.ci.verify_v01 import FullPythonEvidenceError
+
+    identity = serial_identity("a")
+    owned = tmp_path / "owned.json"
+    manifest = serial_owner(identity)
+    if fault == "nonce":
+        manifest["token"] = "0" * 32
+    elif fault == "image":
+        manifest["images"]["db"] = "sha256:" + "0" * 64
+    elif fault == "extra":
+        manifest["other"] = True
+    if fault != "missing":
+        target = owned.with_suffix(".owner.json")
+        if fault == "symlink":
+            real = tmp_path / "other.json"
+            real.write_text(json.dumps(manifest))
+            target.symlink_to(real)
+        else:
+            target.write_text(json.dumps(manifest))
+    if fault:
+        with pytest.raises((module.ProofFailure, FullPythonEvidenceError)):
+            module.full_cleanup_owner(owned, identity)
+    else:
+        assert module.full_cleanup_owner(owned, identity) == identity["nonce"]
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "missing", "unbound", "nonce", "source", "outcome", "duplicate_nonce"]
+)
+def test_full_serial_predecessor_requires_bound_absence_not_a_success_badge(
+    tmp_path, monkeypatch, fault
+):
+    import json
+
+    from scripts.ci.verify_v01 import FullPythonEvidenceError, validate_full_python_cleanup
+
+    before, after = serial_identity("a"), serial_identity("b")
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", before["nonce"])
+    record = serial_cleanup(before)
+    if fault == "unbound":
+        record["identity"] = None
+    elif fault == "nonce":
+        record["owner_token"] = "0" * 32
+    elif fault == "source":
+        record["identity"]["tree"] = "0" * 40
+    elif fault == "outcome":
+        record["outcome"] = "failed"
+    elif fault == "duplicate_nonce":
+        after["nonce"] = before["nonce"]
+    path = tmp_path / "a" / "independent-cleanup.json"
+    path.parent.mkdir()
+    if fault != "missing":
+        path.write_text(json.dumps(record))
+    evidence = tmp_path / "b" / "receipt.json"
+    if fault:
+        with pytest.raises((module.ProofFailure, FullPythonEvidenceError)):
+            module.full_predecessor_cleanup(evidence, after)
+    else:
+        assert module.full_predecessor_cleanup(evidence, after) == validate_full_python_cleanup(
+            record, before
+        )
+    assert (
+        module.full_predecessor_cleanup(tmp_path / "a" / "receipt.json", serial_identity("a"))
+        is None
+    )
+
+
+def test_full_serial_failed_a_still_emits_bound_absence_without_qualifying(tmp_path, monkeypatch):
+    import json
+
+    from scripts.ci.verify_v01 import validate_full_python_cleanup
+
+    identity = serial_identity("a")
+    receipt = tmp_path / "a" / "receipt.json"
+    receipt.parent.mkdir()
+    receipt.write_text(json.dumps({"status": "failed", "failure": "wall_budget"}))
+    owned = tmp_path / "owned-a.json"
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(identity)))
+    output = tmp_path / "step-output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("GITHUB_RUN_ID", identity["run_id"])
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", identity["run_attempt"])
+    events = []
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: events.append("absence"))
+
+    def read_identity(*args):
+        assert events == ["absence"]
+        return identity
+
+    monkeypatch.setattr(module, "full_identity", read_identity)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", identity["commit"], receipt, owned, "a")
+    cleanup = json.loads((receipt.parent / "independent-cleanup.json").read_text())
+    assert validate_full_python_cleanup(cleanup, identity)
+    assert output.read_text() == "cleanup_verified=true\n"
+    assert json.loads(receipt.read_text())["status"] == "failed"
+    assert json.loads(receipt.read_text())["failure"] == "wall_budget"
+
+
+@pytest.mark.parametrize("fault", ["missing", "wrong_owner", "cleanup", "identity"])
+def test_full_serial_unbound_finalizer_never_emits_start_gate(tmp_path, monkeypatch, fault):
+    import json
+
+    identity = serial_identity("a")
+    owned = tmp_path / "owned.json"
+    if fault != "missing":
+        manifest = serial_owner(identity)
+        if fault == "wrong_owner":
+            manifest["token"] = "0" * 32
+        owned.with_suffix(".owner.json").write_text(json.dumps(manifest))
+    output = tmp_path / "step-output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+
+    def reconcile(*args):
+        if fault == "cleanup":
+            raise module.ProofFailure("cleanup_failed")
+
+    def read_identity(*args):
+        if fault == "identity":
+            raise module.ProofFailure("image_identity")
+        return identity
+
+    monkeypatch.setattr(module, "full_reconcile", reconcile)
+    monkeypatch.setattr(module, "full_identity", read_identity)
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python(
+            "worker", "postgres", identity["commit"], tmp_path / "receipt.json", owned, "a"
+        )
+    assert not output.exists()
+
+
+def test_full_serial_b_refuses_creation_without_predecessor_cleanup(tmp_path, monkeypatch):
+    import json
+
+    identity = serial_identity("b")
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", "a" * 32)
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+    monkeypatch.setattr(module.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    receipt = tmp_path / "b" / "receipt.json"
+    owned = tmp_path / "owned-b.json"
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.supervise_python("worker", "postgres", identity["commit"], receipt, owned, "b")
+    assert not owned.with_suffix(".owner.json").exists()
+    report = json.loads(receipt.read_text())
+    assert report["status"] == "failed"
+    assert report["containment"]["predecessor_cleanup_sha256"] is None
+    diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
+    assert diagnostic["stage"] == "serial_predecessor"
+
+
+@pytest.mark.parametrize("operation", ["--full-python", "--finalize-full-python"])
+def test_full_serial_cli_requires_explicit_shard_before_any_operation(monkeypatch, operation):
+    import sys
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "helper",
+            operation,
+            "--worker-image",
+            "worker",
+            "--pg-image",
+            "pg",
+            "--commit",
+            "c" * 40,
+            "--evidence",
+            "receipt.json",
+            "--owned",
+            "owned.json",
+        ],
+    )
+    monkeypatch.setattr(module, "supervise_python", lambda *args: pytest.fail("unlabelled shard"))
+    monkeypatch.setattr(module, "finalize_python", lambda *args: pytest.fail("unlabelled shard"))
+    with pytest.raises(SystemExit) as error:
+        module.main()
+    assert error.value.code == 1
+
+
+@pytest.mark.parametrize("fault", [None, "workload", "stop", "cleanup"])
+def test_full_serial_b_preserves_stop_reap_cleanup_lifecycle(tmp_path, monkeypatch, fault):
+    test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
+        tmp_path, monkeypatch, fault, shard="b"
+    )

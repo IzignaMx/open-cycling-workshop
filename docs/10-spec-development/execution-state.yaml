@@ -1,5 +1,89 @@
 schema: 1
 
+serial_python_dependency_correction_20261023:
+  status: implemented_pending_evidence
+  source_base: de6cc06ee3ed283d4c2a738fed161355bb2fc737
+  preserved_failed_run:
+    run_id: 39743798095
+    source_tree: 9cd12a9fb2bc3da17fa8ebce52eee6b455a2d6a8
+    source_commit: 43011fff6aae84287d787b9005379511942b8d86
+    artifact_id: 12411191927
+    artifact_sha256: c5468fb2f615e2ff9b00c14652e7d899b6bb449e1e70379de247ad8aa21e7f4f
+    collected: 4521
+    diagnostic_pass_dots: 3614
+    diagnostic_skip_markers: 50
+    cases_without_completed_markers: 857
+    final_result: unavailable
+    failure: wall_budget
+    observed_stage: workload_guard
+    observed_role: worker
+    primary_and_independent_cleanup: verified_absent
+    builder_cleanup: not_assessed
+    aggregate_passes: 24
+    aggregate_receipt_rejections: 3
+  preserved_security_failure:
+    run_id: 39743798122
+    artifact_id: 12410536252
+    artifact_sha256: faf15bd4703e4d75d81a2d8894cabed1bb2f923d54f7b1c332993902e368ac7e
+    advisory_entries: 25
+    certifi_version: 2026.7.22
+    pillow_version: 12.3.0
+    active_audited_package_versions: 41
+    demonstrated_production_exploitability: not_established
+    trivy: skipped_after_dependency_audit_failure
+  approved_candidate:
+    fixed_serial_shards: 2
+    workload_seconds_each: 900
+    aggregate_workload_seconds: 1800
+    python_job_minutes: 55
+    worker_memory_mib: 768
+    postgres_memory_mib: 1024
+    postgres_data_mib: 512
+    concurrent_candidate_caps_mib: 1792
+    host_daemon_build_overhead: excluded
+    one_cpu_each_zero_swap_and_other_resource_limits: unchanged
+    existing_test_bodies_assertions_and_large_fixtures: preserved
+    required_collection: exact_disjoint_exhaustive_ordered_union
+    required_skip_identities: 58
+    required_restore_cases: 6
+    source_image_canary_primary_and_independent_cleanup: required_per_shard
+    complete_hosted_attempts_authorized: 1
+    retries_merge_deployment: excluded
+  dependency_correction:
+    pillow_version: 13.0.0
+    certifi_version: 2026.10.19
+    certifi_scope: development_transitive_unchanged
+    uv_version: 0.11.15
+    unrelated_registry_records_preserved: 41
+    official_pypi_artifacts_verified: 15
+    observed_red_regressions: 6
+    focused_passed: 394
+    existing_postgres_environment_skips: 28
+    independent_focused_passed_without_skips: 301
+    audit_active_packages: 41
+    audit_known_vulnerabilities: 0
+    audit_skipped_active_packages: 0
+    windows_only_marker_exclusions: 2
+    production_decoder_and_security_scanner_policy: unchanged
+    advisory_suppressions: none
+    local_python: 3.13.5
+    local_architecture: x86_64
+    postgres_container_native_arm_and_hosted_evidence: pending
+  local_serial_protocol:
+    related_passed_without_skips: 458
+    full_collection: 4649
+    shard_a_count: 2656
+    shard_b_count: 1993
+    prior_4521_node_identities_and_relative_order: preserved
+    added_regressions: 128
+    shard_a_expected_skips: 11
+    shard_b_expected_skips: 47
+    required_restore_cases: 6
+    source_bound_plugin_module_membership: checked_not_cryptographic_attestation
+    independent_final_review: pending
+    hosted_shard_fit: not_proven
+  hosted_qualification: pending
+
 full_python_worker_memory_experiment_proposal_20261020:
   status: prepared_pending_specific_approval
   source_base: 35018747154c83af6b76cc6b3ce43f81a3dc15b0

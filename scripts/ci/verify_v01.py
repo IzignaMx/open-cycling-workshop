@@ -30,15 +30,15 @@ class Check:
     detail: str
 
 
-# One closed CI route, not a selector or command API. Ordinary imports do not
+# Two fixed serial shards, not a selector or command API. Ordinary imports do not
 # register the plugin and the standalone verifier retains its local behavior.
 FULL_RECORD_LIMIT = 4 * 1024 * 1024
 FULL_MAX_NODES = 8192
-# At most 360 bytes for each ordinary collection/outcome pair, plus 64 KiB for
+# At most 448 bytes for each ordinary collection/outcome pair, plus 64 KiB for
 # the 69 unique semantic IDs, three identities, policies and fixed envelopes.
 # Successful phases use only fixed enums and <=9-digit microsecond integers.
-FULL_MAX_SERIALIZED_BYTES = FULL_MAX_NODES * 360 + 65536
-FULL_PYTHON_ARGS = (
+FULL_MAX_SERIALIZED_BYTES = FULL_MAX_NODES * 448 + 65536
+_FULL_PYTHON_ARGS = (
     "-p",
     "no:cacheprovider",
     "-p",
@@ -57,6 +57,33 @@ FULL_PYTHON_ARGS = (
     "tests",
     "services/platform/tests",
 )
+FULL_SHARDS = ("a", "b")
+FULL_SHARD_SELECTORS = {
+    "a": (
+        "tests/",
+        "services/platform/tests/bicycles/",
+        "services/platform/tests/blobs/",
+        "services/platform/tests/branding/",
+        "services/platform/tests/cli/",
+        "services/platform/tests/customers/",
+        "services/platform/tests/db/",
+        "services/platform/tests/events/",
+        "services/platform/tests/identity/",
+        "services/platform/tests/inventory/",
+    ),
+    "b": (
+        "services/platform/tests/jobs/",
+        "services/platform/tests/ops/",
+        "services/platform/tests/quotes/",
+        "services/platform/tests/service_orders/",
+        "services/platform/tests/settings/",
+        "services/platform/tests/sync/",
+        "services/platform/tests/test_baseline_wire.py",
+        "services/platform/tests/test_health.py",
+        "services/platform/tests/test_model_registration.py",
+        "services/platform/tests/test_openapi.py",
+    ),
+}
 FULL_POSTGRES_SETTINGS = {
     "max_wal_size": "128MB",
     "min_wal_size": "80MB",
@@ -68,7 +95,9 @@ FULL_POSTGRES_SETTINGS = {
     "wal_level": "replica",
 }
 FULL_POLICY = {
-    "version": 1,
+    "version": 2,
+    "shards": {key: list(value) for key, value in FULL_SHARD_SELECTORS.items()},
+    "execution": "serial",
     "roots": ["tests", "services/platform/tests"],
     "workload_seconds": 900,
     "supervisor_seconds": 1020,
@@ -262,8 +291,69 @@ def _full_source_hashes(root: Path) -> dict[str, str]:
     return hashes
 
 
-def _full_command_hash() -> str:
-    command = ["/app/.venv/bin/python", "-m", "pytest", *FULL_PYTHON_ARGS]
+def full_python_args(shard: str) -> tuple[str, ...]:
+    """Closed shard enum; both commands collect the complete original roots."""
+    _full_require(type(shard) is str and shard in FULL_SHARDS, "shard")
+    return (*_FULL_PYTHON_ARGS[:-2], f"--ocwp-full-shard={shard}", *_FULL_PYTHON_ARGS[-2:])
+
+
+def full_python_shard(source: str) -> str:
+    """Partition canonical module paths, never generated parameter/node-ID text."""
+    _full_require(
+        type(source) is str
+        and not source.startswith("/")
+        and "\\" not in source
+        and all(part not in {"", ".", ".."} for part in source.split("/"))
+        and source.endswith(".py"),
+        "module_path",
+    )
+    matches = [
+        shard
+        for shard, selectors in FULL_SHARD_SELECTORS.items()
+        for selector in selectors
+        if (source.startswith(selector) if selector.endswith("/") else source == selector)
+    ]
+    _full_require(len(matches) == 1, "module_assignment")
+    return matches[0]
+
+
+def _full_module_inventory() -> dict[str, tuple[str, str]]:
+    """Resolve path digests independently against this exact checkout's test modules.
+
+    The reviewed source-bound producer attests each legacy node-hash/module
+    association, as it does semantic case labels. These are not signatures:
+    coordinated forged producer records are outside this authenticity boundary.
+    Raw parameterized IDs can contain huge/private values and are never exported.
+    """
+    modules: dict[str, tuple[str, str]] = {}
+    try:
+        for root in cast(list[str], FULL_POLICY["roots"]):
+            for path in (ROOT / root).rglob("*.py"):
+                if not (path.name.startswith("test_") or path.name.endswith("_test.py")):
+                    continue
+                source = path.relative_to(ROOT).as_posix()
+                _full_require(
+                    path.is_file() and path.resolve().is_relative_to(ROOT.resolve()),
+                    "module_path",
+                )
+                shard = full_python_shard(source)
+                digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
+                _full_require(digest not in modules, "module_assignment")
+                modules[digest] = (source, shard)
+    except OSError:
+        raise FullPythonEvidenceError("source_unavailable") from None
+    _full_require(bool(modules), "module_assignment")
+    return modules
+
+
+def _full_assigned_nodes(collection: dict[str, Any]) -> list[dict[str, Any]]:
+    modules = _full_module_inventory()
+    shard = collection["identity"]["shard"]
+    return [node for node in collection["nodes"] if modules[node["module_sha256"]][1] == shard]
+
+
+def _full_command_hash(shard: str) -> str:
+    command = ["/app/.venv/bin/python", "-m", "pytest", *full_python_args(shard)]
     return hashlib.sha256(_full_json(command)).hexdigest()
 
 
@@ -271,6 +361,7 @@ def _full_identity(identity: object) -> dict[str, Any]:
     value = _full_keys(
         identity,
         {
+            "shard",
             "commit",
             "tree",
             "image_id",
@@ -285,6 +376,7 @@ def _full_identity(identity: object) -> dict[str, Any]:
         },
         "identity_fields",
     )
+    _full_require(type(value["shard"]) is str and value["shard"] in FULL_SHARDS, "shard")
     for key in ("commit", "tree"):
         _full_require(
             type(value[key]) is str and re.fullmatch(r"[0-9a-f]{40}", value[key]) is not None,
@@ -309,12 +401,13 @@ def _full_identity(identity: object) -> dict[str, Any]:
     _full_require(value["clean_source"] is True, "identity_dirty")
     for key in FULL_SOURCE_FILES:
         _full_hash(value[key], "identity_hash")
-    _full_require(value["command_sha256"] == _full_command_hash(), "identity_command")
+    _full_require(value["command_sha256"] == _full_command_hash(value["shard"]), "identity_command")
     return value
 
 
 def full_python_identity(
     *,
+    shard: str,
     commit: str,
     tree: str,
     image_id: str,
@@ -327,6 +420,7 @@ def full_python_identity(
     """Bind caller-verified clean checkout and job context to current source bytes."""
     return _full_identity(
         {
+            "shard": shard,
             "commit": commit,
             "tree": tree,
             "image_id": image_id,
@@ -336,13 +430,21 @@ def full_python_identity(
             "run_attempt": run_attempt,
             "job": "python-tests",
             "clean_source": True,
-            "command_sha256": _full_command_hash(),
+            "command_sha256": _full_command_hash(shard),
             **_full_source_hashes(root),
         }
     )
 
 
-def full_python_expected_identity(env: dict[str, str]) -> dict[str, Any]:
+def full_python_peer_identity(identity: dict[str, Any], shard: str, nonce: str) -> dict[str, Any]:
+    """Derive a peer's exact expected context from an independently verified identity."""
+    _full_identity(identity)
+    return _full_identity(
+        {**identity, "shard": shard, "nonce": nonce, "command_sha256": _full_command_hash(shard)}
+    )
+
+
+def full_python_expected_identity(env: dict[str, str], *, shard: str) -> dict[str, Any]:
     """Build expectations independently; never use an artifact to choose them."""
 
     def git(*args: str) -> str:
@@ -388,11 +490,12 @@ def full_python_expected_identity(env: dict[str, str]) -> dict[str, Any]:
         )
         raise error
     return full_python_identity(
+        shard=shard,
         commit=git("rev-parse", "HEAD").strip(),
         tree=git("rev-parse", "HEAD^{tree}").strip(),
         image_id=env.get("OCWP_FULL_PYTHON_IMAGE_ID", ""),
         pg_image_id=env.get("OCWP_FULL_PYTHON_PG_IMAGE_ID", ""),
-        nonce=env.get("OCWP_FULL_PYTHON_NONCE", ""),
+        nonce=env.get(f"OCWP_FULL_PYTHON_NONCE_{shard.upper()}", ""),
         run_id=env.get("GITHUB_RUN_ID", ""),
         run_attempt=env.get("GITHUB_RUN_ATTEMPT", ""),
     )
@@ -723,7 +826,7 @@ def _full_envelope(value: dict[str, Any], expected: dict[str, Any], kind: str) -
     _full_identity(expected)
     _full_identity(value["identity"])
     _full_require(_full_json(value["identity"]) == _full_json(expected), "identity_mismatch")
-    _full_require(type(value["schema"]) is int and value["schema"] == 1, "schema")
+    _full_require(type(value["schema"]) is int and value["schema"] == 2, "schema")
     _full_require(value["kind"] == kind, "kind")
     _full_require(_full_json(value["policy"]) == _full_json(FULL_POLICY), "policy")
 
@@ -762,8 +865,11 @@ def _full_collection(collection: object, expected: dict[str, Any]) -> dict[str, 
     _full_require(type(nodes) is list and len(nodes) == count, "collection_count")
     keys: set[str] = set()
     cases: set[str] = set()
+    modules = _full_module_inventory()
     for node in nodes:
-        _full_keys(node, {"node_sha256", "case"}, "collection_node")
+        _full_keys(node, {"node_sha256", "module_sha256", "case"}, "collection_node")
+        module = _full_hash(node["module_sha256"], "module_hash")
+        _full_require(module in modules, "module_assignment")
         key = _full_hash(node["node_sha256"], "node_hash")
         _full_require(key not in keys, "duplicate_node")
         keys.add(key)
@@ -771,12 +877,20 @@ def _full_collection(collection: object, expected: dict[str, Any]) -> dict[str, 
         _full_require(case is None or type(case) is str, "case_identity")
         if case is not None:
             _full_require(case in FULL_CASE_BY_ID and case not in cases, "case_identity")
+            _full_require(FULL_CASE_BY_ID[case].source == modules[module][0], "case_module")
             cases.add(case)
     _full_require(cases == set(FULL_CASE_BY_ID), "required_cases_missing")
     _full_require(len(FULL_SKIP_CASES) == 58 and len(FULL_REQUIRED_CASES) == 11, "case_ledger")
     _full_require(
         value["inventory_sha256"] == hashlib.sha256(_full_json(nodes)).hexdigest(),
         "inventory_digest",
+    )
+    _full_require(
+        all(
+            any(modules[node["module_sha256"]][1] == shard for node in nodes)
+            for shard in FULL_SHARDS
+        ),
+        "shard_empty",
     )
     return value
 
@@ -893,7 +1007,8 @@ def validate_full_python_result(
         value["collection_errors"] == 0 and value["deselected"] == 0, "collection_incomplete"
     )
     _full_require(_full_json(value["preflight"]) == _full_json(FULL_PREFLIGHT), "preflight_failed")
-    counts = _full_counts(value["outcomes"], manifest["nodes"])
+    assigned = _full_assigned_nodes(manifest)
+    counts = _full_counts(value["outcomes"], assigned)
     declared = _full_keys(value["counts"], set(counts), "count_fields")
     for key, count in counts.items():
         _full_int(declared[key], 0, FULL_MAX_NODES, "count_type")
@@ -902,8 +1017,9 @@ def validate_full_python_result(
         not any(counts[key] for key in ("failed", "error", "unexpected_skipped", "unrun")),
         "result_incomplete",
     )
-    _full_require(counts["expected_skipped"] == len(FULL_SKIP_CASES), "skip_ledger")
-    for node, outcome in zip(manifest["nodes"], value["outcomes"], strict=True):
+    expected_skips = sum(node["case"] in FULL_SKIP_CASES for node in assigned)
+    _full_require(counts["expected_skipped"] == expected_skips, "skip_ledger")
+    for node, outcome in zip(assigned, value["outcomes"], strict=True):
         if node["case"] in FULL_REQUIRED_CASES:
             _full_require(
                 all(phase[0] == "passed" for phase in outcome["phases"]), "required_case_failed"
@@ -915,10 +1031,11 @@ def validate_full_python_result(
     return counts
 
 
-def _full_containment(containment: object) -> None:
+def _full_containment(containment: object, expected_identity: dict[str, Any]) -> None:
     value = _full_keys(
         containment,
         {
+            "predecessor_cleanup_sha256",
             "canary",
             "worker_exit",
             "deadline",
@@ -934,6 +1051,11 @@ def _full_containment(containment: object) -> None:
         },
         "containment_fields",
     )
+    predecessor = value["predecessor_cleanup_sha256"]
+    if expected_identity["shard"] == "a":
+        _full_require(predecessor is None, "serial_predecessor")
+    else:
+        _full_hash(predecessor, "serial_predecessor")
     _full_require(
         value["canary"] == "passed" and value["final_probe"] == "passed", "containment_failed"
     )
@@ -993,7 +1115,7 @@ def validate_full_python_receipt(
     _full_require(
         pending or value["independent_cleanup"] == "verified_absent", "independent_cleanup_failed"
     )
-    _full_containment(value["containment"])
+    _full_containment(value["containment"], expected_identity)
     return validate_full_python_result(value["result"], expected_identity, value["collection"])
 
 
@@ -1004,26 +1126,133 @@ def _full_failed_checks(code: str, source_status: str | None = None) -> list[Che
     return [Check(name, "fail", detail) for name in FULL_CHECK_NAMES]
 
 
-def consume_full_python_receipt(path: Path, expected_identity: dict[str, Any]) -> list[Check]:
+def validate_full_python_cleanup(record: object, expected_identity: dict[str, Any]) -> str:
+    """Verify an absence-only gate; it cannot qualify the associated workload."""
+    value = _full_keys(
+        record,
+        {
+            "schema",
+            "kind",
+            "status",
+            "expected_commit",
+            "run_id",
+            "run_attempt",
+            "scope",
+            "owner_manifest_present",
+            "owner_token",
+            "identity",
+            "outcome",
+            "build_resource_cleanup",
+            "qualification",
+        },
+        "cleanup_fields",
+    )
+    _full_require(len(_full_json(value)) + 1 < FULL_RECORD_LIMIT, "record_size")
+    _full_identity(expected_identity)
+    _full_identity(value["identity"])
+    _full_require(
+        _full_json(value["identity"]) == _full_json(expected_identity), "identity_mismatch"
+    )
+    _full_require(type(value["schema"]) is int and value["schema"] == 2, "schema")
+    _full_require(value["kind"] == "ocwp.full_python.independent_cleanup", "kind")
+    _full_require(
+        value["status"] == "unqualified"
+        and value["scope"] == "manifest_owned_canary_database_worker"
+        and value["build_resource_cleanup"] == "not_assessed"
+        and value["qualification"] == "not_a_receipt",
+        "cleanup_scope",
+    )
+    _full_require(
+        value["expected_commit"] == expected_identity["commit"]
+        and value["run_id"] == expected_identity["run_id"]
+        and value["run_attempt"] == expected_identity["run_attempt"],
+        "cleanup_context",
+    )
+    _full_require(
+        value["owner_manifest_present"] is True
+        and value["owner_token"] == expected_identity["nonce"],
+        "cleanup_owner",
+    )
+    _full_require(value["outcome"] == "verified_absent", "independent_cleanup_failed")
+    return hashlib.sha256(_full_json(value)).hexdigest()
+
+
+def validate_full_python_pair(
+    receipts: object, expected_identities: dict[str, dict[str, Any]], cleanups: object
+) -> dict[str, int]:
+    """Two separately bounded receipts, never an unchecked combined JSON envelope."""
+    values = _full_keys(receipts, set(FULL_SHARDS), "pair_shards")
+    expected = _full_keys(expected_identities, set(FULL_SHARDS), "pair_shards")
+    cleanup_values = _full_keys(cleanups, set(FULL_SHARDS), "pair_shards")
+    for shard in FULL_SHARDS:
+        _full_identity(expected[shard])
+        _full_require(expected[shard]["shard"] == shard, "pair_shards")
+    a, b = (expected[shard] for shard in FULL_SHARDS)
+    shared = set(a) - {"shard", "nonce", "command_sha256"}
+    _full_require(all(a[key] == b[key] for key in shared), "pair_context")
+    _full_require(a["nonce"] != b["nonce"], "pair_nonce")
+    cleanup_digests = {
+        shard: validate_full_python_cleanup(cleanup_values[shard], expected[shard])
+        for shard in FULL_SHARDS
+    }
+    counts = {
+        shard: validate_full_python_receipt(values[shard], expected[shard]) for shard in FULL_SHARDS
+    }
+    first, second = (values[shard] for shard in FULL_SHARDS)
+    _full_require(
+        _full_json(first["collection"]["nodes"]) == _full_json(second["collection"]["nodes"]),
+        "pair_inventory",
+    )
+    _full_require(
+        second["containment"]["predecessor_cleanup_sha256"] == cleanup_digests["a"],
+        "pair_predecessor",
+    )
+    # Per-shard validation already proves ordered assignment and complete phases.
+    outcomes = [receipt["result"]["outcomes"] for receipt in (first, second)]
+    keys = [{item["node_sha256"] for item in items} for items in outcomes]
+    inventory = {node["node_sha256"] for node in first["collection"]["nodes"]}
+    _full_require(not keys[0] & keys[1] and keys[0] | keys[1] == inventory, "pair_coverage")
+    _full_require(
+        [outcome["node_sha256"] for items in outcomes for outcome in items]
+        == [node["node_sha256"] for node in first["collection"]["nodes"]],
+        "pair_order",
+    )
+    total = {key: sum(counts[shard][key] for shard in FULL_SHARDS) for key in counts["a"]}
+    _full_require(total["expected_skipped"] == len(FULL_SKIP_CASES), "skip_ledger")
+    return total
+
+
+def consume_full_python_pair(
+    path: Path, expected_identities: dict[str, dict[str, Any]]
+) -> list[Check]:
     try:
-        counts = validate_full_python_receipt(read_full_python_json(path), expected_identity)
+        # Read each bounded record separately. No caller-supplied artifact selectors.
+        receipts = {
+            shard: read_full_python_json(path / shard / "receipt.json") for shard in FULL_SHARDS
+        }
+        cleanups = {
+            shard: read_full_python_json(path / shard / "independent-cleanup.json")
+            for shard in FULL_SHARDS
+        }
+        counts = validate_full_python_pair(receipts, expected_identities, cleanups)
     except FullPythonEvidenceError as error:
         return _full_failed_checks(str(error))
     detail = (
-        f"One source-bound contained invocation: {counts['passed']} passed, "
-        f"{counts['expected_skipped']} exact intentional skips, zero unrun; both cleanups verified"
+        f"Two source-bound serial invocations: {counts['passed']} passed, "
+        f"{counts['expected_skipped']} exact intentional skips, zero unrun; "
+        "both cleanups verified for each shard"
     )
     return [
         Check("python_tests", "pass", detail),
         Check(
             "python_psycopg",
             "pass",
-            "Owned PostgreSQL 18.4, psycopg 3.3.4, UTF8 preflight verified",
+            "Owned PostgreSQL 18.4, psycopg 3.3.4, UTF8 verified in both shards",
         ),
         Check(
             "postgresql_integration",
             "pass",
-            "Exact generic PostgreSQL migration case passed in the same invocation",
+            "Exact migration case and all six genuine restores passed in the serial pair",
         ),
     ]
 
@@ -1031,8 +1260,8 @@ def consume_full_python_receipt(path: Path, expected_identity: dict[str, Any]) -
 def full_python_route_checks(path: Path | None, env: dict[str, str]) -> list[Check]:
     try:
         _full_require(path is not None, "receipt_required")
-        expected = full_python_expected_identity(env)
-        return consume_full_python_receipt(path, expected)
+        expected = {shard: full_python_expected_identity(env, shard=shard) for shard in FULL_SHARDS}
+        return consume_full_python_pair(cast(Path, path), expected)
     except FullPythonEvidenceError as error:
         return _full_failed_checks(str(error), error.source_status)
 
@@ -1154,9 +1383,12 @@ class _FullPythonPlugin:
     """The complete collection is sealed before the first test body runs."""
 
     def __init__(self, config: Any) -> None:
-        _full_require(tuple(config.invocation_params.args) == FULL_PYTHON_ARGS, "pytest_command")
         self.identity = _full_identity(
             read_full_python_value(os.environ.get("OCWP_FULL_PYTHON_IDENTITY", ""))
+        )
+        _full_require(
+            tuple(config.invocation_params.args) == full_python_args(self.identity["shard"]),
+            "pytest_command",
         )
         _full_require(
             all(self.identity[key] == value for key, value in _full_source_hashes(ROOT).items()),
@@ -1182,22 +1414,31 @@ class _FullPythonPlugin:
         nodes = []
         for item in session.items:
             key = hashlib.sha256(item.nodeid.encode("utf-8")).hexdigest()
-            _full_require(key not in self.outcomes, "duplicate_node")
+            _full_require(key not in self.cases, "duplicate_node")
             source = item.path.relative_to(ROOT).as_posix()
             _full_require(
                 source.startswith(("tests/", "services/platform/tests/")), "collection_root"
             )
+            _full_require(item.nodeid.startswith(source + "::"), "node_module")
             function = item.originalname
             _full_require(type(function) is str, "collection_function")
             callspec = getattr(item, "callspec", None)
             case = full_python_case(
                 source, function, callspec.params if callspec is not None else {}
             )
-            nodes.append({"node_sha256": key, "case": case})
-            self.outcomes[key] = {"node_sha256": key, "phases": [None, None, None]}
+            shard = full_python_shard(source)
+            nodes.append(
+                {
+                    "node_sha256": key,
+                    "module_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+                    "case": case,
+                }
+            )
+            if shard == self.identity["shard"]:
+                self.outcomes[key] = {"node_sha256": key, "phases": [None, None, None]}
             self.cases[key] = case
         self.collection = {
-            "schema": 1,
+            "schema": 2,
             "kind": "ocwp.full_python.collection",
             "identity": self.identity,
             "policy": FULL_POLICY,
@@ -1209,6 +1450,13 @@ class _FullPythonPlugin:
         }
         write_full_python_json(Path("/tmp/ocwp-proof/collection.json"), self.collection)
         _full_collection(self.collection, self.identity)
+        # Planned partitioning is not pytest deselection. The complete manifest is
+        # already sealed, while unexpected deselection remains a hard failure.
+        session.items[:] = [
+            item
+            for item in session.items
+            if full_python_shard(item.path.relative_to(ROOT).as_posix()) == self.identity["shard"]
+        ]
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         try:
@@ -1258,12 +1506,12 @@ class _FullPythonPlugin:
             return
         outcomes = list(self.outcomes.values())
         try:
-            counts = _full_counts(outcomes, self.collection["nodes"])
+            counts = _full_counts(outcomes, _full_assigned_nodes(self.collection))
         except FullPythonEvidenceError:
             self.protocol_error = True
             raise
         result = {
-            "schema": 1,
+            "schema": 2,
             "kind": "ocwp.full_python.result",
             "identity": self.identity,
             "policy": FULL_POLICY,
@@ -1277,6 +1525,10 @@ class _FullPythonPlugin:
             "counts": counts,
         }
         write_full_python_json(Path("/tmp/ocwp-proof/result.json"), result)
+
+
+def pytest_addoption(parser: Any) -> None:
+    parser.addoption("--ocwp-full-shard", choices=FULL_SHARDS, default=None)
 
 
 def pytest_configure(config: Any) -> None:
@@ -1571,7 +1823,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--allow-blocked", action="store_true")
-    parser.add_argument("--full-python-receipt", type=Path)
+    parser.add_argument(
+        "--full-python-receipt",
+        type=Path,
+        help="Directory with fixed a/receipt.json and b/receipt.json",
+    )
     args = parser.parse_args()
 
     python_env = dict(__import__("os").environ)

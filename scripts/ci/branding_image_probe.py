@@ -532,8 +532,8 @@ def run_probe(
 
         installed = Path(images.__file__).resolve()
         require(installed.is_relative_to(Path(sys.prefix).resolve()), "installed_decoder")
-        require(importlib.metadata.version("Pillow") == "12.3.0", "installed_decoder")
-        result["pillow_version"] = "12.3.0"
+        require(importlib.metadata.version("Pillow") == "13.0.0", "installed_decoder")
+        result["pillow_version"] = "13.0.0"
         result["worker_source_sha256"] = hashlib.sha256(installed.read_bytes()).hexdigest()
         result["decoder_limits"] = worker_limits(
             inspect.getsource(images._worker_main),
@@ -660,7 +660,7 @@ def _validate_report(
                 isinstance(value, str) and re.fullmatch(r"3\.13\.[0-9]{1,3}", value) is not None
             ),
         },
-        "pillow_version": "12.3.0",
+        "pillow_version": "13.0.0",
         "worker_source_sha256": worker_sha256,
         "decoder_limits": {
             "evidence_basis": "installed_worker_source_checked",

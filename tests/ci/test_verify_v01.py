@@ -216,14 +216,15 @@ def test_qualifier_requires_real_pinned_old_build_before_browser_setup(monkeypat
     assert not any(name in {"browser_e2e_prepare", "browser_e2e"} for name, _ in calls)
 
 
-def full_python_receipt():
+def full_python_receipt(shard="a"):
     """Synthetic protocol data only; this fixture never starts a worker or test run."""
     identity = MODULE.full_python_identity(
+        shard=shard,
         commit="a" * 40,
         tree="b" * 40,
         image_id="sha256:" + "c" * 64,
         pg_image_id="sha256:" + "d" * 64,
-        nonce="e" * 32,
+        nonce=("e" if shard == "a" else "f") * 32,
         run_id="1234567",
         run_attempt="1",
     )
@@ -231,15 +232,23 @@ def full_python_receipt():
     for index, case in enumerate((*MODULE.FULL_CASES, None)):
         key = hashlib.sha256(f"synthetic-node-{index}".encode()).hexdigest()
         case_id = case.case if case is not None else None
-        nodes.append({"node_sha256": key, "case": case_id})
+        source = case.source if case is not None else "tests/ci/test_verify_v01.py"
+        nodes.append(
+            {
+                "node_sha256": key,
+                "module_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                "case": case_id,
+            }
+        )
         phases = [["passed", 1, None], ["passed", 1, None], ["passed", 1, None]]
         if case is not None and case.reason is not None:
             phases[case.phase] = ["skipped", 1, case.case]
             if case.phase == 0:
                 phases[1] = None
-        outcomes.append({"node_sha256": key, "phases": phases})
+        if MODULE.full_python_shard(source) == shard:
+            outcomes.append({"node_sha256": key, "phases": phases})
     collection = {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.full_python.collection",
         "identity": identity,
         "policy": deepcopy(MODULE.FULL_POLICY),
@@ -250,7 +259,7 @@ def full_python_receipt():
         "inventory_sha256": hashlib.sha256(MODULE._full_json(nodes)).hexdigest(),
     }
     result = {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.full_python.result",
         "identity": deepcopy(identity),
         "policy": deepcopy(MODULE.FULL_POLICY),
@@ -261,18 +270,10 @@ def full_python_receipt():
         "deselected": 0,
         "preflight": deepcopy(MODULE.FULL_PREFLIGHT),
         "outcomes": outcomes,
-        "counts": {
-            "collected": 70,
-            "passed": 12,
-            "failed": 0,
-            "error": 0,
-            "expected_skipped": 58,
-            "unexpected_skipped": 0,
-            "unrun": 0,
-        },
+        "counts": MODULE._full_counts(outcomes, MODULE._full_assigned_nodes(collection)),
     }
     return {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.full_python.receipt",
         "identity": deepcopy(identity),
         "policy": deepcopy(MODULE.FULL_POLICY),
@@ -281,6 +282,7 @@ def full_python_receipt():
         "collection": collection,
         "result": result,
         "containment": {
+            "predecessor_cleanup_sha256": None if shard == "a" else "a" * 64,
             "canary": "passed",
             "worker_exit": 0,
             "deadline": "completed",
@@ -308,17 +310,52 @@ def refresh_inventory(receipt):
     receipt["result"]["inventory_sha256"] = collection["inventory_sha256"]
 
 
+def full_python_cleanup(identity):
+    return {
+        "schema": 2,
+        "kind": "ocwp.full_python.independent_cleanup",
+        "status": "unqualified",
+        "expected_commit": identity["commit"],
+        "run_id": identity["run_id"],
+        "run_attempt": identity["run_attempt"],
+        "scope": "manifest_owned_canary_database_worker",
+        "owner_manifest_present": True,
+        "owner_token": identity["nonce"],
+        "identity": deepcopy(identity),
+        "outcome": "verified_absent",
+        "build_resource_cleanup": "not_assessed",
+        "qualification": "not_a_receipt",
+    }
+
+
+def full_python_pair():
+    receipts = {shard: full_python_receipt(shard) for shard in ("a", "b")}
+    modules = MODULE._full_module_inventory()
+    for receipt in receipts.values():
+        receipt["collection"]["nodes"].sort(key=lambda node: modules[node["module_sha256"]][1])
+        refresh_inventory(receipt)
+    expected = {shard: deepcopy(receipts[shard]["identity"]) for shard in ("a", "b")}
+    cleanups = {shard: full_python_cleanup(expected[shard]) for shard in ("a", "b")}
+    receipts["b"]["containment"]["predecessor_cleanup_sha256"] = hashlib.sha256(
+        MODULE._full_json(cleanups["a"])
+    ).hexdigest()
+    return receipts, expected, cleanups
+
+
 def test_full_python_receipt_consumes_all_three_controls_once(tmp_path):
-    receipt = full_python_receipt()
-    path = tmp_path / "receipt.json"
-    MODULE.write_full_python_json(path, receipt)
-
-    checks = MODULE.consume_full_python_receipt(path, receipt["identity"])
-
+    receipts, expected, cleanups = full_python_pair()
+    for shard in ("a", "b"):
+        (tmp_path / shard).mkdir()
+        MODULE.write_full_python_json(tmp_path / shard / "receipt.json", receipts[shard])
+        MODULE.write_full_python_json(
+            tmp_path / shard / "independent-cleanup.json", cleanups[shard]
+        )
+    checks = MODULE.consume_full_python_pair(tmp_path, expected)
     assert [check.name for check in checks] == list(MODULE.FULL_CHECK_NAMES)
     assert all(check.status == "pass" for check in checks)
-    counts = MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+    counts = MODULE.validate_full_python_pair(receipts, expected, cleanups)
     assert counts["expected_skipped"] == 58
+    assert counts["passed"] == 12
 
 
 @pytest.mark.parametrize(
@@ -377,12 +414,14 @@ def test_full_python_receipt_requires_inner_source_identity(location):
     ],
 )
 def test_full_python_receipt_requires_every_large_restore_and_database_case(case):
-    receipt = full_python_receipt()
+    receipt = full_python_receipt(MODULE.full_python_shard(MODULE.FULL_CASE_BY_ID[case].source))
     index = next(
         index for index, node in enumerate(receipt["collection"]["nodes"]) if node["case"] == case
     )
-    receipt["collection"]["nodes"].pop(index)
-    receipt["result"]["outcomes"].pop(index)
+    key = receipt["collection"]["nodes"].pop(index)["node_sha256"]
+    receipt["result"]["outcomes"][:] = [
+        outcome for outcome in receipt["result"]["outcomes"] if outcome["node_sha256"] != key
+    ]
     refresh_inventory(receipt)
 
     with pytest.raises(MODULE.FullPythonEvidenceError, match="required_cases_missing"):
@@ -453,8 +492,10 @@ def test_full_python_phase_duration_is_strict_bounded_microseconds(duration):
 def test_full_python_fail_fast_tail_is_unrun_not_passed(phases):
     receipt = full_python_receipt()
     receipt["result"]["outcomes"][-1]["phases"] = phases
-    counts = MODULE._full_counts(receipt["result"]["outcomes"], receipt["collection"]["nodes"])
-    assert counts["unrun"] == 1 and counts["passed"] == 11
+    counts = MODULE._full_counts(
+        receipt["result"]["outcomes"], MODULE._full_assigned_nodes(receipt["collection"])
+    )
+    assert counts["unrun"] == 1 and counts["passed"] == 4
     receipt["result"]["counts"] = counts
 
     with pytest.raises(MODULE.FullPythonEvidenceError, match="result_incomplete"):
@@ -465,9 +506,11 @@ def test_full_python_fail_fast_tail_is_unrun_not_passed(phases):
     "case", [case.case for case in MODULE.FULL_CASES if case.case.startswith("required.restore.")]
 )
 def test_full_python_restore_dependency_skips_are_never_allowed(case):
-    receipt = full_python_receipt()
+    receipt = full_python_receipt(MODULE.full_python_shard(MODULE.FULL_CASE_BY_ID[case].source))
     index = next(
-        index for index, node in enumerate(receipt["collection"]["nodes"]) if node["case"] == case
+        index
+        for index, node in enumerate(MODULE._full_assigned_nodes(receipt["collection"]))
+        if node["case"] == case
     )
     receipt["result"]["outcomes"][index]["phases"] = [
         ["skipped", 1, "unexpected"],
@@ -475,7 +518,7 @@ def test_full_python_restore_dependency_skips_are_never_allowed(case):
         ["passed", 1, None],
     ]
     receipt["result"]["counts"] = MODULE._full_counts(
-        receipt["result"]["outcomes"], receipt["collection"]["nodes"]
+        receipt["result"]["outcomes"], MODULE._full_assigned_nodes(receipt["collection"])
     )
 
     with pytest.raises(MODULE.FullPythonEvidenceError, match="result_incomplete"):
@@ -487,7 +530,7 @@ def test_full_python_exact_skip_ledger_rejects_replacement_or_wrong_phase():
     assert sum(case.phase == 0 for case in MODULE.FULL_CASES) == 2
     assert sum(case.phase == 1 for case in MODULE.FULL_CASES) == 56
     receipt = full_python_receipt()
-    # The count remains58, but a different semantic node cannot replace a skip.
+    # The selected skip count remains11; no different semantic node can replace one.
     original = receipt["result"]["outcomes"][0]["phases"]
     original[1] = ["passed", 1, None]
     receipt["result"]["outcomes"][-1]["phases"][1] = ["skipped", 1, "skip.gitleaks.pinned"]
@@ -565,7 +608,7 @@ def test_full_python_finalizer_can_only_accept_exact_provisional_success():
     counts = MODULE.validate_full_python_receipt(
         receipt, receipt["identity"], allow_pending_cleanup=True
     )
-    assert counts["passed"] == 12
+    assert counts["passed"] == 5
     for failure in ("wall_budget", "result_failed", "unrun", None):
         broken = deepcopy(receipt)
         broken["failure"] = failure
@@ -612,8 +655,15 @@ def test_full_python_reader_and_writer_enforce_strict_size_and_regular_files(tmp
 
 
 def test_full_python_missing_failed_and_unrun_receipts_fail_all_controls(tmp_path):
-    receipt = full_python_receipt()
-    path = tmp_path / "receipt.json"
+    receipts, expected, cleanups = full_python_pair()
+    for shard in ("a", "b"):
+        (tmp_path / shard).mkdir()
+        MODULE.write_full_python_json(
+            tmp_path / shard / "independent-cleanup.json", cleanups[shard]
+        )
+    MODULE.write_full_python_json(tmp_path / "b" / "receipt.json", receipts["b"])
+    receipt = receipts["a"]
+    path = tmp_path / "a" / "receipt.json"
     for state in ("missing", "failed", "unrun"):
         if state != "missing":
             current = deepcopy(receipt)
@@ -621,39 +671,55 @@ def test_full_python_missing_failed_and_unrun_receipts_fail_all_controls(tmp_pat
             if state == "unrun":
                 current.update(collection=None, result=None)
             MODULE.write_full_python_json(path, current)
-        checks = MODULE.consume_full_python_receipt(path, receipt["identity"])
+        checks = MODULE.consume_full_python_pair(tmp_path, expected)
         assert {check.name for check in checks} == set(MODULE.FULL_CHECK_NAMES)
         assert all(check.status == "fail" for check in checks)
 
 
 def test_full_python_protocol_size_is_bounded_at_node_ceiling():
-    receipt = full_python_receipt()
-    nodes = receipt["collection"]["nodes"]
-    outcomes = receipt["result"]["outcomes"]
-    for index in range(len(nodes), MODULE.FULL_MAX_NODES):
-        key = hashlib.sha256(f"maximum-node-{index}".encode()).hexdigest()
-        nodes.append({"node_sha256": key, "case": None})
-        outcomes.append(
-            {"node_sha256": key, "phases": [["passed", 900000000, None] for _ in range(3)]}
+    for shard in ("a", "b"):
+        receipt = full_python_receipt(shard)
+        nodes = receipt["collection"]["nodes"]
+        outcomes = receipt["result"]["outcomes"]
+        source = (
+            "tests/ci/test_verify_v01.py"
+            if shard == "a"
+            else "services/platform/tests/test_health.py"
         )
-    refresh_inventory(receipt)
-    receipt["result"]["counts"]["collected"] = MODULE.FULL_MAX_NODES
-    receipt["result"]["counts"]["passed"] = MODULE.FULL_MAX_NODES - 58
-    assert len(MODULE._full_json(receipt)) + 1 < MODULE.FULL_RECORD_LIMIT
-    assert len(MODULE._full_json(receipt)) + 1 < MODULE.FULL_MAX_SERIALIZED_BYTES
-    assert MODULE.validate_full_python_receipt(receipt, receipt["identity"])["collected"] == 8192
-    receipt["collection"]["count"] = 8193
-    with pytest.raises(MODULE.FullPythonEvidenceError):
-        MODULE.validate_full_python_receipt(receipt, receipt["identity"])
+        for index in range(len(nodes), MODULE.FULL_MAX_NODES):
+            key = hashlib.sha256(f"maximum-node-{index}".encode()).hexdigest()
+            nodes.append(
+                {
+                    "node_sha256": key,
+                    "module_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                    "case": None,
+                }
+            )
+            outcomes.append(
+                {"node_sha256": key, "phases": [["passed", 900000000, None] for _ in range(3)]}
+            )
+        refresh_inventory(receipt)
+        receipt["result"]["counts"] = MODULE._full_counts(
+            outcomes, MODULE._full_assigned_nodes(receipt["collection"])
+        )
+        assert len(MODULE._full_json(receipt)) + 1 < MODULE.FULL_RECORD_LIMIT
+        assert len(MODULE._full_json(receipt)) + 1 < MODULE.FULL_MAX_SERIALIZED_BYTES
+        assert MODULE.validate_full_python_receipt(receipt, receipt["identity"])[
+            "collected"
+        ] == 8192 - (54 if shard == "a" else 16)
+        receipt["collection"]["count"] = 8193
+        with pytest.raises(MODULE.FullPythonEvidenceError):
+            MODULE.validate_full_python_receipt(receipt, receipt["identity"])
 
 
 def test_full_python_plugin_is_inert_outside_contained_mode(monkeypatch):
-    assert MODULE.FULL_PYTHON_ARGS[-7:] == (
+    assert MODULE.full_python_args("a")[-8:] == (
         "--capture=fd",
         "--show-capture=no",
         "--no-showlocals",
         "--tb=short",
         "-q",
+        "--ocwp-full-shard=a",
         "tests",
         "services/platform/tests",
     )
@@ -698,7 +764,9 @@ def test_full_python_plugin_seals_hashed_inventory_before_reports(monkeypatch):
         SimpleNamespace(
             path=MODULE.ROOT / "tests/ci/test_verify_v01.py",
             originalname="test_ordinary_synthetic_case",
-            nodeid="ordinary[" + "sensitive-synthetic-payload" * 10000 + "]",
+            nodeid="tests/ci/test_verify_v01.py::ordinary["
+            + "sensitive-synthetic-payload" * 10000
+            + "]",
             callspec=None,
         )
     )
@@ -709,7 +777,13 @@ def test_full_python_plugin_seals_hashed_inventory_before_reports(monkeypatch):
     assert all(node["phases"] == [None, None, None] for node in plugin.outcomes.values())
     assert "sensitive-synthetic-payload" not in MODULE._full_json(written[0][1]).decode()
 
-    for item, case in zip(items, (*MODULE.FULL_CASES, None), strict=True):
+    for item in session.items:
+        case_id = MODULE.full_python_case(
+            item.path.relative_to(MODULE.ROOT).as_posix(),
+            item.originalname,
+            item.callspec.params if item.callspec else {},
+        )
+        case = MODULE.FULL_CASE_BY_ID.get(case_id)
         for phase, when in enumerate(("setup", "call", "teardown")):
             if case is not None and case.phase == 0 and phase == 1:
                 continue
@@ -726,7 +800,9 @@ def test_full_python_plugin_seals_hashed_inventory_before_reports(monkeypatch):
     plugin.pytest_sessionfinish(session, 0)
     assert written[1][0] == Path("/tmp/ocwp-proof/result.json")
     counts = MODULE.validate_full_python_result(written[1][1], plugin.identity, written[0][1])
-    assert counts["passed"] == 12
+    assert counts["passed"] == 5
+    assert len(written[0][1]["nodes"]) == 70
+    assert len(session.items) == 16
 
 
 @pytest.mark.parametrize("reason", ["missing PostgreSQL", "host containment preflight required "])
@@ -787,16 +863,16 @@ def test_full_python_expected_context_uses_checkout_and_job_outputs(monkeypatch)
     env = {
         "OCWP_FULL_PYTHON_IMAGE_ID": "sha256:" + "c" * 64,
         "OCWP_FULL_PYTHON_PG_IMAGE_ID": "sha256:" + "d" * 64,
-        "OCWP_FULL_PYTHON_NONCE": "e" * 32,
+        "OCWP_FULL_PYTHON_NONCE_A": "e" * 32,
         "GITHUB_RUN_ID": "1234567",
         "GITHUB_RUN_ATTEMPT": "1",
     }
-    identity = MODULE.full_python_expected_identity(env)
+    identity = MODULE.full_python_expected_identity(env, shard="a")
     assert identity == full_python_receipt()["identity"]
     assert len(calls) == 3
     outputs[("status", "--porcelain", "--untracked-files=normal")] = " M modified"
     with pytest.raises(MODULE.FullPythonEvidenceError, match="identity_dirty"):
-        MODULE.full_python_expected_identity(env)
+        MODULE.full_python_expected_identity(env, shard="a")
 
 
 @pytest.mark.parametrize("case", ["short", "truncated", "query_cap"])
@@ -820,7 +896,7 @@ def test_dirty_source_paths_are_bounded_and_never_admit_a_receipt(monkeypatch, c
 
     monkeypatch.setattr(MODULE.subprocess, "run", git)
     monkeypatch.setattr(
-        MODULE, "consume_full_python_receipt", lambda *args: pytest.fail("dirty receipt admitted")
+        MODULE, "consume_full_python_pair", lambda *args: pytest.fail("dirty receipt admitted")
     )
     checks = MODULE.full_python_route_checks(Path("unread-receipt.json"), {})
     assert [item.name for item in checks] == list(MODULE.FULL_CHECK_NAMES)
@@ -859,7 +935,9 @@ def test_full_python_aggregate_never_falls_back_and_allow_blocked_cannot_pass(
     monkeypatch.setenv("CI", "true")
     monkeypatch.setattr(MODULE, "run_check", run_check)
     monkeypatch.setattr(
-        MODULE, "full_python_expected_identity", lambda env: full_python_receipt()["identity"]
+        MODULE,
+        "full_python_expected_identity",
+        lambda env, *, shard: full_python_receipt(shard)["identity"],
     )
     monkeypatch.setattr(
         MODULE, "postgresql_runtime_checks", lambda env: pytest.fail("duplicate pytest")

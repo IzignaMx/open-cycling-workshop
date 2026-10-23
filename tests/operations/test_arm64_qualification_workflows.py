@@ -37,7 +37,7 @@ def passing_report(native: bool = True) -> dict[str, Any]:
             "effective_capabilities": 0,
             "python": "3.13.14",
         },
-        "pillow_version": "12.3.0",
+        "pillow_version": "13.0.0",
         "worker_source_sha256": WORKER,
         "decoder_limits": {
             "evidence_basis": "installed_worker_source_checked",
@@ -705,3 +705,14 @@ def test_qemu_passing_report_cannot_omit_required_proof(missing: str) -> None:
     del report[missing]
     with pytest.raises(probe.ProbeFailure, match="emulated_report_invalid"):
         probe.validate_emulated_report(json.dumps(report).encode(), 0, SHA, IMAGE, WORKER)
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_old_pillow_receipt_cannot_qualify_corrected_image(native: bool) -> None:
+    report = passing_report(native)
+    report["pillow_version"] = "12.3.0"
+    with pytest.raises(probe.ProbeFailure, match="report_invalid"):
+        if native:
+            probe.validate_native_report(json.dumps(report).encode(), 0, SHA, IMAGE, WORKER, HOST)
+        else:
+            probe.validate_emulated_report(json.dumps(report).encode(), 0, SHA, IMAGE, WORKER)

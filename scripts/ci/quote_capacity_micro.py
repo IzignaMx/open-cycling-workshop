@@ -16,7 +16,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 from types import FrameType
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 LIMIT = 16 * 1024
@@ -1242,7 +1242,9 @@ def full_reconcile(owned: Path, execute: Callable[..., str]) -> None:
     remove_owned(found, execute)
 
 
-def full_identity(commit: str, worker_image: str, pg_image: str, execute: Callable[..., str]):
+def full_identity(
+    commit: str, worker_image: str, pg_image: str, execute: Callable[..., str], shard: str = "a"
+):
     from scripts.ci.verify_v01 import full_python_identity
 
     if source_query("head", execute) != commit or source_query("status", execute):
@@ -1276,10 +1278,49 @@ def full_identity(commit: str, worker_image: str, pg_image: str, execute: Callab
         tree=tree,
         image_id=images[0],
         pg_image_id=images[1],
-        nonce=os.environ.get("OCWP_FULL_PYTHON_NONCE", ""),
+        nonce=os.environ.get(f"OCWP_FULL_PYTHON_NONCE_{shard.upper()}", ""),
         run_id=os.environ.get("GITHUB_RUN_ID", ""),
         run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+        shard=shard,
     )
+
+
+def full_cleanup_owner(owned: Path, identity: dict[str, Any]) -> str:
+    """Bind an already-reconciled ownership manifest to this exact invocation."""
+    from scripts.ci.verify_v01 import read_full_python_json
+
+    manifest = read_full_python_json(owned.with_suffix(".owner.json"))
+    expected = {
+        "token": identity["nonce"],
+        "images": {
+            "db": identity["pg_image_id"],
+            "worker": identity["image_id"],
+            "canary": identity["image_id"],
+        },
+    }
+    if manifest != expected:
+        raise ProofFailure("owner_identity_mismatch")
+    return cast(str, identity["nonce"])
+
+
+def full_predecessor_cleanup(evidence: Path, identity: dict[str, Any]) -> str | None:
+    """B cannot allocate anything until A's same-attempt absence is verified."""
+    from scripts.ci.verify_v01 import (
+        full_python_peer_identity,
+        read_full_python_json,
+        validate_full_python_cleanup,
+    )
+
+    if identity["shard"] == "a":
+        return None
+    if identity["shard"] != "b" or evidence.parent.name != "b":
+        raise ProofFailure("serial_predecessor")
+    nonce = os.environ.get("OCWP_FULL_PYTHON_NONCE_A", "")
+    if nonce == identity["nonce"]:
+        raise ProofFailure("serial_predecessor")
+    expected = full_python_peer_identity(identity, "a", nonce)
+    cleanup = read_full_python_json(evidence.parent.parent / "a" / "independent-cleanup.json")
+    return validate_full_python_cleanup(cleanup, expected)
 
 
 def full_capture_record(cid: str, name: str, execute: Callable[..., str]):
@@ -1408,6 +1449,7 @@ def full_preflight_diagnostic(
         "image_identity",
         "image_source_mismatch",
         "owner_already_exists",
+        "serial_predecessor",
         "container_identity",
         "container_boundary",
         "unexpected_mount",
@@ -1484,6 +1526,7 @@ def full_preflight_diagnostic(
     }
     stages = {
         "identity",
+        "serial_predecessor",
         "ownership",
         "create",
         "inspect",
@@ -1600,14 +1643,14 @@ def full_failure_observation(
 
 
 def supervise_python(
-    worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path
+    worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path, shard: str = "a"
 ) -> None:
     from scripts.ci.verify_v01 import (
         FULL_FAILURE_CODES,
         FULL_POLICY,
         FULL_POSTGRES_SETTINGS,
-        FULL_PYTHON_ARGS,
         FullPythonEvidenceError,
+        full_python_args,
         read_full_python_json,
         validate_full_python_collection,
         validate_full_python_result,
@@ -1624,7 +1667,7 @@ def supervise_python(
     stage = "identity"
     role = None
     report = {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.full_python.receipt",
         "identity": None,
         "policy": FULL_POLICY,
@@ -1649,6 +1692,7 @@ def supervise_python(
         "resource_samples": {"worker": 0, "db": 0},
         "pressure_events": {"worker": 0, "db": 0},
         "final_probe": "pending",
+        "predecessor_cleanup_sha256": None,
     }
     report["containment"] = containment
     memory_successful: dict[str, dict[str, object] | None] = {"worker": None, "db": None}
@@ -1734,9 +1778,11 @@ def supervise_python(
     evidence.parent.mkdir(parents=True, exist_ok=True)
     write_full_python_json(evidence, report)  # Never reuse a previous receipt.
     try:
-        identity = full_identity(commit, worker_image, pg_image, execute)
+        identity = full_identity(commit, worker_image, pg_image, execute, shard)
         report["identity"] = identity
-        token = uuid4().hex
+        stage = "serial_predecessor"
+        containment["predecessor_cleanup_sha256"] = full_predecessor_cleanup(evidence, identity)
+        token = identity["nonce"]
         images = {
             "db": identity["pg_image_id"],
             "worker": identity["image_id"],
@@ -1920,7 +1966,7 @@ def supervise_python(
                     "/app/.venv/bin/python",
                     "-m",
                     "pytest",
-                    *FULL_PYTHON_ARGS,
+                    *full_python_args(shard),
                 ],
                 stdout=output,
                 stderr=output,
@@ -2091,10 +2137,13 @@ def supervise_python(
         raise ProofFailure("full_python_unqualified")
 
 
-def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path):
+def finalize_python(
+    worker_image: str, pg_image: str, commit: str, evidence: Path, owned: Path, shard: str = "a"
+):
     from scripts.ci.verify_v01 import (
         FullPythonEvidenceError,
         read_full_python_json,
+        validate_full_python_cleanup,
         validate_full_python_receipt,
         write_full_python_json,
     )
@@ -2109,7 +2158,7 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
 
     report = None
     cleanup = {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.full_python.independent_cleanup",
         "status": "unqualified",
         "expected_commit": commit,
@@ -2117,6 +2166,8 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
         "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
         "scope": "manifest_owned_canary_database_worker",
         "owner_manifest_present": owned.with_suffix(".owner.json").exists(),
+        "owner_token": None,
+        "identity": None,
         "outcome": "unfinished",
         "build_resource_cleanup": "not_assessed",
         "qualification": "not_a_receipt",
@@ -2132,7 +2183,18 @@ def finalize_python(worker_image: str, pg_image: str, commit: str, evidence: Pat
         write_full_python_json(cleanup_path, cleanup)
         if not cleanup["owner_manifest_present"]:
             raise ProofFailure("ownership_unrecorded")
-        identity = full_identity(commit, worker_image, pg_image, execute)
+        identity = full_identity(commit, worker_image, pg_image, execute, shard)
+        cleanup["owner_token"] = full_cleanup_owner(owned, identity)
+        cleanup["identity"] = identity
+        validate_full_python_cleanup(cleanup, identity)
+        if time.monotonic() >= deadline:
+            raise ProofFailure("independent_cleanup_deadline")
+        write_full_python_json(cleanup_path, cleanup)
+        # This gate proves only source-bound absence, not workload success.
+        # B may still run after A fails; the aggregate retains that failure.
+        if output := os.environ.get("GITHUB_OUTPUT"):
+            with open(output, "a") as destination:
+                destination.write("cleanup_verified=true\n")
         report = read_full_python_json(evidence)
         validate_full_python_receipt(report, identity, allow_pending_cleanup=True)
         report.update(status="passed", failure=None, independent_cleanup="verified_absent")
@@ -2169,14 +2231,26 @@ def main() -> None:
     parser.add_argument("--single-record-feasibility", action="store_true")
     parser.add_argument("--full-python", action="store_true")
     parser.add_argument("--finalize-full-python", action="store_true")
+    parser.add_argument("--full-python-shard", choices=("a", "b"))
     args = parser.parse_args()
     try:
         if sum((args.single_record_feasibility, args.full_python, args.finalize_full_python)) > 1:
             raise ProofFailure("mode_conflict")
         if args.full_python or args.finalize_full_python:
+            if args.full_python_shard is None:
+                raise ProofFailure("shard_required")
             operation = finalize_python if args.finalize_full_python else supervise_python
-            operation(args.worker_image, args.pg_image, args.commit, args.evidence, args.owned)
+            operation(
+                args.worker_image,
+                args.pg_image,
+                args.commit,
+                args.evidence,
+                args.owned,
+                args.full_python_shard,
+            )
             return
+        if args.full_python_shard is not None:
+            raise ProofFailure("mode_conflict")
         supervise(
             args.worker_image,
             args.pg_image,
