@@ -1,5 +1,266 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Serial qualification and corrected dependencies · 2026-10-23
+
+- [x] Preserve the explicit 900-second failure and both scoped cleanup proofs in [CI 39743798095](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798095), and the 25 advisory entries in [Security 39743798122](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798122).
+- [x] Obtain approval for corrected Pillow/certifi dependencies, related tests, two serial exhaustive 900-second shards at unchanged per-container budgets, a 55-minute Python job and one complete hosted validation. No merge or deployment.
+- [ ] Independently review the final dependency/serial-protocol diff and local evidence, including old-version rejection, unchanged decoder isolation, exact union/skip/restore proof, stale/missing/duplicate shard rejection and cleanup gating.
+- [ ] Qualify the fresh corrected images and complete source-bound shard pair; preserve failed artifacts without retries or budget escalation. Prior runtime/browser/security evidence is not inherited by this candidate.
+- [ ] Keep physical-device, installation-specific recovery, quote activation and product-capacity gates separate. Serial qualification is not a measured capacity result.
+
+## Proposed worker-only memory experiment · 2026-10-20
+
+- [x] Preserve [diagnostic CI 39416676359](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39416676359): exit 137, 4,486 collected, no final result, both cleanup absence proofs, worker sampled peak 511.93 MiB under its 512-MiB cap. Zero sampled OOM counters and no terminal observation do not confirm or exclude OOM.
+- [ ] Obtain specific approval before publishing and running one 768-MiB Python-worker experiment. PostgreSQL 1 GiB/data 512 MiB, Python 900 seconds, CPU/swap, tests and cleanup remain unchanged; the separate canary remains 512 MiB.
+- [ ] Require exact-source full collection, intentional skip identities, all restores and final containment. A larger worker cap is not a guaranteed fix, product-capacity result, merge or deployment approval.
+
+## Direct writer-matrix fixture correction · 2026-10-20
+
+- [x] Preserve [CI 39379037252](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39379037252): 4,463 collected, partial 4,298 dot and 58 skip observations, 107 cases without completed markers, `wall_budget`, both cleanup absence proofs. No validated final result exists.
+- [x] Remove only unused HTTP infrastructure from the 125-case direct SQLite writer matrix, preserving fresh seed/schema, all combinations, real lock calls and exact assertions; pass 224 related tests with zero skips and retain every prior collection identity.
+- [ ] Independently review the exact correction and obtain complete fresh hosted evidence within the unchanged 900 seconds, 512-MiB database data mount and 1-GiB database memory. No test omission, limit increase, production change, merge or deployment is included.
+
+## Full-suite WAL checkpoint candidate · 2026-10-20
+
+- [x] Preserve the ninth failed full-suite attempt, [39376683110](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39376683110), including its valid source identity and both absence proofs. Logged pytest counts are not a validated final receipt.
+- [x] Keep the 512-MiB PostgreSQL data mount, 1-GiB database memory, 512-MiB worker, CPU/swap/deadline/fixture and cleanup boundaries unchanged; pass 283 local supervisor/receipt tests.
+- [ ] Independently review and qualify the full-suite-only `max_wal_size=128MB` candidate, including live settings readback and preserved durability. Do not label this soft checkpoint trigger a disk cap or claim the unmeasured prior WAL footprint.
+- [ ] Require full collection, exact intentional skips, all mandatory restores and final containment before accepting the rerun. No limit widening, forced checkpoint/vacuum, product changes, merge or deployment is included.
+
+## Fixed CI correction qualification · 2026-10-20
+
+- [x] Verify PR #58 source `b6a614deea41440973d1645f17f9b98e8078fc16` and preserve its failed Python and security evidence.
+- [x] Pass 258 local full-suite supervisor/receipt checks for the fixed PostgreSQL budget, including eight new cases and five observed pre-fix failures.
+- [ ] Obtain exact-source complete Python qualification with PostgreSQL data tmpfs 512 MiB and memory 1 GiB; worker 512 MiB, one CPU each, zero swap, Python 900 seconds, exact 58 intentional skips, all six restore cases and both cleanup proofs remain required.
+- [x] Pass ten actual native Gitleaks 8.30.1 canaries and all 52 local policy/security-wrapper tests, including per-exception negative mutations, with no skipped cases.
+- [ ] Complete hosted pinned-scanner canaries, full-history scanning, REUSE, dependency audit and Trivy on the corrected source. Do not inherit earlier security passes.
+- [ ] Preserve the separate integration, physical-device, migration/recovery and quote-activation gates. No merge or deployment is authorized by this correction.
+
+## Clean quote service integration · 2026-10-18
+
+- [x] Preserve the original 214-case evidence and both failed static runs: [39091798151](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151) and [39092755007](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007). The latter has complete outer diagnostics but truncated inner formatter output; neither failed static run supplies final workload metrics.
+- [x] Independently verify all six corrected-source static commands and both cleanup proofs in [run 39093315481](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481).
+- [x] Recover the exact historical clean source and prepare the four canonical source-file reconciliation without reintroducing experiment-only controls.
+- [x] Pass the bounded locked Prettier 3.9.6 check for CI YAML and the three status documents; apply the narrowly reviewed `persist-credentials: false` setting to the CI verification checkout.
+- [x] Preserve [PR 58's first CI attempt](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39140389383): image-build failure with missing build diagnostics, skipped pytest, unobserved independent cleanup, and no full-Python artifact. The original Docker-build cause remains unknown.
+- [x] Retain the separate two-file Prettier failure and prepare its exact canonical Markdown changes with locked Prettier 3.9.6 on bounded inert copies. The main browser steps were skipped; secondary verifier fixture attempts failed without Chromium (80 unexpected tests, 159 failed attempts, no assertion passes). The aggregate remained 21 passed, five failed and one blocked, with no fallback pytest for missing receipt.
+- [x] Preserve [the second preparation failure](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39141875819): actual exit 1, bounded client reap and complete 5,041-byte output. The failing combined RUN is known; its underlying subcommand cause remains unknown. Missing ownership is retained as an unqualified cleanup observation, not absence proof; pytest was skipped.
+- [x] Preserve [the third preparation failure](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39143857377): 39,855 spool bytes, retained 16,384-byte tail, 23,471 omitted prefix bytes, no 1-MiB saturation, reaped client exit 1. Its pnpm assertion reports `Permission denied`; official pinned package data confirms executable `pnpm.mjs` and non-executable compatibility `pnpm.cjs`. The earlier two build causes remain unproven.
+- [x] Preserve [the fourth attempt's successful image preparation and failed containment setup](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39145603647). The exact-source receipt has no completed canary, collection or result; database/worker samples are zero. Both manifest-owned cleanup checks verified absence, while build-resource cleanup remains unassessed. The first failing preflight check was not retained.
+- [x] Preserve [the fifth attempt](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39147495876): image preparation and cancellation canary passed, then database scratch readback failed before business/pytest launch. Collection/result are null; both scoped cleanup checks verified absence. Raw scratch rows were not retained.
+- [x] Preserve [the sixth attempt](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39149558971): actual pytest collected 4,422 cases, then reported 180 passed, five skipped and one failed, leaving 4,236 unreached. The pinned legacy-source Git query exited 128 without retained stderr. All six mandatory restores were unreached; final result/resource counters remain absent. Image preparation, canary and reached scratch checks passed, and both manifest-owned cleanups verified absence. Builder cleanup remains unassessed.
+- [x] Qualify the real historical codec/cutover fixture and all five bounded loader cases in [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879). Preserve exact historical provenance and the unavailable earlier Git fatal message. The separate real legacy App/SW build and its full-history checkout remain unchanged.
+- [x] Preserve the same seventh attempt's next failure: 4,427 collected, 948 passed, five skipped and one failed, with 3,473 unreached. The publication shell returned 1 without retained subprocess stdout/stderr. Final result/resource counters remain absent; both manifest-owned cleanups verified absence and builder cleanup is unassessed.
+- [ ] Qualify the synthetic repository test's explicit `cwd=source` and three bounded-output mock cases. The unchanged release helper requires invocation from an existing Git repository because its pre-clone bundle verification uses the current repository; standalone outside-repository invocation is unsupported. Keep real backup/ref/tree assertions, no skips and all containment limits. The missing historical stderr prevents attributing the observed shell exit to a specific command.
+- [x] Verify the fixed canonical scratch lookup during reached containment and all eight added mount/ownership refusal cases plus the existing preflight diagnostic case in [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879). Every requested mount, size, option and kernel check remains enforced. The earlier missing raw rows still prevent claiming the alias mismatch was the sole historical cause; this partial attempt does not qualify the complete suite.
+- [ ] Review and qualify the Docker 28.0.4 mount-representation correction and bounded fixed-field preflight diagnostic. Exact tmpfs configuration, refusal of alternate mounts and all post-start kernel checks remain required; the independently demonstrated source defect is not proof of the historical first failure. The seven added mocked cases passed in [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879); complete-suite qualification remains pending.
+- [ ] Review and qualify the minimal executable-entry correction and CI-only runner-temp branding asset placement. Preserve the production asset default and strict clean-source check. The earlier direct browser 80/80 and final verifier 24 pass/three `identity_dirty` rejections remain source-bound evidence, not a full-Python pass. Bounded path/status diagnostics retain rejection and explicit truncation without file contents; their three mocked cases passed in [run 39151218879](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879). Complete-suite qualification remains pending.
+- [ ] Qualify the prepared diagnostic regressions and complete containment setup on the final source. The image recipe passed on the fourth and fifth attempts; all fixed build/workload/record limits remain unchanged from the reviewed plain-progress route. Missing ownership/image/receipt still fails closed, and builder cleanup remains unqualified.
+- [ ] Qualify the final clean tree through fixed full-image preparation and one complete source-bound Python receipt; do not relabel earlier results as final-tree execution.
+- [ ] Preserve the 900-second business limit, one-CPU 512-MiB worker, one-CPU 1024-MiB database with 512-MiB data tmpfs, bounded scratch/output, exactly 58 intentional skips and all six required restore cases. Keep both ordinary larger specimens in the complete collection.
+- [ ] Complete technical review of the corrected source before any later execution. The first draft PR triggered ordinary CI, Security/DCO, Local runtime/native ARM64, QEMU diagnostics and the existing quote microfixtures; those scopes remain separate from the full-Python worker.
+- [ ] Complete the full-history pre-reopen validator, real-installation inventory, physical-restore/corruption and capacity/activation obligations separately.
+
+## Joint bounded quote-effects candidate · 2026-10-17
+
+- [x] Independently verify six corrected PostgreSQL 0012 cases in run 39053813148.
+- [x] Review the joint bounded full-integrity design and exact raw-bind seam.
+- [x] Implement and independently review versioning, admission and full payload validation.
+- [x] Verify all six static/contract commands in run 39061922896.
+- [x] Verify eighteen pure boundary cases and 54 phases in run 39063614879.
+- [x] Verify four genuine PostgreSQL 0013 cases in corrected run 39065290465.
+- [x] Verify the fixed 119 guard / 62 database-free product / 6 static selection in run 39069601139.
+- [x] Verify 204 current-source service/effect/DTO/mock and PostgreSQL metadata/bridge cases in run 39072574166.
+- [x] Close the four SIM300 findings: repository and Ruff passed in run 39073762410.
+- [x] Close all six corrected-source static commands in run 39074239970.
+- [x] Execute all 32 selected PostgreSQL loader/writer cases successfully in run 39075248467, with independent artifact checks.
+- [x] Close the four new SIM300 findings: repository and Ruff passed in run 39075919485.
+- [x] Verify the retained single-line formatting correction and all six static commands in run 39076298550, with independent evidence review.
+- [x] Qualify all 40 finite PostgreSQL service/payload/atomicity/race cases and six selection mocks in run 39077801165.
+- [x] Close the import-order finding: repository and Ruff passed in run 39078500578.
+- [x] Verify the retained formatter hunk and all six static commands in run 39078898414, with independent evidence review.
+- [ ] Close the remaining affected integration regressions on the final intended integration tree.
+- [ ] Close the [337-check existing regression selection](docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md): its original four failures are preserved; corrected functional cases passed in run 39082181517, and the static closure passed in run 39082876503; final integration-tree qualification remains open.
+- [x] Verify all 66 corrected functional cases and six mocks in the [oracle correction](docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md), run 39082181517.
+- [x] Close its retained formatter failure and three unrun commands in run 39082876503 through the [12-check mock/static selection](docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md).
+- [ ] Review ordinary pull-request CI workload containment before opening the clean integration PR; its full Python selection includes specimens excluded from the finite groups.
+- [x] Verify three migration integrity cases and nine phases in run 39066342042.
+- [x] Verify valid historical 0012 migration/replay in run 39065290465.
+- [x] Verify refusal of unsupported old effects in run 39066342042.
+- [x] Prove DDL rollback after the final ALTER in run 39066342042.
+- [x] Prove tiny logical restore with generated metadata and valid retained effects in run 39067901565.
+- [x] Review and execute the one-case signed-PG18.4-client restore candidate under unchanged limits.
+- [ ] Complete broader integration, concurrency and capacity gates before activation.
+- [Selected amendment](docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md).
+  Earlier preparation entries are historical checkpoints, not current completion claims.
+
+## PostgreSQL settings-result correction · 2026-10-17
+
+- [x] Preserve and independently review failed run `39053071575` and cleanup.
+- [ ] Review the minimal Result conversion and bounded traceback patch.
+- [ ] Qualify the corrected source against all six existing PostgreSQL/DTO cases.
+- [ ] Run new focused regressions and the broader integration suite.
+- [Evidence and limits](docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md).
+
+## PostgreSQL-0012 service qualification · 2026-10-17
+
+- [x] Close all six static/contract commands on `559f9f31`, run `39052034132`.
+- [ ] Review the finite PG bridge, actual identity evidence and exact candidate.
+- [ ] Run its six-case workload once under the existing verified limits.
+- [ ] Verify source, migration, protocol, resource and cleanup receipts.
+- [ ] Integrate schema 0013 only after receipt-version and payload-admission adaptation.
+- [Scope and exclusions](docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md).
+  Earlier preparation sections are historical checkpoints.
+
+## Static contract subtimeout · 2026-10-17
+
+- [x] Retain first-four-command passes and OpenAPI timeout from run `39051546208`.
+- [ ] Review six-second OpenAPI allowance within unchanged global 20 seconds.
+- [ ] Obtain complete six-command result, then continue finite PostgreSQL semantics.
+- [Rationale and pending scope](docs/10-spec-development/2026-10-17-static-contract-subtimeout.md).
+  Previous preparation sections remain historical checkpoints.
+
+## Formatter correction · 2026-10-17
+
+- [x] Recover complete formatter output from run `39051023447`.
+- [ ] Review exact observed changes to the two guard/test files.
+- [ ] Close all six static commands, then finite PostgreSQL-0012 semantics.
+- Earlier preparation sections are historical; no activation is qualified.
+
+## Static output retention · 2026-10-17
+
+- [x] Preserve run `39050280067`: repository and Ruff lint passed, format failed.
+- [ ] Review and run bounded direct tool-output retention without catalogs.
+- [ ] Apply observed format corrections, then close types and contracts.
+- [ ] Continue finite PostgreSQL-0012 qualification after static closure.
+- [Evidence and limits](docs/10-spec-development/2026-10-17-static-output-retention.md).
+  Earlier preparation blocks remain historical.
+
+## Observed Ruff corrections · 2026-10-17
+
+- [x] Retain all four diagnostic records from run `39049797128`.
+- [ ] Review the four exact corrections and obtain all six static results.
+- [ ] Qualify the finite PostgreSQL-0012 service cases after static closure.
+- One output line is unparsed; the capture remains explicitly incomplete.
+  Earlier pending sections below describe historical preparation checkpoints.
+
+## Static diagnostic retention · 2026-10-17
+
+- [x] Independently close failed run `39048370590`; verify cancellation and absence.
+- [ ] Review the minimal diagnostic correction without guessed product changes.
+- [ ] Run the fixed static gate and retain actionable standard diagnostics.
+- [ ] Close actual static findings before PostgreSQL-0012 qualification.
+- [Current evidence and pending scope](docs/10-spec-development/2026-10-17-static-diagnostic-retention.md).
+  Earlier preparation blocks are historical checkpoints.
+
+## Direct static source repair · 2026-10-17
+
+- [x] Retain static run `39044828140`: repository passed, Ruff failed; later checks unrun.
+- [x] Retain repair run `39046578616`: export failed and no patch was retained.
+- [ ] Independently review direct source corrections and exact candidate.
+- [ ] Execute the unchanged bounded six-command static qualification once.
+- [ ] Close all actual static findings before the finite PostgreSQL-0012 gate.
+- No generated repair was applied; no complete static or PostgreSQL pass is claimed.
+  [Current scope and historical evidence](docs/10-spec-development/2026-10-17-direct-static-source-repair.md).
+  Older preparation checklists below are historical, not current results.
+
+## Fixed service static and contract gate · 2026-10-17
+
+- [x] Independently accept [semantic run 39043072145](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39043072145)
+      on `a9450392`/tree `3f9b851f`: six tests, 18 passing ordered phases, zero
+      errors/skips, exact source/resource evidence and both absence receipts.
+- [ ] Review the new fixed six-tool source, strict failure-only marker/parser,
+      exact image additions, unchanged resource ceilings and wrapper assertions.
+- [ ] After acceptance, make a fresh remote-parent/trigger preflight and separate
+      one-shot publication decision for `codex/quote-service-static-contracts`.
+- [ ] Obtain actual static/contracts results for every exact command. A first
+      failed tool stops later nodes; report them as unrun. No local check ran.
+- [ ] Retain all broader semantics, PostgreSQL, schema/version, hard deadline,
+      exposed API/UI, capacity, restore, physical/operator and activation gates.
+- All prior consumed workflows and their source-bound results are preserved.
+  TypeScript freshness is not compilation; mounted OpenAPI freshness is not
+  new-service exposure qualification. [Exact prepared scope](docs/10-spec-development/2026-10-17-quote-service-static-contracts.md).
+  Earlier pending blocks below are historical preparation checkpoints.
+
+## Fixed service semantic qualification · 2026-10-17
+
+- [x] Independently accept [corrected run 39041920516](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041920516):
+      exactly six original tests, all 18 ordered phases, scoped actual source and
+      resource evidence and both final absence receipts. This closes that gate.
+- [ ] Independently review the new exact source tree, six fixed selectors, one
+      late-expiry reachability assertion, workflow identity and unchanged bounds.
+- [ ] After acceptance, obtain a fresh remote parent/branch/trigger preflight and
+      separate one-shot publication decision. This preparation does not publish.
+- [ ] Execute the distinct six semantic nodes once, requiring every protocol,
+      scoped source/control/final resource evidence and both absence receipts.
+- [ ] Keep static/contracts, full grants/enrollment, APPROVE/REJECT, PostgreSQL,
+      hard deadlines, versioned payload admission, API/UI, capacity, restore and
+      activation pending. False-flag replay here means the creation receipt.
+- Every consumed workflow stays byte-identical and every prior run remains bound
+  to its original source. No retry or resource increase follows from preparation.
+  [Exact pending scope](docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md).
+  Earlier preparation blocks below remain historical checkpoints.
+
+## Corrected-source service qualification · 2026-10-17
+
+- [x] Independently verify [correction run 39041234055](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39041234055):
+      eight exact passes, zero errors/failures/skips, actual controls and both final absence receipts.
+- [ ] Review the minimal new corrected-service workflow and exact unchanged
+      six-node source/fixture/guard binding before its unique publication.
+- [ ] Execute and qualify the six original service protocols under unchanged
+      limits, retaining failure diagnostics and both final absence checks.
+- [ ] Keep the two moved pure tests, wider service semantics, PostgreSQL,
+      capacity, versioned payload admission and activation gates pending.
+- No prior consumed workflow is altered or retried. Earlier preparation blocks
+  below remain historical checkpoints; the latest evidence is in this section.
+
+## Initial service collection failure and correction · 2026-10-17
+
+- [x] Preserve [failed run 39039629649](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39039629649),
+      exact source identity and digest-verified artifact `12103397218`.
+- [x] Verify actual containment, cancellation and both owned-container absence receipts.
+- [x] Identify the independent static collection defect affecting two pure tests.
+- [ ] Review the local test separation and closed failure diagnostics exactly.
+- [ ] Review and run the separate fixed eight-node correction gate once with the
+      frozen outer helper, 20-second deadline and both final absence receipts.
+- [ ] Verify corrected collection and original six-case service behavior under
+      bounded containment. The consumed original workflow is not rerun.
+- [ ] Preserve PostgreSQL, capacity, deadlines, schema/version, routes and activation gates.
+- Current result and proposed verification are described in the
+  [collection correction](docs/10-spec-development/2026-10-17-service-collection-correction.md).
+  The dated preparation blocks below are historical, not current qualification claims.
+
+## Initial six-case service qualification · 2026-10-17
+
+- [x] Reconstruct published guard tree `400a69cb` exactly from current-main tree
+      `323661ad` and the 11-file published payload before adding service sources.
+- [x] Preserve the successful guard-only bootstrap run
+      [39007201961](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39007201961):
+      34 finite guard cases, actual controls/canary and both cleanup receipts.
+- [ ] Independently review the exact reconciled tree, frozen manifest and import
+      closure before a separately authorized service-trigger publication.
+- [ ] Qualify exactly six existing nodes once under the unchanged 20-second
+      service ceiling. Service tests, static checks and contracts remain unexecuted.
+- [ ] Keep schema 0012 for this initial batch. Schema 0013 and effect-version
+      admission are a separate uncombined proposal; no migration/model/registry
+      change is included here.
+- [ ] Preserve all PostgreSQL, semantic, deadlines, routes/fences/UI, capacity,
+      restore, physical/operator and activation gates. Consumed workflows stay
+      unchanged; a consumed or skipped service run cannot be replaced implicitly.
+- The following candidate/preparation entries are dated historical checkpoints;
+  current status and exact scope are in the
+  [six-case reconciliation](docs/10-spec-development/2026-10-17-quote-service-six-case-candidate.md).
+
+## Internal quote service candidate · 2026-10-16
+
+- [ ] Independently inspect the exact unmounted service/DTO/effect source.
+- [ ] Authorize a named contained venue and verify actual preflight before tests.
+- [ ] Execute prepared tiny tests and static/contracts; no RED/GREEN has been observed.
+- [ ] Resolve acquisition, synchronous Python and cleanup deadline enforcement.
+- [ ] Complete cohesive ingress/API/TS/UI and PostgreSQL/restore evidence before exposure.
+- [ ] Retain failed capacity/profile evidence and all activation/operator gates.
+- Scope: [unexecuted candidate](docs/10-spec-development/2026-10-16-quote-service-candidate.md).
+
 > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
 
 ## Product stack ordinary closure · 2026-10-16
@@ -325,7 +586,7 @@ conflicts were additive changelog/state sections; both histories were retained.
       27 aggregate controls, 2,375 Python checks (14 explicit skips), 773 frontend
       checks and retry-free 20 sync/order, 9 cutover and 5 clock repetitions.
 - [x] [Runtime](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739626)
-      passed 11 checks, named-volume restart/restore and two PostgreSQL18
+      passed 11 checks, named-volume restart/restore and two PostgreSQL 18
       asset-aware recovery scenarios. Native ARM64 execution passed in 0.265133s;
       all three builds passed. [Security](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38681739673)
       passed with zero findings.
@@ -1455,3 +1716,9 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
 - No new operator action is needed for this test-only instrumentation. Existing
   maximum quote capacity, recovery, physical-device and activation gates remain
   open. See the [diagnostic scope and evidence](docs/10-spec-development/2026-10-16-bounded-restart-diagnostics.md).
+
+## Contained service preparation (2026-10-17)
+
+Unexecuted local preparation. Do not publish the fixed service-trigger branch until its independent guard prerequisite and exact service tree are accepted: a push launches the workload immediately. Do not open a PR merely to store the package, because ordinary CI also runs. A consumed/skipped first run stops without renaming or counter changes.
+
+Do not combine frozen service writes with schema 0013 unchanged: explicit effect-version write/replay handling is required. Real PostgreSQL migration, restore and resource evidence remain pending. SQLite service passes would establish only the named functional cases, not capacity, safe activation or physical readiness.

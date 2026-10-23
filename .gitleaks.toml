@@ -19,3 +19,10 @@ condition = "AND"
 paths = ['''^README\.md$''']
 regexTarget = "secret"
 regexes = ['''^signed/revocable$''']
+
+[[rules.allowlists]]
+description = "Public execution-state prose describing JSON diagnostic byte accounting; not credential data"
+condition = "AND"
+paths = ['''^docs/10-spec-development/execution-state\.yaml$''']
+regexTarget = "secret"
+regexes = ['''^may_expand_beyond_retained_utf8_bytes$''']

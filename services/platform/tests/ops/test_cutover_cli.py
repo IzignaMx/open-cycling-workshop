@@ -19,7 +19,7 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 
-@pytest.fixture(params=["0010", "0011", "0012"])
+@pytest.fixture(params=["0010", "0011", "0012", "0013"])
 def installation(tmp_path, monkeypatch, request):
     url = f"sqlite+pysqlite:///{tmp_path / 'cutover.sqlite3'}"
     engine = create_engine(url)
@@ -211,7 +211,7 @@ def test_cutover_cli_refuses_fallback_database_configuration(monkeypatch, capsys
     assert json.loads(capsys.readouterr().out)["error"] == "database_configuration_required"
 
 
-@pytest.mark.parametrize("revision", [None, "0009", "0013", "multiple", "empty"])
+@pytest.mark.parametrize("revision", [None, "0009", "0014", "multiple", "empty"])
 def test_operator_refuses_unqualified_schema_without_effects(installation, revision):
     engine, settings = installation
     with engine.begin() as connection:

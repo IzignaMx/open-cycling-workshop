@@ -12,6 +12,47 @@ from test_quote_reconstruction import records as records
 from test_quote_repository import database as database
 
 
+def quote_only_oracle_adapter(module):
+    """Bridge repository keywords without extending the frozen oracle's domain."""
+
+    def adapted(
+        lineage,
+        revisions,
+        lines,
+        targets,
+        decisions,
+        operations,
+        outboxes,
+        *,
+        order_events,
+        changes,
+        order_outboxes,
+        checkpoint,
+    ):
+        checkpoint()
+        if order_events or changes or order_outboxes:
+            raise AssertionError("frozen quote-only oracle cannot validate linked source rows")
+        if any(
+            value is not None
+            for operation in operations
+            for value in (
+                operation.order_event_id,
+                operation.resulting_order_version,
+                operation.change_cursor,
+                operation.order_outbox_id,
+                operation.order_effect_version,
+            )
+        ):
+            raise AssertionError("frozen quote-only oracle cannot validate order effects")
+        result = module._reconstruct_with_bytes(
+            lineage, revisions, lines, targets, decisions, operations, outboxes
+        )
+        checkpoint()
+        return result
+
+    return adapted
+
+
 def equivalent(rows):
     from cycling_workshop.quotes.storage import canonical_bytes
 
@@ -36,7 +77,9 @@ def equivalent(rows):
     assert old_records == new_records
     assert len(new_records) == len(rows[5])
     assert old.ledger == new.ledger
-    assert [asdict(item) for item in old.receipts] == [asdict(item) for item in new.receipts]
+    assert [asdict(item) | {"order_effects": None} for item in old.receipts] == [
+        asdict(item) for item in new.receipts
+    ]
     assert old_bytes == new_bytes
     return new
 
@@ -257,7 +300,9 @@ def test_byte_failure_and_outer_rollback_on_both_paths(database, monkeypatch, ol
     from test_quote_storage import NOW
 
     if old_path:
-        monkeypatch.setattr(repository, "_reconstruct_with_bytes", oracle._reconstruct_with_bytes)
+        monkeypatch.setattr(
+            repository, "_reconstruct_with_bytes", quote_only_oracle_adapter(oracle)
+        )
     with Session(database) as session:
         admitted(session)
         repo = repository.QuoteRepository(session)

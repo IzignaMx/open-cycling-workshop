@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -23,6 +23,25 @@ from scripts.e2e.prepare_e2e_database import E2E_LEGACY_ORGANIZATION_ID, validat
 
 ROOT = Path(__file__).resolve().parents[2]
 PIN = "714342c60f4163c7b4c1ebec8433995dccbeea01"
+# Independently verified Git provenance; runtime checks the exact archived blob bytes.
+PIN_TREE = "fbf5e5678188a97b8b9709e6f91cb6b250e20c9f"
+PIN_SOURCE = "services/platform/src/cycling_workshop/identity/security.py"
+PIN_BLOB = "0a13a1ac154f0b982589dfa09c470cf4aa61c4e0"
+PIN_SOURCE_BYTES = 4549
+PIN_SOURCE_SHA256 = "95613b4278c0a966ecdd68445c8d5197e5d874f1678a35f8be930720811b87c6"
+PIN_SOURCE_FIXTURE = ROOT / "tests/fixtures/legacy-714342c6/security.py.source"
+
+
+def legacy_security_source() -> str:
+    """Load only the unchanged pinned codec, including in a source-only archive."""
+    try:
+        with PIN_SOURCE_FIXTURE.open("rb") as handle:
+            source = handle.read(PIN_SOURCE_BYTES + 1)
+    except OSError as exc:
+        raise RuntimeError("Pinned legacy security source unavailable") from exc
+    if len(source) != PIN_SOURCE_BYTES or hashlib.sha256(source).hexdigest() != PIN_SOURCE_SHA256:
+        raise RuntimeError("Pinned legacy security source identity mismatch")
+    return source.decode("utf-8")
 
 
 def legacy_fixture_session(settings: Settings) -> str:
@@ -43,13 +62,7 @@ def legacy_fixture_session(settings: Settings) -> str:
                 capabilities=frozenset(user.capabilities),
                 session_version=user.session_version,
             )
-        source = subprocess.run(
-            ["git", "show", f"{PIN}:services/platform/src/cycling_workshop/identity/security.py"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
+        source = legacy_security_source()
         module = ModuleType("_ocwp_pinned_legacy_security")
         sys.modules[module.__name__] = module
         try:

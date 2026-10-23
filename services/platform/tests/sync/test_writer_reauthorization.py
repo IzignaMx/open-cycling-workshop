@@ -1,5 +1,6 @@
 """Functional stale-dependency regression; PostgreSQL tests separately prove waits."""
 
+from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -10,9 +11,15 @@ from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.sync.models import ChangeRecord
-from sqlalchemy import func, select
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
-from services.platform.tests.bicycles.test_bicycle_api import FULL_CAPABILITIES, build_client
+from services.platform.tests.bicycles.test_bicycle_api import (
+    FULL_CAPABILITIES,
+    _ensure_seed,
+    build_client,
+)
 
 
 @pytest.mark.parametrize("kind", ["customer", "bicycle", "order", "transition", "push"])
@@ -96,15 +103,30 @@ GRANT_SETS = [
 ]
 
 
+@pytest.fixture
+def writer_matrix_factory() -> Iterator[sessionmaker[Session]]:
+    # These direct lock_writer cases need the same fresh database as build_client,
+    # but never use its HTTP app, client or bearer token.
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    try:
+        _ensure_seed(engine)
+        yield sessionmaker(bind=engine, expire_on_commit=False)
+    finally:
+        engine.dispose()
+
+
 @pytest.mark.parametrize("token_grants", GRANT_SETS)
 @pytest.mark.parametrize("initial_account_grants", GRANT_SETS)
 @pytest.mark.parametrize("current_account_grants", GRANT_SETS)
 def test_waiting_writer_preserves_literal_intersection_matrix(
-    token_grants, initial_account_grants, current_account_grants
+    token_grants, initial_account_grants, current_account_grants, writer_matrix_factory
 ) -> None:
     from cycling_workshop.sync.writes import lock_writer
 
-    client = build_client()
     # The ordinary HTTP dependency already narrowed token ∩ persisted account.
     # An account change during the lock wait must not resolve wildcard semantics
     # differently or restore grants removed by that first literal intersection.
@@ -114,7 +136,7 @@ def test_waiting_writer_preserves_literal_intersection_matrix(
         location_id="loc-1",
         capabilities=token_grants.intersection(initial_account_grants),
     )
-    with client.app.state.session_factory() as session:
+    with writer_matrix_factory() as session:
         actor = session.get(UserRecord, "user-1")
         actor.capabilities = sorted(current_account_grants)
         session.commit()

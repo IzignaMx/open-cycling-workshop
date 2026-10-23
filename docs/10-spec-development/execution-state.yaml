@@ -1,4 +1,1374 @@
 schema: 1
+
+serial_python_dependency_correction_20261023:
+  status: implemented_pending_evidence
+  source_base: de6cc06ee3ed283d4c2a738fed161355bb2fc737
+  preserved_failed_run:
+    run_id: 39743798095
+    source_tree: 9cd12a9fb2bc3da17fa8ebce52eee6b455a2d6a8
+    source_commit: 43011fff6aae84287d787b9005379511942b8d86
+    artifact_id: 12411191927
+    artifact_sha256: c5468fb2f615e2ff9b00c14652e7d899b6bb449e1e70379de247ad8aa21e7f4f
+    collected: 4521
+    diagnostic_pass_dots: 3614
+    diagnostic_skip_markers: 50
+    cases_without_completed_markers: 857
+    final_result: unavailable
+    failure: wall_budget
+    observed_stage: workload_guard
+    observed_role: worker
+    primary_and_independent_cleanup: verified_absent
+    builder_cleanup: not_assessed
+    aggregate_passes: 24
+    aggregate_receipt_rejections: 3
+  preserved_security_failure:
+    run_id: 39743798122
+    artifact_id: 12410536252
+    artifact_sha256: faf15bd4703e4d75d81a2d8894cabed1bb2f923d54f7b1c332993902e368ac7e
+    advisory_entries: 25
+    certifi_version: 2026.7.22
+    pillow_version: 12.3.0
+    active_audited_package_versions: 41
+    demonstrated_production_exploitability: not_established
+    trivy: skipped_after_dependency_audit_failure
+  approved_candidate:
+    fixed_serial_shards: 2
+    workload_seconds_each: 900
+    aggregate_workload_seconds: 1800
+    python_job_minutes: 55
+    worker_memory_mib: 768
+    postgres_memory_mib: 1024
+    postgres_data_mib: 512
+    concurrent_candidate_caps_mib: 1792
+    host_daemon_build_overhead: excluded
+    one_cpu_each_zero_swap_and_other_resource_limits: unchanged
+    existing_test_bodies_assertions_and_large_fixtures: preserved
+    required_collection: exact_disjoint_exhaustive_ordered_union
+    required_skip_identities: 58
+    required_restore_cases: 6
+    source_image_canary_primary_and_independent_cleanup: required_per_shard
+    complete_hosted_attempts_authorized: 1
+    retries_merge_deployment: excluded
+  dependency_correction:
+    pillow_version: 13.0.0
+    certifi_version: 2026.10.19
+    certifi_scope: development_transitive_unchanged
+    uv_version: 0.11.15
+    unrelated_registry_records_preserved: 41
+    official_pypi_artifacts_verified: 15
+    observed_red_regressions: 6
+    focused_passed: 394
+    existing_postgres_environment_skips: 28
+    independent_focused_passed_without_skips: 301
+    audit_active_packages: 41
+    audit_known_vulnerabilities: 0
+    audit_skipped_active_packages: 0
+    windows_only_marker_exclusions: 2
+    production_decoder_and_security_scanner_policy: unchanged
+    advisory_suppressions: none
+    local_python: 3.13.5
+    local_architecture: x86_64
+    postgres_container_native_arm_and_hosted_evidence: pending
+  local_serial_protocol:
+    related_passed_without_skips: 458
+    full_collection: 4649
+    shard_a_count: 2656
+    shard_b_count: 1993
+    prior_4521_node_identities_and_relative_order: preserved
+    added_regressions: 128
+    shard_a_expected_skips: 11
+    shard_b_expected_skips: 47
+    required_restore_cases: 6
+    source_bound_plugin_module_membership: checked_not_cryptographic_attestation
+    independent_final_review: pending
+    hosted_shard_fit: not_proven
+  hosted_qualification: pending
+
+full_python_worker_memory_experiment_proposal_20261020:
+  status: prepared_pending_specific_approval
+  source_base: 35018747154c83af6b76cc6b3ce43f81a3dc15b0
+  preserved_failed_run:
+    run_id: 39416676359
+    source_tree: b43c307cba0a81066a6d61607f139720627334a7
+    source_commit: fb7f4bd5f949d9849d26715779d845291387c2ee
+    artifact_id: 12263175747
+    artifact_sha256: 1b9b2052d339a254bfc347a92ba86e1236aa343d4c520f9f9dd6eace29ba371d
+    collected: 4486
+    diagnostic_pass_dots: 4234
+    diagnostic_skip_markers: 58
+    cases_without_completed_markers: 194
+    progress_is_not_a_final_result_or_exact_skip_proof: true
+    failure: worker_failed
+    worker_exit: 137
+    worker_last_current_bytes: 529096704
+    worker_last_peak_bytes: 536797184
+    worker_limit_bytes: 536870912
+    worker_peak_to_cap_margin_bytes: 73728
+    worker_observed_max_oom_and_oom_kill: 0
+    terminal_observation: not_taken
+    oom_cause: plausible_not_confirmed
+    database_last_peak_bytes: 381833216
+    post_stop_data_mount_free_bytes: 290512896
+    storage_snapshot: non_atomic_nonqualifying
+    final_result_and_final_probe: unavailable
+    primary_and_independent_cleanup: verified_absent
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39416676359
+  proposed_single_experiment:
+    worker_memory_mib: 768
+    previous_worker_memory_mib: 512
+    increase_mib: 256
+    increase_percent: 50
+    postgres_memory_mib: 1024
+    postgres_data_mib: 512
+    canary_memory_mib: 512
+    canary_removed_before_database_and_worker: true
+    concurrent_database_and_worker_caps_mib: 1792
+    previous_concurrent_caps_mib: 1536
+    host_daemon_and_build_overhead: excluded_not_a_total_host_peak
+    workload_seconds: 900
+    cpu_swap_tests_assertions_skips_restores_large_fixtures_and_cleanup: unchanged
+    success_or_sufficiency: not_proven
+    requires_specific_publication_and_run_approval: true
+  merge_and_deployment: excluded
+
+full_python_direct_writer_fixture_correction_20261020:
+  status: implemented_pending_evidence
+  source_base: 15f2290f6ca095d59f575a630be6945662737a79
+  preserved_failed_run:
+    run_id: 39379037252
+    source_tree: c172921493aac00a9b146aa6855a5feb1e319ba9
+    source_commit: aab3887450756e313a8b45af0f42c1cf6b93e2a4
+    artifact_id: 12244384233
+    artifact_sha256: d3b35b51973f5ee1b1f47b46991124f4486779504eb7e52093f63dbb8ef5f57b
+    collected: 4463
+    diagnostic_pass_dots: 4298
+    diagnostic_skip_markers: 58
+    cases_without_completed_markers: 107
+    progress_is_not_a_final_result_or_exact_skip_proof: true
+    failure: wall_budget
+    workload_seconds: 900
+    final_result_worker_exit_and_final_probe: unavailable
+    primary_and_independent_cleanup: verified_absent
+    storage_diagnostic: unavailable_no_unused_workload_time
+    boundary: sqlite_writer_grant_matrix_last_teardown_or_next_setup_call_unknown
+    large_postgres_and_six_restore_call_markers: precede_boundary_not_final_qualification
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39379037252
+  candidate:
+    scope: remove_unused_http_app_client_and_jwt_from_direct_125_case_matrix_only
+    fresh_database_full_schema_original_seed_and_session_configuration: preserved
+    grant_combinations_lock_calls_assertions_http_tests_and_savepoint_test: unchanged
+    engine_disposal: required_per_case
+    production_code_hard_limits_skips_restores_and_large_fixtures: unchanged
+    full_collection: 4467
+    previous_4463_node_identities_and_relative_order: preserved
+    additional_fixture_regressions: 4
+    related_tests_passed: 224
+    related_tests_skipped: 0
+    profiled_matrix_seconds_before: 25.58
+    profiled_matrix_seconds_after: 7.25
+    seed_and_real_lock_calls_before_and_after: 125
+    timings_are_not_hosted_capacity_evidence: true
+  runtime_result: pending
+  merge_and_deployment: excluded
+
+full_python_wal_checkpoint_candidate_20261020:
+  status: implemented_pending_evidence
+  source_base: c18c9475a46fb89325651af423cb3b2afbe0b728
+  preserved_failed_run:
+    run_id: 39376683110
+    source_tree: 8820a3ed2e5dddc9ddb2f6eaf842330b0c7cb0ab
+    source_commit: 28dc2b8bd26ef76d0ef0bac50c1c188b8e7d4aef
+    artifact_id: 12244121042
+    artifact_sha256: f57cb58cbe60315d2132279af1fdbbcc3dcc0e6d649191509da7c367cde514e5
+    collected: 4438
+    logged_passed: 2390
+    logged_skipped: 11
+    logged_failed: 1
+    logged_teardown_errors: 1
+    unreached_cases: 2036
+    logged_seconds: 388.12
+    failure: data_tmpfs_full_during_inventory_catalog_sort_then_teardown_wal_allocation
+    fixture_counts: products_20001_and_movements_100000_committed
+    final_receipt_status: failed_containment_failed
+    worker_exit_final_probe_and_result: unavailable
+    primary_and_independent_cleanup: verified_absent
+    storage_breakdown_and_wal_dominance: not_measured
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39376683110
+  candidate:
+    only_changed_server_setting: max_wal_size_128MB
+    setting_semantics: soft_checkpoint_trigger_not_a_wal_or_disk_cap
+    inherited_max_wal_size_expected_default: 1GB_not_runtime_observed
+    min_wal_size: unchanged_80MB
+    checkpoint_timeout: unchanged_5min
+    checkpoint_completion_target: unchanged_0_9
+    fsync_full_page_writes_synchronous_commit: remain_on_and_live_readback_required
+    wal_level: unchanged_replica
+    postgres_data_mib: 512
+    postgres_memory_mib: 1024
+    worker_memory_mib: 512
+    workload_seconds: 900
+    other_limits_large_fixtures_indexes_queries_skips_restores_and_microfixtures: unchanged
+    forced_checkpoint_vacuum_or_test_isolation_changes: none
+    failed_run_storage_diagnostic: fixed_numeric_post_stop_non_atomic_nonqualifying
+    diagnostic_budget: unused_workload_time_only_3_second_command_plus_2_second_reap
+    diagnostic_failure: never_changes_original_failure_or_cleanup
+  local_supervisor_and_receipt_cases_passed: 283
+  additional_cases: 25
+  runtime_result: pending
+  merge_and_deployment: excluded
+
+full_python_fixed_postgres_and_scanner_correction_20261020:
+  status: implemented_pending_evidence
+  source_base: b6a614deea41440973d1645f17f9b98e8078fc16
+  previous_ci:
+    run_id: 39153233846
+    collected: 4430
+    passed: 1371
+    skipped: 6
+    failed: 1
+    unreached: 3052
+    failure: postgres_data_tmpfs_full_during_200000_row_fixture
+    complete_qualification_and_product_capacity: not_established
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39153233846
+  previous_security:
+    run_id: 39153233900
+    status: failed_generic_api_key_public_documentation_prose
+    later_reuse_pip_audit_trivy: skipped
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39153233900
+  fixed_full_suite_budget:
+    postgres_data_tmpfs_mib: 512
+    postgres_memory_mib: 1024
+    worker_memory_mib: 512
+    cpus_per_container: 1
+    swap_bytes: 0
+    python_seconds: 900
+    postgres_data_inodes: 32768
+    finite_microfixture_limits: unchanged
+    ordinary_large_fixtures: unchanged_200000_and_100000_rows
+    intentional_skip_identities: 58
+    mandatory_restore_cases: 6
+    primary_and_independent_cleanup: required
+  scanner_correction:
+    rule: generic-api-key
+    path: docs/10-spec-development/execution-state.yaml
+    exception: exact_public_prose_value_conjoined_with_exact_path
+    additional_actual_scanner_canaries: 3
+    local_actual_scanner_version: 8.30.1
+    local_canaries_passed: 10
+    local_policy_and_wrapper_tests_passed: 52
+    local_scanner_test_skips: 0
+    each_exception_negative_mutations: passed
+    hosted_full_history_security_result: pending
+  local_budget_checks:
+    passed: 258
+    added_cases: 8
+    observed_prefixed_failures: 5
+    hosted_resource_behavior: not_claimed
+  exact_source_full_python_security_and_other_ci: pending
+  merge_deployment_and_quote_activation: excluded
+
+full_python_synthetic_repository_invocation_20261018:
+  status: prepared_unrun
+  source_base: db5cc27a73d1c8567d1c77c5e57bd0ec360b0e55
+  seventh_attempt:
+    run_id: 39151218879
+    source_commit: 418de1e9f2e427dbdd9baccf344b59b988cc9a56
+    source_tree: a4025706a4cfded68b6d9cbb8f7a5ee061d64db4
+    artifact_id: 12145775293
+    artifact_sha256: 6b0c7db13972ec6c735e5041e61635c5b892aa9cd3bb16677d851905b6e7a286
+    collected: 4427
+    collection_errors_and_deselections: 0
+    passed: 948
+    skipped: 5
+    failed: 1
+    unreached: 3473
+    historical_codec_fixture_and_five_loader_cases: passed
+    eight_canonical_scratch_mocks_and_existing_preflight_case: passed
+    seven_containment_observer_and_three_dirty_source_cases: passed
+    mandatory_database_and_branding_restores: three_passed
+    mandatory_quote_restores: three_unreached
+    failure: synthetic_publication_bash_exit_1
+    subprocess_stdout_stderr_and_exact_failing_command: unavailable
+    diagnostic_bytes: 2966
+    diagnostic_truncated: false
+    final_result_and_final_resource_counters: unavailable
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39151218879
+  prepared_correction:
+    test_script_cwd: existing_synthetic_source_repository
+    demonstrated_prerequisite: git_bundle_verify_requires_current_repository_before_clone
+    prior_audit_limitation: synthetic_objects_identified_but_inherited_cwd_missed
+    production_script_bytes_and_publication_assertions: unchanged
+    failure_diagnostic_scope: public_synthetic_test_module_only
+    retained_reencoded_utf8_bytes_per_stdout_stderr_tail: 2048
+    counts_offsets_availability_and_truncation: explicit
+    original_raw_subprocess_byte_counts: not_claimed
+    json_escaping: may_expand_beyond_retained_utf8_bytes
+    original_exception_and_returncode: preserved
+    additional_mock_cases: 3
+    mock_execution: unrun
+    equivalent_other_shell_defects_identified: none
+    workflows_resources_deadlines_skips_and_restores: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_immutable_legacy_source_20261018:
+  checkpoint: historical_preparation_before_run_39151218879
+  status_at_checkpoint: prepared_unrun
+  source_base: 68d9c50184fd4f9ecd56b2137f14d66627481f34
+  sixth_attempt:
+    run_id: 39149558971
+    source_commit: 7e66adad82cfdef24a2f9b1c34c2e75ad9c9bab3
+    source_tree: 7997293576a2e65c5a7cd8a013b775122d7f10d9
+    artifact_id: 12144184476
+    artifact_sha256: 3d6d1b4e8b5c47354f5a2c25e127c9f78b2c1b7060e8e9921270e3d9aaf9f4fa
+    image_preparation_canary_reached_scratch_checks: passed
+    collected: 4422
+    collection_errors_and_deselections: 0
+    passed: 180
+    skipped: 5
+    failed: 1
+    unreached: 4236
+    failed_fixture: legacy_fixture_session_pinned_git_show
+    git_exit: 128
+    git_stderr_and_exact_fatal_reason: unavailable
+    diagnostic_bytes: 1869
+    diagnostic_truncated: false
+    required_restores: all_six_unrun
+    final_result_and_final_resource_counters: unavailable
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39149558971
+  prepared_correction:
+    historical_commit: 714342c60f4163c7b4c1ebec8433995dccbeea01
+    historical_tree: fbf5e5678188a97b8b9709e6f91cb6b250e20c9f
+    historical_path: services/platform/src/cycling_workshop/identity/security.py
+    historical_blob: 0a13a1ac154f0b982589dfa09c470cf4aa61c4e0
+    source_bytes: 4549
+    source_sha256: 95613b4278c0a966ecdd68445c8d5197e5d874f1678a35f8be930720811b87c6
+    packaged_fixture: tests/fixtures/legacy-714342c6/security.py.source
+    preparation_provenance: exact_commit_tree_path_blob_membership_verified
+    runtime_proof: exact_bounded_length_and_sha256_before_historical_compile
+    runtime_read_bound_bytes: 4550
+    git_metadata_credentials_hooks_or_current_codec_substitution: none
+    original_cutover_session_assertions: unchanged
+    additional_regression_cases: 5
+    regression_execution: unrun
+    workflows_dependencies_resources_deadlines_skips_and_restores: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_scratch_path_observation_20261018:
+  checkpoint: historical_preparation_before_run_39149558971
+  status_at_checkpoint: prepared_unrun
+  source_base: 172556621f430b3c8dcd73a5efb24a197b6187d2
+  fifth_attempt:
+    run_id: 39147495876
+    source_commit: 1541412b95f2b657c2ada3a8a44ec89b49b8d658
+    source_tree: 17547cb85de4e033412b002bc8c77c0dcfd7787c
+    artifact_id: 12143952911
+    artifact_sha256: 80e618fb9956080595ef9549492f23521fe71632207cc0c7fa838a756973bb06
+    image_preparation: passed
+    cancellation_canary: passed
+    failed_role: db
+    failed_stage: scratch
+    failure: scratch_readback
+    raw_scratch_rows: unavailable
+    business_and_pytest: not_launched
+    collection_and_result: null
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39147495876
+  prepared_correction:
+    official_pg_config_sha256: 4b87d5343a0e499eea33b6c19ec152a3ed4a0d1a453eadd26ff415a406821a6e
+    official_source_revision: d71f5241e97ebf5c6e6e37e3043ab542132550f2
+    metadata: two_digest_verified_layers_without_execution_or_extraction
+    requested_socket_path: /var/run/postgresql
+    required_canonical_socket_path: /run/postgresql
+    other_paths: required_to_resolve_to_themselves
+    realpath_equality: mandatory_fixed_expected_destinations
+    historical_sole_cause: not_proven_without_raw_readback
+    requested_tmpfs_paths_sizes_options_and_kernel_enforcement: unchanged
+    diagnostic: first_fixed_path_check_and_bounded_expected_observed_values
+    numeric_bound_exclusive: 340282366920938463463374607431768211456
+    free_space_expected_value: fixed_two_integer_interval
+    arbitrary_malformed_or_unbounded_observations: omitted
+    diagnostic_limit_bytes_exclusive: 16384
+    raw_output: excluded
+    additional_mocked_cases: 8
+    mocked_execution: unrun
+    budgets_and_receipt_acceptance: unchanged
+    next_attempt: exact_review_and_terminal_current_run_review_required
+
+full_python_containment_observation_20261018:
+  checkpoint: historical_preparation_before_run_39147495876
+  status_at_checkpoint: prepared_unrun
+  source_base: e98ba57e106849fd4830fc955e7c7139663a691f
+  fourth_attempt:
+    run_id: 39145603647
+    source_commit: 2a906c7fc276639f422b5f7b4ad4dd3384e19d5e
+    source_tree: 4059c1bd6d7bf6e23438785622c3258997bbd342
+    artifact_id: 12143540648
+    artifact_sha256: c575f4012bff2455e8c1ba0f2d587d7412d490509089230959417aa934cc90c2
+    image_preparation: passed
+    supervisor: failed_before_completed_canary_and_business_launch
+    receipt_failure: containment_failed
+    original_failed_check: unavailable
+    collection_and_result: null
+    database_worker_resource_samples: 0
+    primary_and_independent_cleanup: verified_absent_manifest_owned_scope
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39145603647
+  prepared_correction:
+    advertised_docker_client_server: 28.0.4
+    source_demonstrated_defect: tmpfs_map_not_top_level_mounts
+    historical_first_failure_attribution: unknown
+    tmpfs_configuration: exact_unchanged
+    alternate_mounts: rejected
+    inspection_order: unchanged_before_start
+    kernel_scratch_enforcement: unchanged_after_start_and_during_sampling
+    preflight_diagnostic: existing_uploaded_diagnostic_json
+    diagnostic_fields: fixed_stage_role_failure_check_and_bounded_returncode
+    diagnostic_limit_bytes_exclusive: 16384
+    raw_configuration_arguments_environment_exception_payloads: excluded
+    diagnostic_qualification: not_a_receipt
+    first_refusal_retention: preserved_across_cleanup
+    receipt_acceptance_and_resource_budgets: unchanged
+    additional_mocked_cases: 7
+    mocked_execution: unrun
+    next_attempt: held_for_exact_review_and_terminal_current_runs
+
+full_python_image_entry_and_workspace_20261018:
+  checkpoint: historical_preparation_before_run_39145603647
+  status_at_checkpoint: prepared_unrun
+  source_base: 7c436d9d94ff1b63e4eb78f39a8443426756f428
+  third_preparation_attempt:
+    run_id: 39143857377
+    source_commit: af4706a111b5a79524711e2e322d6037a1db5e3f
+    source_tree: 352ed2fab06747bad77cc79328401e3e5d5779ba
+    artifact_id: 12142782067
+    artifact_sha256: 47ea822dc5ec9866ca5c17431db171005ce84a17c4c647fed6a0ed0c4e51d34d
+    build_client_returncode: 1
+    failing_assertion: pnpm_version_permission_denied
+    inner_shell_returncode: 127
+    client_reaped: true
+    observed_spool_bytes: 39855
+    retained_tail_bytes: 16384
+    dropped_prefix_bytes: 23471
+    retention_truncated: true
+    spool_saturated: false
+    pg_package_client_and_node_checks: passed_in_retained_tail
+    playwright_package_assertion_and_pytest: unrun
+    independent_cleanup: no_ownership_manifest_not_absence_proof
+    build_resource_cleanup: not_assessed
+    first_two_build_causes: not_retrospectively_proven
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39143857377
+  previous_verify_attempt:
+    run_id: 39141875819
+    direct_browser_passed: 80
+    aggregate_passed: 24
+    aggregate_failed: 3
+    failures: [python_tests, python_psycopg, postgresql_integration]
+    refusal: identity_dirty
+    runtime_writer: default_checkout_var_branding_assets
+    causal_evidence: successful_real_logo_upload_and_exact_source
+    sole_dirty_path_proof: unavailable_no_porcelain_record
+  prepared_corrections:
+    pnpm_version: 11.17.0
+    final_image_entry: bin/pnpm.mjs
+    official_entry_mode: '0755'
+    compatibility_cjs_mode: '0644'
+    verify_asset_root: RUNNER_TEMP/ocwp-browser-branding-assets
+    propagation: early_fixed_step_via_GITHUB_ENV
+    production_asset_default: unchanged
+    identity_dirty_retained_path_status_bytes: 4096
+    original_git_query_limit_bytes: 16384
+    path_status_byte_counts_and_truncation: explicit
+    source_cleanliness_rejection: unchanged
+    file_contents_and_environment_values: not_captured
+    new_mocked_cases: 3
+    new_mocked_execution: unrun
+    pins_build_and_runtime_budgets: unchanged
+    next_attempt: held_for_exact_review_and_terminal_current_runs
+
+full_python_build_output_localization_20261018:
+  checkpoint: historical_preparation_before_run_39143857377
+  status_at_checkpoint: prepared_unrun
+  source_base: f525d4f07973926680c0f7564497886db7029eaf
+  second_preparation_attempt:
+    run_id: 39141875819
+    run_attempt: 1
+    source_commit: dfb186e0c50e756262990895b54272bf2651475a
+    source_tree: 2a0d9179c8ad4612738329393872287f5ac9c9f6
+    artifact_id: 12142120768
+    artifact_sha256: 7ce2afff676bca048ce14e2b58ccdb7258e9a2b9a706c54dea61af73d15292a4
+    stage: image_build
+    returncode: 1
+    client_reaped: true
+    observed_and_retained_bytes: 5041
+    truncated: false
+    failure_localization: combined_package_key_version_link_RUN
+    underlying_subcommand_cause: unknown
+    pytest: skipped
+    independent_cleanup: no_ownership_manifest_not_absence_proof
+    build_resource_cleanup: not_assessed
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39141875819
+  prepared_diagnostics:
+    build_progress: plain
+    labeled_RUN_phases: 9
+    build_only_spool_bytes: 1048576
+    previous_build_spool_bytes: 16384
+    retained_tail_bytes: 16384
+    observed_retained_and_dropped_prefix_counts: explicit
+    retention_truncation_and_spool_saturation: separate
+    spool_saturation: failed_no_automatic_widening
+    capture: after_bounded_client_reap_only
+    other_control_spool_bytes: 16384
+    worker_runtime_and_receipt_budgets: unchanged
+    package_trust_pins_and_assertions: unchanged
+    new_mocked_regressions: unexecuted
+    third_attempt: held_for_exact_technical_review
+
+full_python_preparation_diagnostics_20261018:
+  checkpoint: historical_preparation_before_run_39141875819
+  status_at_checkpoint: prepared_unrun
+  source_base: 2e85dd7b6e3b19e74d29c536ca62f79a5de325e3
+  first_attempt:
+    run_id: 39140389383
+    run_attempt: 1
+    source_commit: 6b166504dde92aa5fa42f85eef687fc97b2306eb
+    source_tree: dd30aeb9530fb41f7e11aab5cde3b7859ef5dc13
+    preparation: first_docker_build_invocation_failed
+    build_output_child_returncode_and_underlying_cause: unavailable
+    pytest: skipped
+    independent_cleanup_observation: unavailable
+    full_python_artifact: absent
+    separate_verify_formatting: failed_two_markdown_files
+    main_browser_install_and_journeys: skipped
+    secondary_verifier_browser_fixtures: failed_missing_chromium
+    secondary_browser_unexpected_tests: 80
+    secondary_browser_failed_attempts: 159
+    secondary_browser_assertion_passes: 0
+    verify_aggregate_passed: 21
+    verify_aggregate_failed: 5
+    verify_aggregate_blocked: 1
+    missing_receipt: rejected_identity_image_no_fallback_pytest
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39140389383
+  prepared_correction:
+    preparation_control_spool_bytes: 16384
+    stage_returncode_and_truncation: explicit
+    diagnostic_capture: after_bounded_client_reap_only
+    independent_cleanup_record: separate_unqualified_observation
+    missing_ownership: cannot_certify_absence
+    build_resource_cleanup: not_assessed
+    full_suite_limits_and_receipt_acceptance: unchanged
+    mocked_regressions: unrun
+    two_markdown_files: canonical_locked_prettier_3_9_6_inert_copy_output
+  further_execution_at_checkpoint: pending_technical_review_no_retry
+
+clean_quote_service_integration_20261018:
+  status: image_prepared_containment_setup_failed_final_tree_qualification_pending
+  intended_branch: codex/quote-service-clean-integration
+  integration_base: 8a7eeecc39b0a43097484d10dc30af541ae38156
+  historical_clean_tree: d3bde4a9526a0a1c40cc95646c6fcdd7f438fb6f
+  historical_tree_recovery: independently_verified
+  canonical_source_commit: f550cde9e7675f38e9523ad9998e4e04ea58d0a8
+  canonical_source_tree: 2d52aff76ab170a70e43d1c7490b7962cb557e71
+  canonical_source_files: 4
+  clean_status_documents: 3
+  ci_verify_checkout_persist_credentials: false
+  locked_formatter: Prettier_3_9_6
+  bounded_ci_yaml_and_three_status_documents_format_check: passed
+  product_migrations_functional_tests_and_locks: unchanged_from_reviewed_candidate
+  original_case_run:
+    run_id: 39091798151
+    helper_verifier_guard_cases_passed: 214
+    repository_command: passed
+    ruff: failed_SIM105_SIM300
+    later_commands_unrun: 4
+    source_commit: 3695dfd896bb8e22a07fbd8671a77d3e1f37df8e
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39091798151
+  preserved_style_run:
+    run_id: 39092755007
+    passed_commands: 2
+    formatter: failed_output_cap
+    inner_output_bytes: 16384
+    inner_output_truncated: true
+    later_commands_unrun: 3
+    source_commit: e144a054b4de1748ac85e9eb5141559aba5cf0ec
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39092755007
+  static_closure:
+    run_id: 39093315481
+    status: independently_verified_six_passed
+    failures_errors_skips_unrun: 0
+    workload_seconds: 10.852200477
+    final_pretermination_peak_bytes: 275406848
+    artifact_id: 12123386817
+    artifact_sha256: 89edddfd550c75ca4d0b8f931ac7332ffefd66cb7d20dab525869dd7e3e8f0c3
+    source_pins: 54
+    locked_inputs: 4
+    primary_and_independent_cleanup: verified_absent
+    evidence: https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39093315481
+  final_clean_tree_runtime: fourth_attempt_failed_containment_before_pytest
+  full_image_preparation: fourth_attempt_passed
+  full_python_suite: unrun
+  full_python_business_seconds: 900
+  worker_cpus: 1
+  worker_memory_mib: 512
+  postgres_cpus: 1
+  postgres_memory_mib: 768
+  intentional_skip_identities: 58
+  required_restore_cases: 6
+  ordinary_large_specimens: retained_both_dialects
+  launch_status: next_attempt_held_for_exact_technical_review
+  ordinary_ci_merge_recovery_reopening_capacity_activation: pending
+
+quote_oracle_format_closure_20261018:
+  status: verified_fixed_scope_independently_reviewed
+  source_base: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  prior_run: 39082181517
+  retained_format_output_bytes: 9755
+  format_hunks: 15
+  auxiliary_files_formatted: 3
+  planned_checks: 12
+  planned_groups: 1
+  workload_seconds: 20
+  runtime: passed
+  run_id: 39082876503
+  source_commit: 1d32c9a4b91b6e3b2cc0a1ec2c6e54329b24a5ef
+  source_tree: ef961b9a12780a3a618f3fe5bbcdd90bfce2cb9e
+  artifact_id: 12119921296
+  checks_passed: 12
+  failures_errors_skips_unrun: 0
+  measured_workload_seconds: 14.579792505
+  final_pretermination_worker_peak_bytes: 283918336
+  cleanup: primary_and_independent_absence_verified
+  full_integration: pending
+  evidence: docs/10-spec-development/2026-10-18-quote-oracle-format-closure.md
+
+quote_oracle_adapter_correction_20261018:
+  status: functional_passed_formatter_failed_independently_reviewed
+  run_id: 39082181517
+  source_commit: b353c4b4d364ebfbcd1dc98134017c8bc6aae609
+  source_tree: 7136fdb0d7d5642839af9963caa09461571d8775
+  functional_cases_passed: 66
+  selection_mocks_passed: 6
+  repository_and_ruff: passed
+  formatter: failed_complete_retained_diff
+  types_openapi_client: unrun
+  observed_passes: 74
+  failures: 1
+  unrun_checks: 3
+  cleanup: all_four_primary_and_independent_absence_verified
+  source_base: dea1a661c81fee3aa1ce907f095a1709edb82d6e
+  original_failed_run: 39080692255
+  product_change: none
+  frozen_oracles: unchanged
+  planned_checks: 78
+  planned_groups: 4
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 80
+  runtime: partial_failed_formatter
+  evidence: docs/10-spec-development/2026-10-18-quote-oracle-adapter-correction.md
+
+quote_existing_integration_checks_20261017:
+  status: executed_four_failed_groups_independently_reviewed
+  selection_design: independently_reviewed
+  exact_implementation: independently_reviewed
+  run_id: 39080692255
+  source_commit: dea1a661c81fee3aa1ce907f095a1709edb82d6e
+  source_tree: 01a92e4597bcc742568ebe1cc02b737f79c96f6c
+  complete_passing_groups: 19
+  complete_functional_cases_passed: 259
+  postgres_cases_passed: 39
+  postgres_phases_passed: 117
+  partial_functional_passes: 35
+  selection_mock_passes: 6
+  repository_contract: passed
+  observed_passes: 301
+  failures: 4
+  unrun_checks: 32
+  artifact_count: 23
+  cleanup: all_primary_and_independent_absence_verified
+  source_base: 03e11cd8c0ea6e22955c748fc58abe00c90405b5
+  source_base_tree: f0ef88823094bc4e74bdfa8795e4d68597efb751
+  existing_functional_cases_planned: 325
+  existing_selection_mocks_planned: 6
+  existing_static_commands_planned: 6
+  total_checks_planned: 337
+  serialized_groups_planned: 23
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 460
+  runtime: partial_failed_test_adapters_and_lint
+  product_change: none
+  test_data_correction: unsupported_cutover_revision_0013_to_0014
+  excluded_specimens: large_100_line_proof_and_26_revision_pagination
+  integration_gate: pending_final_source_equivalence_and_contained_execution_review
+  evidence: docs/10-spec-development/2026-10-17-quote-existing-integration-checks.md
+
+quote_semantic_closure_20261017:
+  status: postgres_and_mock_passed_static_failed_independently_reviewed
+  run_id: 39077801165
+  source_commit: f5066d0056322ea1845bbfded24924e4ac90e8ae
+  source_tree: c4fbd6c163722e192cd4663086deddfa6015c422
+  postgres_cases_passed: 40
+  postgres_phases_passed: 120
+  mock_cases_passed: 6
+  repository_check: passed
+  static_result: Ruff_one_I001_later_four_commands_unrun
+  cleanup: all_seven_primary_and_independent_absence_verified
+  postgres_workload_seconds: [7.112, 6.844, 7.173, 4.708, 8.945, 6.950]
+  correction: six_static_commands_passed_independently_reviewed
+  final_static_run: 39078898414
+  final_static_source: 03e11cd8c0ea6e22955c748fc58abe00c90405b5
+  final_static_tree: f0ef88823094bc4e74bdfa8795e4d68597efb751
+  final_static_artifact: 12118142126
+  final_static_commands_passed: 6
+  final_static_workload_seconds: 14.408
+  final_static_pretermination_worker_peak_bytes: 275771392
+  correction_run: 39078500578
+  correction_source: a047ca603697b76a2ccfe449412bcebda638206b
+  correction_tree: 09669755bc4e57355f2635a152bb8a3aa505615c
+  correction_artifact: 12117848133
+  correction_repository_and_ruff: passed
+  correction_formatter: failed_one_complete_hunk_712_bytes
+  correction_types_openapi_client: unrun
+  design: independently_reviewed
+  exact_implementation_review: independently_reviewed
+  runtime: partial_failed_static
+  postgres_group_cases: [7, 7, 7, 6, 8, 5]
+  combined_mock_static_cases: 12
+  total_selected_checks: 52
+  workload_seconds_per_group: 20
+  maximum_business_allocation_seconds: 140
+  production_change: none
+  scope: finite_service_semantics_payload_atomicity_and_authority_races
+  evidence: docs/10-spec-development/2026-10-17-quote-semantic-closure.md
+
+quote_loader_format_20261017:
+  status: six_static_commands_passed_independently_reviewed
+  qualification_run: 39076298550
+  source_commit: 4b0a19b64d346e9322d343f460069aebf145ccfb
+  source_tree: 0d5cbb2e03eb7601db1eb7935c21d7e15480ef2a
+  artifact: 12117062612
+  passed_commands: 6
+  failures_errors_skips: 0
+  measured_workload_seconds: 13.499080871
+  final_pretermination_worker_peak_bytes: 276119552
+  prior_run: 39075919485
+  prior_source: 0009343af1c56ffc8477d0b31efeba41a1a9fc74
+  prior_tree: 5bb38a73cafd43948dfa8ae67979b31cb82f7543
+  prior_artifact: 12117355365
+  prior_repository_and_ruff: passed
+  prior_formatter: failed_one_complete_hunk_662_bytes
+  prior_types_openapi_client: unrun
+  workload_seconds: 20
+  evidence: docs/10-spec-development/2026-10-17-quote-loader-writer-checks.md
+
+quote_loader_writer_checks_20261017:
+  status: postgres_and_mock_passed_static_failed_independently_checked
+  run_id: 39075248467
+  source_commit: 07351675c671cf18077c5c08edab2132be070dec
+  source_tree: cb254639c316e3a48f5f10e74c56377a9be3495d
+  postgresql_cases_passed: 32
+  postgresql_phases_passed: 96
+  postgresql_workload_seconds: [4.936, 6.985, 7.166, 9.760]
+  cleanup: all_five_primary_and_independent_absence_verified
+  mock_cases_passed: 6
+  repository_check: passed
+  static_result: Ruff_four_SIM300_later_four_commands_unrun
+  postgresql_group_cases: [5, 9, 9, 9]
+  combined_mock_static_cases: 12
+  total_selected_checks: 44
+  workload_seconds_per_group: 20
+  runtime_result: partial_failed_static
+  scope: existing_prepared_writer_bounded_loader_and_updated_selection_static
+  production_change: none
+  evidence: docs/10-spec-development/2026-10-17-quote-loader-writer-checks.md
+
+quote_integrity_format_20261017:
+  status: six_static_commands_passed_independently_reviewed
+  qualification_run: 39074239970
+  source_commit: cb2d8d4830e01fc7eaa9ec13582240d8f56087f2
+  source_tree: ddffa0b8c8be5fdd501698a3b91b789e2df32d71
+  artifact: 12116625573
+  passed_commands: 6
+  failures_errors_skips: 0
+  measured_workload_seconds: 13.270018381
+  final_pretermination_worker_peak_bytes: 276189184
+  prior_run: 39073762410
+  prior_source_commit: 86eb20b0db740d1911d06f7e1e6272f0cba87bb5
+  prior_source_tree: f04fd26f4748954cad6e9f81fa9b87fc27a579b9
+  prior_artifact: 12115797338
+  prior_repository_and_ruff: passed
+  prior_formatter: failed_three_files_2616_bytes_complete_diff
+  prior_types_openapi_generated_client: unrun
+  correction: retained_formatting_only_and_fixed_static_scope
+  workload_seconds: 20
+  evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md
+
+quote_integrity_edges_20261017:
+  status: functional_selection_passed_static_failed
+  run_id: 39072574166
+  source_commit: 20f1d06d07898a89195c65d5c2143894bec1f6b0
+  source_tree: 5e25b34c56b16e5871d2367ea375880c963e2c9e
+  functional_mock_cases_passed: 204
+  actual_postgresql_cases: 27
+  regression_cases_passed: 10
+  static: repository_pass_ruff_four_SIM300_format_types_openapi_client_unrun
+  cleanup: all_ten_primary_and_independent_absence_verified
+  failed_static_final_resource_counters: not_retained
+  static_style_correction: repository_and_lint_passed_formatter_failed_run39073762410
+  observed_red_green: false
+  scope: canonical_receipt_year_and_scalar_order_nul_prehydration
+  evidence: docs/10-spec-development/2026-10-17-quote-integrity-edges.md
+
+quote_integration_checks_20261017:
+  status: passed_independently_reviewed
+  run_id: 39069601139
+  source_commit: 181579e9a76fabb8af72ec4cc343d85ecbfde55b
+  source_tree: 71adc27482ce823e062d055ae9bf911c9a12d0ee
+  artifact_ids: [12114437035, 12114538048, 12114712400, 12114547961]
+  measured_workload_seconds: [0.791, 2.190, 3.488, 9.632]
+  failures_errors_skips: 0
+  cleanup: primary_and_independent_absence_verified
+  fixed_group_cases: [51, 68, 62, 6]
+  workload_seconds_per_group: 20
+  total_group_workload_allocation_seconds: 80
+  max_parallel: 1
+  frozen_outer_baseline: true
+  internal_merge_readiness: pending_consolidated_review_and_integration
+  activation_capacity_and_concurrency: unqualified
+  evidence: docs/10-spec-development/2026-10-17-quote-integration-checks.md
+
+quote_service_restore_20261017:
+  status: passed_independently_reviewed
+  run_id: 39067901565
+  source_commit: d7868100c1b736607e939bef40c91f94798fad2f
+  source_tree: 9baa4919d168279900545feb6fdabee790ff4ad8
+  artifact_id: 12114530032
+  artifact_sha256: 8f34ed579074c6e0781a0305c8ce34cae5da87f6a4a4f999f27c4f10b0987b24
+  measured_workload_seconds: 4.848
+  final_worker_peak_bytes: 96944128
+  final_database_peak_bytes: 136056832
+  cleanup: verified_absent
+  expected_cases: 1
+  expected_phases: 3
+  database_roles: [source, target]
+  selected_revision: '0013'
+  client_server_release: '18.4'
+  client_package_revision: '18.4-1.pgdg13+1'
+  shared_workload_seconds: 20
+  scope: tiny_valid_version_one_effect_metadata_restore_and_fresh_replay
+  package_installation_and_duration: verified_for_this_tiny_case
+  evidence: docs/10-spec-development/2026-10-17-quote-service-restore.md
+
+quote_migration_integrity_20261017:
+  status: passed_independently_reviewed
+  run_id: 39066342042
+  source_commit: cc1dc6b62748ddfd6a4c0593127401198954a313
+  source_tree: 12fbf2eb9355255040d600e1d9631cd2e8fa76df
+  artifact_id: 12113905223
+  artifact_sha256: 0cfadbcfab42ca4833ae770fbe4c9aac38dfad4cea754af40418cbd7738c779d
+  measured_workload_seconds: 4.337
+  final_worker_peak_bytes: 94027776
+  final_database_peak_bytes: 101224448
+  cleanup: verified_absent
+  expected_cases: 3
+  expected_phases: 9
+  final_revisions: ['0012', '0013', '0013']
+  shared_workload_seconds: 20
+  observer: final_only_no_upgrade_interception
+  restore_concurrency_capacity: unqualified
+  evidence: docs/10-spec-development/2026-10-17-quote-migration-integrity.md
+
+bounded_effects_null_correction_20261017:
+  status: passed_independently_reviewed_after_exact_recovery
+  run_id: 39065290465
+  source_commit: 8a627dcffaaee5d63c5bf67436d2d534463b4eb7
+  source_tree: d67ebe171d893ca87eff568ada80d2a8c221994a
+  artifact_id: 12112758073
+  artifact_sha256: 6d967e5a95bc8ec230915da3e526a82097a403a21b329d20af676ec9291a303c
+  actual_postgresql_schemas: 4
+  server_version: '18.4'
+  driver: psycopg_3_3_4
+  schema_revision: '0013'
+  measured_workload_seconds: 6.98
+  final_worker_peak_bytes: 101507072
+  final_database_peak_bytes: 108875776
+  cleanup: verified_absent
+  source_recovery: all_775_blobs_and_original_six_path_manifest_verified
+  preserved_failed_run: 39064719886
+  change: test_only_implicit_null_shape_and_actual_guarded_null_results
+  expected_cases: 4
+  expected_phases: 12
+  shared_workload_seconds: 20
+  product_source_changed: false
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-null.md
+
+bounded_effects_postgresql_20261017:
+  status: failed_independently_reviewed_preserved
+  run_id: 39064719886
+  source_commit: f842b58e5cd7a3cb7038c3af4a141979fd9756de
+  source_tree: c56e653bb35cf8ab13e5af1ab38686db0fba3fea
+  artifact_id: 12111704973
+  artifact_sha256: 82db1c3f071aa874e617ac34a2b2cc20177df24b0b38f62b2d60a7762577511d
+  passed_cases: 2
+  failed_case: paired_raw_cast_literal_else_assertion
+  historical_case: unrun
+  complete_postgresql_identity_receipt: unavailable_on_failure
+  cancellation_and_cleanup: independently_verified
+  expected_cases: 4
+  expected_phases: 12
+  database_schemas: 4
+  selected_revision: '0013'
+  shared_workload_seconds: 20
+  migration_identity: observation_only_no_implicit_upgrade
+  restore_concurrency_capacity: unqualified
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-postgresql.md
+
+bounded_effects_pure_20261017:
+  status: passed_independently_reviewed
+  run_id: 39063614879
+  source_commit: 0b8e3ea96d11362b7d65477bb57038727691b818
+  source_tree: ea1c25d9320b548f78e656e4afd8f5d0443b1d13
+  artifact_id: 12112502333
+  artifact_sha256: 64cca88e845b79f0f0df45420f4641579bc457306f4113ddda7b34e7e6805a55
+  measured_workload_seconds: 2.394
+  final_worker_peak_bytes: 90959872
+  cleanup: verified_absent
+  negative_guard_regressions: unrun
+  expected_cases: 18
+  expected_phases: 54
+  source_functions: 10
+  remaining_pure_cases: 47
+  shared_workload_seconds: 20
+  maximum_success_report_bound_bytes: 15103
+  database_usage: unused_environment_overhead
+  genuine_postgresql_0013: unrun
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-pure.md
+
+bounded_effects_static_20261017:
+  status: passed_independently_reviewed
+  run_id: 39061922896
+  source_commit: 2460fbc11577170ec7660bc75c237dfd5a905bcf
+  source_tree: 326ff11ac86241c787ae8b0469b24968c867a748
+  artifact_id: 12111533199
+  artifact_sha256: 0b0bd1250455acf53d18fde25abdf7adf6f50bd8fde6fb3cafeb3b7e91c5429d
+  fixed_commands: 6
+  passed_phases: 18
+  source_paths: 38
+  production_type_roots: 13
+  shared_workload_seconds: 20
+  measured_workload_seconds: 14.729
+  final_worker_peak_bytes: 274309120
+  cleanup: verified_absent
+  database_usage: unused_environment_overhead
+  runtime_tests: unrun
+  previous_failed_runs:
+    [
+      39056889116,
+      39057515145,
+      39057919833,
+      39059789509,
+      39060197021,
+      39060563945,
+      39060973460,
+      39061333413,
+    ]
+  evidence: docs/10-spec-development/2026-10-17-bounded-effects-source-repair.md
+
+bounded_quote_effects_joint_20261017:
+  status: source_reviewed_tests_unexecuted
+  base_commit: 9c07e2249fedd59462e00d9a1b44652709b05e2e
+  base_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
+  selected_schema_revision: '0013'
+  effect_version: 1
+  current_source_octet_limit: 262144
+  canonical_projection_octet_limit: 262144
+  each_raw_copy_octet_limit: 1048576
+  raw_submission: measured_text_bind_postgresql_json_cast
+  generic_legacy_payloads: preserved_without_global_cap
+  historical_quote_only: null_version_no_invented_effect
+  populated_old_receipts: refuse_before_migration_ddl
+  migration_rollback_restore: pending_separate_evidence
+  activation: unavailable
+  evidence: docs/02-technical-architecture/2026-10-17-bounded-quote-order-effects.md
+
+postgresql_0012_verified_20261017:
+  qualification_run: 39053813148
+  qualification_artifact: 12108926137
+  artifact_sha256: 1914213c319edc078b6f34566b26c502d4e7eeb2f2632cdef75f938a26339e31
+  source_commit: 9c07e2249fedd59462e00d9a1b44652709b05e2e
+  source_tree: fe30964b9b164b4eaf1d63449f46c490de548f2e
+  result: six_cases_eighteen_ordered_phases_passed
+  actual_postgresql_schemas: 4
+  server_version: '18.4'
+  driver: psycopg_3_3_4
+  schema_revision: '0012'
+  workload_seconds: 4.316
+  worker_peak_bytes: 99504128
+  database_peak_bytes: 109645824
+  canary_and_both_absence_receipts: independently_verified
+  prior_failed_run_preserved: 39053071575
+  focused_fake_and_guard_regressions: not_selected_unrun
+  concurrency_restore_capacity: not_qualified
+
+quote_postgresql_settings_result_correction_20261017:
+  status: prepared_pending_exact_review_and_execution
+  preserved_failed_run: 39053071575
+  preserved_artifact: 12108915032
+  preserved_source: d79eeed8dd9afbc493162b1c85769dcae526625e
+  observed_result: two_dto_passed_first_pg_call_failed_three_pg_cases_unrun
+  original_exception: not_retained
+  cancellation_cleanup: independently_verified
+  correction: explicit_iteration_of_same_three_settings_rows
+  workload_seconds: 20
+  schema_revision: '0012'
+  new_regression_tests: prepared_unrun
+  evidence: docs/10-spec-development/2026-10-17-postgresql-settings-result-correction.md
+
+quote_service_postgresql_0012_20261017:
+  status: failed_first_pg_call_evidence_preserved
+  source_commit: 559f9f311fe6c4aedf303063df5e697a461c64a7
+  source_tree: e0505482124317ec8190cd7f0a3985543b30ebc2
+  prior_static_run: 39052034132
+  prior_static_result: six_commands_eighteen_phases_passed
+  selector: two_existing_dto_four_existing_service_cases_on_postgresql
+  expected_isolated_postgresql_schemas: 4
+  database_revision: '0012'
+  shared_workload_seconds: 20
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_cpu: 1
+  database_memory_mib: 768
+  original_sqlite_fixtures: unchanged
+  schema_0013: excluded_pending_version_adaptation
+  actual_pg_service_result: first_case_failed_remaining_three_unrun
+  evidence: docs/10-spec-development/2026-10-17-postgresql-0012-service-qualification.md
+
+static_contract_subtimeout_20261017:
+  status: verified_six_static_commands_under_global_budget
+  qualification_run: 39052034132
+  qualification_artifact: 12108166920
+  source_commit: 512df3d47132f9c14c1e33ce4fac9efe03d35fac
+  source_tree: c1eda35969f1ec78831a5a455a7b3d5388700836
+  failed_run: 39051546208
+  artifact: 12107922284
+  repository_lint_format_strict_mypy: passed
+  openapi: subprocess_timeout_three_seconds_no_output
+  generated_client: unrun
+  proposed_tool_ceilings_seconds: [2, 3, 3, 12, 6, 2]
+  unchanged_shared_workload_seconds: 20
+  product_latency_qualification: none
+  evidence: docs/10-spec-development/2026-10-17-static-contract-subtimeout.md
+
+observed_formatter_correction_20261017:
+  status: format_verified_openapi_subtimeout_client_unrun
+  qualification_run: 39051546208
+  qualification_artifact: 12107922284
+  source_commit: d15b3ae5f2d45e9a0e22d8b42997218a68427057
+  source_tree: 848f2ca1eac996265a9eb4de645285825d203e49
+  failed_run: 39051023447
+  artifact: 12107073435
+  repository_and_ruff_lint: passed
+  formatter: failed_two_files_require_layout_changes
+  already_formatted_files: 17
+  retained_output_bytes: 10420
+  output_truncated: false
+  mypy_openapi_client: unrun
+  change: exact_observed_guard_and_test_formatting_only
+  mechanism_and_execution_limits: unchanged
+
+static_output_retention_20261017:
+  status: verified_exact_formatter_output_static_checks_not_qualified
+  qualification_run: 39051023447
+  qualification_artifact: 12107073435
+  source_commit: 603f7cd2878f616d34e78b0e825db983d064d1b2
+  source_tree: 9c54a8b1b645eb046d540883bae82c3405dd3331
+  failed_run: 39050280067
+  artifact: 12107930877
+  repository_and_ruff_lint: passed
+  format: failed
+  mypy_openapi_client: unrun
+  formatter_output_bytes: 11498
+  formatter_unparsed_lines: 212
+  exact_discarded_formatter_output: unavailable
+  correction: bounded_original_public_tool_output_without_catalogs
+  tool_output_limit_bytes: 16384
+  static_marker_limit_bytes: 24576
+  service_spool_limit_bytes: 32768
+  execution_resource_limits: unchanged
+  evidence: docs/10-spec-development/2026-10-17-static-output-retention.md
+
+quote_observed_ruff_corrections_20261017:
+  status: ruff_verified_formatter_failed_later_checks_unrun
+  qualification_run: 39050280067
+  qualification_artifact: 12107930877
+  source_commit: 5513ead255ec64128de1230009dc7fe0bc4acba1
+  source_tree: aaa9578ccaabbc15e0526019b53d65f3b7f66c59
+  failed_run: 39049797128
+  artifact: 12107027091
+  observed_rules: [SIM905, RUF043, RUF043, SIM300]
+  reported_diagnostics: 4
+  retained_diagnostics: 4
+  omitted_diagnostics: 0
+  unparsed_lines: 1
+  complete_capture: false
+  repository_result: passed
+  ruff_result: failed
+  format_types_openapi_client: unrun
+  execution_limits_and_semantics: preserved
+
+quote_static_diagnostic_retention_20261017:
+  status: verified_actionable_failure_diagnostics_static_checks_not_qualified
+  qualification_run: 39049797128
+  qualification_artifact: 12107027091
+  source_commit: 038a463c3339210488a80e5c8b0d61fc83edfdad
+  source_tree: 1e68b89488d65ba8f828da122e48ae9d34be51ba
+  failed_run: 39048370590
+  artifact: 12106453817
+  result: repository_passed_ruff_failed_four_later_checks_unrun
+  ruff_output_bytes: 679
+  unparsed_lines: 7
+  exact_remaining_diagnostics: unavailable
+  cancellation_reap_both_absence: independently_verified
+  correction: generic_codes_standard_public_source_messages_existing_marker
+  ruff_marker_budget_bytes: 12288
+  host_spool_budget_bytes: 16384
+  complete_arbitrary_16k_output_transport: not_guaranteed
+  execution_resources_product_schema_tool_commands: unchanged
+  evidence: docs/10-spec-development/2026-10-17-static-diagnostic-retention.md
+
+quote_service_manual_static_repair_20261017:
+  status: failed_ruff_after_repository_pass_later_checks_unrun
+  run: 39048370590
+  artifact: 12106453817
+  base_commit: dff067af840b8e83d87d17ae6fa36cfd10e75653
+  base_tree: c3ba32738c5996badcf575bc47dfac9b9499fb4f
+  branch: codex/quote-service-static-manual-qualification
+  workflow: .github/workflows/quote-service-static-manual-qualification.yml
+  previous_static_run: 39044828140
+  previous_static_result: repository_passed_ruff_failed_four_checks_unrun
+  repair_proposal_run: 39046578616
+  repair_proposal_result: sixth_export_call_failed_no_patch_retained_cause_unknown
+  correction: direct_source_edits_no_generated_patch_applied
+  rules_product_schema_resource_limits: preserved
+  consumed_workflows: unchanged_not_retried
+  actual_new_static_checks: repository_passed_ruff_failed_four_later_checks_unrun
+  evidence: docs/10-spec-development/2026-10-17-direct-static-source-repair.md
+
+quote_service_static_contracts_20261017:
+  status: failed_ruff_after_repository_pass_later_checks_unrun
+  run: 39044828140
+  artifact: 12105845250
+  base_commit: a945039247decaec4f00fe3a04d125ba2d238208
+  base_tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
+  local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  workflow: .github/workflows/quote-service-static-contracts.yml
+  branch: codex/quote-service-static-contracts
+  required_run_number: 1
+  required_run_attempt: 1
+  selector: fixed_six_real_static_and_contract_commands
+  lint_format_exact_paths: 19
+  strict_mypy_production_roots: 6
+  strict_mypy_import_following: unchanged_no_skip_or_ignored_errors
+  tool_time_ceiling_seconds: [2, 3, 3, 12, 3, 2]
+  shared_workload_ceiling_seconds: 20
+  tool_time_ceiling_sum_is_not_total_allocation: true
+  fail_fast: maxfail_1_later_nodes_unrun_after_first_failure
+  tool_output_limit_bytes: 16384
+  additional_failure_marker_limit_bytes: 4096
+  diagnostic_records_maximum: 12
+  diagnostic_contents: exact_source_path_line_and_enumerated_rule_only_no_messages
+  diagnostic_transport: existing_capped_host_spool_after_verified_stop_and_client_reap
+  numeric_failure_marker_and_failure_status: preserved
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_overhead_cpu: 1
+  database_overhead_memory_mib: 768
+  additional_archived_image_files: 25
+  additional_archived_image_bytes: 246220
+  application_SQLite_files: 0
+  application_PostgreSQL_protocols: 0
+  product_schema_fixtures_locks_configs_contracts: unchanged_schema_0012_no_0013
+  consumed_workflows: byte_identical_not_retried
+  local_import_compile_collection_tests_static_contracts: not_run
+  diagnostic_negative_source_cases: prepared_unrun_not_selected
+  actual_static_contract_results: repository_passed_ruff_failed_format_mypy_openapi_client_unrun
+  exposed_service_contract_TypeScript_compilation_broad_suite: not_qualified
+  evidence: docs/10-spec-development/2026-10-17-quote-service-static-contracts.md
+
+quote_service_semantic_verified_20261017:
+  status: verified_exact_six_semantic_cases_only
+  run: 39043072145
+  job: 117426303592
+  run_number: 1
+  run_attempt: 1
+  commit: a945039247decaec4f00fe3a04d125ba2d238208
+  tree: 3f9b851f427c8d43746f7a3df5be308741ae6387
+  artifact: 12104344631
+  artifact_sha256: ce49d2c92a5c8d0d7b8824e55638d84be941145b37bd0b644cc9e0344b6ee424
+  tests_passed: 6
+  ordered_setup_call_teardown_phases_passed: 18
+  failures_skips_collection_protocol_unhandled_errors: 0
+  setup_seconds: 2.538
+  workload_seconds: 5.402
+  supervisor_seconds: 8.360
+  worker_peak_bytes: 103657472
+  database_peak_bytes: 86355968
+  combined_workload_cpu_usec: 5990638
+  actual_controls_canary_final_resources_client_reap_both_absence_receipts: independently_verified
+  late_expiry_post_append_clock_assertion: executed_passed
+  service_failure_path_cancellation_or_diagnostic_transport: not_exercised_by_success
+  broad_service_postgresql_capacity_activation_qualified: false
+  initial_failed_run_preserved: 39039629649
+  initial_failed_run_initiating_exception: unknown_not_recovered
+  evidence: docs/10-spec-development/2026-10-17-quote-service-static-contracts.md
+
+quote_service_semantic_qualification_20261017:
+  current_closure: quote_service_semantic_verified_20261017
+  checkpoint_status: prepared_pending_exact_independent_review_unexecuted_unpublished
+  base_commit: 65e2e69df4c2ad134ff2256864e44256fc5d3b3a
+  base_tree: 6c5d5d3f2af75f505262901f8099e89f5942f50f
+  local_baseline_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  workflow: .github/workflows/quote-service-semantic-qualification.yml
+  branch: codex/quote-service-semantic-qualification
+  required_run_number: 1
+  required_run_attempt: 1
+  selector: fixed_two_pure_fake_driver_and_four_SQLite_nodes_only
+  exact_nodes:
+    - services/platform/tests/quotes/test_quote_driver_budgets.py::test_raw_driver_budget_failure_has_availability_category
+    - services/platform/tests/quotes/test_quote_driver_budgets.py::test_budget_first_round_trip_can_exhaust_original_deadline
+    - services/platform/tests/quotes/test_quote_application_service.py::test_false_flag_denies_new_but_preserves_exact_revision_replay[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_foreign_actor_and_noncustomer_decision_are_refused[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_commit_ack_loss_is_unknown_and_same_identity_replays[sqlite]
+    - services/platform/tests/quotes/test_quote_application_service.py::test_expiry_after_order_effect_flush_rolls_back_outer_transaction[sqlite]
+  assertion_tightening: late_expiry_clock_equals_9_after_original_append_change_returns
+  false_flag_scope: creation_receipt_replay_not_revision_replay_or_delivery_assertion
+  service_guard_sha256: 8a60b0d1f7f774bf2800f72312ce40081f3f3c75d0f96e879cf4b93bb5fdce25
+  service_test_sha256: bd7eba2b375444adc48e07af183e739f161cdd6ef400de110cb572f7c14467ce
+  workflow_sha256: d2410a6cab96c7af55c4dc3b3c9efd4f99c1a3843c45274785d77b59ffa11794
+  guard_change: only_six_fixed_selector_values_no_new_mode_or_guard_layer
+  consumed_workflows: byte_identical_not_retried
+  product_schema_fixtures_locks: unchanged_schema_0012_no_0013
+  workload_seconds: 20
+  worker_cpu: 1
+  worker_memory_mib: 512
+  database_overhead_cpu: 1
+  database_overhead_memory_mib: 768
+  expected_SQLite_files: 4
+  expected_persisted_quote_operations: 5
+  expected_late_rolled_back_decision_attempts: 1
+  expected_footprint_basis: source_and_assertions_not_runtime_measurement
+  host_containment: unproved_no_local_runtime
+  local_import_compile_collection_tests_static_contracts: not_run
+  semantics_qualified: false
+  postgresql_capacity_activation_qualified: false
+  evidence: docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md
+
+quote_service_original_six_verified_20261017:
+  status: verified_exact_original_six_DTO_SQLite_cases_only
+  run: 39041920516
+  job: 117422972026
+  run_number: 1
+  run_attempt: 1
+  commit: 65e2e69df4c2ad134ff2256864e44256fc5d3b3a
+  tree: 6c5d5d3f2af75f505262901f8099e89f5942f50f
+  artifact: 12104491644
+  artifact_sha256: 673a87843db6f3379472a000ddfc3f761568174f3f7afb935f8bf53c8580e78b
+  tests_passed: 6
+  ordered_setup_call_teardown_phases_passed: 18
+  failures_skips_collection_protocol_unhandled_errors: 0
+  setup_seconds: 2.171
+  workload_seconds: 4.410
+  supervisor_seconds: 7.243
+  worker_peak_bytes: 107028480
+  database_peak_bytes: 83677184
+  combined_workload_cpu_usec: 4941034
+  actual_controls_canary_final_resources_client_reap_both_absence_receipts: independently_verified
+  service_failure_path_cancellation_or_diagnostic_transport: not_exercised_by_success
+  broad_service_postgresql_capacity_activation_qualified: false
+  initial_failed_run_preserved: 39039629649
+  initial_failed_run_initiating_exception: unknown_not_recovered
+  evidence: docs/10-spec-development/2026-10-17-quote-service-semantic-qualification.md
+
+quote_service_corrected_collection_gate_20261017:
+  current_closure: quote_service_original_six_verified_20261017
+  checkpoint_status: prepared_pending_exact_review_and_single_execution
+  base_commit: 54fe65bee87f615a78c771507515ab95e6ef247e
+  base_tree: b480a2aaf641f7dd12c7bc22fa73ffceef436185
+  regression_run: 39041234055
+  regression_artifact: 12104072554
+  regression_artifact_sha256: 0bff116ef047cecee132989c92453b2f906ad1bd725e4d35ba226087af4e4fee
+  regression_nodes_passed: 8
+  regression_failures_errors_skips: 0
+  regression_workload_seconds: 1.8037246949999997
+  regression_actual_controls_cancellation_both_absence_receipts: independently_verified
+  service_guard_sha256: a8c92710682204575b7affa26fccd263f9ab2325a3033bf8aff4f03b000dd11a
+  selector: six_original_DTO_SQLite_nodes_unchanged
+  service_workload_seconds: 20
+  branch: codex/quote-service-corrected-collection
+  original_failed_run: 39039629649
+  original_workflow: preserved_consumed_not_retried
+  checkpoint_service_qualified: false
+  postgresql_capacity_activation_qualified: false
+  evidence: docs/10-spec-development/2026-10-17-service-collection-correction.md
+
+quote_service_initial_failure_20261017:
+  status: failed_initial_qualification_correction_prepared_unexecuted
+  run: 39039629649
+  run_number: 1
+  run_attempt: 1
+  commit: 49a6f9d8ddce77f1b9488fac78f17a952300e448
+  tree: 8def8ab7ce55db121c9f31f72265f0447e3c3253
+  artifact: 12103397218
+  artifact_sha256: 56d6933692f4e7a1a2cfd581c5aa12b6d0aa108a46b2b5d6662abb8c50301da0
+  specimen_returncode: 4
+  supervisor_elapsed_seconds: 6.395
+  workload_ceiling_seconds: 20
+  cancellation: verified_stopped
+  supervisor_cleanup: verified_absent
+  independent_cleanup: verified_absent
+  six_case_qualification: false
+  original_diagnostic: not_retained_exact_initiating_error_unknown
+  static_defect: module_indirect_database_parametrization_rejects_two_pure_tests
+  correction_tests: prepared_not_executed_RED_GREEN_not_observed
+  correction_gate: fixed_eight_node_dev_only_batch_pending_exact_review_execution
+  correction_gate_branch: codex/quote-collection-regression-proof
+  correction_gate_workload_seconds: 20
+  correction_gate_cpu: 1
+  correction_gate_memory_mib: 512
+  consumed_workflow: unchanged_no_rerun
+  evidence: docs/10-spec-development/2026-10-17-service-collection-correction.md
+
+quote_service_six_case_reconciliation_20261017:
+  status: source_reconciled_service_execution_pending_exact_review
+  actual_main_commit: 8a7eeecc39b0a43097484d10dc30af541ae38156
+  baseline_local_commit: f9849cbca62311d6fe090e5800986307a223cbd9
+  baseline_tree: 323661ade5a3540f389bfb5b965d4ff63b400d5c
+  published_guard_commit: d481d5b68240aca635e6ded957e660481b52c06b
+  reconstructed_published_guard_tree: 400a69cbd2c0351ee1ad853826e98481b41adf27
+  guard_bootstrap_run: 39007201961
+  guard_bootstrap_nodes_passed: 34
+  guard_bootstrap_actual_controls_and_both_cleanup_receipts: verified
+  service_cases_executed: 0
+  initial_selection: six_exact_existing_nodes_once_20_seconds
+  schema: unchanged_0012_no_0013_effect_version_amendment
+  source_changes: frozen_service_12_Python_files_identical_no_semantic_fix
+  remaining_static_contract_and_service_checks: unexecuted
+  publication: not_performed_by_this_reconciliation
+  evidence: docs/10-spec-development/2026-10-17-quote-service-six-case-candidate.md
+
+quote_service_candidate_20261016:
+  status: implemented_pending_evidence_execution_blocked_unproved_containment
+  base: PR57_tree540d963d686dd30bda31e7382b15837eae2c9c44
+  scope: unmounted_transaction_service_command_DTO_and_full_immutable_effect_receipt
+  tests: prepared_before_implementation_but_unexecuted_RED_GREEN_not_observed
+  static_and_contracts: unexecuted
+  deadlines: cooperative_only_acquisition_total_Python_and_cleanup_unproved
+  authority: synthetic_development_only_no_routes_adoption_publication_or_workloads
+  evidence: docs/10-spec-development/2026-10-16-quote-service-candidate.md
+
 project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
@@ -333,6 +1703,8 @@ authoritative_restore_script:
   test: tests/repository/test_publish_authoritative_bundle.py
   local_bare_remote_restore: passed_hermetic_windows_and_posix
   retained_for: future_integrity_preserving_restores_and_disaster_recovery
+  invocation_requirement: existing_git_repository_as_current_directory_for_preclone_bundle_verify
+  standalone_outside_repository_invocation: unsupported_by_current_script
 
 # Corrective increment; does not supersede historical release evidence above.
 effective_identity_sync_authority_2026_10_14:
@@ -2121,3 +3493,17 @@ product_stack57_ordinary_closure_20261016:
   superseded_checkout: 046754f2ccae18561012b57c2139f519b8096abe_against_PR55_same_tree_not_main_qualification
   integration_trigger: ordinary_new_commit_after_retarget_no_consumed_experiment_rerun
   evidence: https://github.com/IzignaMx/open-cycling-workshop/pull/57
+
+contained_service_preparation_20261017:
+  status: local_unexecuted_preparation
+  source_base_tree: 323661ade5a3540f389bfb5b965d4ff63b400d5c
+  plan: docs/10-spec-development/2026-10-17-contained-service-preparation.md
+  workload_seconds: 20
+  exact_service_cases: 6
+  tests_executed: false
+  publication_triggers_execution: true
+  pending:
+    - independent_finite_guard_qualification
+    - exact_combined_service_source_review
+    - schema0013_effect_version_reconciliation_if_combined
+    - real_postgresql_compatibility_and_cleanup_evidence

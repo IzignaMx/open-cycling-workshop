@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Index, Integer, String
+from sqlalchemy import JSON, BigInteger, CheckConstraint, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cycling_workshop.db.base import Base
+from cycling_workshop.db.order_payload_size import OrderPayloadRawOctets
 
 
 def _hex_only(expression: str) -> str:
@@ -71,3 +72,6 @@ class ChangeRecord(Base):
     entity_version: Mapped[int] = mapped_column(Integer, nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    order_payload_raw_octets: Mapped[int | None] = mapped_column(
+        BigInteger, OrderPayloadRawOctets("entity_type"), nullable=True
+    )

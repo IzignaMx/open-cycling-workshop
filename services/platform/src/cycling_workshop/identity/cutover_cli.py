@@ -28,6 +28,7 @@ def require_cutover_schema(session: Session) -> None:
         ["0010"],
         ["0011"],
         ["0012"],
+        ["0013"],
     ):
         raise ApiError(409, "cutover_schema_incompatible", "qualified cutover schema required")
 

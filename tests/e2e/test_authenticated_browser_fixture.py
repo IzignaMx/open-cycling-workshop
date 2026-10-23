@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from cycling_workshop.app import create_app
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.settings import Settings
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from scripts.e2e import legacy_upgrade_fixture as legacy_fixture
 from scripts.e2e import prepare_e2e_database as preparation
 from scripts.e2e.prepare_e2e_database import (
     E2E_ORGANIZATION_ID,
@@ -17,6 +19,37 @@ from scripts.e2e.prepare_e2e_database import (
     run_migrations,
     seed_browser_identity,
 )
+
+
+def test_pinned_legacy_source_loads_exact_bytes_without_repository_history(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = legacy_fixture.PIN_SOURCE_FIXTURE.read_bytes()
+    fixture = tmp_path / "security.py.source"
+    fixture.write_bytes(source)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(legacy_fixture, "PIN_SOURCE_FIXTURE", fixture)
+    assert not (tmp_path / ".git").exists()
+    assert len(source) == 4549
+    assert legacy_fixture.legacy_security_source().encode("utf-8") == source
+
+
+@pytest.mark.parametrize("damage", ["missing", "truncated", "tampered", "oversized"])
+def test_pinned_legacy_source_refuses_missing_or_changed_bytes(
+    tmp_path: Path, monkeypatch, damage: str
+) -> None:
+    source = legacy_fixture.PIN_SOURCE_FIXTURE.read_bytes()
+    fixture = tmp_path / "security.py.source"
+    if damage == "truncated":
+        fixture.write_bytes(source[:-1])
+    elif damage == "tampered":
+        fixture.write_bytes(bytes([source[0] ^ 1]) + source[1:])
+    elif damage == "oversized":
+        fixture.write_bytes(source + b"\n")
+    monkeypatch.setattr(legacy_fixture, "PIN_SOURCE_FIXTURE", fixture)
+    reason = "unavailable" if damage == "missing" else "identity mismatch"
+    with pytest.raises(RuntimeError, match=f"^Pinned legacy security source {reason}$"):
+        legacy_fixture.legacy_security_source()
 
 
 def test_browser_fixture_has_genuine_enabled_multiuser_workshop_contexts(
