@@ -1,7 +1,11 @@
 # Local workshop runtime: laptop first, then a Raspberry Pi
 
-Status: **implemented, Docker runtime evidence pending**. This is a new opt-in
-runtime; `docker-compose.dev.yml` and the Tier 1 development override are unchanged.
+Status: **hosted runtime verified for `21245faacc991d91c1dd334bd37ba49c17141252`; physical laptop/Raspberry acceptance pending**.
+[Local runtime 39990179250](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39990179250)
+passed, including the separate native ARM64 decoder and three ARM64 image builds.
+This is source-bound hosted evidence, not a pass for later commits or real devices.
+See the [current reconciliation](../10-spec-development/2026-10-25-pr58-status-reconciliation.md).
+This is an opt-in runtime; `docker-compose.dev.yml` and the Tier 1 development override are unchanged.
 The hosted `Local runtime` workflow is the executable qualification path. A build
 or static test is not a claim that this ran on a laptop, tablet or Raspberry Pi.
 
@@ -289,8 +293,10 @@ Only its own random project/volumes and temporary test data are removed afterwar
 This script is a hosted rootful-Linux test, not a Windows setup wizard.
 
 The workflow uploads `local-runtime-evidence` with commit SHA, architecture,
-Docker/Compose versions, image IDs and completed checks. Separate QEMU jobs build
-all three images for `linux/arm64` without publishing them. Running the smoke
+Docker/Compose versions, image IDs and completed checks. Separate ARM64 build jobs build
+all three images for `linux/arm64` without publishing them; the native ARM64
+decoder job supplies architecture execution evidence. The optional QEMU decoder
+diagnostic is NON-QUALIFYING and is not the native or physical-device gate. Running the smoke
 without `--browser` explicitly records that browser evidence is absent.
 
 Still required before operational qualification: green hosted runtime/build jobs

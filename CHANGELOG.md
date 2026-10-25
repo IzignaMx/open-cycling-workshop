@@ -1,5 +1,12 @@
 # Changelog
 
+## PR #58 hosted qualification reconciliation · 2026-10-25
+
+- Record the complete, source-bound [CI 39990179262](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39990179262) result for `21245faacc991d91c1dd334bd37ba49c17141252`: 4,649 Python cases collected, 4,591 passed, 58 expected skips, all six mandatory restores and 27/27 aggregate controls. Both serial shard cleanup gates passed under the approved unchanged per-shard limits.
+- Record same-head Security, Local runtime/native ARM64, DCO and containment success; retain optional QEMU failure as NON-QUALIFYING. No physical laptop/Raspberry, production capacity, installation recovery or quote API/UI acceptance is inferred.
+- Reconcile execution state, the current manual action queue and runtime status with [the spec-linked handoff](docs/10-spec-development/2026-10-25-pr58-status-reconciliation.md). Earlier entries remain historical checkpoints, including their then-pending evidence and failed attempts. V0.1 remains partial; PR #58 remains draft/unmerged. Documentation successors require their own checks.
+- Documentation only: no product, dependency, CI limit, test, merge, deployment or data changes.
+
 ## Serial Python qualification and dependency correction · 2026-10-23
 
 - Preserve [CI 39743798095](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798095), tree `9cd12a9f`: the exact-source diagnostic identified `wall_budget` at `workload_guard` while the worker remained live. Of 4,521 collected cases, output retained 3,614 pass dots and 50 skip markers, leaving 857 unmarked. These are progress observations, not final results. Both owned-container cleanups verified absence; the aggregate correctly retained 24 passes and three `receipt_failed` rejections.

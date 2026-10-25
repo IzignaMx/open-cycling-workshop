@@ -1,7 +1,36 @@
 schema: 1
 
+current_reconciliation_20261025:
+  status: partial
+  evidence: docs/10-spec-development/2026-10-25-pr58-status-reconciliation.md
+  qualified_product_head: 21245faacc991d91c1dd334bd37ba49c17141252
+  qualified_product_tree: 69e1ee2e0f5d73acb5ef805ba4bf47666a29926a
+  tested_merge: 5e2e5409936bd0ac5b31e7a508b35c433f91ca41
+  base_main: 8a7eeecc39b0a43097484d10dc30af541ae38156
+  pull_request: https://github.com/IzignaMx/open-cycling-workshop/pull/58
+  integration: draft_unmerged_no_deployment
+  ci_run: 39990179262
+  hosted_qualification: verified_for_named_source_only
+  python_collected: 4649
+  python_passed: 4591
+  python_expected_skips: 58
+  mandatory_restore_cases: 6
+  aggregate_controls_passed: 27
+  security_run: 39990179253
+  runtime_run: 39990179250
+  dco_run: 39990179190
+  containment_microfixture_run: 39990179270
+  qemu_run: 39990179217
+  qemu_status: failed_nonqualifying_not_a_physical_device_result
+  physical_laptop_windows_android_raspberry: blocked_pending_operator_evidence
+  installation_recovery_and_quote_activation: blocked_pending_separate_acceptance
+  maximum_quote_capacity_and_nominal_latency: unqualified
+  documentation_successor: requires_own_checks_no_inherited_exact_head_pass
+  historical_sections: retain_original_source_bound_results_not_current_todo_queue
+
 serial_python_dependency_correction_20261023:
-  status: implemented_pending_evidence
+  current_closure: current_reconciliation_20261025
+  checkpoint_status: implemented_pending_evidence
   source_base: de6cc06ee3ed283d4c2a738fed161355bb2fc737
   preserved_failed_run:
     run_id: 39743798095
@@ -1372,9 +1401,10 @@ quote_service_candidate_20261016:
 project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
-branch: main
-status: v02_increment_1_workshop_core_complete_pending_v01_physical_devices
-last_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
+branch: codex/quote-service-clean-integration
+status: partial
+last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
+historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
 
 locally_verified_tasks:
   - R01-T001
@@ -1622,14 +1652,13 @@ tier1_protocol:
   status: awaiting_operator_execution
 
 next_focus:
-  - execute Android tablet and physical-Windows Tier 1 qualification to close R01-T035
-  - produce hosted browser conflict-path evidence for R01-T021 and browser/device chaos for R01-T036
-  - prove Dexie migrations preserve queued mutations and test quota pressure behavior
-  - backup fallback drill with a corrupt/unavailable latest dump; re-measure RTO on production-like volume
-  - repeat the Compose fresh-install smoke on the first clean Linux host (target topology)
-  - tighten main protection (approvals, code-owner reviews, enforce for admins) once a second custodian exists; then work through short-lived PRs only
-  - operator executes the Tier 1 physical protocol and records evidence in the results template
-  - execute the V0.2 Workshop Core plan (bicycles + service orders) task-by-task under the Master Loop
+  - preserve PR58 source-bound qualification and independently review the final integration candidate before any separately authorized merge
+  - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
+  - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
+  - complete quote full-history pre-reopen validation and installation inventory before activation
+  - obtain a separately reviewed authorized capacity and latency plan without repeating consumed PR51 or PR56 trials
+  - keep quote API UI offline drafts and operator adoption closed until their own ingress authority recovery and acceptance gates pass
+  - retain active V0.1 partial status until physical and operational acceptance is evidenced
 
 repository_consolidation_evidence:
   purpose: make_github_canonical_without_losing_authoritative_files

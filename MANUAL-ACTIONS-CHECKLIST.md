@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Current reconciliation · 2026-10-25
+
+This is the current action queue. Dated sections below retain their original
+checkpoints; unchecked historical experiment items are not instructions to rerun
+them. See the [source-bound reconciliation](docs/10-spec-development/2026-10-25-pr58-status-reconciliation.md)
+for scope, evidence and prioritized spec dependencies.
+
+- [x] Verify PR #58 remains draft and unmerged at `21245faacc991d91c1dd334bd37ba49c17141252`, against main `8a7eeecc39b0a43097484d10dc30af541ae38156`.
+- [x] Record complete serial qualification in [CI 39990179262](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39990179262): 4,649 collected, 4,591 passed, 58 expected skips, six mandatory restores, both shard cleanup gates and 27/27 aggregate controls. This closes hosted qualification for this source, not a physical-device or product-capacity gate.
+- [x] Record same-head Security, Local runtime/native ARM64, DCO and containment success. Preserve the optional QEMU timeout as failed and NON-QUALIFYING.
+- [ ] Complete final integration review and any new-head checks before a separately authorized merge; no merge, deployment or new budget is authorized here.
+- [ ] Close **R01-T035** with actual Windows and Android Tier 1 device records in the existing protocol/results template. Hosted Chromium does not replace physical storage, touch or assistive-technology acceptance. Current runtime/recovery safety rules take precedence over historical disposable-fixture instructions: never delete installation volumes or weaken TLS/browser security.
+- [ ] Qualify the actual laptop/Docker Desktop installation, then Raspberry Pi hardware/storage/power and trusted LAN clients. No connected physical device is available in this reconciliation session; record source/image identity, topology and results rather than inferring a pass from ARM64 builds.
+- [ ] Complete real-installation inventory, isolated restore/corruption drills and measured RPO/RTO, preserving browser journals and database/assets/TLS identity before any authorized installation change.
+- [ ] Complete quote full-history pre-reopen validation, independently reviewed capacity/latency plan and remaining activation/ingress/authority gates. Keep quote API/UI closed; do not repeat consumed PR #51/#56 trials or increase limits without specific approval.
+
+## Historical checkpoints
+
+The following entries preserve evidence and requirements at the stated dates.
+The current reconciliation supersedes their pending hosted-qualification prose
+only for the exact source and scopes named above; historical failures remain failures.
+
 ## Serial qualification and corrected dependencies · 2026-10-23
 
 - [x] Preserve the explicit 900-second failure and both scoped cleanup proofs in [CI 39743798095](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798095), and the 25 advisory entries in [Security 39743798122](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39743798122).
