@@ -1,5 +1,26 @@
 schema: 1
 
+branding_administration_readiness_20261026:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-10-26-branding-administration-readiness.md
+  source_base: 8a48ecc991247958552fc64f6585ba97cf2cb27e
+  preserved_ci_run: 40218677350
+  preserved_aggregate_artifact: 12608733977
+  preserved_aggregate_sha256: e1feffcf6b6ad78a06157bdd0602eb94d4c0ef60abb20d3c31a9cddec37cea32
+  preserved_browser_result: 79_clean_passes_plus_one_flaky_retry_pass
+  demonstrated_failure: helper_waits_for_button_replaced_by_automatic_account_admission
+  local_control_red: 5_passed_1_failed_at_original_toBeEnabled
+  local_control_green: 6_passed_zero_skips
+  frontend_core_passed: 934
+  local_web_typecheck_pwa_build_and_six_ci_contracts: passed
+  independent_source_and_local_control_review: passed
+  native_regression_cases_added: 6
+  native_browser_local: blocked_executor_socket_restriction
+  final_hosted_direct_aggregate_and_retry_free_evidence: pending_exact_successor
+  production_authority_storage_cache_and_grants: unchanged
+  assertions_timeouts_retries_security_and_resource_budgets: unchanged
+  integration: draft_unmerged_no_deployment
+
 current_reconciliation_20261025:
   status: partial
   evidence: docs/10-spec-development/2026-10-25-pr58-status-reconciliation.md

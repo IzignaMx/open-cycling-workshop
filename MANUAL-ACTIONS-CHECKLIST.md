@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Branding helper successor · 2026-10-26
+
+- [x] Preserve CI 40218677350's aggregate 79 clean passes plus one retry pass and reproduce the helper-state failure without changing production authority or readiness.
+- [x] Verify six local helper controls after the narrow readiness correction; preserve the observed pre-fix failure. No new operator action is required for this test-only change.
+- [ ] Establish exact-successor direct and aggregate browser results, including the new native DOM regressions and existing retry-free repetition stages. Local controlled observations are not native browser/API evidence; do not infer a clean aggregate from a successful exit that contains retry passes.
+- [ ] Keep PR #58 draft/unmerged, quote API/UI closed, and all physical-device, recovery, capacity and installation gates below open on their own evidence. No merge, deployment or budget increase is authorized.
+
+See the [readiness evidence record](docs/10-spec-development/2026-10-26-branding-administration-readiness.md). The dated checkpoint below remains source-bound rather than current-head qualification.
+
 ## Current reconciliation · 2026-10-25
 
 This is the current action queue. Dated sections below retain their original

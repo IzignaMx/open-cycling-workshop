@@ -1,5 +1,11 @@
 # Changelog
 
+## Branding administration readiness · 2026-10-26
+
+- Preserve the aggregate first-attempt branding failure in CI 40218677350; its retry pass is not clean acceptance. Reproduce the helper-only failure when automatic account verification replaces its disabled button with the admitted session.
+- Wait for either the visible session or an actually enabled verification button, retaining the final exact session/branding assertions and every UI/API grant check. No production behavior, timeout, retry, dependency or resource policy changes.
+- Add six deterministic helper controls and six native synthetic-DOM regressions. Local control RED/GREEN is established; exact-successor hosted browser qualification remains pending. See the [scope and evidence](docs/10-spec-development/2026-10-26-branding-administration-readiness.md).
+
 ## PR #58 hosted qualification reconciliation · 2026-10-25
 
 - Record the complete, source-bound [CI 39990179262](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/39990179262) result for `21245faacc991d91c1dd334bd37ba49c17141252`: 4,649 Python cases collected, 4,591 passed, 58 expected skips, all six mandatory restores and 27/27 aggregate controls. Both serial shard cleanup gates passed under the approved unchanged per-shard limits.

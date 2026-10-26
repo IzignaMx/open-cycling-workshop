@@ -1,5 +1,14 @@
 # PR #58 · Source-bound qualification and pending spec gates
 
+## Successor investigation · 2026-10-26
+
+The documentation successor `8a48ecc991247958552fc64f6585ba97cf2cb27e` completed
+normal hosted CI, but its aggregate browser artifact retained 79 clean passes
+and one flaky retry pass. Its green workflow exit is not retry-free browser
+acceptance. The [bounded helper correction and preserved evidence](2026-10-26-branding-administration-readiness.md)
+address that demonstrated failure first. No source below is retroactively
+relabelled, and a new helper successor requires its own hosted checks.
+
 ## Current checkpoint
 
 Reconciled on 2026-10-25 using AGENTS.md, Master Agent Loop v0.2, execution state,
