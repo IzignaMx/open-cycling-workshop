@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-26 · Full-history recovery gate
+
+- [x] Complete independent source review and 89 focused recovery/operator tests.
+- [ ] Obtain exact-candidate PostgreSQL/restore evidence for complete quote
+      inventory before recovery rotation. SQLite functional tests
+      do not establish PostgreSQL restore, locks or installation qualification.
+- [ ] Before any separately authorized reopening, stop every API/edge/worker/old
+      writer on the isolated restored target, preserve originals/browser journals,
+      run complete validation then incarnation rotation, and prove fresh same-ID
+      replay without new effects. A populated 0012 database must undergo preserved
+      forward migration to 0013; never infer an effect version or repair evidence.
+- [ ] Keep installation inventory, physical corruption, actual-volume RPO/RTO,
+      Windows/Android/laptop/Raspberry and quote activation gates open. PR58 merge
+      is not installation or deployment approval. See the
+      [source-bound record](docs/10-spec-development/2026-10-26-full-history-recovery.md).
+
+PR #58 is merged at `9e5bea10ec041682e63d04e3bb2d2a484a3a6196`; no deployment.
+Its postmerge CI failed before shard A collection at a canary-create timeout,
+with both cleanup proofs verified absent; shard B and direct/aggregate browsers
+passed. Aggregate is 24/27, not full qualification. Historical sections below
+retain then-current instructions/results, not a current rerun or merge queue.
+
 ## Current owned-cleanup and matcher successor · 2026-10-26
 
 - [x] Preserve CI 40249194704 failure on head `41263b4`: direct and aggregate each 84 passed / two failed / zero flaky; full Python stopped before collection at canary creation. Primary and independent cleanup failed; historical owned-container absence is not proven.

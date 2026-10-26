@@ -1,5 +1,32 @@
 schema: 1
 
+full_history_recovery_20261026:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-10-26-full-history-recovery.md
+  base_main: 9e5bea10ec041682e63d04e3bb2d2a484a3a6196
+  base_tree: 09b76901555f75f702744e6165ae4fe837c9f1df
+  pr58: merged_no_deployment
+  postmerge_ci: 40396434262
+  postmerge_qualification: failed_a_canary_creation_before_collection
+  postmerge_both_shards_primary_and_independent_cleanup: verified_absent
+  postmerge_aggregate: 24_of_27_only_receipt_failed
+  postmerge_direct_and_aggregate_browser: 86_of_86_each_zero_flaky
+  source_gate: complete_scoped_inventory_and_reconstruction_before_rotation
+  schemas_0010_0011: supported_only_without_quote_tables_or_scoped_quote_outboxes
+  schema_0012_with_history: preserved_forward_migration_required
+  unattributable_orphan_targets: globally_fail_closed
+  local_evidence: sqlite_functional_not_postgres_qualification
+  local_focused_passed: 198
+  local_focused_environment_skips: 118
+  full_collection: 4713
+  added_sqlite_cases: 20
+  local_static_contracts: passed
+  mandatory_real_restore: extended_corrupt_pair_refusal_then_existing_exact_replay
+  hosted_exact_candidate: pending
+  independent_final_review: passed_source_and_89_focused_cases
+  budgets_skips_restores_and_ownership_assertions: unchanged
+  installation_reopening_quote_activation_and_physical_devices: separate_open_gates
+
 owned_cleanup_matcher_reconciliation_20261026:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-10-26-owned-cleanup-reconciliation.md
