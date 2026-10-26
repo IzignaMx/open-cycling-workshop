@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 · Legacy recovery fixture schema correction
+
+- Preserve PR59's first failed CI checkpoint; replace its synthetic current-schema
+  database falsely stamped 0011 with a genuine disposable Alembic0011 migration.
+  Production recovery integrity, legacy-session/account/audit assertions, skip
+  policy and resource limits remain unchanged. Exact-source hosted proof is pending.
+
 ## 2026-10-26 · Full-history recovery validation (pending hosted qualification)
 
 - Validate all retained scoped quote histories and linked generic effects before

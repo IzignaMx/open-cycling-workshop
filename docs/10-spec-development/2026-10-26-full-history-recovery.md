@@ -104,3 +104,55 @@ Final exact-tree normal CI and real PostgreSQL restore remain required. Installa
 inventory, physical corruption qualification, real-volume RPO/RTO, physical devices,
 capacity/latency, ingress/authority/adoption/old-writer gates and quote API/UI
 activation remain separate. No old bounded workflow trial is relaunched.
+
+## First hosted PR59 result and genuine legacy-schema fixture correction
+
+PR59 head `6e212925` / [CI 40401909437](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40401909437)
+failed its first Python shard on the existing
+`test_explicit_legacy_transition_refuses_old_sessions_checkpoints_and_clients[completed]`.
+Its log records 617 passed, 5 skipped and 1 failed before stopping; no final shard-A
+result or exhaustive-suite qualification exists. Shard B's strict receipt records
+2,013 selected, 1,966 passed and 47 expected skips. Its mandatory service-effect
+restore completed all phases, including the new corrupted-pair refusal and fresh
+replay. Both shards' primary and independent cleanup prove absence. Terminal aggregate qualification is **24/27**, with only the three Python receipt
+controls rejecting `receipt_failed`; direct browser evidence is 86/86 clean and
+the aggregate log records 86 passes. Security, DCO, containment and runtime/native
+ARM passed; optional QEMU failed nonqualifying. This attempted source
+remains failed; the separate shard-B proof cannot qualify the incomplete pair.
+
+The exact failing test was reproduced locally. Exception tracing identified
+`cutover_schema_incompatible`: the fixture constructed **current** tables through
+`Base.metadata.create_all` (including quote tables), then manually labelled them
+as pre-quote revision 0011. The newly required drift check correctly rejects that
+unsupported combination; weakening production validation would conceal the defect.
+
+The correction is test-only: migrate the disposable SQLite target genuinely to
+0011, assert that revision and absence of quote lineage storage, and leave every
+existing legacy session/checkpoint/client, account-preservation, floor, race and
+audit assertion intact. Clear migration URL environment overrides so only the
+fixture's explicit temporary database can be selected. Both original parameters
+pass locally (2/2), including with ambient URL/file overrides injected; the ambient
+database was not created. No production code, skip, resource budget or ownership
+assertion changes. Independent review passed 160 affected cases plus both ambient-override controls;
+no prior behavior assertion was removed. The final pinned full operations, operator,
+identity and recovery selection passed **1,565**, with **159 existing environment
+skips** and no failures. New exact-source hosted qualification remains required. No deployment or installation reopening follows.
+
+### Local dependency-environment reconciliation
+
+The expanded operations/identity run initially used the older shared local venv:
+1,554 passed, 159 environment skips and 11 failures, all in the existing dependency
+security module. That interpreter had PyJWT 2.13.0, Starlette 0.52.1 and FastAPI
+0.128.8 rather than the lock's 2.15.1, 1.3.1 and 0.133.1. The identical 11 failures
+were reproduced on unchanged PR58 source (with 3 passes). They are retained local
+environment failures, not evidence to relax security tests or change production.
+
+A separate temporary venv was materialized with `uv sync --frozen --all-packages`
+from the unchanged lock; all 42 packages installed. The dependency-security module
+then passed all 14 cases without source changes. The original focused recovery selection then passed **198** with **118 existing
+local PostgreSQL/dependency skips** in that pinned environment. The unchanged
+original branding fixture also reproduced the same failure under pinned dependencies;
+this distinguishes its genuine schema mismatch from the separate stale-env security
+failures. The full expanded selection completed **1,565 passed / 159 local environment skips**
+under the unchanged frozen lock. These terminal results qualify only their named
+local scopes. PostgreSQL/physical-device proof remains separate.

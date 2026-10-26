@@ -23,6 +23,25 @@ full_history_recovery_20261026:
   local_static_contracts: passed
   mandatory_real_restore: extended_corrupt_pair_refusal_then_existing_exact_replay
   hosted_exact_candidate: pending
+  first_pr59_head: 6e212925
+  first_pr59_ci: 40401909437
+  first_pr59_a: failed_legacy_fixture_schema_mismatch_no_final_result
+  first_pr59_a_log_only: 617_passed_5_skipped_1_failed
+  first_pr59_b: 2013_selected_1966_passed_47_expected_skips
+  first_pr59_b_service_restore: all_phases_passed
+  first_pr59_all_owned_cleanup: verified_absent
+  first_pr59_aggregate: terminal_24_of_27_only_three_receipt_failed
+  legacy_fixture_correction: genuine_alembic_0011_no_production_change
+  legacy_fixture_red: exact_hosted_case_failed_cutover_schema_incompatible
+  legacy_fixture_green: both_parameters_passed_with_ambient_override_isolation
+  legacy_fixture_broad_regressions: locked_1565_passed_159_local_environment_skips
+  legacy_fixture_independent_review: passed_160_affected_cases_and_2_ambient_controls
+  legacy_broad_stale_environment: 1554_passed_159_skipped_11_dependency_security_failed
+  legacy_stale_failures_on_unchanged_base: reproduced_11_failed_3_passed
+  locked_local_environment: frozen_lock_42_packages_separate_temporary_venv
+  locked_dependency_security: 14_passed
+  locked_original_focused: 198_passed_118_local_environment_skips
+  locked_original_branding_fixture_red: reproduced
   independent_final_review: passed_source_and_89_focused_cases
   budgets_skips_restores_and_ownership_assertions: unchanged
   installation_reopening_quote_activation_and_physical_devices: separate_open_gates
