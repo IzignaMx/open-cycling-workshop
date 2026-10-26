@@ -1227,19 +1227,124 @@ def full_scratch(cid: str, role: str, execute: Callable[..., str]) -> None:
         raise ProofFailure("scratch_readback", check="scratch_format") from error
 
 
-def full_reconcile(owned: Path, execute: Callable[..., str]) -> None:
+def full_reconcile(
+    owned: Path, execute: Callable[..., str], diagnostic: dict[str, object] | None = None
+) -> None:
     """Only exact manifest-owned names/images may be removed, even after ambiguous create."""
     ids = []
+    incomplete = False
+    cid_states = dict.fromkeys(("canary", "db", "worker"), "unobserved")
+    if diagnostic is not None:
+        diagnostic["cidfiles"] = cid_states
     for role in ("canary", "db", "worker"):
         path = owned.with_suffix(f".{role}.cid")
+        cid_states[role] = "unreadable"
         if path.exists():
-            ids.append(identifier(path.read_text().strip()))
+            # Docker may create the cidfile before its create response completes.
+            # An empty or partial hexadecimal value is only an incomplete hint:
+            # never pass it to Docker or infer which container it identifies.
+            with path.open() as source:
+                raw = source.read(LIMIT)
+            value = raw.strip()
+            cid_states[role] = "invalid"
+            if len(raw) >= LIMIT or not re.fullmatch(r"[0-9a-f]{0,64}", value):
+                raise ProofFailure("container_identity")
+            if len(value) == 64:
+                cid_states[role] = "complete"
+                ids.append(identifier(value))
+            else:
+                cid_states[role] = "partial" if value else "empty"
+                incomplete = True
+        else:
+            cid_states[role] = "missing"
+    manifest_present = owned.with_suffix(".owner.json").exists()
+    if incomplete and not manifest_present:
+        raise ProofFailure("owner_manifest")
     present = execute(["docker", "ps", "--all", "--no-trunc", "--format", "{{.ID}}"])
     all_ids = [identifier(value) for value in present.splitlines()]
-    found = reconcile_owned(owned, execute) if owned.with_suffix(".owner.json").exists() else []
+    found = reconcile_owned(owned, execute) if manifest_present else []
     if not set(ids).intersection(all_ids).issubset(found):
         raise ProofFailure("owned_identity_reconciliation")
     remove_owned(found, execute)
+
+
+def diagnosed_full_reconcile(owned: Path, execute: Callable[..., str], diagnostic: Path) -> None:
+    """Best-effort bounded observations, never an absence or workload receipt."""
+    from scripts.ci.verify_v01 import write_full_python_json
+
+    report: dict[str, object] = {
+        "schema": 1,
+        "kind": "ocwp.full_python.cleanup_diagnostic",
+        "qualification": "not_a_receipt",
+        "outcome": "failed",
+        "stage": "cidfiles",
+        "cidfiles": dict.fromkeys(("canary", "db", "worker"), "unobserved"),
+        "failure": None,
+    }
+    listed_all = False
+    failed_stage = None
+
+    def observe(args, **kwargs):
+        nonlocal listed_all, failed_stage
+        if args[:2] == ["docker", "ps"]:
+            report["stage"] = (
+                "discover_owned"
+                if "--filter" in args
+                else "verify_absence"
+                if listed_all
+                else "list_all"
+            )
+            if "--filter" not in args:
+                listed_all = True
+        elif args[:2] == ["docker", "inspect"]:
+            report["stage"] = "inspect_identity"
+        elif args[:2] == ["docker", "rm"]:
+            report["stage"] = "remove_owned"
+        try:
+            return execute(args, **kwargs)
+        except (ProofFailure, ValueError, OSError):
+            if failed_stage is None:
+                failed_stage = report["stage"]
+            raise
+
+    try:
+        full_reconcile(owned, observe, report)
+        report["outcome"] = (
+            "verified_absent"
+            if owned.with_suffix(".owner.json").exists()
+            else "no_ownership_manifest"
+        )
+    except (ProofFailure, ValueError, OSError) as error:
+        if failed_stage is not None:
+            report["stage"] = failed_stage
+        known = {
+            "container_identity",
+            "owner_manifest",
+            "owner_identity_mismatch",
+            "owned_identity_reconciliation",
+            "cleanup_failed",
+            "command_timeout",
+            "command_failed",
+            "output_limit",
+            "cleanup_deadline",
+            "independent_cleanup_deadline",
+            "tool_unavailable",
+        }
+        report["failure"] = (
+            str(error)
+            if isinstance(error, ProofFailure) and str(error) in known
+            else "metadata_io"
+            if isinstance(error, OSError)
+            else "metadata_format"
+            if isinstance(error, ValueError)
+            else "cleanup_error"
+        )
+        raise
+    finally:
+        # An unavailable diagnostic sink must not prevent owned cleanup or alter
+        # the authoritative receipt/independent-absence acceptance path.
+        with suppress(OSError, ValueError):
+            write_full_python_json(diagnostic, report)
 
 
 def full_identity(
@@ -2116,7 +2221,9 @@ def supervise_python(
             return full_client(args, timeout=min(timeout, remaining))
 
         try:
-            full_reconcile(owned, cleanup_execute)
+            diagnosed_full_reconcile(
+                owned, cleanup_execute, evidence.parent / "primary-cleanup-diagnostic.json"
+            )
             report["primary_cleanup"] = "verified_absent"
             if child is not None:
                 if child.poll() is None:
@@ -2176,7 +2283,9 @@ def finalize_python(
     cleanup_path = evidence.parent / "independent-cleanup.json"
     write_full_python_json(cleanup_path, cleanup)
     try:
-        full_reconcile(owned, execute)
+        diagnosed_full_reconcile(
+            owned, execute, evidence.parent / "independent-cleanup-diagnostic.json"
+        )
         cleanup["outcome"] = (
             "verified_absent" if cleanup["owner_manifest_present"] else "no_ownership_manifest"
         )

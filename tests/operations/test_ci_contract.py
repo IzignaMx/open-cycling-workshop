@@ -90,3 +90,14 @@ def test_full_python_serial_workflow_binds_fixed_pair_and_full_job_budget() -> N
             f"OCWP_FULL_PYTHON_NONCE_{shard}: "
             f"${{{{ needs.python-tests.outputs.nonce_{shard.lower()} }}}}" in workflow
         )
+
+
+def test_full_python_cleanup_diagnostics_are_retained_after_failure() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text()
+    job = workflow.split("  python-tests:\n", 1)[1].split("\n  verify:", 1)[0]
+    uploads = [step for step in job.split("\n      - ") if "actions/upload-artifact@" in step]
+    assert len(uploads) == 1
+    assert "if: always()" in uploads[0]
+    for shard in ("a", "b"):
+        for phase in ("primary", "independent"):
+            assert f"artifacts/full-python/{shard}/{phase}-cleanup-diagnostic.json" in uploads[0]

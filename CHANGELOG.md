@@ -1,5 +1,11 @@
 # Changelog
 
+## Owned cleanup and native negative matcher reconciliation · 2026-10-26
+
+- Preserve failed CI 40249194704 on published head `41263b4012659c0baf3475b2a7a3e763fe2856e7`: native direct and aggregate browser reports each have 84 passes, two failures and zero flaky passes. The negative controls expose a cross-realm Promise matcher defect, not clean browser acceptance.
+- Preserve the five-second canary-create timeout, `creation_uncertain`, failed primary and independent cleanup and missing historical absence proof. Incomplete CID-file handling is a reproduced cleanup weakness, not a proven historical root cause.
+- Implement the approved strict manifest-owned incomplete-CID handling, bounded non-qualifying diagnostics and narrow matcher normalization. Independent code review and 502 combined local qualification tests passed with zero skips, including 271 cleanup-helper cases; one fresh complete normal hosted validation remains pending; no budget, production, merge or deployment change is authorized. See the [source-bound reconciliation](docs/10-spec-development/2026-10-26-owned-cleanup-reconciliation.md).
+
 ## Branding administration readiness · 2026-10-26
 
 - Preserve the aggregate first-attempt branding failure in CI 40218677350; its retry pass is not clean acceptance. Reproduce the helper-only failure when automatic account verification replaces its disabled button with the admitted session.

@@ -895,6 +895,14 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     else:
         module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json", shard)
     value = json.loads(receipt.read_text())
+    cleanup_diagnostic = json.loads(
+        (receipt.parent / "primary-cleanup-diagnostic.json").read_text()
+    )
+    assert cleanup_diagnostic["qualification"] == "not_a_receipt"
+    assert cleanup_diagnostic["outcome"] == value["primary_cleanup"]
+    assert cleanup_diagnostic["failure"] == (
+        "cleanup_failed" if value["primary_cleanup"] == "failed" else None
+    )
     assert value["containment"]["predecessor_cleanup_sha256"] == predecessor
     owner = json.loads((tmp_path / "owned.owner.json").read_text())
     assert owner == serial_owner(identity)
@@ -2348,3 +2356,285 @@ def test_full_serial_b_preserves_stop_reap_cleanup_lifecycle(tmp_path, monkeypat
     test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
         tmp_path, monkeypatch, fault, shard="b"
     )
+
+
+def cleanup_fixture(tmp_path, cid_content=None, *, manifest=True):
+    """Finite daemon model: only exact owned IDs can ever reach removal."""
+    import json
+
+    owned = tmp_path / "owned.json"
+    token, image, cid = "a" * 32, "sha256:" + "b" * 64, "c" * 64
+    if manifest:
+        owned.with_suffix(".owner.json").write_text(
+            json.dumps({"token": token, "images": dict.fromkeys(("canary", "db", "worker"), image)})
+        )
+    if cid_content is not None:
+        owned.with_suffix(".canary.cid").write_text(cid_content)
+    present, removed, commands = [cid], [], []
+
+    def execute(args, **kwargs):
+        commands.append(args)
+        if args[1] == "ps":
+            return "\n".join(present)
+        if args[1] == "inspect":
+            assert args[-1] == cid
+            return f"{image}|{token}|/ocwp-quote-{token}-canary"
+        if args[1] == "rm":
+            assert args == ["docker", "rm", "--force", cid]
+            present.remove(cid)
+            removed.append(cid)
+            return cid
+        pytest.fail(f"Unexpected synthetic command: {args}")
+
+    return owned, execute, present, removed, commands
+
+
+@pytest.mark.parametrize("content", [None, "", "\n", "c", "c" * 12, "c" * 63, "c" * 64 + "\n"])
+def test_full_cleanup_incomplete_cid_uses_only_exact_manifest_identity(tmp_path, content):
+    owned, execute, present, removed, commands = cleanup_fixture(tmp_path, content)
+    module.full_reconcile(owned, execute)
+    assert not present
+    assert removed == ["c" * 64]
+    assert [args[1] for args in commands] == ["ps", "ps", "inspect", "rm", "ps"]
+
+
+@pytest.mark.parametrize("content", ["not-an-id", "C" * 12, "c" * 65, "c\nd", "x" * module.LIMIT])
+def test_full_cleanup_malformed_cid_never_reaches_daemon(tmp_path, content):
+    owned, execute, present, removed, commands = cleanup_fixture(tmp_path, content)
+    with pytest.raises(module.ProofFailure, match="container_identity"):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert removed == commands == []
+
+
+@pytest.mark.parametrize("content", ["", "\n", "c" * 12])
+def test_full_cleanup_incomplete_cid_requires_ownership_manifest(tmp_path, content):
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, content, manifest=False)
+    with pytest.raises(module.ProofFailure, match="owner_manifest"):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert not removed
+
+
+@pytest.mark.parametrize("fault", ["image", "token", "name", "foreign_full_id", "manifest"])
+def test_full_cleanup_incomplete_hint_does_not_relax_identity(tmp_path, fault):
+    owned, original, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    if fault == "manifest":
+        owned.with_suffix(".owner.json").write_text("{}")
+    if fault == "foreign_full_id":
+        owned.with_suffix(".worker.cid").write_text("d" * 64)
+
+    def execute(args, **kwargs):
+        result = original(args, **kwargs)
+        if args[1] == "inspect":
+            parts = result.split("|")
+            if fault in {"image", "token", "name"}:
+                parts[{"image": 0, "token": 1, "name": 2}[fault]] = "foreign"
+            return "|".join(parts)
+        if args[1] == "ps" and "--filter" not in args and fault == "foreign_full_id":
+            return result + "\n" + "d" * 64
+        return result
+
+    with pytest.raises(module.ProofFailure):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert not removed
+
+
+@pytest.mark.parametrize("fault", ["list", "inspect", "remove", "still_present"])
+def test_full_cleanup_never_proves_absence_after_daemon_failure(tmp_path, fault):
+    owned, original, present, _removed, _commands = cleanup_fixture(tmp_path, "")
+
+    def execute(args, **kwargs):
+        if (args[1], fault) in {("ps", "list"), ("inspect", "inspect"), ("rm", "remove")}:
+            raise module.ProofFailure("command_timeout")
+        if args[1] == "rm" and fault == "still_present":
+            return "c" * 64
+        return original(args, **kwargs)
+
+    with pytest.raises(module.ProofFailure):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+
+
+@pytest.mark.parametrize(
+    "failure", ["command_timeout", "owner_identity_mismatch", "PRIVATE_CANARY"]
+)
+def test_full_cleanup_diagnostic_is_bounded_and_never_copies_exception(
+    tmp_path, monkeypatch, failure
+):
+    import json
+
+    def reject(*args):
+        raise module.ProofFailure(failure)
+
+    monkeypatch.setattr(module, "full_reconcile", reject)
+    path = tmp_path / "cleanup-diagnostic.json"
+    with pytest.raises(module.ProofFailure, match=failure):
+        module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report == {
+        "schema": 1,
+        "kind": "ocwp.full_python.cleanup_diagnostic",
+        "qualification": "not_a_receipt",
+        "outcome": "failed",
+        "stage": "cidfiles",
+        "cidfiles": dict.fromkeys(("canary", "db", "worker"), "unobserved"),
+        "failure": failure if failure != "PRIVATE_CANARY" else "cleanup_error",
+    }
+    assert "PRIVATE_CANARY" not in path.read_text()
+    assert path.stat().st_size < 512
+
+
+def test_full_cleanup_diagnostic_preserves_success_and_exact_removal(tmp_path):
+    import json
+
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    path = tmp_path / "cleanup-diagnostic.json"
+    module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "verified_absent"
+    assert report["failure"] is None
+    assert report["qualification"] == "not_a_receipt"
+    assert not present
+    assert removed == ["c" * 64]
+
+
+@pytest.mark.parametrize("fault", ["list", "inspect", "remove"])
+def test_full_cleanup_diagnostic_reports_only_fixed_command_stage(tmp_path, fault):
+    import json
+
+    owned, original, _present, _removed, _commands = cleanup_fixture(tmp_path, "")
+    path = tmp_path / "cleanup-diagnostic.json"
+
+    def execute(args, **kwargs):
+        if (args[1], fault) in {("ps", "list"), ("inspect", "inspect"), ("rm", "remove")}:
+            raise module.ProofFailure("command_timeout")
+        return original(args, **kwargs)
+
+    with pytest.raises(module.ProofFailure):
+        module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "failed"
+    assert (
+        report["stage"]
+        == {"list": "list_all", "inspect": "inspect_identity", "remove": "remove_owned"}[fault]
+    )
+    assert report["failure"] == ("cleanup_failed" if fault == "remove" else "command_timeout")
+
+
+def test_full_cleanup_diagnostic_sink_failure_cannot_prevent_cleanup(tmp_path):
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    module.diagnosed_full_reconcile(owned, execute, tmp_path / "missing" / "diagnostic.json")
+    assert not present
+    assert removed == ["c" * 64]
+
+
+@pytest.mark.parametrize("kind", ["io", "format"])
+def test_full_cleanup_diagnostic_sanitizes_metadata_errors(tmp_path, monkeypatch, kind):
+    import json
+
+    error = OSError("PRIVATE_CANARY") if kind == "io" else ValueError("PRIVATE_CANARY")
+
+    def reject(*args):
+        raise error
+
+    monkeypatch.setattr(module, "full_reconcile", reject)
+    path = tmp_path / "cleanup-diagnostic.json"
+    with pytest.raises(type(error), match="PRIVATE_CANARY"):
+        module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    assert json.loads(path.read_text())["failure"] == f"metadata_{kind}"
+    assert "PRIVATE_CANARY" not in path.read_text()
+
+
+def test_full_cleanup_independent_absence_keeps_creation_uncertain_failed(tmp_path, monkeypatch):
+    import json
+
+    identity = serial_identity("a")
+    serial_environment(monkeypatch, identity)
+    owned, original, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(identity)))
+    receipt = tmp_path / "receipt.json"
+    original_receipt = {"status": "failed", "failure": "creation_uncertain"}
+    receipt.write_text(json.dumps(original_receipt))
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+
+    def execute(args, **kwargs):
+        if args[1] == "inspect":
+            return (
+                f"{identity['image_id']}|{identity['nonce']}|/ocwp-quote-{identity['nonce']}-canary"
+            )
+        return original(args, **kwargs)
+
+    monkeypatch.setattr(module, "full_client", execute)
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", identity["commit"], receipt, owned)
+    assert not present
+    assert removed == ["c" * 64]
+    assert json.loads(receipt.read_text()) == original_receipt | {
+        "independent_cleanup": "verified_absent"
+    }
+    cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+    assert cleanup["outcome"] == "verified_absent"
+    assert cleanup["qualification"] == "not_a_receipt"
+    diagnostic = json.loads((tmp_path / "independent-cleanup-diagnostic.json").read_text())
+    assert diagnostic["outcome"] == "verified_absent"
+    assert diagnostic["qualification"] == "not_a_receipt"
+
+
+@pytest.mark.parametrize(
+    "content,state",
+    [(None, "missing"), ("", "empty"), ("c" * 12, "partial"), ("c" * 64, "complete")],
+)
+def test_full_cleanup_diagnostic_records_actual_cid_read_state(tmp_path, content, state):
+    import json
+
+    owned, execute, _present, _removed, _commands = cleanup_fixture(tmp_path, content)
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(owned, execute, path)
+    assert json.loads(path.read_text())["cidfiles"] == {
+        "canary": state,
+        "db": "missing",
+        "worker": "missing",
+    }
+
+
+def test_full_cleanup_diagnostic_no_manifest_is_not_verified_absence(tmp_path):
+    import json
+
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "no_ownership_manifest"
+    assert report["stage"] == "verify_absence"
+
+
+def test_full_cleanup_diagnostic_absent_container_still_verifies_final_listing(tmp_path):
+    import json
+
+    owned, _execute, present, _removed, _commands = cleanup_fixture(tmp_path, "")
+    present.clear()
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(owned, lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "verified_absent"
+    assert report["stage"] == "verify_absence"
+
+
+@pytest.mark.parametrize("fault,state", [("invalid", "invalid"), ("directory", "unreadable")])
+def test_full_cleanup_diagnostic_bad_cid_state_never_logs_contents(tmp_path, fault, state):
+    import json
+
+    owned, execute, _present, removed, _commands = cleanup_fixture(tmp_path)
+    cidfile = owned.with_suffix(".canary.cid")
+    if fault == "directory":
+        cidfile.mkdir()
+    else:
+        cidfile.write_text("PRIVATE_CANARY")
+    path = tmp_path / "diagnostic.json"
+    with pytest.raises((module.ProofFailure, OSError)):
+        module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["cidfiles"] == {"canary": state, "db": "unobserved", "worker": "unobserved"}
+    assert "PRIVATE_CANARY" not in path.read_text()
+    assert not removed

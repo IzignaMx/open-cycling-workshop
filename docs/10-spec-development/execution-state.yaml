@@ -1,6 +1,44 @@
 schema: 1
 
+owned_cleanup_matcher_reconciliation_20261026:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-10-26-owned-cleanup-reconciliation.md
+  source_base: 41263b4012659c0baf3475b2a7a3e763fe2856e7
+  preserved_tree: 2877e3e8666397335e3c0255ddd0147c2b633a8a
+  preserved_tested_merge: 873e7101b6a2ff38d877ae1b0a5e20dcd1fbcd25
+  preserved_ci_run: 40249194704
+  preserved_python_artifact: 12620187257
+  preserved_python_sha256: 2abc032c5d358950d350cb0a0cf6b457c4d228c159966314defa1a68cc9d7366
+  preserved_native_direct: 84_passed_2_failed_0_flaky
+  preserved_native_aggregate: 84_passed_2_failed_0_flaky
+  negative_control_matcher: cross_realm_promise_rejected_before_expected_timeout_matching
+  canary_create_timeout_seconds: 5
+  preserved_failure: creation_uncertain
+  preserved_collection_and_result: unavailable
+  preserved_primary_cleanup: failed
+  preserved_independent_cleanup_a: failed
+  preserved_independent_cleanup_b: no_ownership_manifest
+  historical_owned_container_absence: not_proven
+  historical_root_cause: unknown
+  build_resource_cleanup: not_assessed
+  approved_scope: strict_owned_incomplete_cid_handling_bounded_diagnostics_and_matcher
+  approval_record: user_20261026_1754
+  fresh_complete_normal_validations_authorized: 1
+  independent_code_review: passed
+  local_cleanup_helper_passed: 271
+  local_cleanup_helper_added: 43
+  local_combined_qualification_passed: 502
+  local_combined_qualification_skipped: 0
+  local_frontend_core_passed: 934
+  local_matcher_controls_passed: 4
+  final_documentation_review: pending
+  final_hosted_evidence: pending
+  resource_budgets_retries_assertions_skips_and_restores: unchanged
+  physical_devices_recovery_capacity_and_quote_activation: open
+  integration: draft_unmerged_no_deployment
+
 branding_administration_readiness_20261026:
+  successor_record: owned_cleanup_matcher_reconciliation_20261026
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-10-26-branding-administration-readiness.md
   source_base: 8a48ecc991247958552fc64f6585ba97cf2cb27e

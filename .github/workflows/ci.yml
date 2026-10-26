@@ -211,10 +211,14 @@ jobs:
             artifacts/full-python/a/diagnostic.txt
             artifacts/full-python/a/diagnostic.json
             artifacts/full-python/a/independent-cleanup.json
+            artifacts/full-python/a/primary-cleanup-diagnostic.json
+            artifacts/full-python/a/independent-cleanup-diagnostic.json
             artifacts/full-python/b/receipt.json
             artifacts/full-python/b/diagnostic.txt
             artifacts/full-python/b/diagnostic.json
             artifacts/full-python/b/independent-cleanup.json
+            artifacts/full-python/b/primary-cleanup-diagnostic.json
+            artifacts/full-python/b/independent-cleanup-diagnostic.json
           if-no-files-found: error
   verify:
     needs: python-tests

@@ -82,7 +82,9 @@ for (const state of ['verifying', 'absent'] as const) {
     page,
   }) => {
     await render(page, state)
-    await expect(checkedInOpenBranding()(page)).rejects.toThrow(/Timeout/)
+    // The AST-extracted helper returns a VM-realm Promise; normalize its realm
+    // before using Playwright's rejection matcher, without changing the result.
+    await expect(Promise.resolve(checkedInOpenBranding()(page))).rejects.toThrow(/Timeout/)
     await expect(page.getByRole('heading', { name: 'Mi sesión', exact: true })).toHaveCount(0)
   })
 }

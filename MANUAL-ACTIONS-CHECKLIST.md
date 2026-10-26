@@ -1,5 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Current owned-cleanup and matcher successor · 2026-10-26
+
+- [x] Preserve CI 40249194704 failure on head `41263b4`: direct and aggregate each 84 passed / two failed / zero flaky; full Python stopped before collection at canary creation. Primary and independent cleanup failed; historical owned-container absence is not proven.
+- [x] Record October 26 17:54 user approval for strict manifest-owned incomplete-CID handling, bounded diagnostics, the cross-realm negative matcher correction and **one** fresh complete normal validation under unchanged budgets. This does not authorize another consumed trial, a retry, merge or deployment.
+- [x] Independently review the bundled code, fail-closed ownership/absence proofs, bounded diagnostic redaction and local regressions: 271 helper cases (43 added), 502 combined qualification tests with zero skips, matcher controls and 934 frontend core tests passed. Final documentation consistency review and hosted qualification remain separate.
+- [ ] Inspect that single fresh source-bound normal validation through terminal direct/aggregate browser, full Python, all six mandatory restores, both serial-shard primary and independent cleanup gates, Security, DCO, containment and Local runtime. A pass for another source or a non-qualifying sidecar cannot close this gate. Preserve optional QEMU as NON-QUALIFYING.
+- [ ] Keep V0.1 partial, PR #58 draft/unmerged, quote API/UI closed and physical-device, full-history recovery, real-installation, capacity/latency and remaining authority gates open.
+
+See the [owned-cleanup reconciliation](docs/10-spec-development/2026-10-26-owned-cleanup-reconciliation.md). Dated sections below retain historical source-bound checkpoints, not instructions to rerun experiments.
+
 ## Branding helper successor · 2026-10-26
 
 - [x] Preserve CI 40218677350's aggregate 79 clean passes plus one retry pass and reproduce the helper-state failure without changing production authority or readiness.
@@ -11,7 +21,7 @@ See the [readiness evidence record](docs/10-spec-development/2026-10-26-branding
 
 ## Current reconciliation · 2026-10-25
 
-This is the current action queue. Dated sections below retain their original
+This is the October 25 source-bound action queue. Dated sections below retain their original
 checkpoints; unchecked historical experiment items are not instructions to rerun
 them. See the [source-bound reconciliation](docs/10-spec-development/2026-10-25-pr58-status-reconciliation.md)
 for scope, evidence and prioritized spec dependencies.
