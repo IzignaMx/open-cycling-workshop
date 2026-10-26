@@ -53,6 +53,12 @@ def qualify_policy(root: Path, output: Path, binary: Path | None = None) -> dict
     prose = next(
         line for line in (root / "README.md").read_text().splitlines() if "signed/revocable" in line
     )
+    execution_state_path = "docs/10-spec-development/execution-state.yaml"
+    execution_state_prose = next(
+        line
+        for line in (root / execution_state_path).read_text().splitlines()
+        if line.strip().startswith("json_escaping:")
+    )
     cases = [
         ("exact_invalid_fixture", fixture_path, f'token = "{token}"\n', None),
         ("changed_fixture", fixture_path, f'token = "{token}x"\n', "generic-api-key"),
@@ -65,6 +71,24 @@ def qualify_policy(root: Path, output: Path, binary: Path | None = None) -> dict
             "generic-api-key",
         ),
         ("documentation_other_path", "OTHER.md", prose + "\n", "generic-api-key"),
+        (
+            "exact_execution_state_prose",
+            execution_state_path,
+            execution_state_prose + "\n",
+            None,
+        ),
+        (
+            "changed_execution_state_prose",
+            execution_state_path,
+            execution_state_prose + "x\n",
+            "generic-api-key",
+        ),
+        (
+            "execution_state_prose_other_path",
+            "docs/10-spec-development/OTHER.yaml",
+            execution_state_prose + "\n",
+            "generic-api-key",
+        ),
         (
             "default_other_rule",
             "src/other.py",

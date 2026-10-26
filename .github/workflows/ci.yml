@@ -10,7 +10,219 @@ permissions:
   contents: read
 
 jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    outputs:
+      nonce_a: ${{ steps.identity.outputs.nonce_a }}
+      nonce_b: ${{ steps.identity.outputs.nonce_b }}
+      image_id: ${{ steps.prepare.outputs.image_id }}
+      pg_image_id: ${{ steps.prepare.outputs.pg_image_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Bind this exact source and fresh attempt
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          nonce_a="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+          nonce_b="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+          test "$nonce_a" != "$nonce_b"
+          printf 'nonce_a=%s\nnonce_b=%s\n' "$nonce_a" "$nonce_b" >> "$GITHUB_OUTPUT"
+      - name: Prepare the fixed locked full-Python image and matching PostgreSQL clients
+        id: prepare
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/full-python-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          export OCWP_FULL_CONTEXT="$context"
+          cat > "$RUNNER_TEMP/full-python.Dockerfile" <<'DOCKERFILE'
+          FROM node:22.16.0-bookworm-slim AS node
+          RUN npm install --global pnpm@11.17.0
+          WORKDIR /app
+          COPY . /app
+          RUN pnpm install --frozen-lockfile
+          FROM ghcr.io/astral-sh/uv:0.11.15 AS uv
+          FROM python:3.13.14-slim-trixie
+          COPY --from=uv /uv /bin/uv
+          COPY --from=node /usr/local/bin/node /usr/local/bin/node
+          COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+          RUN ln -s /usr/local/lib/node_modules/pnpm/bin/pnpm.mjs /usr/local/bin/pnpm
+          ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never PYTHONDONTWRITEBYTECODE=1
+          WORKDIR /app
+          COPY --from=node /app /app
+          RUN uv sync --all-packages --group dev --locked
+          RUN set -eu; printf '%s\n' 'OCWP build: base dependencies'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg git libstdc++6; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PGDG signing key'; \
+              install -d -m 0755 /usr/share/postgresql-common/pgdg; \
+              curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc; \
+              gpg --batch --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /tmp/pgdg-key-info; \
+              keys="$(awk -F: '$1 == "pub" {n++} END {print n+0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG primary keys: %s\n' "$keys"; test "$keys" = 1; \
+              fingerprint="$(awk -F: '$1 == "pub" {primary=1; next} primary && $1 == "fpr" {print $10; primary=0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG fingerprint: %s\n' "$fingerprint"; \
+              test "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8; \
+              printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt-archive.postgresql.org/pub/repos/apt trixie-pgdg-archive main' > /etc/apt/sources.list.d/pgdg.list; \
+              rm /tmp/pgdg-key-info
+          RUN set -eu; printf '%s\n' 'OCWP build: pinned PostgreSQL packages'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends postgresql-client-18=18.4-1.pgdg13+1 libpq5=18.4-1.pgdg13+1; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL package versions'; \
+              for package in postgresql-client-18 libpq5; do \
+                version="$(dpkg-query -W -f='${Version}' "$package")"; \
+                printf '%s: %s\n' "$package" "$version"; test "$version" = 18.4-1.pgdg13+1; \
+              done
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL client versions and links'; \
+              for tool in pg_dump pg_restore psql; do \
+                printf 'PostgreSQL client: %s\n' "$tool"; \
+                ln -s /usr/lib/postgresql/18/bin/$tool /usr/local/bin/$tool || exit 1; \
+                version="$(/usr/lib/postgresql/18/bin/$tool --version)" || exit 1; \
+                printf '%s\n' "$version"; \
+                case "$version" in "$tool (PostgreSQL) 18.4"|"$tool (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)") ;; *) exit 1;; esac; \
+                ldd /usr/lib/postgresql/18/bin/$tool > /tmp/client-link-check || exit 1; \
+                cat /tmp/client-link-check; \
+                if grep -F 'not found' /tmp/client-link-check; then exit 1; else status=$?; test "$status" -eq 1 || exit 1; fi; \
+              done; rm /tmp/client-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node runtime links'; \
+              ldd /usr/local/bin/node > /tmp/node-link-check; cat /tmp/node-link-check; \
+              if grep -F 'not found' /tmp/node-link-check; then exit 1; else status=$?; test "$status" -eq 1; fi; \
+              rm /tmp/node-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node version assertion'; version="$(node --version)"; \
+              printf 'OCWP build: Node version: %s\n' "$version"; test "$version" = v22.16.0
+          RUN set -eu; printf '%s\n' 'OCWP build: pnpm version assertion'; version="$(pnpm --version)"; \
+              printf 'OCWP build: pnpm version: %s\n' "$version"; test "$version" = 11.17.0
+          RUN set -eu; printf '%s\n' 'OCWP build: Playwright package assertion'; version="$(node -p 'require("./apps/web/node_modules/@playwright/test/package.json").version')"; \
+              printf 'OCWP build: Playwright package version: %s\n' "$version"; test "$version" = 1.62.0
+          ARG SOURCE_TREE
+          LABEL ocwp.source-tree=$SOURCE_TREE
+          DOCKERFILE
+          timeout --signal=TERM --kill-after=30s 660s python3 - <<'PY'
+          import os
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import (
+              FULL_BUILD_SPOOL_LIMIT, LIMIT, ProofFailure, full_client,
+              full_preparation_diagnostic, source_query,
+          )
+          deadline = time.monotonic() + 650
+          context = os.environ['OCWP_FULL_CONTEXT']
+          diagnostics = Path('artifacts/full-python')
+          def execute(args, *, timeout=5, stage='source_tree'):
+              remaining = deadline - time.monotonic()
+              limit = FULL_BUILD_SPOOL_LIMIT if stage == 'image_build' else LIMIT
+              if remaining <= 0:
+                  full_preparation_diagnostic(None, diagnostics, stage, 'preparation_deadline', None, False, spool_limit=limit)
+                  raise ProofFailure('preparation_deadline')
+              return full_client(args, timeout=min(timeout, remaining), limit=limit, preparation=(diagnostics, stage))
+          tree = source_query('tree', execute)
+          execute(['docker', 'build', '--progress=plain', '-f',
+                   str(Path(os.environ['RUNNER_TEMP']) / 'full-python.Dockerfile'),
+                   '--build-arg', f'SOURCE_TREE={tree}', '-t', 'ocwp-full-python', context], timeout=590, stage='image_build')
+          execute(['docker', 'pull', '--quiet', 'postgres:18.4-trixie'], timeout=60, stage='postgres_pull')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key, tag in [('image_id', 'ocwp-full-python'), ('pg_image_id', 'postgres:18.4-trixie')]:
+                  stage = 'worker_image' if key == 'image_id' else 'postgres_image'
+                  image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], stage=stage)
+                  output.write(f'{key}={image}\n')
+          PY
+      - name: Run fixed pytest shard A
+        id: run_a
+        timeout-minutes: 18
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 1020s python3 -m scripts.ci.quote_capacity_micro \
+            --full-python --full-python-shard a --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-a-owned.json" \
+            --evidence artifacts/full-python/a/receipt.json
+      - name: Independently remove shard A containers and seal only complete proof
+        id: finalize_a
+        if: always()
+        timeout-minutes: 1
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s python3 -m scripts.ci.quote_capacity_micro \
+            --finalize-full-python --full-python-shard a --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-a-owned.json" \
+            --evidence artifacts/full-python/a/receipt.json
+      - name: Run fixed pytest shard B
+        id: run_b
+        if: ${{ !cancelled() && steps.finalize_a.outputs.cleanup_verified == 'true' }}
+        timeout-minutes: 18
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 1020s python3 -m scripts.ci.quote_capacity_micro \
+            --full-python --full-python-shard b --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-b-owned.json" \
+            --evidence artifacts/full-python/b/receipt.json
+      - name: Independently remove shard B containers and seal only complete proof
+        id: finalize_b
+        if: always()
+        timeout-minutes: 1
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ steps.identity.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ steps.identity.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s python3 -m scripts.ci.quote_capacity_micro \
+            --finalize-full-python --full-python-shard b --worker-image ocwp-full-python --pg-image postgres:18.4-trixie \
+            --commit "$GITHUB_SHA" --owned "$RUNNER_TEMP/full-python-b-owned.json" \
+            --evidence artifacts/full-python/b/receipt.json
+      - name: Upload both bounded full-Python shard proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-python-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: |
+            artifacts/full-python/preparation.txt
+            artifacts/full-python/preparation.json
+            artifacts/full-python/a/receipt.json
+            artifacts/full-python/a/diagnostic.txt
+            artifacts/full-python/a/diagnostic.json
+            artifacts/full-python/a/independent-cleanup.json
+            artifacts/full-python/a/primary-cleanup-diagnostic.json
+            artifacts/full-python/a/independent-cleanup-diagnostic.json
+            artifacts/full-python/b/receipt.json
+            artifacts/full-python/b/diagnostic.txt
+            artifacts/full-python/b/diagnostic.json
+            artifacts/full-python/b/independent-cleanup.json
+            artifacts/full-python/b/primary-cleanup-diagnostic.json
+            artifacts/full-python/b/independent-cleanup-diagnostic.json
+          if-no-files-found: error
   verify:
+    needs: python-tests
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -35,6 +247,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Exact pre-cutover App/SW source remains available.
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -49,6 +262,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
+
+      - name: Keep browser branding assets outside the source checkout
+        run: printf 'OCWP_BRANDING_ASSET_ROOT=%s/ocwp-browser-branding-assets\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
       - name: Generate missing lockfiles
         shell: bash
@@ -85,8 +301,13 @@ jobs:
         run: pnpm exec eslint .
       - name: Run formatting check
         run: pnpm exec prettier --check "**/*.{js,mjs,ts,tsx,json,css,md,yml,yaml}"
-      - name: Run Python tests
-        run: uv run pytest -q
+      - name: Download this attempt's full-Python shard pair
+        if: always()
+        continue-on-error: true # The always-run aggregate fails missing or invalid proof.
+        uses: actions/download-artifact@v4
+        with:
+          name: full-python-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: artifacts/full-python
       - name: Prove inventory PostgreSQL budgets, fresh authority and measured plans
         run: uv run python scripts/ci/inventory_read_proof.py
       - name: Prove inventory query privacy in both actual Caddy configurations
@@ -214,8 +435,13 @@ jobs:
         run: pnpm --filter @ocwp/api-client typecheck
       - name: Run V0.1 qualification verifier
         if: always()
+        env:
+          OCWP_FULL_PYTHON_NONCE_A: ${{ needs.python-tests.outputs.nonce_a }}
+          OCWP_FULL_PYTHON_NONCE_B: ${{ needs.python-tests.outputs.nonce_b }}
+          OCWP_FULL_PYTHON_IMAGE_ID: ${{ needs.python-tests.outputs.image_id }}
+          OCWP_FULL_PYTHON_PG_IMAGE_ID: ${{ needs.python-tests.outputs.pg_image_id }}
         run: |
-          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked
+          uv run python scripts/ci/verify_v01.py --json-out artifacts/v0.1-qualification.json --allow-blocked --full-python-receipt artifacts/full-python
           uv run python scripts/ci/inventory_expiry_repeat.py check "${{ steps.inventory_expiry_repeat.outcome }}"
       - name: Upload V0.1 qualification artifact
         if: always()

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/repository/publish-authoritative-bundle.sh"
@@ -51,7 +54,64 @@ def hermetic_git_env(tmp_path: Path) -> dict[str, str]:
 
 
 def run(*args: str, cwd: Path | None = None, env: dict[str, str] | None = None):
-    return subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, check=True)
+    try:
+        return subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, check=True)
+    except subprocess.CalledProcessError as error:
+        # Only this module's public synthetic repositories use this helper.
+        # text=True already decoded each stream; counts below are re-encoded UTF-8.
+        diagnostic: dict[str, object] = {"returncode": error.returncode}
+        for name, output in (("stdout", error.stdout), ("stderr", error.stderr)):
+            raw = (output or "").encode("utf-8")
+            tail = raw[-2048:]
+            diagnostic[name] = {
+                "available": output is not None,
+                "captured_utf8_bytes": len(raw) if output is not None else None,
+                "retained_utf8_bytes": len(tail),
+                "dropped_prefix_utf8_bytes": len(raw) - len(tail),
+                "truncated": len(raw) > len(tail),
+                "tail": tail.decode("utf-8", errors="replace"),
+            }
+        error.add_note("Public synthetic repository command output:\n" + json.dumps(diagnostic))
+        raise
+
+
+@pytest.mark.parametrize(
+    "output",
+    [None, "public synthetic output", "\u00e9" * 2049],
+    ids=["unavailable", "complete", "truncated"],
+)
+def test_run_preserves_failure_with_bounded_public_output(tmp_path: Path, monkeypatch, output):
+    error = subprocess.CalledProcessError(1, ["git", "synthetic"], output=output, stderr=output)
+    env = {"SYNTHETIC": "fixture"}
+
+    def fail(args, **kwargs):
+        assert args == ("git", "synthetic")
+        assert kwargs == {
+            "cwd": tmp_path,
+            "env": env,
+            "text": True,
+            "capture_output": True,
+            "check": True,
+        }
+        raise error
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    with pytest.raises(subprocess.CalledProcessError) as caught:
+        run("git", "synthetic", cwd=tmp_path, env=env)
+    assert caught.value is error and error.returncode == 1
+    assert len(error.__notes__) == 1
+    note = json.loads(error.__notes__[0].split("\n", 1)[1])
+    raw = (output or "").encode("utf-8")
+    assert note["returncode"] == 1
+    for name in ("stdout", "stderr"):
+        assert note[name] == {
+            "available": output is not None,
+            "captured_utf8_bytes": len(raw) if output is not None else None,
+            "retained_utf8_bytes": min(len(raw), 2048),
+            "dropped_prefix_utf8_bytes": max(len(raw) - 2048, 0),
+            "truncated": len(raw) > 2048,
+            "tail": raw[-2048:].decode("utf-8", errors="replace"),
+        }
 
 
 def test_publish_script_restores_main_and_bootstrap_and_preserves_backup(tmp_path: Path) -> None:
@@ -102,7 +162,8 @@ def test_publish_script_restores_main_and_bootstrap_and_preserves_backup(tmp_pat
     partial = run("git", "rev-parse", "HEAD", cwd=seed, env=env).stdout.strip()
     run("git", "push", "origin", "HEAD:main", cwd=seed, env=env)
 
-    result = run(resolve_bash(), str(SCRIPT), str(bundle), str(remote), env=env)
+    # The script verifies the bundle against its current repository before cloning.
+    result = run(resolve_bash(), str(SCRIPT), str(bundle), str(remote), cwd=source, env=env)
     assert "Repository restore verified" in result.stdout
 
     main = run(

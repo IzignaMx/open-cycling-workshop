@@ -141,10 +141,16 @@ async function openBranding(page: Page) {
   })
   const session = page.getByRole('heading', { name: 'Mi sesión', exact: true })
   await expect(verify.or(session)).toBeVisible()
-  if (!(await session.isVisible())) {
-    await expect(verify).toBeEnabled()
-    await verify.click()
-  }
+  // Technical accounts can publish SELECTOR while automatic verification is
+  // still running. Its disabled button is replaced by the admitted session;
+  // wait for either actionable state, not for that transient button to enable.
+  await expect
+    .poll(
+      async () =>
+        (await session.isVisible()) || (await verify.and(page.locator(':enabled')).isVisible()),
+    )
+    .toBe(true)
+  if (!(await session.isVisible())) await verify.click()
   await expect(session).toBeVisible()
   await expect(
     page.getByRole('region', { name: 'Marca compartida del taller', exact: true }),

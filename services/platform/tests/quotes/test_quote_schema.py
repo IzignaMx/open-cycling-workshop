@@ -77,9 +77,13 @@ def test_additive_quote_migration_and_forward_only_retention(identity_migration_
     command.upgrade(config, "head")
     assert set(inspect(engine).get_table_names()) >= TABLES
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0013"
         for table, rows in before.items():
-            assert list(connection.execute(text(f"SELECT * FROM {table}")).mappings()) == rows
+            current = list(connection.execute(text(f"SELECT * FROM {table}")).mappings())
+            assert len(current) == len(rows)
+            assert [
+                {key: row[key] for key in old} for old, row in zip(rows, current, strict=True)
+            ] == rows
         assert (
             connection.scalar(text("SELECT name FROM organizations WHERE id='preserved'"))
             == "Existing organization"
@@ -717,7 +721,7 @@ def test_downgrade_refuses_before_changes(quote_database):
     with pytest.raises(RuntimeError, match="forward-only"):
         command.downgrade(config, "0011")
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0013"
         assert {
             table: connection.scalar(text(f"SELECT count(*) FROM {table}")) for table in TABLES
         } == before
@@ -863,6 +867,7 @@ def test_complete_order_effect_tuple_is_retained_but_delivery_bookkeeping_can_ch
                 quote_outbox_id="quote-outbox-new",
                 order_event_id="order-event-new",
                 resulting_order_version=2,
+                order_effect_version=1,
                 change_cursor=100,
                 order_outbox_id="order-outbox-new",
             ),

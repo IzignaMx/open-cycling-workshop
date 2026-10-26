@@ -29,7 +29,7 @@ def test_cutover_initializes_unique_canonical_incarnations_without_changing_tena
     _seed_tenant(engine)
     before = _snapshot(engine, "organizations")
     command.upgrade(config, "head")
-    assert _revision(engine) == "0012"
+    assert _revision(engine) == "0013"
     after = _snapshot(engine, "organizations")
     for old, current in zip(before, after, strict=True):
         assert {key: current[key] for key in old} == old

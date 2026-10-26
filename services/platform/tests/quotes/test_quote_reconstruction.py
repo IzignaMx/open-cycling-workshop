@@ -36,7 +36,9 @@ def reconstruct(*rows):
         raise current.value from None
     current = reconstruction.reconstruct(*deepcopy(rows))
     assert old.ledger == current.ledger
-    assert [asdict(item) for item in old.receipts] == [asdict(item) for item in current.receipts]
+    assert [asdict(item) | {"order_effects": None} for item in old.receipts] == [
+        asdict(item) for item in current.receipts
+    ]
     return current
 
 

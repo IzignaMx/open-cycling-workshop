@@ -54,3 +54,50 @@ def test_direct_browser_evidence_upload_immediately_follows_e2e() -> None:
     ):
         assert upload_index < names.index(later_step)
     assert "\n        if: always()\n" in steps[upload_index]
+
+
+def test_full_python_serial_workflow_binds_fixed_pair_and_full_job_budget() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text()
+    job = workflow.split("  python-tests:\n", 1)[1].split("\n  verify:", 1)[0]
+    assert "timeout-minutes: 55" in job
+    assert "timeout-minutes: 35" not in job
+    assert "nonce_a: ${{ steps.identity.outputs.nonce_a }}" in job
+    assert "nonce_b: ${{ steps.identity.outputs.nonce_b }}" in job
+    assert job.count("timeout-minutes: 12") == 1
+    assert job.count("timeout-minutes: 18") == 2
+    assert job.count("timeout-minutes: 1\n") == 2
+    assert job.count("--signal=TERM --kill-after=30s 1020s") == 2
+    assert job.count("--signal=TERM --kill-after=5s 55s") == 2
+    assert (
+        job.index("id: run_a")
+        < job.index("id: finalize_a")
+        < job.index("id: run_b")
+        < job.index("id: finalize_b")
+    )
+    for shard in ("a", "b"):
+        assert job.count(f"--full-python-shard {shard}") == 2
+        assert job.count(f'--owned "$RUNNER_TEMP/full-python-{shard}-owned.json"') == 2
+        assert job.count(f"--evidence artifacts/full-python/{shard}/receipt.json") == 2
+        assert f"artifacts/full-python/{shard}/independent-cleanup.json" in job
+    run_b = job.split("id: run_b", 1)[1].split("\n      - name:", 1)[0]
+    assert "if: ${{ !cancelled() && steps.finalize_a.outputs.cleanup_verified == 'true' }}" in run_b
+    assert "continue-on-error" not in job
+    assert "strategy:" not in job
+    assert "matrix:" not in job
+    assert "--full-python-receipt artifacts/full-python\n" in workflow
+    for shard in ("A", "B"):
+        assert (
+            f"OCWP_FULL_PYTHON_NONCE_{shard}: "
+            f"${{{{ needs.python-tests.outputs.nonce_{shard.lower()} }}}}" in workflow
+        )
+
+
+def test_full_python_cleanup_diagnostics_are_retained_after_failure() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text()
+    job = workflow.split("  python-tests:\n", 1)[1].split("\n  verify:", 1)[0]
+    uploads = [step for step in job.split("\n      - ") if "actions/upload-artifact@" in step]
+    assert len(uploads) == 1
+    assert "if: always()" in uploads[0]
+    for shard in ("a", "b"):
+        for phase in ("primary", "independent"):
+            assert f"artifacts/full-python/{shard}/{phase}-cleanup-diagnostic.json" in uploads[0]

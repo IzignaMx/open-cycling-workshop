@@ -2,12 +2,13 @@
 
 Financial snapshots are checked against their immutable semantic commands, in
 contiguous operation order. Current inventory prices and customer data are never
-substituted into history. Operational order-effect tuples are reserved for the
-separately reviewed activation slice and fail closed in this repository version.
+substituted into history. Populated order-effect tuples require their complete
+retained event, change and outbox rows; historical quote-only tuples stay null.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
@@ -24,11 +25,20 @@ from cycling_workshop.quotes.decisions import (
     EntryRecording,
     QuoteDecisionEntry,
     QuoteDecisionLedger,
+    QuoteDecisionResult,
     _admit,
     _line_decisions,
     price_selection,
 )
 from cycling_workshop.quotes.domain import Quote
+from cycling_workshop.quotes.effects import (
+    OrderEffectChange,
+    OrderEffectEvent,
+    OrderEffectOutbox,
+    QuoteOrderEffects,
+    _order_effects,
+    _validate_order_effects,
+)
 from cycling_workshop.quotes.history import QuoteHistory
 from cycling_workshop.quotes.models import (
     QuoteDecisionRecord,
@@ -68,6 +78,7 @@ class QuoteReceipt:
     ordinal: int
     recorded_at: datetime
     quote_outbox_id: str
+    order_effects: QuoteOrderEffects | None = None
 
     @property
     def operation_id(self) -> str:
@@ -78,6 +89,10 @@ class QuoteReceipt:
 class QuoteSnapshot:
     ledger: QuoteDecisionLedger
     receipts: tuple[QuoteReceipt, ...]
+
+
+def _noop() -> None:
+    """Historical repository calls have no request-owned deadline callback."""
 
 
 def utc(value: datetime) -> datetime:
@@ -91,6 +106,14 @@ def utc(value: datetime) -> datetime:
 def advance(
     ledger: QuoteDecisionLedger | None, command: QuoteRepositoryCommand, now: datetime
 ) -> QuoteDecisionLedger:
+    return _advance_with_result(ledger, command, now)[0]
+
+
+def _advance_with_result(
+    ledger: QuoteDecisionLedger | None, command: QuoteRepositoryCommand, now: datetime
+) -> tuple[QuoteDecisionLedger, QuoteDecisionResult | None]:
+    """Keep the actual fresh domain result local to the application append."""
+    decision: QuoteDecisionResult | None = None
     if isinstance(command, CreateQuoteCommand):
         if ledger is not None:
             raise ValueError("order already has a quote lineage")
@@ -130,7 +153,7 @@ def advance(
                 raise ValueError("duplicate decision in operation history")
             result = decision.ledger
     validate_storage_ledger(result)
-    return result
+    return result, decision
 
 
 def event_payload(
@@ -226,6 +249,7 @@ def _revision_document(
     lines: list[QuoteLineRecord],
     targets: list[QuoteLineTargetRecord],
     successor: QuoteRevisionRecord | None,
+    checkpoint: Callable[[], None] = _noop,
 ) -> Document:
     line_documents: list[JsonValue] = []
     fields = (
@@ -244,6 +268,7 @@ def _revision_document(
         "discount": ("amount_minor",),
     }
     for position, line in enumerate(sorted(lines, key=lambda item: item.position)):
+        checkpoint()
         if (
             line.position != position
             or type(line.position) is not int
@@ -270,6 +295,7 @@ def _revision_document(
         elif edges:
             raise ValueError("charge line cannot have pricing targets")
         line_documents.append(doc)
+    checkpoint()
     line_ids = {line.line_id for line in lines}
     if any(
         edge.revision_id != row.quote_id
@@ -309,9 +335,22 @@ def reconstruct(
     decisions: list[QuoteDecisionRecord],
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
+    *,
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
 ) -> QuoteSnapshot:
     return _reconstruct_with_bytes(
-        lineage, revisions, lines, targets, decisions, operations, outboxes
+        lineage,
+        revisions,
+        lines,
+        targets,
+        decisions,
+        operations,
+        outboxes,
+        order_events=order_events,
+        changes=changes,
+        order_outboxes=order_outboxes,
     )[0]
 
 
@@ -323,9 +362,26 @@ def _reconstruct_with_bytes(
     decisions: list[QuoteDecisionRecord],
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
+    *,
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
+    checkpoint: Callable[[], None] = _noop,
 ) -> tuple[QuoteSnapshot, int]:
     try:
-        return _reconstruct(lineage, revisions, lines, targets, decisions, operations, outboxes)
+        return _reconstruct(
+            lineage,
+            revisions,
+            lines,
+            targets,
+            decisions,
+            operations,
+            outboxes,
+            order_events=order_events,
+            changes=changes,
+            order_outboxes=order_outboxes,
+            checkpoint=checkpoint,
+        )
     except (ValueError, TypeError, AttributeError, KeyError, OverflowError) as error:
         raise QuoteIntegrityError("stored quote history is invalid") from error
 
@@ -338,7 +394,13 @@ def _reconstruct(
     decisions: list[QuoteDecisionRecord],
     operations: list[QuoteOperationRecord],
     outboxes: list[OutboxRecord],
+    *,
+    order_events: Sequence[OrderEffectEvent] = (),
+    changes: Sequence[OrderEffectChange] = (),
+    order_outboxes: Sequence[OrderEffectOutbox] = (),
+    checkpoint: Callable[[], None] = _noop,
 ) -> tuple[QuoteSnapshot, int]:
+    checkpoint()
     _id(lineage.lineage_id, generated=True)
     if (
         lineage.root_quote_id != lineage.lineage_id
@@ -349,6 +411,19 @@ def _reconstruct(
         raise ValueError("invalid lineage root or history bounds")
     if len(operations) != len(revisions) + len(decisions) or len(outboxes) != len(operations):
         raise ValueError("every result requires one operation and quote outbox")
+    effects = [_order_effects(operation) for operation in operations]
+    effect_count = sum(effect is not None for effect in effects)
+    if effect_count > 1:
+        raise ValueError("a lineage may own only one initial order transition")
+    if any(len(rows) != effect_count for rows in (order_events, changes, order_outboxes)):
+        raise ValueError("every order effect requires exactly one retained source row")
+    order_event_map = {row.event_id: row for row in order_events}
+    change_map = {row.cursor: row for row in changes}
+    order_outbox_map = {row.event_id: row for row in order_outboxes}
+    if any(
+        len(mapping) != effect_count for mapping in (order_event_map, change_map, order_outbox_map)
+    ):
+        raise ValueError("duplicate stored order effect identities")
     revision_map = {row.quote_id: row for row in revisions}
     decision_map = {row.decision_id: row for row in decisions}
     outbox_map = {row.event_id: row for row in outboxes}
@@ -358,12 +433,15 @@ def _reconstruct(
         or len(outbox_map) != len(outboxes)
     ):
         raise ValueError("duplicate stored identities")
+    if outbox_map.keys() & order_outbox_map.keys():
+        raise ValueError("quote and order outbox identities must be independent")
     if any(line.revision_id not in revision_map for line in lines) or any(
         edge.revision_id not in revision_map for edge in targets
     ):
         raise ValueError("orphaned quote lines or targets")
     stored_quotes = []
     for index, row in enumerate(revisions):
+        checkpoint()
         if (row.organization_id, row.lineage_id, row.version) != (
             lineage.organization_id,
             lineage.lineage_id,
@@ -376,9 +454,13 @@ def _reconstruct(
             [line for line in lines if line.revision_id == row.quote_id],
             [edge for edge in targets if edge.revision_id == row.quote_id],
             revisions[index + 1] if index + 1 < len(revisions) else None,
+            checkpoint,
         )
+        checkpoint()
         stored_quotes.append(decode_quote(doc))
+    checkpoint()
     stored_history = QuoteHistory(tuple(stored_quotes))
+    checkpoint()
     head: Quote | None = None
     predecessors: list[Quote] = []
     entries: list[QuoteDecisionEntry] = []
@@ -387,6 +469,7 @@ def _reconstruct(
     receipts: list[QuoteReceipt] = []
     logical: list[Document] = []
     for ordinal, operation in enumerate(operations, 1):
+        checkpoint()
         for value in (
             operation.proof_version,
             operation.ordinal,
@@ -395,6 +478,7 @@ def _reconstruct(
         ):
             _integer(value)
         command = command_from_proof(operation.proof)
+        checkpoint()
         now = utc(operation.recorded_at)
         _id(operation.quote_outbox_id, generated=True)
         if (
@@ -413,16 +497,7 @@ def _reconstruct(
             ordinal,
         ):
             raise ValueError("operation scope, actor, version or ordinal mismatch")
-        if any(
-            value is not None
-            for value in (
-                operation.order_event_id,
-                operation.resulting_order_version,
-                operation.change_cursor,
-                operation.order_outbox_id,
-            )
-        ):
-            raise ValueError("operational quote effects are not supported before activation")
+        order_effects = effects[ordinal - 1]
         entry: QuoteDecisionEntry | None = None
         sequence = len(entries)
         if (command.organization_id, command.location_id, command.order_id, command.lineage_id) != (
@@ -478,6 +553,7 @@ def _reconstruct(
                     latest.get(head.quote_id),
                     customer_times.get(head.quote_id),
                 )
+                checkpoint()
                 entry = QuoteDecisionEntry(
                     proof,
                     sequence + 1,
@@ -490,6 +566,7 @@ def _reconstruct(
                 if proof.evidence is not None:
                     customer_times[head.quote_id] = proof.evidence.decided_at
                 sequence += 1
+        checkpoint()
         if not isinstance(command, RecordQuoteDecisionCommand) and (
             head.version > len(stored_quotes)
             or head
@@ -549,6 +626,7 @@ def _reconstruct(
                 or utc(row_revision.created_at) != now
             ):
                 raise ValueError("revision receipt association mismatch")
+        checkpoint()
         outbox = outbox_map.pop(operation.quote_outbox_id)
         if (
             outbox.event_type,
@@ -568,7 +646,19 @@ def _reconstruct(
             _event_payload(command, head, lineage.lineage_id, sequence, entry)
         ):
             raise ValueError("quote outbox disagrees with receipt")
+        if order_effects is not None:
+            _validate_order_effects(
+                order_effects,
+                command,
+                now,
+                operation.quote_outbox_id,
+                order_event_map.pop(order_effects.order_event_id),
+                change_map.pop(order_effects.change_cursor),
+                order_outbox_map.pop(order_effects.order_outbox_id),
+            )
+        checkpoint()
         logical.append(_logical_record(command, head, entry))
+        checkpoint()
         receipts.append(
             QuoteReceipt(
                 command,
@@ -578,6 +668,7 @@ def _reconstruct(
                 ordinal,
                 now,
                 operation.quote_outbox_id,
+                order_effects,
             )
         )
     if (
@@ -585,11 +676,17 @@ def _reconstruct(
         or revision_map
         or decision_map
         or outbox_map
+        or order_event_map
+        or change_map
+        or order_outbox_map
         or (*predecessors, head) != stored_history.revisions
     ):
         raise ValueError("incomplete quote operation history")
+    checkpoint()
     ledger = QuoteDecisionLedger(stored_history, tuple(entries))
+    checkpoint()
     validate_storage_ledger(ledger)
+    checkpoint()
     if (lineage.head_quote_id, lineage.head_version, lineage.decision_sequence) != (
         ledger.history.head.quote_id,
         ledger.history.head.version,
@@ -599,4 +696,5 @@ def _reconstruct(
     for value in (lineage.head_version, lineage.decision_sequence):
         _integer(value)
     size = _history_byte_count(logical)
+    checkpoint()
     return QuoteSnapshot(ledger, tuple(receipts)), size

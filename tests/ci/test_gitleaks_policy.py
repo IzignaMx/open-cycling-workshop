@@ -17,7 +17,18 @@ def test_policy_extends_defaults_and_only_uses_conjunctive_exact_exceptions() ->
     rule = policy["rules"][0]
     assert rule["id"] == "generic-api-key"
     assert set(rule) == {"id", "allowlists"}
-    assert len(rule["allowlists"]) == 2
+    assert len(rule["allowlists"]) == 3
+    assert {(entry["paths"][0], entry["regexes"][0]) for entry in rule["allowlists"]} == {
+        (
+            r"^tests/operations/test_local_compose_runtime\.py$",
+            r"^eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiJhIn0\.signature$",
+        ),
+        (r"^README\.md$", r"^signed/revocable$"),
+        (
+            r"^docs/10-spec-development/execution-state\.yaml$",
+            r"^may_expand_beyond_retained_utf8_bytes$",
+        ),
+    }
     for entry in rule["allowlists"]:
         assert entry["condition"] == "AND"
         assert entry["regexTarget"] == "secret"
@@ -95,7 +106,7 @@ def test_actual_pinned_scanner_rejects_near_misses_and_other_paths(tmp_path: Pat
         pytest.skip("Actual scanner canaries are mandatory in the hosted Security workflow")
     evidence = qualify_policy(Path.cwd(), tmp_path, Path(binary))
     assert evidence["status"] == "passed"
-    assert evidence["cases"] == 7
+    assert evidence["cases"] == 10
 
 
 @pytest.mark.parametrize("exit_code", [0, 1])
@@ -148,16 +159,26 @@ def test_actual_scanner_canaries_reject_broadened_or_missing_exceptions(
     binary = os.environ.get("OCWP_GITLEAKS_BINARY")
     if not binary:
         pytest.skip("Actual scanner canaries are mandatory in the hosted Security workflow")
-    policy = Path(".gitleaks.toml").read_text()
-    if mutation == "remove_exceptions":
-        policy = "[extend]\nuseDefault = true\n"
-    elif mutation == "condition_or":
-        policy = policy.replace('condition = "AND"', 'condition = "OR"')
-    elif mutation == "broaden_path":
-        policy = policy.replace("^tests/operations/test_local_compose_runtime\\.py$", ".*")
-    else:
-        policy = policy.replace("^signed/revocable$", ".*")
-    (tmp_path / ".gitleaks.toml").write_text(policy)
+    original_policy = Path(".gitleaks.toml").read_text()
+    header, *blocks = original_policy.split("[[rules.allowlists]]")
+    entries = tomllib.loads(original_policy)["rules"][0]["allowlists"]
     (tmp_path / "README.md").write_text(Path("README.md").read_text())
-    with pytest.raises(security_scan.CoverageError, match="canary failed"):
-        qualify_policy(tmp_path, tmp_path / "evidence", Path(binary))
+    state_path = Path("docs/10-spec-development/execution-state.yaml")
+    (tmp_path / state_path).parent.mkdir(parents=True)
+    (tmp_path / state_path).write_text(state_path.read_text())
+    # Mutate each exception independently without adding skipped test cases to
+    # the full-Python verifier's exact five-case scanner skip contract.
+    for index, entry in enumerate(entries):
+        mutated_blocks = blocks.copy()
+        if mutation == "remove_exceptions":
+            del mutated_blocks[index]
+        elif mutation == "condition_or":
+            mutated_blocks[index] = blocks[index].replace('condition = "AND"', 'condition = "OR"')
+        elif mutation == "broaden_path":
+            mutated_blocks[index] = blocks[index].replace(entry["paths"][0], ".*", 1)
+        else:
+            mutated_blocks[index] = blocks[index].replace(entry["regexes"][0], ".*", 1)
+        policy = header + "".join("[[rules.allowlists]]" + block for block in mutated_blocks)
+        (tmp_path / ".gitleaks.toml").write_text(policy)
+        with pytest.raises(security_scan.CoverageError, match="canary failed"):
+            qualify_policy(tmp_path, tmp_path / "evidence", Path(binary))

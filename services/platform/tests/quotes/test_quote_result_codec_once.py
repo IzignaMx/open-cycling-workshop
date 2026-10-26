@@ -18,7 +18,7 @@ from test_identity_migration import identity_migration_database as identity_migr
 from test_quote_reconstruction import records as records
 from test_quote_repository import admitted, creation, decision, revision
 from test_quote_repository import database as database
-from test_quote_single_pass import collect_rows
+from test_quote_single_pass import collect_rows, quote_only_oracle_adapter
 from test_quote_storage import NOW, uid
 
 
@@ -90,7 +90,9 @@ def traced(module, rows):
 def equivalent(rows):
     old, new = traced(oracle, rows), traced(reconstruction, rows)
     assert old[0].ledger == new[0].ledger
-    assert [asdict(item) for item in old[0].receipts] == [asdict(item) for item in new[0].receipts]
+    assert [asdict(item) | {"order_effects": None} for item in old[0].receipts] == [
+        asdict(item) for item in new[0].receipts
+    ]
     assert old[1] == new[1]
     assert [item[3] for item in old[3]] == [item[3] for item in new[3]]
     for previous, current in zip(old[3], new[3], strict=True):
@@ -207,7 +209,8 @@ def test_pr55_local_formatters_are_bidirectionally_independent(records, monkeypa
 def test_unicode_mixed_correction_withdrawal_revision_and_initial(database):
     first = creation()
     first = replace(
-        first, lines=tuple(replace(line, description="Revisión café 🚲") for line in first.lines)
+        first,
+        lines=tuple(replace(line, description="Revisión café 🚲") for line in first.lines),
     )
     evidence = replace(decision().command.evidence, note='Nota café 🚲\n"exacta"')
     commands = [
@@ -300,7 +303,13 @@ def test_corrupt_history_rejection_has_zero_database_writes(database, monkeypatc
             }:
                 writes.append(statement)
 
-        monkeypatch.setattr(repository, "_reconstruct_with_bytes", module._reconstruct_with_bytes)
+        monkeypatch.setattr(
+            repository,
+            "_reconstruct_with_bytes",
+            quote_only_oracle_adapter(oracle)
+            if module is oracle
+            else module._reconstruct_with_bytes,
+        )
         event.listen(database, "before_cursor_execute", capture)
         try:
             for command in (creation(), revision()):

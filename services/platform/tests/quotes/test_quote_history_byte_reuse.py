@@ -100,8 +100,13 @@ def test_candidate_byte_boundary_preserves_error_and_rows(database, monkeypatch)
     "error_type", [ValueError, TypeError, AttributeError, KeyError, OverflowError]
 )
 def test_private_and_public_reconstruction_normalize_same_errors(monkeypatch, error_type):
-    def invalid(*args):
-        raise error_type("synthetic malformed stored data")
+    expected_error = error_type("synthetic malformed stored data")
+
+    def invalid(*args, order_events, changes, order_outboxes, checkpoint):
+        assert len(args) == 7
+        assert not order_events and not changes and not order_outboxes
+        checkpoint()
+        raise expected_error
 
     monkeypatch.setattr(reconstruction, "_reconstruct", invalid)
     for reconstruct in (reconstruction.reconstruct, reconstruction._reconstruct_with_bytes):
@@ -110,6 +115,7 @@ def test_private_and_public_reconstruction_normalize_same_errors(monkeypatch, er
         ) as failure:
             reconstruct(None, [], [], [], [], [], [])
         assert type(failure.value.__cause__) is error_type
+        assert failure.value.__cause__ is expected_error
 
 
 @pytest.mark.parametrize("identity_migration_database", ["sqlite"], indirect=True)

@@ -32,6 +32,1234 @@ def test_exact_enforced_limits_and_numeric_counters():
     assert module.parse_probe(probe(), 512, 64) == {"cpu_usec": 100, "memory_peak": 8192}
 
 
+def test_full_route_stops_worker_before_reaping_failed_exec_client(monkeypatch):
+    from types import SimpleNamespace
+
+    events = []
+    clock = iter([0.0, 1.0])
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+    client = SimpleNamespace(
+        pid=1234, poll=lambda: None, wait=lambda **kwargs: events.append("client_reap")
+    )
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: client)
+    with pytest.raises(module.ProofFailure, match="command_timeout"):
+        module.full_client(
+            ["docker", "exec", "a" * 64, "fixed-reader"],
+            timeout=0.05,
+            abort=lambda: events.append("worker_verified_stopped"),
+        )
+    assert events == ["worker_verified_stopped", "client_kill", "client_reap"]
+
+
+def test_full_route_unverified_stop_stays_failure_even_after_client_hygiene(monkeypatch):
+    from types import SimpleNamespace
+
+    events = []
+    clock = iter([0.0, 1.0])
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+    client = SimpleNamespace(
+        pid=1234, poll=lambda: None, wait=lambda **kwargs: events.append("client_reap")
+    )
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: client)
+
+    def abort():
+        events.extend(["stop_unverified", "owned_reconciliation_attempted"])
+        raise module.ProofFailure("worker_stop_unverified")
+
+    with pytest.raises(module.ProofFailure, match="worker_stop_unverified"):
+        module.full_client(["docker", "exec", "a" * 64, "fixed-reader"], timeout=0.05, abort=abort)
+    assert events == [
+        "stop_unverified",
+        "owned_reconciliation_attempted",
+        "client_kill",
+        "client_reap",
+    ]
+
+
+def test_full_diagnostic_retains_only_the_bounded_host_spool(tmp_path):
+    import json
+    import tempfile
+
+    with tempfile.TemporaryFile() as output:
+        output.write(b"x" * (module.FULL_SPOOL_LIMIT + 1))
+        output.flush()
+        module.full_save_diagnostic(output, tmp_path / "receipt.json")
+    assert (tmp_path / "diagnostic.txt").stat().st_size == module.FULL_SPOOL_LIMIT
+    assert json.loads((tmp_path / "diagnostic.json").read_text()) == {
+        "schema": 1,
+        "available": True,
+        "retained_bytes": module.FULL_SPOOL_LIMIT,
+        "at_limit_or_truncated": True,
+    }
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "nonzero", "cap", "timeout", "reap", "spawn", "nonzero_reap"]
+)
+def test_preparation_client_retains_only_reaped_bounded_output(tmp_path, monkeypatch, fault):
+    import json
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"build diagnostic" if fault != "cap" else b"x" * module.LIMIT
+    clock = iter([0.0, 1.0] if fault == "timeout" else [0.0, 0.0])
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+
+    def launch(args, **kwargs):
+        assert args == ["docker", "build", "--quiet"]
+        if fault == "spawn":
+            raise OSError("unavailable synthetic client")
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        client = SimpleNamespace(
+            pid=1234,
+            returncode=7 if fault in {"nonzero", "nonzero_reap"} else 0,
+            poll=lambda: None if fault == "timeout" else 0,
+        )
+
+        def wait(**kwargs):
+            events.append("client_reap")
+            if fault in {"reap", "nonzero_reap"}:
+                raise module.subprocess.TimeoutExpired("fixed", 2)
+            if fault == "timeout":
+                client.returncode = -9
+            return client.returncode
+
+        client.wait = wait
+        return client
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    original = module.full_preparation_diagnostic
+
+    def save(output, *args, **kwargs):
+        if output is not None and args[-1]:
+            assert events[-1] == "client_reap"
+        original(output, *args, **kwargs)
+
+    monkeypatch.setattr(module, "full_preparation_diagnostic", save)
+    arguments = {"timeout": 0.5, "preparation": (tmp_path, "image_build")}
+    if fault:
+        error = {
+            "reap": module.subprocess.TimeoutExpired,
+            "nonzero_reap": module.subprocess.TimeoutExpired,
+            "spawn": OSError,
+        }.get(fault, module.ProofFailure)
+        with pytest.raises(error):
+            module.full_client(["docker", "build", "--quiet"], **arguments)
+    else:
+        assert module.full_client(["docker", "build", "--quiet"], **arguments) == raw.decode()
+    record = json.loads((tmp_path / "preparation.json").read_text())
+    assert record["stage"] == "image_build"
+    assert record["limit_bytes"] == module.LIMIT
+    assert record["qualification"] == "not_a_receipt"
+    assert record["build_resource_cleanup"] == "not_assessed"
+    available = fault not in {"reap", "spawn", "nonzero_reap"}
+    assert record["client_reaped"] is available
+    assert record["available"] is available
+    assert record["returncode"] == {
+        "nonzero": 7,
+        "timeout": -9,
+        "reap": None,
+        "spawn": None,
+        "nonzero_reap": None,
+    }.get(fault, 0)
+    assert (
+        record["failure"]
+        == {
+            None: None,
+            "nonzero": "command_failed",
+            "cap": "command_failed",
+            "timeout": "command_timeout",
+            "reap": "client_reap_unverified",
+            "spawn": "tool_unavailable",
+            "nonzero_reap": "command_failed",
+        }[fault]
+    )
+    assert record["at_limit_or_truncated"] is (fault == "cap" if available else None)
+    assert record["retained_bytes"] == (len(raw) if available else 0)
+    assert (tmp_path / "preparation.txt").read_bytes() == (raw if available else b"")
+    assert not (tmp_path / "receipt.json").exists()
+
+
+@pytest.mark.parametrize("fault", [None, "nonzero", "cap", "running_cap", "nonzero_reap"])
+def test_fixed_build_spool_retains_tail_and_preserves_failure(tmp_path, monkeypatch, fault):
+    import json
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"discarded progress\n" + b"z" * module.LIMIT + b"final build diagnostic\n"
+    if fault in {"cap", "running_cap"}:
+        raw = b"x" * (module.FULL_BUILD_SPOOL_LIMIT - module.LIMIT) + raw[-module.LIMIT :]
+    monkeypatch.setattr(module.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(module.os, "killpg", lambda *args: events.append("client_kill"))
+    monkeypatch.setattr(module.resource, "setrlimit", lambda key, value: events.append(value))
+
+    def launch(args, **kwargs):
+        assert args == ["docker", "build", "--progress=plain"]
+        kwargs["preexec_fn"]()
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        client = SimpleNamespace(
+            pid=1234,
+            returncode=1 if fault in {"nonzero", "nonzero_reap"} else 0,
+            poll=lambda: None if fault == "running_cap" else 0,
+        )
+
+        def wait(**kwargs):
+            events.append("client_reap")
+            if fault == "nonzero_reap":
+                raise module.subprocess.TimeoutExpired("fixed", 2)
+            if fault == "running_cap":
+                client.returncode = -9
+            return client.returncode
+
+        client.wait = wait
+        return client
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    original = module.full_preparation_diagnostic
+
+    def save(output, *args, **kwargs):
+        if output is not None and args[-1]:
+            assert events[-1] == "client_reap"
+        original(output, *args, **kwargs)
+
+    monkeypatch.setattr(module, "full_preparation_diagnostic", save)
+    arguments = {
+        "limit": module.FULL_BUILD_SPOOL_LIMIT,
+        "preparation": (tmp_path, "image_build"),
+    }
+    if fault:
+        error = module.subprocess.TimeoutExpired if fault == "nonzero_reap" else module.ProofFailure
+        with pytest.raises(error):
+            module.full_client(["docker", "build", "--progress=plain"], **arguments)
+    else:
+        assert (
+            module.full_client(["docker", "build", "--progress=plain"], **arguments)
+            == raw.decode().strip()
+        )
+    available = fault != "nonzero_reap"
+    record = json.loads((tmp_path / "preparation.json").read_text())
+    assert record["schema"] == 2
+    assert record["capture"] == "tail"
+    assert record["limit_bytes"] == module.LIMIT
+    assert record["spool_limit_bytes"] == module.FULL_BUILD_SPOOL_LIMIT
+    assert record["observed_bytes"] == (len(raw) if available else None)
+    assert record["retained_bytes"] == (module.LIMIT if available else 0)
+    assert record["dropped_prefix_bytes"] == (len(raw) - module.LIMIT if available else None)
+    assert record["retention_truncated"] is (True if available else None)
+    assert record["at_spool_limit"] is (fault in {"cap", "running_cap"} if available else None)
+    assert record["client_reaped"] is available
+    assert (
+        record["failure"]
+        == {
+            None: None,
+            "nonzero": "command_failed",
+            "cap": "command_failed",
+            "running_cap": "output_limit",
+            "nonzero_reap": "command_failed",
+        }[fault]
+    )
+    assert record["returncode"] == {"nonzero": 1, "nonzero_reap": None, "running_cap": -9}.get(
+        fault, 0
+    )
+    assert record["qualification"] == "not_a_receipt"
+    assert record["build_resource_cleanup"] == "not_assessed"
+    assert events[0] == (module.FULL_BUILD_SPOOL_LIMIT, module.FULL_BUILD_SPOOL_LIMIT)
+    assert (tmp_path / "preparation.txt").read_bytes() == (
+        raw[-module.LIMIT :] if available else b""
+    )
+    assert not (tmp_path / "receipt.json").exists()
+
+
+@pytest.mark.parametrize("fault", ["no_preparation", "other_stage", "quiet", "abort"])
+def test_build_spool_cannot_expand_other_clients(tmp_path, monkeypatch, fault):
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    arguments = {
+        "limit": module.FULL_BUILD_SPOOL_LIMIT,
+        "preparation": (tmp_path, "image_build"),
+    }
+    args = ["docker", "build", "--progress=plain"]
+    if fault == "no_preparation":
+        arguments["preparation"] = None
+    elif fault == "other_stage":
+        arguments["preparation"] = (tmp_path, "postgres_pull")
+    elif fault == "quiet":
+        args[-1] = "--quiet"
+    else:
+        arguments["abort"] = lambda: pytest.fail("abort called")
+    with pytest.raises(module.ProofFailure, match="preparation_diagnostic_scope"):
+        module.full_client(args, **arguments)
+
+
+@pytest.mark.parametrize("fault", ["stage", "record_limit", "abort"])
+def test_preparation_diagnostics_cannot_expand_the_control_scope(tmp_path, monkeypatch, fault):
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    arguments = {"preparation": (tmp_path, "image_build")}
+    if fault == "stage":
+        arguments["preparation"] = (tmp_path, "arbitrary")
+    elif fault == "record_limit":
+        arguments["limit"] = module.FULL_RECORD_LIMIT
+    else:
+        arguments["abort"] = lambda: pytest.fail("abort called")
+    with pytest.raises(module.ProofFailure, match="preparation_diagnostic_scope"):
+        module.full_client(["docker", "build", "--quiet"], **arguments)
+
+
+def test_default_full_client_spawn_failure_does_not_invoke_abort(monkeypatch):
+    def fail(*args, **kwargs):
+        raise OSError("unavailable synthetic client")
+
+    monkeypatch.setattr(module.subprocess, "Popen", fail)
+    with pytest.raises(OSError):
+        module.full_client(["docker", "exec"], abort=lambda: pytest.fail("abort before spawn"))
+
+
+def test_full_record_capture_accepts_only_fixed_names_and_typed_pending_marker():
+    with pytest.raises(module.ProofFailure, match="record_name"):
+        module.full_capture_record("a" * 64, "arbitrary", lambda *args: pytest.fail("spawned"))
+    assert (
+        module.full_capture_record(
+            "a" * 64, "collection", lambda *args, **kwargs: '{"pending":true}'
+        )
+        is None
+    )
+    assert module.full_capture_record(
+        "a" * 64, "collection", lambda *args, **kwargs: '{"pending":1}'
+    ) == {"pending": 1}
+
+
+@pytest.mark.parametrize("final", ["true|123", "false|123", "missing", "false|0"])
+def test_full_stop_requires_exact_terminal_state(final):
+    calls = []
+
+    def execute(args, **kwargs):
+        calls.append(args)
+        if args[:2] == ["docker", "kill"]:
+            return ""
+        return "true|123" if len(calls) == 1 else final
+
+    if final == "false|0":
+        module.full_stop_worker("a" * 64, execute)
+    else:
+        with pytest.raises(module.ProofFailure, match="worker_stop_unverified"):
+            module.full_stop_worker("a" * 64, execute)
+    assert calls[1] == ["docker", "kill", "--signal", "KILL", "a" * 64]
+
+
+def full_inspect_value():
+    return {
+        "id": "a" * 64,
+        "image": "sha256:" + "b" * 64,
+        "token": "c" * 32,
+        "user": "10001:10001",
+        "host": {
+            "NetworkMode": "none",
+            "Privileged": False,
+            "ReadonlyRootfs": True,
+            "Memory": 512 * 1024 * 1024,
+            "MemorySwap": 512 * 1024 * 1024,
+            "NanoCpus": 1_000_000_000,
+            "PidsLimit": 64,
+            "ShmSize": 64 * 1024 * 1024,
+            "CgroupnsMode": "private",
+            "CapDrop": ["ALL"],
+            "IpcMode": "private",
+            "PidMode": "",
+            "UTSMode": "",
+            "PublishAllPorts": False,
+            "SecurityOpt": ["no-new-privileges:true"],
+            "Tmpfs": module.FULL_TMPFS["worker"],
+            "LogConfig": {"Type": "none", "Config": {}},
+        },
+        "mounts": [],
+    }
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "shm",
+        "memory",
+        "exec_root",
+        "bind",
+        "extra_mount",
+        "host_mount",
+        "mount_shape",
+        "tmpfs",
+    ],
+)
+def test_full_boundary_has_fixed_memory_shm_and_only_declared_scratch(fault):
+    import json
+
+    value = full_inspect_value()
+    if fault == "shm":
+        value["host"]["ShmSize"] *= 2
+    elif fault == "memory":
+        value["host"]["Memory"] *= 2
+    elif fault == "exec_root":
+        value["host"]["ReadonlyRootfs"] = False
+    elif fault == "bind":
+        value["host"]["Binds"] = ["/host:/app"]
+    elif fault == "extra_mount":
+        value["mounts"].append({"Type": "volume", "Destination": "/other"})
+    elif fault == "host_mount":
+        value["host"]["Mounts"] = [{"Type": "tmpfs", "Target": "/other"}]
+    elif fault == "mount_shape":
+        value["mounts"] = None
+    elif fault == "tmpfs":
+        value["host"]["Tmpfs"] = {}
+
+    def execute(*args, **kwargs):
+        return json.dumps(value)
+
+    if fault:
+        with pytest.raises(module.ProofFailure) as caught:
+            module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "canary", execute)
+        assert (
+            caught.value.check
+            == {
+                "shm": "ShmSize",
+                "memory": "Memory",
+                "exec_root": "ReadonlyRootfs",
+                "bind": "attachments",
+                "extra_mount": "Mounts",
+                "host_mount": "HostConfig.Mounts",
+                "mount_shape": "Mounts",
+                "tmpfs": "Tmpfs",
+            }[fault]
+        )
+    else:
+        module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "canary", execute)
+
+
+def full_scratch_value(role):
+    paths = module.FULL_TMPFS[role] | {"/dev/shm": "size=64m,mode=1777"}
+    stats, mounts = [], []
+    for path, raw in paths.items():
+        canonical = "/run/postgresql" if path == "/var/run/postgresql" else path
+        options = dict(part.split("=", 1) if "=" in part else (part, "") for part in raw.split(","))
+        blocks = int(options["size"][:-1]) * 256
+        inodes = int(options.get("nr_inodes", "1024"))
+        stats.extend(
+            [
+                f"{path}|tmpfs|4096|{blocks}|{blocks - 1}|{inodes}|{inodes - 1}",
+                f"{path}|{options.get('uid', '0')}|{options.get('gid', '0')}|"
+                f"{options['mode'].lstrip('0')}",
+                f"{path}|{canonical}",
+            ]
+        )
+        flags = "rw,nosuid,nodev" + ("" if path == "/tmp/ocwp-tests" else ",noexec")
+        mounts.append(f"1 0 0:1 / {canonical} {flags} - tmpfs tmpfs rw")
+    return "\n".join(stats) + "\n---mounts---\n" + "\n".join(mounts)
+
+
+@pytest.mark.parametrize("role", ["worker", "db"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "bytes",
+        "inodes",
+        "space",
+        "flags",
+        "canonical",
+        "mount_missing",
+        "mount_duplicate",
+        "ownership",
+    ],
+)
+def test_full_scratch_uses_kernel_bytes_inodes_permissions_and_flags(role, fault):
+    raw = full_scratch_value(role)
+    if fault == "bytes":
+        raw = raw.replace("|4096|", "|8192|", 1)
+    elif fault == "inodes":
+        lines = raw.splitlines()
+        values = lines[0].split("|")
+        values[5:7] = ["32768", "32767"]
+        lines[0] = "|".join(values)
+        raw = "\n".join(lines)
+    elif fault == "space":
+        raw = raw.replace("|16384|16383|", "|16384|0|", 1)
+    elif fault == "flags":
+        raw = raw.replace("rw,nosuid,nodev,noexec", "rw,nosuid,nodev", 1)
+    elif fault == "ownership":
+        raw = raw.replace("/tmp|0|0|1777\n", "/tmp|1|0|1777\n", 1)
+    elif fault == "canonical":
+        original = "/var/run/postgresql|/run/postgresql" if role == "db" else "/tmp|/tmp"
+        raw = raw.replace(original, original.rsplit("|", 1)[0] + "|/unexpected", 1)
+    elif fault == "mount_missing":
+        raw = raw.rsplit("\n", 1)[0]
+    elif fault == "mount_duplicate":
+        stats, mounts = raw.split("\n---mounts---\n")
+        rows = mounts.splitlines()
+        rows[-1] = rows[0]
+        raw = stats + "\n---mounts---\n" + "\n".join(rows)
+
+    def execute(args, **kwargs):
+        assert args[:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+        command = args[5]
+        assert "readlink -e -- /tmp;" in command
+        if role == "db":
+            assert "readlink -e -- /var/run/postgresql;" in command
+            assert '$5 == "/run/postgresql"' in command
+            assert '$5 == "/var/run/postgresql"' not in command
+        return raw
+
+    if fault:
+        with pytest.raises(module.ProofFailure) as error:
+            module.full_scratch("a" * 64, role, execute)
+        check, path, wanted, observed = {
+            "bytes": ("scratch_bytes", "/tmp", 67108864, 134217728),
+            "inodes": ("scratch_inodes", "/tmp", 16384, 32768),
+            "space": ("scratch_free_blocks", "/tmp", [1, 16384], 0),
+            "flags": ("scratch_mount_noexec", "/tmp", True, False),
+            "canonical": (
+                "scratch_realpath",
+                "/var/run/postgresql" if role == "db" else "/tmp",
+                "/run/postgresql" if role == "db" else "/tmp",
+                "mismatch",
+            ),
+            "mount_missing": ("scratch_mount_rows", None, 4, 3),
+            "mount_duplicate": ("scratch_mount_identity", "/tmp", 1, 2),
+            "ownership": ("scratch_uid", "/tmp", 0, 1),
+        }[fault]
+        assert error.value.check == check
+        assert error.value.scratch == {
+            "path": path,
+            "check": check,
+            "expected": wanted,
+            "observed": observed,
+        }
+    else:
+        module.full_scratch("a" * 64, role, execute)
+
+
+def test_full_preflight_failure_has_no_candidate_launch_and_cannot_qualify(tmp_path, monkeypatch):
+    import json
+
+    def fail(*args, **kwargs):
+        raise module.ProofFailure("source_not_exact_clean_commit")
+
+    monkeypatch.setattr(module, "full_identity", fail)
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    monkeypatch.setattr(module.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    receipt = tmp_path / "receipt.json"
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.supervise_python("worker", "postgres", "c" * 40, receipt, tmp_path / "owned.json")
+    value = json.loads(receipt.read_text())
+    assert value["failure"] == "source_identity"
+    assert value["status"] == "failed"
+    assert value["collection"] is value["result"] is None
+    assert value["primary_cleanup"] == "verified_absent"
+    assert value["independent_cleanup"] == "pending"
+
+
+def test_independent_absence_cannot_promote_failed_or_missing_proof(tmp_path, monkeypatch):
+    import json
+
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    identity = serial_identity("a")
+    serial_environment(monkeypatch, identity)
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+    receipt = tmp_path / "receipt.json"
+    (tmp_path / "owned.owner.json").write_text(json.dumps(serial_owner(identity)))
+    receipt.write_text(json.dumps({"status": "failed", "failure": "wall_budget"}))
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", "c" * 40, receipt, tmp_path / "owned.json")
+    assert json.loads(receipt.read_text())["status"] == "failed"
+    assert json.loads(receipt.read_text())["failure"] == "wall_budget"
+    assert (
+        json.loads((tmp_path / "independent-cleanup.json").read_text())["outcome"]
+        == "verified_absent"
+    )
+
+
+@pytest.mark.parametrize("fault", ["owner", "image", "receipt", "cleanup"])
+def test_finalizer_retains_cleanup_evidence_without_qualification(tmp_path, monkeypatch, fault):
+    import json
+
+    receipt = tmp_path / "receipt.json"
+    owned = tmp_path / "owned.json"
+    expected_identity = serial_identity("a")
+    serial_environment(monkeypatch, expected_identity)
+    if fault != "owner":
+        owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(expected_identity)))
+
+    def reconcile(*args):
+        if fault == "cleanup":
+            raise module.ProofFailure("cleanup_failed")
+
+    def identity(*args):
+        assert fault not in {"owner", "cleanup"}
+        cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+        assert cleanup["outcome"] == "verified_absent"
+        if fault == "image":
+            raise module.ProofFailure("image_identity")
+        return expected_identity
+
+    monkeypatch.setattr(module, "full_reconcile", reconcile)
+    monkeypatch.setattr(module, "full_identity", identity)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", "c" * 40, receipt, owned)
+    cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+    assert cleanup["outcome"] == {"owner": "no_ownership_manifest", "cleanup": "failed"}.get(
+        fault, "verified_absent"
+    )
+    assert cleanup["owner_manifest_present"] is (fault != "owner")
+    assert cleanup["qualification"] == "not_a_receipt"
+    assert cleanup["build_resource_cleanup"] == "not_assessed"
+    assert cleanup["expected_commit"] == "c" * 40
+    assert not receipt.exists()
+
+
+def test_finalizer_still_requires_both_receipt_validations(tmp_path, monkeypatch):
+    import json
+
+    from scripts.ci import verify_v01
+
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(json.dumps({"status": "failed", "failure": "independent_cleanup_pending"}))
+    owned = tmp_path / "owned.json"
+    expected_identity = serial_identity("a")
+    serial_environment(monkeypatch, expected_identity)
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(expected_identity)))
+    calls = []
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    monkeypatch.setattr(module, "full_identity", lambda *args: expected_identity)
+
+    def validate(report, identity, *, allow_pending_cleanup=False):
+        assert identity == expected_identity
+        assert report["status"] == ("failed" if allow_pending_cleanup else "passed")
+        calls.append(allow_pending_cleanup)
+
+    monkeypatch.setattr(verify_v01, "validate_full_python_receipt", validate)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    module.finalize_python("worker", "postgres", "c" * 40, receipt, owned)
+    assert calls == [True, False]
+    assert json.loads(receipt.read_text())["status"] == "passed"
+    assert (
+        json.loads((tmp_path / "independent-cleanup.json").read_text())["qualification"]
+        == "not_a_receipt"
+    )
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "workload",
+        "workload_storage_timeout",
+        "workload_deadline",
+        "memory_oom",
+        "memory_malformed",
+        "memory_timeout",
+        "memory_unavailable",
+        "memory_fast_exit",
+        "memory_stop",
+        "memory_live_deadline",
+        "observer_scratch_timeout",
+        "observer_scratch_readback",
+        "observer_scratch_stop",
+        "observer_cpu",
+        "observer_wait",
+        "observer_poll",
+        "canary_absence",
+        "stop",
+        "cleanup",
+        "create",
+        "inspect",
+        "scratch",
+        "inspect_cleanup",
+    ],
+)
+def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
+    tmp_path, monkeypatch, fault, *, shard="a"
+):
+    import json
+    from types import SimpleNamespace
+
+    from scripts.ci import verify_v01
+
+    events = []
+    created = []
+    allocations = []
+    identity = serial_identity(shard)
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+    monkeypatch.setattr(module.signal, "signal", lambda *args: None)
+
+    def inspect(*args):
+        if fault in {"inspect", "inspect_cleanup"}:
+            raise module.ProofFailure("container_boundary", check="Memory")
+
+    def scratch(*args):
+        if fault == "scratch":
+            raise module.ProofFailure("scratch_allocation")
+        if (
+            "pytest" in events
+            and args[1] == "db"
+            and fault
+            in {
+                "observer_scratch_timeout",
+                "observer_scratch_stop",
+                "observer_scratch_readback",
+            }
+        ):
+            events.append("scratch_failure")
+            raise module.ProofFailure(
+                "scratch_readback" if fault == "observer_scratch_readback" else "command_timeout"
+            )
+
+    monkeypatch.setattr(module, "full_inspect", inspect)
+    monkeypatch.setattr(module, "full_scratch", scratch)
+    monkeypatch.setattr(module, "effective_privileges", lambda *args: None)
+    original_cpu_delta = module.cpu_delta
+
+    def cpu_delta(*args):
+        if fault == "observer_cpu" and "pytest" in events:
+            events.append("cpu_failure")
+            raise module.ProofFailure("cpu_counter_regressed")
+        return original_cpu_delta(*args)
+
+    monkeypatch.setattr(module, "cpu_delta", cpu_delta)
+
+    def canary(*args):
+        assert len(created) == 1 and allocations == [512]
+        if fault == "canary_absence":
+            raise module.ProofFailure("cleanup_failed")
+        events.append("canary_absent")
+        allocations.append(0)
+        return {"cpu_usec": 100, "memory_peak": 8192}
+
+    monkeypatch.setattr(module, "cancellation_canary", canary)
+    monkeypatch.setattr(verify_v01, "validate_full_python_result", lambda *args: {})
+    monkeypatch.setattr(verify_v01, "validate_full_python_collection", lambda *args: {})
+
+    def execute(args, **kwargs):
+        if args[:2] == ["docker", "create"]:
+            if fault == "create":
+                raise module.ProofFailure("command_timeout")
+            role = ("canary", "db", "worker")[len(created)]
+            memory, pids = {"canary": (512, 64), "db": (1024, 128), "worker": (768, 64)}[role]
+            assert args[args.index("--memory") + 1] == f"{memory}m"
+            assert args[args.index("--memory-swap") + 1] == f"{memory}m"
+            assert args[args.index("--pids-limit") + 1] == str(pids)
+            assert args[args.index("--cpus") + 1] == "1"
+            if role != "canary":
+                assert "canary_absent" in events
+            allocations.append(memory + (allocations[-1] if allocations else 0))
+            cid = str(len(created) + 1) * 64
+            created.append(cid)
+            Path(args[args.index("--cidfile") + 1]).write_text(cid)
+            return cid
+        if args[:2] == ["docker", "start"]:
+            return ""
+        if args[:2] == ["docker", "exec"]:
+            if "pg_ls_waldir" in args[-1]:
+                events.append("storage")
+                if fault == "workload_storage_timeout":
+                    raise module.ProofFailure("command_timeout")
+                return "4096|131072|100000|12345\n33554432|83886080\n"
+            if args[-1] == module.PROBE:
+                # No observation may postpone stop after exec exit is known.
+                assert "pytest_exit" not in events
+                role = (
+                    "worker"
+                    if len(created) == 3 and args[2] == created[2]
+                    else "db"
+                    if len(created) > 1 and args[2] == created[1]
+                    else "canary"
+                )
+                events.append("probe_" + role)
+                if role == "worker" and "pytest" in events:
+                    raw = (
+                        probe()
+                        .replace("536870912", "805306368")
+                        .replace("---memory.current---\n4096", "---memory.current---\n8192")
+                    )
+                    raw = raw.replace("---memory.peak---\n8192", "---memory.peak---\n16384")
+                    if events.count("probe_worker") == 3:
+                        if fault == "memory_timeout":
+                            kwargs["abort"]()
+                            raise module.ProofFailure("command_timeout")
+                        if fault == "memory_unavailable":
+                            raise OSError("synthetic private error")
+                        if fault == "memory_malformed":
+                            return "synthetic private output"
+                        if fault == "memory_oom":
+                            return (
+                                raw.replace("oom 0\noom_kill 0\nmax 0", "oom 2\noom_kill 1\nmax 9")
+                                .replace(
+                                    "---memory.current---\n8192", "---memory.current---\n524288000"
+                                )
+                                .replace("---memory.peak---\n16384", "---memory.peak---\n536870912")
+                            )
+                    return raw
+                if len(created) > 1 and args[2] == created[1]:
+                    return (
+                        probe()
+                        .replace("536870912", "1073741824")
+                        .replace("---pids.max---\n64", "---pids.max---\n128")
+                    )
+                return probe().replace("536870912", "805306368") if role == "worker" else probe()
+            if "pg_isready" in args:
+                return ""
+            if args[-2] == "-c":
+                events.append("capture")
+                return "{}"
+        raise AssertionError(args)
+
+    def stop(*args):
+        events.append("stop")
+        if fault in {"stop", "memory_stop", "observer_scratch_stop"}:
+            raise module.ProofFailure("worker_stop_unverified")
+
+    def reconcile(*args):
+        events.append("cleanup")
+        if fault in {"cleanup", "inspect_cleanup"}:
+            raise module.ProofFailure("cleanup_failed")
+
+    def launch(args, **kwargs):
+        events.append("pytest")
+        if fault in {"workload_deadline", "memory_live_deadline"}:
+            expired = module.time.monotonic() + module.FULL_SECONDS + 1
+            monkeypatch.setattr(module.time, "monotonic", lambda: expired)
+        expected_args = verify_v01.full_python_args(shard)
+        assert args[-len(expected_args) :] == list(expected_args)
+        assert "OCWP_QUOTE_MICRO=contained" not in args
+        polls = []
+
+        def poll():
+            if fault and fault.startswith("observer_"):
+                if (
+                    fault == "observer_poll"
+                    and events.count("probe_db") == 2
+                    and "stop" not in events
+                ):
+                    events.append("poll_failure")
+                    raise OSError("private poll error")
+                return 137 if "stop" in events else None
+            if fault and fault.startswith("memory_"):
+                if "stop" in events:
+                    return 137
+                if fault == "memory_live_deadline":
+                    return None
+                polls.append(True)
+                count = 1 if fault in {"memory_fast_exit", "memory_stop"} else 2
+                if len(polls) <= count:
+                    return None
+                events.append("pytest_exit")
+                return 137
+            return 0
+
+        return SimpleNamespace(
+            returncode=137
+            if fault and fault.startswith("memory_")
+            else (1 if fault and fault.startswith("workload") else 0),
+            poll=poll,
+            wait=lambda **kwargs: events.append("reap"),
+        )
+
+    monkeypatch.setattr(module, "full_client", execute)
+    monkeypatch.setattr(module, "full_stop_worker", stop)
+    monkeypatch.setattr(module, "full_reconcile", reconcile)
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+
+    def sleep(_seconds):
+        if fault == "observer_wait" and "pytest" in events:
+            events.append("wait_failure")
+            raise module.ProofFailure("interrupted")
+
+    monkeypatch.setattr(module.time, "sleep", sleep)
+    receipt = tmp_path / shard / "receipt.json"
+    predecessor = None
+    if shard == "b":
+        before = serial_identity("a")
+        monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", before["nonce"])
+        prior = tmp_path / "a" / "independent-cleanup.json"
+        prior.parent.mkdir()
+        record = serial_cleanup(before)
+        prior.write_text(json.dumps(record))
+        predecessor = verify_v01.validate_full_python_cleanup(record, before)
+    if fault:
+        with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+            module.supervise_python(
+                "worker", "pg", "d" * 40, receipt, tmp_path / "owned.json", shard
+            )
+    else:
+        module.supervise_python("worker", "pg", "d" * 40, receipt, tmp_path / "owned.json", shard)
+    value = json.loads(receipt.read_text())
+    cleanup_diagnostic = json.loads(
+        (receipt.parent / "primary-cleanup-diagnostic.json").read_text()
+    )
+    assert cleanup_diagnostic["qualification"] == "not_a_receipt"
+    assert cleanup_diagnostic["outcome"] == value["primary_cleanup"]
+    assert cleanup_diagnostic["failure"] == (
+        "cleanup_failed" if value["primary_cleanup"] == "failed" else None
+    )
+    assert value["containment"]["predecessor_cleanup_sha256"] == predecessor
+    owner = json.loads((tmp_path / "owned.owner.json").read_text())
+    assert owner == serial_owner(identity)
+    assert value["policy"]["worker_memory_mib"] == 768
+    if len(created) == 3:
+        assert allocations == [512, 0, 1024, 1792]
+        assert max(allocations) == 1792
+    if fault == "canary_absence":
+        assert len(created) == 1
+        assert "pytest" not in events
+        assert "canary_absent" not in events
+    assert value["status"] == "failed"
+    assert value["independent_cleanup"] == "pending"
+    if fault is None:
+        assert value["failure"] == "independent_cleanup_pending"
+        assert events.index("capture") < events.index("stop") < events.index("reap")
+        assert value["primary_cleanup"] == "verified_absent"
+    else:
+        assert value["failure"] != "independent_cleanup_pending"
+    if fault in {"workload", "workload_storage_timeout", "workload_deadline", "create"}:
+        assert "capture" not in events
+    if fault in {"workload", "workload_storage_timeout", "workload_deadline"}:
+        assert value["failure"] == "worker_failed"
+        assert value["primary_cleanup"] == "verified_absent"
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
+        assert diagnostic["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": "python_failed",
+            "stage": "worker_exit",
+            "role": "worker",
+        }
+        expected = "captured" if fault == "workload" else "unavailable"
+        assert diagnostic["postgres_storage"]["status"] == expected
+        if fault == "workload_deadline":
+            assert "storage" not in events
+        else:
+            assert events.index("reap") < events.index("storage") < events.index("cleanup")
+    if fault and fault.startswith("memory_"):
+        metadata = json.loads((receipt.parent / "diagnostic.json").read_text())
+        expected_reason = {
+            "memory_oom": "resource_pressure",
+            "memory_malformed": "cgroup_unavailable",
+            "memory_timeout": "command_timeout",
+            "memory_unavailable": "unavailable",
+            "memory_fast_exit": "python_failed",
+            "memory_stop": "python_failed",
+            "memory_live_deadline": "wall_budget",
+        }[fault]
+        expected_stage = (
+            "workload_guard"
+            if fault == "memory_live_deadline"
+            else "worker_exit"
+            if fault in {"memory_fast_exit", "memory_stop"}
+            else "resource_probe"
+        )
+        assert metadata["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": expected_reason,
+            "stage": expected_stage,
+            "role": "worker",
+        }
+        diagnostic = metadata["memory"]
+        assert diagnostic["qualification"] == "not_a_receipt"
+        assert diagnostic["atomic"] is False
+        assert diagnostic["terminal_observation"] == "not_taken"
+        successful = diagnostic["last_successful"]["worker"]
+        observed = diagnostic["last_observed"]["worker"]
+        phase = "preflight" if fault == "memory_live_deadline" else "workload_poll"
+        assert successful == {
+            "phase": phase,
+            "status": "captured",
+            "memory_current_bytes": 4096 if phase == "preflight" else 8192,
+            "memory_peak_bytes": 8192 if phase == "preflight" else 16384,
+            "memory_max_bytes": 805306368,
+            "memory_events": {"max": 0, "oom": 0, "oom_kill": 0},
+        }
+        if fault == "memory_oom":
+            assert observed == successful | {
+                "memory_current_bytes": 524288000,
+                "memory_peak_bytes": 536870912,
+                "memory_events": {"max": 9, "oom": 2, "oom_kill": 1},
+            }
+        elif fault in {"memory_malformed", "memory_timeout", "memory_unavailable"}:
+            assert observed == {
+                "phase": "workload_poll",
+                "status": "unavailable",
+                "reason": "invalid_output" if fault == "memory_malformed" else "probe_incomplete",
+            }
+        else:
+            assert observed == successful
+        assert (
+            value["failure"]
+            == {
+                "memory_oom": "resource_pressure",
+                "memory_malformed": "containment_failed",
+                "memory_timeout": "containment_failed",
+                "memory_unavailable": "invalid_evidence",
+                "memory_fast_exit": "worker_failed",
+                "memory_stop": "worker_stop_unverified",
+                "memory_live_deadline": "wall_budget",
+            }[fault]
+        )
+        exited = fault in {"memory_fast_exit", "memory_stop"}
+        polls = 0 if fault == "memory_live_deadline" else 1 if exited else 2
+        assert events.count("probe_worker") == events.count("probe_db") == polls + 1
+        assert value["containment"]["resource_samples"] == {
+            "worker": 1 if polls == 0 else 2,
+            "db": polls + 1,
+        }
+        assert value["containment"]["worker_exit"] == (137 if exited else None)
+        assert value["containment"]["final_probe"] == "pending"
+        assert value["result"] is None
+        if exited:
+            assert events[events.index("pytest_exit") + 1] == "stop"
+        assert events.index("stop") < events.index("reap")
+        if fault == "memory_stop":
+            assert events.index("stop") < events.index("cleanup") < events.index("reap")
+        else:
+            assert events.index("reap") < events.index("cleanup")
+        assert "synthetic private" not in json.dumps(metadata)
+    if fault and fault.startswith("observer_"):
+        metadata = json.loads((receipt.parent / "diagnostic.json").read_text())
+        assert metadata["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": {
+                "observer_scratch_timeout": "command_timeout",
+                "observer_scratch_stop": "command_timeout",
+                "observer_scratch_readback": "scratch_readback",
+                "observer_cpu": "cpu_counter_regressed",
+                "observer_wait": "interrupted",
+                "observer_poll": "unavailable",
+            }[fault],
+            "stage": "cpu_check"
+            if fault == "observer_cpu"
+            else "workload_guard"
+            if fault in {"observer_wait", "observer_poll"}
+            else "scratch_check",
+            "role": None
+            if fault == "observer_cpu"
+            else "worker"
+            if fault in {"observer_wait", "observer_poll"}
+            else "db",
+        }
+        assert "supervisor_failure" not in value
+        assert value["failure"] == {
+            "observer_scratch_stop": "worker_stop_unverified",
+            "observer_wait": "interrupted",
+            "observer_poll": "invalid_evidence",
+        }.get(fault, "containment_failed")
+        assert value["primary_cleanup"] == "verified_absent"
+        assert value["containment"]["worker_exit"] is None
+        assert value["result"] is None
+        assert events.count("probe_db") == 2
+        assert events.count("probe_worker") == (
+            2 if fault in {"observer_cpu", "observer_wait", "observer_poll"} else 1
+        )
+        failed = {
+            "observer_cpu": "cpu_failure",
+            "observer_wait": "wait_failure",
+            "observer_poll": "poll_failure",
+        }.get(fault, "scratch_failure")
+        assert events[events.index(failed) + 1] == "stop"
+        assert events.index("stop") < events.index("reap")
+        if fault != "observer_scratch_stop":
+            assert events.index("reap") < events.index("cleanup")
+    if fault in {"inspect", "scratch", "inspect_cleanup", "create"}:
+        assert "pytest" not in events
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
+        assert diagnostic["kind"] == "ocwp.full_python.preflight_failure"
+        assert diagnostic["qualification"] == "not_a_receipt"
+        assert diagnostic["status"] == "unqualified"
+        assert diagnostic["identity"] == identity
+        assert diagnostic["role"] == "canary"
+        assert (
+            diagnostic["stage"]
+            == {
+                "inspect": "inspect",
+                "inspect_cleanup": "inspect",
+                "scratch": "scratch",
+                "create": "create",
+            }[fault]
+        )
+        assert (
+            diagnostic["failure"]
+            == {
+                "inspect": "container_boundary",
+                "inspect_cleanup": "container_boundary",
+                "scratch": "scratch_allocation",
+                "create": "command_timeout",
+            }[fault]
+        )
+        assert diagnostic["failed_field"] == (
+            "Memory" if fault in {"inspect", "inspect_cleanup"} else None
+        )
+        assert diagnostic["returncode"] is None
+        assert value["primary_cleanup"] == (
+            "failed" if fault == "inspect_cleanup" else "verified_absent"
+        )
+        assert value["collection"] is value["result"] is None
+    if fault == "stop":
+        assert not (receipt.parent / "diagnostic.txt").exists()
+        diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
+        assert diagnostic["available"] is False
+        assert diagnostic["supervisor_failure"] == {
+            "qualification": "not_a_receipt",
+            "reason": "worker_stop_unverified",
+            "stage": "worker_stop",
+            "role": "worker",
+        }
+    if "reap" in events:
+        assert events.index("stop") < events.index("reap")
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "command_timeout",
+        "command_failed",
+        "scratch_allocation",
+        "limits_not_enforced",
+        "cpu_budget",
+    ],
+)
+def test_supervisor_failure_diagnostic_preserves_only_fixed_identifiers(reason):
+    assert module.full_failure_observation(
+        module.ProofFailure(reason, check="private", scratch={"private": "secret"}),
+        "scratch_check",
+        "db",
+    ) == {
+        "qualification": "not_a_receipt",
+        "reason": reason,
+        "stage": "scratch_check",
+        "role": "db",
+    }
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        module.ProofFailure("private exception " + "x" * module.LIMIT),
+        OSError("command_timeout"),
+        ValueError("private exception"),
+    ],
+)
+def test_supervisor_failure_diagnostic_never_retains_unknown_text(error):
+    assert module.full_failure_observation(error, "private stage", "private role") == {
+        "qualification": "not_a_receipt",
+        "reason": "unavailable",
+        "stage": "unavailable",
+        "role": None,
+    }
+
+
+def test_preflight_diagnostic_is_closed_bounded_and_not_raw_output(tmp_path):
+    import json
+
+    evidence = tmp_path / "receipt.json"
+    module.full_preflight_diagnostic(
+        evidence, None, "start", "canary", module.ProofFailure("command_failed", returncode=-25)
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["returncode"] == -25
+    for check in (
+        "scratch_stat_rows",
+        "scratch_mount_rows",
+        "scratch_realpath",
+        "scratch_stat_shape",
+        "scratch_bytes",
+        "scratch_free_blocks",
+        "scratch_free_inodes",
+        "scratch_inodes",
+        "scratch_ownership_shape",
+        "scratch_ownership_identity",
+        "scratch_uid",
+        "scratch_gid",
+        "scratch_mode",
+        "scratch_mount_identity",
+        "scratch_mount_type",
+        "scratch_mount_rw",
+        "scratch_mount_nosuid",
+        "scratch_mount_nodev",
+        "scratch_mount_noexec",
+        "scratch_format",
+    ):
+        module.full_preflight_diagnostic(
+            evidence, None, "scratch", "db", module.ProofFailure("scratch_readback", check=check)
+        )
+        value = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert value["failed_field"] == check
+        assert value["status"] == "unqualified"
+        assert value["qualification"] == "not_a_receipt"
+    detail = {"path": "/tmp", "check": "scratch_uid", "expected": 0, "observed": 1}
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "scratch",
+        "db",
+        module.ProofFailure("scratch_allocation", check="scratch_uid", scratch=detail),
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["scratch"] == detail
+    interval = {
+        "path": "/tmp",
+        "check": "scratch_free_blocks",
+        "expected": [1, 16384],
+        "observed": 0,
+    }
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "scratch",
+        "db",
+        module.ProofFailure("scratch_allocation", check="scratch_free_blocks", scratch=interval),
+    )
+    assert json.loads((tmp_path / "diagnostic.json").read_text())["scratch"] == interval
+    for bad in (
+        detail | {"path": "/untrusted"},
+        detail | {"check": "untrusted"},
+        detail | {"observed": "untrusted"},
+        detail | {"observed": 2**128},
+        detail | {"extra": True},
+        interval | {"expected": [True, 16384]},
+    ):
+        check = (
+            "scratch_free_blocks" if bad.get("check") == "scratch_free_blocks" else "scratch_uid"
+        )
+        module.full_preflight_diagnostic(
+            evidence,
+            None,
+            "scratch",
+            "db",
+            module.ProofFailure("scratch_allocation", check=check, scratch=bad),
+        )
+        value = json.loads((tmp_path / "diagnostic.json").read_text())
+        assert "scratch" not in value
+        assert value["failure"] == "scratch_allocation"
+        assert value["failed_field"] == check
+        assert value["status"] == "unqualified"
+    module.full_preflight_diagnostic(
+        evidence,
+        None,
+        "untrusted-stage",
+        "untrusted-role",
+        module.ProofFailure("untrusted-output", check="untrusted-field", returncode=2**32),
+    )
+    raw = (tmp_path / "diagnostic.json").read_text()
+    value = json.loads(raw)
+    assert "untrusted" not in raw
+    assert value["stage"] == "unavailable"
+    assert value["failure"] == "invalid_evidence"
+    assert value["role"] is value["failed_field"] is value["returncode"] is None
+    assert len(raw.encode("utf-8")) < module.LIMIT
+    with pytest.raises(module.ProofFailure, match="preflight_diagnostic_limit"):
+        module.full_preflight_diagnostic(
+            evidence, "x" * module.LIMIT, "inspect", "canary", ValueError()
+        )
+    assert (tmp_path / "diagnostic.json").read_text() == raw
+
+
 @pytest.mark.parametrize(
     "old,new",
     [
@@ -636,3 +1864,777 @@ def test_record_failure_diagnostic_refuses_unclosed_fields(change):
     value = dict(stage="create_decode", failure_type="value_error", byte_counts={}) | change
     with pytest.raises(module.ProofFailure):
         module.record_diagnostic(json.dumps(value))
+
+
+@pytest.mark.parametrize("memory_mib", [768, 1024, 2048])
+def test_full_postgres_inspection_accepts_only_fixed_one_gib(memory_mib):
+    import json
+
+    value = full_inspect_value()
+    value["user"] = "postgres"
+    value["host"].update(
+        Memory=memory_mib * 1024 * 1024,
+        MemorySwap=memory_mib * 1024 * 1024,
+        PidsLimit=128,
+        Tmpfs=module.FULL_TMPFS["db"],
+    )
+
+    def execute(*args, **kwargs):
+        return json.dumps(value)
+
+    if memory_mib == 1024:
+        module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "db", execute)
+    else:
+        with pytest.raises(module.ProofFailure, match="container_boundary"):
+            module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", "db", execute)
+
+
+def test_full_postgres_storage_budget_preserves_other_containment():
+    from scripts.ci.verify_v01 import FULL_POLICY
+
+    assert module.FULL_TMPFS["db"]["/var/lib/postgresql"] == (
+        "rw,noexec,nosuid,nodev,size=512m,nr_inodes=32768,mode=1777"
+    )
+    assert FULL_POLICY["postgres_tmpfs_bytes"] == [67108864, 536870912, 16777216]
+    assert FULL_POLICY["postgres_memory_mib"] == 1024
+    assert FULL_POLICY["worker_memory_mib"] == 768
+    assert FULL_POLICY["workload_seconds"] == module.FULL_SECONDS == 900
+    assert FULL_POLICY["postgres_cpu"] == FULL_POLICY["worker_cpu"] == 1
+
+
+def test_full_postgres_checkpoint_trigger_leaves_microfixture_unchanged():
+    import inspect
+
+    from scripts.ci.verify_v01 import FULL_POLICY, FULL_POSTGRES_SETTINGS
+
+    assert FULL_POSTGRES_SETTINGS == {
+        "max_wal_size": "128MB",
+        "min_wal_size": "80MB",
+        "checkpoint_timeout": "5min",
+        "checkpoint_completion_target": "0.9",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+    }
+    assert FULL_POLICY["postgres_wal_checkpoint_trigger_mib"] == 128
+    assert '"max_wal_size=" + FULL_POSTGRES_SETTINGS["max_wal_size"]' in inspect.getsource(
+        module.supervise_python
+    )
+    assert "max_wal_size" not in inspect.getsource(module.supervise)
+
+
+@pytest.mark.parametrize(
+    "raw", ["", "private text", "1|2|3|4\n5|6", "4096|100|101|20\n1|2", "4096|100|80|20\n1|-2"]
+)
+def test_postgres_storage_diagnostic_rejects_untrusted_or_invalid_scalars(raw):
+    with pytest.raises((module.ProofFailure, ValueError)):
+        module.full_postgres_storage("a" * 64, lambda *args, **kwargs: raw)
+
+
+def test_postgres_storage_diagnostic_is_fixed_bounded_and_nonqualifying():
+    calls = []
+
+    def execute(args, **kwargs):
+        calls.append((args, kwargs))
+        return "4096|131072|100000|12345\n33554432|83886080\n"
+
+    observed = module.full_postgres_storage("a" * 64, execute)
+    assert observed == {
+        "status": "captured",
+        "phase": "post_worker_stop",
+        "atomic": False,
+        "qualification": "not_a_receipt",
+        "data_mount_bytes": 536870912,
+        "data_mount_free_bytes": 409600000,
+        "data_mount_free_inodes": 12345,
+        "database_bytes": 33554432,
+        "wal_bytes": 83886080,
+    }
+    assert calls[0][1] == {"timeout": 3, "limit": module.LIMIT}
+    assert calls[0][0][:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+    assert "pg_ls_waldir" in calls[0][0][-1]
+    assert "CHECKPOINT" not in calls[0][0][-1] and "VACUUM" not in calls[0][0][-1]
+
+
+@pytest.mark.parametrize("oversized", [False, True])
+def test_postgres_storage_diagnostic_composes_with_real_client(monkeypatch, oversized):
+    from types import SimpleNamespace
+
+    events = []
+    raw = b"4096|131072|100000|12345\n33554432|83886080"
+    if oversized:
+        raw += b"0" * 1024
+
+    def launch(args, **kwargs):
+        events.append("spawn")
+        assert args[:5] == ["docker", "exec", "a" * 64, "sh", "-c"]
+        kwargs["stdout"].write(raw)
+        kwargs["stdout"].flush()
+        return SimpleNamespace(
+            returncode=0, poll=lambda: 0, wait=lambda **kwargs: events.append("reap")
+        )
+
+    monkeypatch.setattr(module.subprocess, "Popen", launch)
+    if oversized:
+        with pytest.raises(module.ProofFailure, match="storage_diagnostic_size"):
+            module.full_postgres_storage("a" * 64, module.full_client)
+    else:
+        assert module.full_postgres_storage("a" * 64, module.full_client)["status"] == "captured"
+    assert events == ["spawn", "reap"]
+
+
+def test_memory_observation_keeps_pressure_without_weakening_qualification():
+    raw = probe().replace("oom 0\noom_kill 0\nmax 0", "oom 2\noom_kill 1\nmax 9")
+    assert module.full_memory_observation(raw) == {
+        "memory_current_bytes": 4096,
+        "memory_peak_bytes": 8192,
+        "memory_max_bytes": 536870912,
+        "memory_events": {"max": 9, "oom": 2, "oom_kill": 1},
+    }
+    with pytest.raises(module.ProofFailure, match="resource_pressure"):
+        module.parse_probe(raw, 512, 64)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "",
+        "private output",
+        probe().replace("0::/", "0::/private"),
+        probe().replace("oom 0", "oom -1"),
+        probe().replace("oom 0", "oom 0\noom 0"),
+        probe().replace("oom_kill 0", "missing 0"),
+        probe().replace("oom_kill 0", "oom_kill 0 private"),
+        probe().replace("8192", str(2**64)),
+        probe().replace("4096", "-1"),
+        probe().replace("536870912", "max"),
+        probe() + "x" * module.LIMIT,
+    ],
+    ids=[
+        "empty",
+        "private",
+        "wrong_cgroup",
+        "negative_event",
+        "duplicate_event",
+        "missing_event",
+        "malformed_event",
+        "overflow",
+        "negative_current",
+        "non_numeric_max",
+        "oversized",
+    ],
+)
+def test_memory_observation_rejects_malformed_or_unbounded_values(raw):
+    with pytest.raises(ValueError):
+        module.full_memory_observation(raw)
+
+
+@pytest.mark.parametrize(
+    "role,memory_mib,swap_mib",
+    [
+        ("worker", 768, 768),
+        ("worker", 512, 512),
+        ("worker", 1024, 1024),
+        ("worker", 768, 512),
+        ("worker", 768, 1024),
+        ("canary", 512, 512),
+        ("canary", 768, 768),
+        ("db", 1024, 1024),
+        ("db", 768, 768),
+    ],
+)
+def test_full_worker_budget_inspection_is_role_specific(role, memory_mib, swap_mib):
+    import json
+
+    value = full_inspect_value()
+    value["host"].update(Memory=memory_mib * 1024**2, MemorySwap=swap_mib * 1024**2)
+    if role == "db":
+        value["user"] = "postgres"
+        value["host"].update(PidsLimit=128, Tmpfs=module.FULL_TMPFS["db"])
+    expected = {"canary": 512, "db": 1024, "worker": 768}[role]
+
+    def execute(*args, **kwargs):
+        return json.dumps(value)
+
+    if memory_mib == swap_mib == expected:
+        module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", role, execute)
+    else:
+        with pytest.raises(module.ProofFailure, match="container_boundary"):
+            module.full_inspect("a" * 64, "sha256:" + "b" * 64, "c" * 32, "none", role, execute)
+
+
+@pytest.mark.parametrize("memory_mib", [512, 768, 1024])
+def test_full_worker_budget_cgroup_probe_is_exact(memory_mib):
+    assert module.full_role_limits("worker") == (768, 64)
+    assert module.full_role_limits("canary") == (512, 64)
+    assert module.full_role_limits("db") == (1024, 128)
+    raw = probe().replace("536870912", str(memory_mib * 1024**2))
+    if memory_mib == 768:
+        assert module.parse_probe(raw, *module.full_role_limits("worker"))["memory_peak"] == 8192
+    else:
+        with pytest.raises(module.ProofFailure, match="limits_not_enforced"):
+            module.parse_probe(raw, *module.full_role_limits("worker"))
+
+
+def test_full_role_limits_reject_unknown_role():
+    with pytest.raises(module.ProofFailure, match="container_role"):
+        module.full_role_limits("other")
+
+
+def serial_identity(shard):
+    from scripts.ci.verify_v01 import full_python_identity
+
+    return full_python_identity(
+        commit="c" * 40,
+        tree="d" * 40,
+        image_id="sha256:" + "e" * 64,
+        pg_image_id="sha256:" + "f" * 64,
+        nonce={"a": "a" * 32, "b": "b" * 32}[shard],
+        run_id="123",
+        run_attempt="1",
+        shard=shard,
+    )
+
+
+def serial_environment(monkeypatch, identity):
+    monkeypatch.setenv("GITHUB_RUN_ID", identity["run_id"])
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", identity["run_attempt"])
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+
+def serial_owner(identity):
+    return {
+        "token": identity["nonce"],
+        "images": {
+            "db": identity["pg_image_id"],
+            "worker": identity["image_id"],
+            "canary": identity["image_id"],
+        },
+    }
+
+
+def serial_cleanup(identity):
+    return {
+        "schema": 2,
+        "kind": "ocwp.full_python.independent_cleanup",
+        "status": "unqualified",
+        "expected_commit": identity["commit"],
+        "run_id": identity["run_id"],
+        "run_attempt": identity["run_attempt"],
+        "scope": "manifest_owned_canary_database_worker",
+        "owner_manifest_present": True,
+        "owner_token": identity["nonce"],
+        "identity": identity,
+        "outcome": "verified_absent",
+        "build_resource_cleanup": "not_assessed",
+        "qualification": "not_a_receipt",
+    }
+
+
+@pytest.mark.parametrize("shard", ["a", "b"])
+def test_full_serial_identity_uses_only_the_selected_fresh_nonce(monkeypatch, shard):
+    from scripts.ci import verify_v01
+
+    wanted = serial_identity(shard)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", "a" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_B", "b" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE", "0" * 32)
+    monkeypatch.setenv("OCWP_FULL_PYTHON_IMAGE_ID", wanted["image_id"])
+    monkeypatch.setenv("OCWP_FULL_PYTHON_PG_IMAGE_ID", wanted["pg_image_id"])
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
+    monkeypatch.setattr(
+        module,
+        "source_query",
+        lambda kind, execute: {"head": wanted["commit"], "tree": wanted["tree"], "status": ""}[
+            kind
+        ],
+    )
+
+    def execute(args):
+        if "ocwp.source-tree" in args[-2]:
+            return wanted["tree"]
+        return wanted["image_id"] if args[-1] == "worker" else wanted["pg_image_id"]
+
+    observed = module.full_identity(wanted["commit"], "worker", "postgres", execute, shard)
+    assert observed == wanted
+    assert (
+        observed["command_sha256"]
+        == verify_v01.full_python_peer_identity(wanted, shard, wanted["nonce"])["command_sha256"]
+    )
+
+
+@pytest.mark.parametrize("fault", [None, "nonce", "image", "extra", "missing", "symlink"])
+def test_full_serial_cleanup_owner_is_bound_to_expected_invocation(tmp_path, fault):
+    import json
+
+    from scripts.ci.verify_v01 import FullPythonEvidenceError
+
+    identity = serial_identity("a")
+    owned = tmp_path / "owned.json"
+    manifest = serial_owner(identity)
+    if fault == "nonce":
+        manifest["token"] = "0" * 32
+    elif fault == "image":
+        manifest["images"]["db"] = "sha256:" + "0" * 64
+    elif fault == "extra":
+        manifest["other"] = True
+    if fault != "missing":
+        target = owned.with_suffix(".owner.json")
+        if fault == "symlink":
+            real = tmp_path / "other.json"
+            real.write_text(json.dumps(manifest))
+            target.symlink_to(real)
+        else:
+            target.write_text(json.dumps(manifest))
+    if fault:
+        with pytest.raises((module.ProofFailure, FullPythonEvidenceError)):
+            module.full_cleanup_owner(owned, identity)
+    else:
+        assert module.full_cleanup_owner(owned, identity) == identity["nonce"]
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "missing", "unbound", "nonce", "source", "outcome", "duplicate_nonce"]
+)
+def test_full_serial_predecessor_requires_bound_absence_not_a_success_badge(
+    tmp_path, monkeypatch, fault
+):
+    import json
+
+    from scripts.ci.verify_v01 import FullPythonEvidenceError, validate_full_python_cleanup
+
+    before, after = serial_identity("a"), serial_identity("b")
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", before["nonce"])
+    record = serial_cleanup(before)
+    if fault == "unbound":
+        record["identity"] = None
+    elif fault == "nonce":
+        record["owner_token"] = "0" * 32
+    elif fault == "source":
+        record["identity"]["tree"] = "0" * 40
+    elif fault == "outcome":
+        record["outcome"] = "failed"
+    elif fault == "duplicate_nonce":
+        after["nonce"] = before["nonce"]
+    path = tmp_path / "a" / "independent-cleanup.json"
+    path.parent.mkdir()
+    if fault != "missing":
+        path.write_text(json.dumps(record))
+    evidence = tmp_path / "b" / "receipt.json"
+    if fault:
+        with pytest.raises((module.ProofFailure, FullPythonEvidenceError)):
+            module.full_predecessor_cleanup(evidence, after)
+    else:
+        assert module.full_predecessor_cleanup(evidence, after) == validate_full_python_cleanup(
+            record, before
+        )
+    assert (
+        module.full_predecessor_cleanup(tmp_path / "a" / "receipt.json", serial_identity("a"))
+        is None
+    )
+
+
+def test_full_serial_failed_a_still_emits_bound_absence_without_qualifying(tmp_path, monkeypatch):
+    import json
+
+    from scripts.ci.verify_v01 import validate_full_python_cleanup
+
+    identity = serial_identity("a")
+    receipt = tmp_path / "a" / "receipt.json"
+    receipt.parent.mkdir()
+    receipt.write_text(json.dumps({"status": "failed", "failure": "wall_budget"}))
+    owned = tmp_path / "owned-a.json"
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(identity)))
+    output = tmp_path / "step-output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("GITHUB_RUN_ID", identity["run_id"])
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", identity["run_attempt"])
+    events = []
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: events.append("absence"))
+
+    def read_identity(*args):
+        assert events == ["absence"]
+        return identity
+
+    monkeypatch.setattr(module, "full_identity", read_identity)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", identity["commit"], receipt, owned, "a")
+    cleanup = json.loads((receipt.parent / "independent-cleanup.json").read_text())
+    assert validate_full_python_cleanup(cleanup, identity)
+    assert output.read_text() == "cleanup_verified=true\n"
+    assert json.loads(receipt.read_text())["status"] == "failed"
+    assert json.loads(receipt.read_text())["failure"] == "wall_budget"
+
+
+@pytest.mark.parametrize("fault", ["missing", "wrong_owner", "cleanup", "identity"])
+def test_full_serial_unbound_finalizer_never_emits_start_gate(tmp_path, monkeypatch, fault):
+    import json
+
+    identity = serial_identity("a")
+    owned = tmp_path / "owned.json"
+    if fault != "missing":
+        manifest = serial_owner(identity)
+        if fault == "wrong_owner":
+            manifest["token"] = "0" * 32
+        owned.with_suffix(".owner.json").write_text(json.dumps(manifest))
+    output = tmp_path / "step-output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+
+    def reconcile(*args):
+        if fault == "cleanup":
+            raise module.ProofFailure("cleanup_failed")
+
+    def read_identity(*args):
+        if fault == "identity":
+            raise module.ProofFailure("image_identity")
+        return identity
+
+    monkeypatch.setattr(module, "full_reconcile", reconcile)
+    monkeypatch.setattr(module, "full_identity", read_identity)
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python(
+            "worker", "postgres", identity["commit"], tmp_path / "receipt.json", owned, "a"
+        )
+    assert not output.exists()
+
+
+def test_full_serial_b_refuses_creation_without_predecessor_cleanup(tmp_path, monkeypatch):
+    import json
+
+    identity = serial_identity("b")
+    monkeypatch.setenv("OCWP_FULL_PYTHON_NONCE_A", "a" * 32)
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+    monkeypatch.setattr(module.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(module, "full_reconcile", lambda *args: None)
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("spawned"))
+    receipt = tmp_path / "b" / "receipt.json"
+    owned = tmp_path / "owned-b.json"
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.supervise_python("worker", "postgres", identity["commit"], receipt, owned, "b")
+    assert not owned.with_suffix(".owner.json").exists()
+    report = json.loads(receipt.read_text())
+    assert report["status"] == "failed"
+    assert report["containment"]["predecessor_cleanup_sha256"] is None
+    diagnostic = json.loads((receipt.parent / "diagnostic.json").read_text())
+    assert diagnostic["stage"] == "serial_predecessor"
+
+
+@pytest.mark.parametrize("operation", ["--full-python", "--finalize-full-python"])
+def test_full_serial_cli_requires_explicit_shard_before_any_operation(monkeypatch, operation):
+    import sys
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "helper",
+            operation,
+            "--worker-image",
+            "worker",
+            "--pg-image",
+            "pg",
+            "--commit",
+            "c" * 40,
+            "--evidence",
+            "receipt.json",
+            "--owned",
+            "owned.json",
+        ],
+    )
+    monkeypatch.setattr(module, "supervise_python", lambda *args: pytest.fail("unlabelled shard"))
+    monkeypatch.setattr(module, "finalize_python", lambda *args: pytest.fail("unlabelled shard"))
+    with pytest.raises(SystemExit) as error:
+        module.main()
+    assert error.value.code == 1
+
+
+@pytest.mark.parametrize("fault", [None, "workload", "stop", "cleanup"])
+def test_full_serial_b_preserves_stop_reap_cleanup_lifecycle(tmp_path, monkeypatch, fault):
+    test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
+        tmp_path, monkeypatch, fault, shard="b"
+    )
+
+
+def cleanup_fixture(tmp_path, cid_content=None, *, manifest=True):
+    """Finite daemon model: only exact owned IDs can ever reach removal."""
+    import json
+
+    owned = tmp_path / "owned.json"
+    token, image, cid = "a" * 32, "sha256:" + "b" * 64, "c" * 64
+    if manifest:
+        owned.with_suffix(".owner.json").write_text(
+            json.dumps({"token": token, "images": dict.fromkeys(("canary", "db", "worker"), image)})
+        )
+    if cid_content is not None:
+        owned.with_suffix(".canary.cid").write_text(cid_content)
+    present, removed, commands = [cid], [], []
+
+    def execute(args, **kwargs):
+        commands.append(args)
+        if args[1] == "ps":
+            return "\n".join(present)
+        if args[1] == "inspect":
+            assert args[-1] == cid
+            return f"{image}|{token}|/ocwp-quote-{token}-canary"
+        if args[1] == "rm":
+            assert args == ["docker", "rm", "--force", cid]
+            present.remove(cid)
+            removed.append(cid)
+            return cid
+        pytest.fail(f"Unexpected synthetic command: {args}")
+
+    return owned, execute, present, removed, commands
+
+
+@pytest.mark.parametrize("content", [None, "", "\n", "c", "c" * 12, "c" * 63, "c" * 64 + "\n"])
+def test_full_cleanup_incomplete_cid_uses_only_exact_manifest_identity(tmp_path, content):
+    owned, execute, present, removed, commands = cleanup_fixture(tmp_path, content)
+    module.full_reconcile(owned, execute)
+    assert not present
+    assert removed == ["c" * 64]
+    assert [args[1] for args in commands] == ["ps", "ps", "inspect", "rm", "ps"]
+
+
+@pytest.mark.parametrize("content", ["not-an-id", "C" * 12, "c" * 65, "c\nd", "x" * module.LIMIT])
+def test_full_cleanup_malformed_cid_never_reaches_daemon(tmp_path, content):
+    owned, execute, present, removed, commands = cleanup_fixture(tmp_path, content)
+    with pytest.raises(module.ProofFailure, match="container_identity"):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert removed == commands == []
+
+
+@pytest.mark.parametrize("content", ["", "\n", "c" * 12])
+def test_full_cleanup_incomplete_cid_requires_ownership_manifest(tmp_path, content):
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, content, manifest=False)
+    with pytest.raises(module.ProofFailure, match="owner_manifest"):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert not removed
+
+
+@pytest.mark.parametrize("fault", ["image", "token", "name", "foreign_full_id", "manifest"])
+def test_full_cleanup_incomplete_hint_does_not_relax_identity(tmp_path, fault):
+    owned, original, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    if fault == "manifest":
+        owned.with_suffix(".owner.json").write_text("{}")
+    if fault == "foreign_full_id":
+        owned.with_suffix(".worker.cid").write_text("d" * 64)
+
+    def execute(args, **kwargs):
+        result = original(args, **kwargs)
+        if args[1] == "inspect":
+            parts = result.split("|")
+            if fault in {"image", "token", "name"}:
+                parts[{"image": 0, "token": 1, "name": 2}[fault]] = "foreign"
+            return "|".join(parts)
+        if args[1] == "ps" and "--filter" not in args and fault == "foreign_full_id":
+            return result + "\n" + "d" * 64
+        return result
+
+    with pytest.raises(module.ProofFailure):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+    assert not removed
+
+
+@pytest.mark.parametrize("fault", ["list", "inspect", "remove", "still_present"])
+def test_full_cleanup_never_proves_absence_after_daemon_failure(tmp_path, fault):
+    owned, original, present, _removed, _commands = cleanup_fixture(tmp_path, "")
+
+    def execute(args, **kwargs):
+        if (args[1], fault) in {("ps", "list"), ("inspect", "inspect"), ("rm", "remove")}:
+            raise module.ProofFailure("command_timeout")
+        if args[1] == "rm" and fault == "still_present":
+            return "c" * 64
+        return original(args, **kwargs)
+
+    with pytest.raises(module.ProofFailure):
+        module.full_reconcile(owned, execute)
+    assert present == ["c" * 64]
+
+
+@pytest.mark.parametrize(
+    "failure", ["command_timeout", "owner_identity_mismatch", "PRIVATE_CANARY"]
+)
+def test_full_cleanup_diagnostic_is_bounded_and_never_copies_exception(
+    tmp_path, monkeypatch, failure
+):
+    import json
+
+    def reject(*args):
+        raise module.ProofFailure(failure)
+
+    monkeypatch.setattr(module, "full_reconcile", reject)
+    path = tmp_path / "cleanup-diagnostic.json"
+    with pytest.raises(module.ProofFailure, match=failure):
+        module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report == {
+        "schema": 1,
+        "kind": "ocwp.full_python.cleanup_diagnostic",
+        "qualification": "not_a_receipt",
+        "outcome": "failed",
+        "stage": "cidfiles",
+        "cidfiles": dict.fromkeys(("canary", "db", "worker"), "unobserved"),
+        "failure": failure if failure != "PRIVATE_CANARY" else "cleanup_error",
+    }
+    assert "PRIVATE_CANARY" not in path.read_text()
+    assert path.stat().st_size < 512
+
+
+def test_full_cleanup_diagnostic_preserves_success_and_exact_removal(tmp_path):
+    import json
+
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    path = tmp_path / "cleanup-diagnostic.json"
+    module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "verified_absent"
+    assert report["failure"] is None
+    assert report["qualification"] == "not_a_receipt"
+    assert not present
+    assert removed == ["c" * 64]
+
+
+@pytest.mark.parametrize("fault", ["list", "inspect", "remove"])
+def test_full_cleanup_diagnostic_reports_only_fixed_command_stage(tmp_path, fault):
+    import json
+
+    owned, original, _present, _removed, _commands = cleanup_fixture(tmp_path, "")
+    path = tmp_path / "cleanup-diagnostic.json"
+
+    def execute(args, **kwargs):
+        if (args[1], fault) in {("ps", "list"), ("inspect", "inspect"), ("rm", "remove")}:
+            raise module.ProofFailure("command_timeout")
+        return original(args, **kwargs)
+
+    with pytest.raises(module.ProofFailure):
+        module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "failed"
+    assert (
+        report["stage"]
+        == {"list": "list_all", "inspect": "inspect_identity", "remove": "remove_owned"}[fault]
+    )
+    assert report["failure"] == ("cleanup_failed" if fault == "remove" else "command_timeout")
+
+
+def test_full_cleanup_diagnostic_sink_failure_cannot_prevent_cleanup(tmp_path):
+    owned, execute, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    module.diagnosed_full_reconcile(owned, execute, tmp_path / "missing" / "diagnostic.json")
+    assert not present
+    assert removed == ["c" * 64]
+
+
+@pytest.mark.parametrize("kind", ["io", "format"])
+def test_full_cleanup_diagnostic_sanitizes_metadata_errors(tmp_path, monkeypatch, kind):
+    import json
+
+    error = OSError("PRIVATE_CANARY") if kind == "io" else ValueError("PRIVATE_CANARY")
+
+    def reject(*args):
+        raise error
+
+    monkeypatch.setattr(module, "full_reconcile", reject)
+    path = tmp_path / "cleanup-diagnostic.json"
+    with pytest.raises(type(error), match="PRIVATE_CANARY"):
+        module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    assert json.loads(path.read_text())["failure"] == f"metadata_{kind}"
+    assert "PRIVATE_CANARY" not in path.read_text()
+
+
+def test_full_cleanup_independent_absence_keeps_creation_uncertain_failed(tmp_path, monkeypatch):
+    import json
+
+    identity = serial_identity("a")
+    serial_environment(monkeypatch, identity)
+    owned, original, present, removed, _commands = cleanup_fixture(tmp_path, "")
+    owned.with_suffix(".owner.json").write_text(json.dumps(serial_owner(identity)))
+    receipt = tmp_path / "receipt.json"
+    original_receipt = {"status": "failed", "failure": "creation_uncertain"}
+    receipt.write_text(json.dumps(original_receipt))
+    monkeypatch.setattr(module, "full_identity", lambda *args: identity)
+
+    def execute(args, **kwargs):
+        if args[1] == "inspect":
+            return (
+                f"{identity['image_id']}|{identity['nonce']}|/ocwp-quote-{identity['nonce']}-canary"
+            )
+        return original(args, **kwargs)
+
+    monkeypatch.setattr(module, "full_client", execute)
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.finalize_python("worker", "postgres", identity["commit"], receipt, owned)
+    assert not present
+    assert removed == ["c" * 64]
+    assert json.loads(receipt.read_text()) == original_receipt | {
+        "independent_cleanup": "verified_absent"
+    }
+    cleanup = json.loads((tmp_path / "independent-cleanup.json").read_text())
+    assert cleanup["outcome"] == "verified_absent"
+    assert cleanup["qualification"] == "not_a_receipt"
+    diagnostic = json.loads((tmp_path / "independent-cleanup-diagnostic.json").read_text())
+    assert diagnostic["outcome"] == "verified_absent"
+    assert diagnostic["qualification"] == "not_a_receipt"
+
+
+@pytest.mark.parametrize(
+    "content,state",
+    [(None, "missing"), ("", "empty"), ("c" * 12, "partial"), ("c" * 64, "complete")],
+)
+def test_full_cleanup_diagnostic_records_actual_cid_read_state(tmp_path, content, state):
+    import json
+
+    owned, execute, _present, _removed, _commands = cleanup_fixture(tmp_path, content)
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(owned, execute, path)
+    assert json.loads(path.read_text())["cidfiles"] == {
+        "canary": state,
+        "db": "missing",
+        "worker": "missing",
+    }
+
+
+def test_full_cleanup_diagnostic_no_manifest_is_not_verified_absence(tmp_path):
+    import json
+
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(tmp_path / "owned.json", lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "no_ownership_manifest"
+    assert report["stage"] == "verify_absence"
+
+
+def test_full_cleanup_diagnostic_absent_container_still_verifies_final_listing(tmp_path):
+    import json
+
+    owned, _execute, present, _removed, _commands = cleanup_fixture(tmp_path, "")
+    present.clear()
+    path = tmp_path / "diagnostic.json"
+    module.diagnosed_full_reconcile(owned, lambda *args: "", path)
+    report = json.loads(path.read_text())
+    assert report["outcome"] == "verified_absent"
+    assert report["stage"] == "verify_absence"
+
+
+@pytest.mark.parametrize("fault,state", [("invalid", "invalid"), ("directory", "unreadable")])
+def test_full_cleanup_diagnostic_bad_cid_state_never_logs_contents(tmp_path, fault, state):
+    import json
+
+    owned, execute, _present, removed, _commands = cleanup_fixture(tmp_path)
+    cidfile = owned.with_suffix(".canary.cid")
+    if fault == "directory":
+        cidfile.mkdir()
+    else:
+        cidfile.write_text("PRIVATE_CANARY")
+    path = tmp_path / "diagnostic.json"
+    with pytest.raises((module.ProofFailure, OSError)):
+        module.diagnosed_full_reconcile(owned, execute, path)
+    report = json.loads(path.read_text())
+    assert report["cidfiles"] == {"canary": state, "db": "unobserved", "worker": "unobserved"}
+    assert "PRIVATE_CANARY" not in path.read_text()
+    assert not removed

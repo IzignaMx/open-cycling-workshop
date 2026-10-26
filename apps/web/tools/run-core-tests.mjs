@@ -75,6 +75,7 @@ try {
     'tests/administration/model.test.mjs',
     'tests/administration/branding-compatibility.test.mjs',
     'tests/branding/contracts.test.mjs',
+    'tests/branding/readiness.test.mjs',
     'tests/branding/preferences.test.mjs',
     'tests/branding/cache.test.mjs',
     'tests/branding/migration.test.mjs',
