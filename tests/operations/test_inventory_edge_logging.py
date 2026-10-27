@@ -40,3 +40,43 @@ def test_runtime_log_filter_is_identical_and_narrow(filename: str) -> None:
     for path in [NAMESPACE + "-other", NAMESPACE + "ish/products", "/other", "/API/v1/inventory"]:
         target = path + "?before=" + CANARY
         assert re.sub(pattern, r"\1", target) == target
+
+
+@pytest.mark.parametrize("filename", ["Caddyfile", "Caddyfile.lan"])
+@pytest.mark.parametrize("namespace", ["/api/v1/quotes", "/api/v1/service-orders/order-1/quotes"])
+def test_quote_namespaces_redact_complete_queries_without_changing_paths(filename, namespace):
+    pattern = privacy_pattern(filename)
+    paths = [namespace, namespace + "/", namespace + "/revision/authorize"]
+    for index, char in enumerate(namespace):
+        for code in (f"%{ord(char):02x}", f"%{ord(char):02X}"):
+            paths.append(namespace[:index] + code + namespace[index + 1 :])
+    paths += ["http://localhost:8080" + namespace, "https://localhost:8443" + namespace]
+    for path in paths:
+        assert re.sub(pattern, r"\1", path + "?proof=" + CANARY) == path
+
+
+@pytest.mark.parametrize("filename", ["Caddyfile", "Caddyfile.lan"])
+def test_quote_filter_does_not_claim_unrelated_namespaces(filename):
+    pattern = privacy_pattern(filename)
+    for path in (
+        "/api/v1/quotes-other",
+        "/api/v1/quotesish/x",
+        "/api/v1/service-orders/a/quotes-other",
+        "/api/v1/service-orders/a/b/quotes",
+        "/api/v1/service-orders//quotes",
+        "/api/v1/service-orders/a%2fb/quotes",
+        "/api/v1/service-orders/a%2Fb/quotes",
+        "/api/v1/service-orders-other/a/quotes",
+        "/api/v1/Quotes",
+    ):
+        target = path + "?proof=" + CANARY
+        assert re.sub(pattern, r"\1", target) == target
+    path = "/api/v1/service-orders/a%252fb/quotes"
+    assert re.sub(pattern, r"\1", path + "?proof=" + CANARY) == path
+
+
+@pytest.mark.parametrize("filename", ["Caddyfile", "Caddyfile.lan"])
+def test_untrusted_request_id_is_removed_only_from_log_encoding(filename):
+    source = (ROOT / "infra/edge" / filename).read_text()
+    assert "request>headers>X-Request-Id delete" in source
+    assert "request_header" not in source and "header_up" not in source

@@ -1,10 +1,12 @@
 {
 	# Even without access logging, upstream failures log the original request.
-	# Remove only inventory queries at encoding time, including equivalent
-	# percent-encoded paths. Keep method/path/status and other runtime errors.
+	# Remove inventory/quote queries at encoding time, including equivalent
+	# percent-encoded paths. Keep forwarding, method/path/status and other errors.
+	# Caller correlation text is not trustworthy; omit it from logs only.
 	log default {
 		format filter {
-			request>uri regexp `^((?:https?://[^/?#]+)?(?:/|%2[fF])(?:a|%61)(?:p|%70)(?:i|%69)(?:/|%2[fF])(?:v|%76)(?:1|%31)(?:/|%2[fF])(?:i|%69)(?:n|%6[eE])(?:v|%76)(?:e|%65)(?:n|%6[eE])(?:t|%74)(?:o|%6[fF])(?:r|%72)(?:y|%79)(?:(?:/|%2[fF])[^?]*)?)\?.*$` `${1}`
+			request>uri regexp `^((?:https?://[^/?#]+)?(?:/|%2[fF])(?:a|%61)(?:p|%70)(?:i|%69)(?:/|%2[fF])(?:v|%76)(?:1|%31)(?:/|%2[fF])(?:(?:i|%69)(?:n|%6[eE])(?:v|%76)(?:e|%65)(?:n|%6[eE])(?:t|%74)(?:o|%6[fF])(?:r|%72)(?:y|%79)|(?:q|%71)(?:u|%75)(?:o|%6[fF])(?:t|%74)(?:e|%65)(?:s|%73)|(?:s|%73)(?:e|%65)(?:r|%72)(?:v|%76)(?:i|%69)(?:c|%63)(?:e|%65)(?:\-|%2[dD])(?:o|%6[fF])(?:r|%72)(?:d|%64)(?:e|%65)(?:r|%72)(?:s|%73)(?:/|%2[fF])(?:[^/%?]|%(?:[013-9a-fA-F][0-9a-fA-F]|2[0-9a-eA-E]))+(?:/|%2[fF])(?:q|%71)(?:u|%75)(?:o|%6[fF])(?:t|%74)(?:e|%65)(?:s|%73))(?:(?:/|%2[fF])[^?]*)?)\?.*$` `${1}`
+			request>headers>X-Request-Id delete
 			wrap json
 		}
 	}
