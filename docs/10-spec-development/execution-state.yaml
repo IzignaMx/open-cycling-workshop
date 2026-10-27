@@ -1,7 +1,20 @@
 schema: 1
 
+pr_backlog_reconciliation_20261027:
+  status: partial
+  evidence: docs/10-spec-development/2026-10-27-pr-backlog-reconciliation.md
+  inventory: six_open_prs_51_through_56_page_2_empty
+  already_integrated: pr52_pr53_pr54_pr55_actual_ancestors_via_pr57
+  redundant_prs: closed_with_provenance_comments_branches_retained
+  diagnostics: pr51_pr56_failed_consumed_unique_source_archived_inert_not_reexecuted
+  archive_integration_and_diagnostic_closure: pending_exact_source_review_ci_and_merge
+  final_empty_listing: pending_live_verification_record_in_successor_pr
+  deployment_installation_real_grants_quote_activation: not_authorized
+
 quote_ingress_authority_fences_20261027:
-  status: implemented_pending_evidence
+  status: verified
+  verification_scope: merged_7d4c696_source_only_not_real_adoption_or_activation
+  terminal_evidence: docs/10-spec-development/2026-10-27-pr-backlog-reconciliation.md
   evidence: docs/10-spec-development/2026-10-27-quote-ingress-authority-fences.md
   base_main: a9e161f7fdcb986828f85a59c46a5a47015c7b34
   tasks: partial_5_and_8_not_complete
@@ -25,16 +38,17 @@ quote_ingress_authority_fences_20261027:
   local_static: mypy_121_sources_openapi_generated_typescript_ruff_format_318_files_passed
   full_collection: 4794
   added_cases: 67
-  new_postgres_cases: 8_pending_hosted_6_ingress_2_adoption
+  new_postgres_cases: 8_passed_hosted_all_phases_6_ingress_2_adoption
   independent_review: passed_no_blockers_59_passed_8_local_postgres_skips
-  hosted_exact_source: pending
+  hosted_exact_source: passed_postmerge_ci_40474510277_4736_passed_58_expected_skips
   routes_api_schemas_catalog_roles_migrations_and_floor: unchanged
   real_accounts_installation_deployment_reopening_and_quote_activation: not_authorized
   consumed_capacity_trials_and_resource_bounds: unchanged
-  integration: draft_intended_no_merge_authorization
+  integration: merged_pr60_7d4c696_after_specific_approval_postmerge_verified
 
 current_reconciliation_20261027:
   status: partial
+  historical_checkpoint: pr59_source_see_pr_backlog_reconciliation_20261027_for_pr60_and_queue
   evidence: docs/10-spec-development/2026-10-27-pr59-postmerge-reconciliation.md
   merged_main: a9e161f7fdcb986828f85a59c46a5a47015c7b34
   merged_tree: f1258947a0ad4f8b4d9fd2592b1d99b962487de8
@@ -59,7 +73,7 @@ current_reconciliation_20261027:
   next_bounded_scope: tasks_5_8_ingress_enrollment_serialization_and_authority_adoption_fences
   physical_R01_T035_windows_android_laptop_pi: blocked_pending_operator_evidence
   installation_recovery_capacity_and_quote_activation: separate_open_gates
-  future_merge: requires_specific_approval
+  future_merge: current_user_authorized_reviewed_ocw_consolidation_and_spec_continuation_no_bypass
   historical_sections: source_bound_checkpoints_not_a_rerun_or_merge_queue
 
 canary_create_allowance_20261026:

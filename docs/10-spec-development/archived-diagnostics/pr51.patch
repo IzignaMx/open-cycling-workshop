@@ -1,0 +1,1327 @@
+diff --git a/.github/workflows/quote-online-once-20261016.yml b/.github/workflows/quote-online-once-20261016.yml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ca738b31e5d0249a5f3b300b012137b9853f88d8
+--- /dev/null
++++ b/.github/workflows/quote-online-once-20261016.yml
+@@ -0,0 +1,88 @@
++name: Quote online profile one-shot 20261016
++
++on:
++  pull_request:
++    types: [opened]
++
++permissions:
++  contents: read
++
++jobs:
++  quote-online-once:
++    if: >-
++      github.event.action == 'opened' &&
++      github.head_ref == 'codex/quote-online-once-20261016' &&
++      github.event.pull_request.head.repo.full_name == github.repository &&
++      github.repository == 'IzignaMx/open-cycling-workshop' &&
++      github.run_number == '1' && github.run_attempt == '1'
++    runs-on: ubuntu-latest
++    timeout-minutes: 15
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          ref: ${{ github.sha }}
++      - name: Build exact archived source with existing pinned runtime and lock
++        timeout-minutes: 9
++        shell: bash
++        run: |
++          set -euo pipefail
++          context="$(mktemp -d "$RUNNER_TEMP/quote-source.XXXXXX")"
++          git archive HEAD | tar -x -C "$context"
++          tree="$(git rev-parse HEAD^{tree})"
++          timeout --signal=TERM --kill-after=5s 210s docker build --target build \
++            -f "$context/infra/docker/platform.local.Dockerfile" -t ocwp-quote-base "$context"
++          cat > "$RUNNER_TEMP/quote-proof.Dockerfile" <<'DOCKERFILE'
++          FROM ocwp-quote-base
++          RUN uv sync --all-packages --group dev --locked
++          COPY tests /app/tests
++          COPY scripts /app/scripts
++          ARG SOURCE_TREE
++          LABEL ocwp.source-tree=$SOURCE_TREE
++          ENV PYTHONDONTWRITEBYTECODE=1
++          DOCKERFILE
++          timeout --signal=TERM --kill-after=5s 210s docker build \
++            -f "$RUNNER_TEMP/quote-proof.Dockerfile" --build-arg "SOURCE_TREE=$tree" \
++            -t ocwp-quote-micro "$context"
++          timeout --signal=TERM --kill-after=5s 60s docker pull postgres:18.4-trixie
++      - name: One fixed 32 revision plus one initial decision profile
++        timeout-minutes: 3
++        shell: bash
++        run: |
++          set -euo pipefail
++          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
++            --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
++            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-online-owned.json" \
++            --evidence artifacts/quote-online-once.json --online-once
++      - name: Independently verify owned containers absent even after supervisor failure
++        if: always()
++        timeout-minutes: 1
++        shell: bash
++        run: |
++          python3 - <<'PY'
++          import os
++          from pathlib import Path
++          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
++          root = Path(os.environ['RUNNER_TEMP'])
++          failed = False
++          for stem in ('quote-online-owned',):
++              try:
++                  ids = [identifier(path.read_text().strip()) for path in root.glob(f'{stem}.*.cid')]
++                  present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
++                  owned = root / f'{stem}.json'
++                  discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
++                  if not set(ids).intersection(present).issubset(discovered):
++                      raise ProofFailure('owned_identity_reconciliation')
++                  remove_owned(discovered)
++              except (ProofFailure, ValueError, OSError):
++                  failed = True
++          if failed:
++              raise SystemExit('Owned-container cleanup unverified')
++          PY
++      - name: Preserve closed online evidence
++        timeout-minutes: 1
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: quote-online-once-${{ github.run_id }}-${{ github.sha }}
++          path: artifacts/quote-online-once.json
++          if-no-files-found: error
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 4bd53c2f3975f2850bb3ec19de25ab1497a952c5..7eb8b98f080273aac05960c11cea860e8f1331b3 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,14 @@
+ # Changelog
+ 
++## Unreleased · Prepare one gated online quote profile
++
++- Prepare one separately triggered 32-revision/one-initial-decision repository
++  profile using the reviewed legal line/edge recipe, with no restored corrections.
++- Add host-granted operation deadlines and immutable 20/80/20-second phase budgets,
++  exact owned cleanup and an opened-only first-run/first-attempt workflow gate.
++- Record the independently verified PR50 single-record prerequisite; this larger
++  fixture remains unexecuted pending final CI50 and exact independent review.
++
+ ## Unreleased · Prepare contained quote microfixture
+ 
+ - Correct the synthetic evidence reference to a same-length whitespace-free
+diff --git a/MANUAL-ACTIONS-CHECKLIST.md b/MANUAL-ACTIONS-CHECKLIST.md
+index fcd9090d115b6b5f038750d822fe7f992180afa2..4826e477d2452757dfb203b524512953b649cc84 100644
+--- a/MANUAL-ACTIONS-CHECKLIST.md
++++ b/MANUAL-ACTIONS-CHECKLIST.md
+@@ -2,6 +2,21 @@
+ 
+ > Living operational checklist for actions that cannot be proven or completed autonomously from every execution environment. Keep this file current until the corresponding evidence exists in `docs/10-spec-development/execution-state.yaml` and the V0.1 qualification artifact.
+ 
++## One-shot online quote profile · 2026-10-16
++
++- [x] Independently verify PR50 run 38894594316 single-record/canary/cleanup evidence.
++- [ ] Close final exact-head CI50 before opening the separate trial PR.
++- [ ] Independently review exact fixed 39-operation fixture, host deadlines and
++      one-shot trigger; no local domain-history or Docker execution is permitted.
++- [x] Record the accepted remote workflow-metadata limitation: connected list API
++      is unsupported; inspected main/local history has no filename entry. Preserve
++      first-run/first-attempt gates; a skipped run cannot be bypassed by renaming.
++- [ ] Only after those gates, review the one source-bound hosted result and cleanup.
++      A failure requires diagnosis/review; no automatic retry or larger budget.
++- [ ] Keep application fencing/order transition, QA25 percentiles, contention,
++      richer restored history, recovery and operator activation gates open.
++- See [exact trial scope](docs/10-spec-development/2026-10-16-quote-online-profile-once.md).
++
+ ## Quote contained microfixture · 2026-10-16
+ 
+ - Diagnostic run 38893517005 isolated an invalid whitespace-containing fixture
+diff --git a/docs/10-spec-development/2026-10-16-quote-online-profile-once.md b/docs/10-spec-development/2026-10-16-quote-online-profile-once.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..9d8866c27be35fbaa78eee44acf6cbee2cbbeeac
+--- /dev/null
++++ b/docs/10-spec-development/2026-10-16-quote-online-profile-once.md
+@@ -0,0 +1,183 @@
++# Fixed online 32+1 repository profile: one-shot preparation
++
++## Authority and source
++
++Prepare locally from Codex commit 5813fab6863e72398d88da295707458c77b509c6,
++tree 761aa77abd89f5025c4d921258e5ddfb5ec59526, equivalent to PR50 head
++dd224a679db05c3ffa79fc86e1ea48c01f3feca1. Keep the final PR50 worktree untouched.
++Opening the separate draft trial PR, and therefore hosted execution, requires
++terminal CI50 closure and independent exact implementation/input review first.
++No local Docker, PostgreSQL, large specimen construction or full-history run.
++
++## Fixed recipe and assertions
++
++Reuse exactly the approved single-record recipe: 80 labor charges, 10 discounts,
++10 taxes; each adjustment targets the first 50 charges, for 100 lines/1,000 edges.
++Preserve 500-ASCII descriptions, 2,000-ASCII note, 200-ASCII whitespace-free source
++reference, prices and allocation semantics. No padding or input sweep.
++
++Construct one initial revision and 31 revisions through real repository commands,
++with fresh distinct IDs, ordinal/version preconditions and the same legal lines.
++Commit each operation. While still DIAGNOSIS, attempt revision 33 and verify the
++capacity error and unchanged receipts/outbox/order/head. Apply one initial full
++approval to revision 32, deriving the approved set from the locked latest revision.
++Verify 32 revisions, one decision, 33 logical operations, one lineage, 33 receipts
++and 33 outbox records, expected head/version/sequence and totals. Verify the quote
++ledger decision projection; the repository does not itself perform the application
++service-order transition, so no actual online transition or lifecycle enforcement
++claim is made. The production service-order row remains DIAGNOSIS/version 1 here.
++Freshly reconstruct, retry original create, a middle revision and final decision;
++compare exact historical receipts, current ledger equality and unchanged effects.
++This tests repository/storage behavior under the accepted online lifecycle. It
++does not assert implemented HTTP fencing or include restored correction histories.
++
++Measure canonical joined bytes once per record, sum plus 32 commas/two brackets,
++and raw request bytes where an actual decoder is exercised. Do not call synthetic
++repository-only commands HTTP requests. Every joined record must remain <=256 KiB;
++the canonical history must remain <=8,650,786 bytes (33-record universal bound)
++and <=16 MiB. Preserve the exact bounded evidence artifact with numeric sizes and closed metrics
++only, plus per-operation timings. Never emit raw requests, financial proof, SQL,
++exceptions or pytest output.
++
++## Deadlines and cancellation
++
++One immutable host monotonic start T defines setup end T+20, workload end
++min(T+100, actual workload start+80),
++and ordinary finalization end min(T+120, finalization start+20). Setup includes source proof, owned container
++creation, canary removal, actual controllers/privileges and PG readiness. Workload
++includes pytest/bootstrap and all assertions, command construction, reads/retries.
++Finalization includes final counters, closed result validation, removal and absence.
++Every subprocess and poll uses remaining phase time. Early setup completion does
++not allow borrowing extra workload time above 80 seconds. Outer timeout is 120 seconds;
++its 30-second emergency grace is cleanup-only, never more specimen time.
++Normal finalization cannot borrow unused workload time; its 20-second deadline
++is retained across final probes, result validation and removal. Emergency cleanup
++ends by min(T+150, cleanup-entry time+30); the external 120+30 cutoff remains
++authoritative.
++
++Per-operation 20-second watchdog is host-owned and includes Python construction /
++validation, transaction admission, SQL and commit. Proposed minimal handshake:
++the worker announces a fixed operation ordinal as ready and waits. Host records
++its deadline before granting that exact ordinal. Worker performs the operation,
++publishes done and waits for acknowledgement before announcing the next ordinal.
++The host never accepts done after deadline and caps every probe/handshake command
++by min(operation deadline, T+100). Expiry immediately attempts bounded KILL of both exact validated worker/DB IDs,
++then verifies they are not running before normal owner reconciliation/removal.
++Killing only the client is insufficient, as the cancellation canary demonstrated.
++Stop timeout/failure remains failed/unverified and never resumes the specimen.
++No reliance on matching host/container clocks or a post-hoc elapsed assertion.
++Missing, malformed, skipped or illegal transitions fail closed. Repeated polling
++of the same ready/done state is allowed without resetting time; a completed ordinal
++cannot be replayed. Atomically replace state files and use ordinal-specific grant
++and acknowledgement values, so stale files cannot authorize another operation.
++Bootstrap and inter-operation gaps have an additional host 20-second bound capped
++by T+100. No expensive fixture work occurs before its grant.
++The handshake has no user-selected operation or workload configuration.
++
++Keep proven worker 1 CPU/512 MiB/64 PIDs and PG 1 CPU/768 MiB/128 PIDs; no extra swap.
++Lifetime CPU 240 seconds is a defensive aggregate ceiling within 120 wall seconds,
++not efficiency evidence. Preserve actual pressure/identity proofs and external
++owned cleanup. No budget changes on failure. No contention experiment bundled.
++
++### Fixed operation enumeration
++
++Ordinals 1–32: create/revise, including input construction, decode where supported,
++admission, validation, DB apply, commit and joined-record numeric accounting.
++Ordinal 33: attempted revision 33 with unchanged-effects assertion. Ordinal 34:
++initial decision construction, admission/load, approval selection, apply, commit
++and joined-record accounting. Ordinal 35: fresh reconstruction and counts.
++Ordinals 36–38: exact create, revision 16 and initial-decision retries respectively.
++Ordinal 39: final canonical framing/byte-bound assertions and closed evidence write.
++Only tiny imports/fixture DB bootstrap may precede ordinal 1; the host gap deadline
++and phase deadline cover it. There is no user-selected operation list.
++
++## Single deliberate hosted trigger
++
++New uniquely named workflow quote-online-once-20261016.yml, one job, no matrix.
++Only pull_request types:[opened], exact trial head branch and repository identity,
++github.run_number == '1' and github.run_attempt == '1'. No push, synchronize,
++reopened, dispatch or schedule. Use read-only contents permission. Unique owner
++token/run ID and exact archived merge tree retain existing identity checks.
++
++GitHub documents run_number as unique per workflow run, starting 1 and incrementing
++for each new run; rerunning leaves it unchanged. run_attempt increments on reruns:
++https://docs.github.com/en/actions/reference/workflows-and-actions/contexts
++Thus duplicate events producing new runs skip at run_number>1; reruns skip at
++run_attempt>1. A mistakenly consumed first run fails closed; do not rename the
++workflow or raise the number to bypass it. Record available repository history and Actions workflow metadata before publication.
++The connected metadata endpoint is unsupported; the parent explicitly accepted
++that limitation because first-run/first-attempt conditions fail closed. Absence
++on inspected main/local refs is not proof of absence across all repository history. Existing ordinary
++CI workflows continue independently and do not invoke this batch.
++
++## Small local TDD and review gates
++
++- Closed mode/result schema: exact counts, finite nonnegative times, per-record
++  byte caps/framing and allowed ordinals; malformed/missing/excess values reject.
++- Mock immutable phase boundaries and remaining-time propagation, including a
++  subprocess that exits zero after its deadline and setup exhaustion before pytest.
++- Mock handshake ready/grant/done/ack; no early construction, no next operation
++  without acknowledgement, expiry during validation or commit removes owned worker.
++- Mock deadline expiry stops workload; only bounded cleanup continues in grace.
++- Trigger assertions: only opened, exact branch/repository, run1/attempt1, one job;
++  duplicate/new-run2 and rerun attempt2 cannot execute the workload.
++- Existing guard suite, changed-file Ruff, strict mypy, diff/format checks. No
++  selection/import path that constructs the full specimen in local validation.
++
++Independent design review precedes code. Final exact tree/package review precedes
++parent publication; CI50 closure also precedes opening the trial PR. One hosted
++failure is a result requiring diagnosis/review, never an automatic repeat.
++
++## Interpretation
++
++QA section 25 nominal preliminary p50 <150 ms / p95 <500 ms / p99 <1 s targets still require
++representative hardware/load and an explicit heavy-operation exception if relevant.
++Per-operation 20 seconds is containment, not UX acceptance. Sequential full-history
++reconstruction may grow quadratically or worse; the single-record timings do not
++prove this batch fits 80 seconds. Capture a partial failed result if it does not.
++
++## Established prerequisite and remaining review
++
++PR50's corrected fixed specimen passed run
++[38894594316](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38894594316)
++on merge 810f9c50da3094ffd01ba25bec4359ab59bab076 / tree 761aa77abd89f5025c4d921258e5ddfb5ec59526.
++Independent review checked actual limits, cancellation canary, privileges,
++network/source identities, counters and final absence. Joined revision 207781 plus
++initial decision 66065 plus array framing 3 gave 273849 bytes. One fixed record pair
++was qualified; this larger profile has not executed. Earlier failed runs remain
++preserved and are not reclassified as passing.
++
++Accepted ADR
++[online boundary §7](../02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md)
++limits the intended initial workflow to 32 pre-consent revisions then one initial
++decision. Storage's richer 128-decision allowance is distinct. This fixture invokes
++repository commands; it cannot prove application/HTTP lifecycle fencing or the
++actual service-order transition that those layers must implement.
++
++Local repository history has no entry for the new workflow filename. Remote
++Actions workflow-list verification is currently unavailable through the connected
++read tool; its endpoint is unsupported. This is an explicitly accepted metadata limitation, not verified remote absence. First-run/first-attempt conditions remain
++fail-closed even if an earlier workflow identity/run exists. Parent must preserve the first-run conditions before opening the trial PR. The parent has accepted the
++metadata limitation; a skipped first run must be reported without renaming or
++changing the required run number.
++
++No hosted result or exact-tree final review exists for this preparation yet.
++
++Host-measured durations for acknowledged operations and the active ordinal are
++retained even on failure, separately from the fixture-only local timing samples.
++
++## Whole hosted-job wall budget
++
++The dedicated job has a 15-minute (900-second) hard wall timeout, including checkout,
++image preparation, containment/workload, cleanup and artifact upload. Image
++preparation is limited to 9 minutes: two 210-second build commands and a 60-second
++pull, plus reserve for shell/build setup. The workload step is at most 3 minutes
++and retains the stricter 120-second supervisor plus 30-second cleanup-only kill
++grace. Independent cleanup and artifact upload each have a 1-minute timeout. These
++step maxima do not extend the overall 900-second cutoff. Missing cleanup/artifacts
++or a cancelled job cannot qualify the trial.
++
++The 240-CPU-second observed aggregate applies to the contained canary/worker/DB
++lifetimes. Image-preparation CPU is not measured by these cgroup counters and is
++not included in the reported specimen CPU claim. No efficiency claim is inferred
++from either hard ceiling. The original PR50 ordinary workflow remains unchanged.
+diff --git a/docs/10-spec-development/execution-state.yaml b/docs/10-spec-development/execution-state.yaml
+index 936045c324105bf9a4fcc4aef4d6f682350ff405..a937898f46d1823e559cd8e9e4f91e1234b66640 100644
+--- a/docs/10-spec-development/execution-state.yaml
++++ b/docs/10-spec-development/execution-state.yaml
+@@ -2023,3 +2023,16 @@ quote_record_reference_correction_2026_10_16:
+   regression: exact2604byte_decoder_request_red_before_green_after_no_ledger_or_PG
+   boundaries: all_line_edge_money_note_resource_and_deadline_dimensions_unchanged
+   evidence: docs/10-spec-development/2026-10-16-quote-capacity-preflight.md
++
++quote_online_profile_once_2026_10_16:
++  status: local_preparation_independent_source_review_pending_no_execution
++  prerequisite: PR50_run38894594316_tree761aa77_fixed_record_independently_verified
++  scope: fixed32_revisions_one_initial_decision_revision33_refusal_three_retries
++  repository_only: service_order_remains_DIAGNOSIS_version1_application_transition_not_proven
++  host_deadlines: immutable20_setup_80_workload_20_finalization_30_emergency_cleanup_only
++  operation_deadline: host_grant20s_includes_construction_admission_validation_DB_commit
++  trigger: separate_exact_branch_opened_only_run1_attempt1_single_job
++  publication_gates: terminal_CI50_exact_independent_review_first_run_attempt_gates
++  workflow_metadata: unsupported_endpoint_limitation_accepted_no_all_history_absence_claim
++  runtime_evidence: none_no_local_or_hosted_trial_executed
++  evidence: docs/10-spec-development/2026-10-16-quote-online-profile-once.md
+diff --git a/scripts/ci/quote_capacity_micro.py b/scripts/ci/quote_capacity_micro.py
+index f2b78ddea23892d2a663ea25fd0cd190a89abbda..efe12a103f9f64c3627f36489167edf92989ca85 100644
+--- a/scripts/ci/quote_capacity_micro.py
++++ b/scripts/ci/quote_capacity_micro.py
+@@ -1,4 +1,4 @@
+-"""Finite, quote-only hosted containment preflight. There is no maximum mode."""
++"""Quote-only containment, plus one separately gated fixed online-profile trial."""
+ 
+ from __future__ import annotations
+ 
+@@ -41,6 +41,51 @@ class ProofFailure(RuntimeError):
+         self.returncode = returncode
+ 
+ 
++class OnlineGate:
++    """Host-owned clocks for the single reviewed 39-step quote trial."""
++
++    def __init__(self, end: float, now: float) -> None:
++        self.end = end
++        self.deadline = min(end, now + 20)
++        self.ordinal = 0
++        self.state = "bootstrap"
++        self.complete = False
++        self.operation_started = now
++        self.completed_seconds: list[float] = []
++
++    def observe(self, raw: str, now: float) -> str | None:
++        if not math.isfinite(now) or now >= self.deadline:
++            raise ProofFailure("online_operation_deadline")
++        value = json.loads(raw)
++        if (
++            type(value) is not dict
++            or set(value) != {"ordinal", "state"}
++            or type(value["ordinal"]) is not int
++            or type(value["state"]) is not str
++        ):
++            raise ProofFailure("online_handshake")
++        ordinal, state = value["ordinal"], value["state"]
++        if (ordinal, state) == (self.ordinal, self.state):
++            return None
++        if (
++            state == "ready"
++            and self.state in {"bootstrap", "done"}
++            and ordinal == self.ordinal + 1
++            and ordinal <= 39
++        ):
++            self.ordinal, self.state = ordinal, state
++            self.operation_started = now
++            self.deadline = min(self.end, now + 20)
++            return f"grant:{ordinal}"
++        if state == "done" and self.state == "ready" and ordinal == self.ordinal:
++            self.completed_seconds.append(round(now - self.operation_started, 6))
++            self.state = state
++            self.complete = ordinal == 39
++            self.deadline = min(self.end, now + 20)
++            return f"ack:{ordinal}"
++        raise ProofFailure("online_handshake")
++
++
+ def identifier(value: str) -> str:
+     if not re.fullmatch(r"[0-9a-f]{64}", value):
+         raise ProofFailure("container_identity")
+@@ -306,8 +351,11 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) ->
+             client.wait(timeout=2)
+ 
+ 
+-def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
+-    fields = run(
++def inspect_owned(
++    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
++) -> None:
++    execute = execute or run
++    fields = execute(
+         [
+             "docker",
+             "inspect",
+@@ -325,7 +373,7 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
+         or fields[6:] != ["true"]
+     ):
+         raise ProofFailure("container_identity")
+-    mounts = run(
++    mounts = execute(
+         [
+             "docker",
+             "inspect",
+@@ -466,6 +514,63 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
+     return value
+ 
+ 
++def online_result(raw: str) -> dict[str, object]:
++    value = json.loads(raw)
++    fixed = dict(
++        new_operations=33,
++        revisions=32,
++        decisions=1,
++        lines_per_revision=100,
++        target_edges=1000,
++        service_order_state="DIAGNOSIS",
++        service_order_version=1,
++        lock_timeout_ms=15000,
++        statement_timeout_ms=20000,
++        maximum_capacity_qualified=False,
++        revision33_rejected=True,
++        exact_retries=3,
++    )
++    fields = set(fixed) | {
++        "operation_seconds",
++        "process_cpu_seconds",
++        "record_bytes",
++        "history_bytes",
++        "raw_request_bytes",
++    }
++    if type(value) is not dict or set(value) != fields:
++        raise ProofFailure("online_result_shape")
++    if any(type(value[k]) is not type(v) or value[k] != v for k, v in fixed.items()):
++        raise ProofFailure("online_result_value")
++    for key, count, limit in (("record_bytes", 33, 262144), ("raw_request_bytes", 33, 131072)):
++        sizes = value[key]
++        if (
++            type(sizes) is not list
++            or len(sizes) != count
++            or any(type(n) is not int or not 0 < n <= limit for n in sizes)
++        ):
++            raise ProofFailure("online_result_bytes")
++    if (
++        type(value["history_bytes"]) is not int
++        or value["history_bytes"] != sum(value["record_bytes"]) + 34
++        or not 0 < value["history_bytes"] <= 8650786
++    ):
++        raise ProofFailure("online_result_framing")
++    durations = value["operation_seconds"]
++    if (
++        type(durations) is not list
++        or len(durations) != 39
++        or any(
++            type(n) not in (int, float) or not math.isfinite(n) or not 0 <= n < 20
++            for n in durations
++        )
++    ):
++        raise ProofFailure("online_result_timings")
++    cpu = value["process_cpu_seconds"]
++    if type(cpu) not in (int, float) or not math.isfinite(cpu) or not 0 <= cpu < 80:
++        raise ProofFailure("online_result_cpu")
++    return value
++
++
+ def supervise(
+     worker_image: str,
+     pg_image: str,
+@@ -474,9 +579,15 @@ def supervise(
+     owned: Path,
+     *,
+     single_record: bool = False,
++    online_once: bool = False,
+ ) -> None:
+     started = time.monotonic()
+-    command_deadline = started + 900
++    command_deadline = started + (20 if online_once else 900)
++    online_gate: OnlineGate | None = None
++    cpu_budget = 240 if online_once else 600
++    interrupted = False
++    online_started = False
++    final_deadline = started + 120
+     micro_deadline = started  # Expired until the fixed workload actually starts.
+ 
+     def execute(args: list[str], *, timeout: float = 5) -> str:
+@@ -490,13 +601,19 @@ def supervise(
+     report: dict[str, object] = {
+         "schema": 1,
+         "commit": commit,
+-        "mode": "single_record_feasibility" if single_record else "micro_only",
++        "mode": "online_32_plus_1_once"
++        if online_once
++        else "single_record_feasibility"
++        if single_record
++        else "micro_only",
+         "maximum_capacity_qualified": False,
+         "status": "failed",
+         "phase": "setup_and_containment",
+     }
+ 
+     def interrupt(_signum: int, _frame: FrameType | None) -> None:
++        nonlocal interrupted
++        interrupted = True
+         raise ProofFailure("interrupted")
+ 
+     signal.signal(signal.SIGTERM, interrupt)
+@@ -627,7 +744,7 @@ def supervise(
+             creation_uncertain = False
+             ids.append(cid)
+             owned.write_text(json.dumps(ids))
+-            inspect_owned(cid, image, label, network)
++            inspect_owned(cid, image, label, network, execute)
+             execute(["docker", "start", cid])
+             snapshots[role] = parse_probe(
+                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+@@ -664,7 +781,7 @@ def supervise(
+                     "three_generations_survived_client_kill_then_container_absent"
+                 )
+         report["command_stage"] = "database_readiness"
+-        deadline = time.monotonic() + 30
++        deadline = min(time.monotonic() + 30, command_deadline)
+         while True:
+             try:
+                 execute(
+@@ -691,8 +808,26 @@ def supervise(
+         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
+         previous = before
+         with tempfile.TemporaryFile() as output:
+-            micro_deadline = time.monotonic() + 20
+-            command_deadline = micro_deadline
++            micro_deadline = (
++                min(started + 100, time.monotonic() + 80) if online_once else time.monotonic() + 20
++            )
++            if online_once:
++                execute(
++                    [
++                        "docker",
++                        "exec",
++                        ids[1],
++                        "sh",
++                        "-c",
++                        'printf \'%s\' \'{"ordinal":0,"state":"bootstrap"}\' '
++                        "> /tmp/quote-online-state.json",
++                    ]
++                )
++                online_gate = OnlineGate(micro_deadline, time.monotonic())
++            command_deadline = (
++                min(micro_deadline, online_gate.deadline) if online_gate else micro_deadline
++            )
++            online_started = online_once
+             child = subprocess.Popen(
+                 [
+                     "docker",
+@@ -707,7 +842,12 @@ def supervise(
+                     "--tb=no",
+                     "--basetemp=/tmp/quote-micro",
+                     (
+-                        "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
++                        "services/platform/tests/quotes/test_quote_online_once_postgres.py"
++                        if online_once
++                        else (
++                            "services/platform/tests/quotes/"
++                            "test_quote_record_feasibility_postgres.py"
++                        )
+                         if single_record
+                         else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+                     ),
+@@ -720,10 +860,33 @@ def supervise(
+             micro_started = time.monotonic()
+             try:
+                 while child.poll() is None:
+-                    if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
++                    if time.monotonic() >= command_deadline:
+                         raise ProofFailure("wall_budget")
+                     if os.fstat(output.fileno()).st_size >= LIMIT:
+                         raise ProofFailure("output_limit")
++                    if online_gate:
++                        observed = execute(
++                            ["docker", "exec", ids[1], "cat", "/tmp/quote-online-state.json"]
++                        )
++                        grant = online_gate.observe(observed, time.monotonic())
++                        command_deadline = min(micro_deadline, online_gate.deadline)
++                        report["online_progress"] = {
++                            "ordinal": online_gate.ordinal,
++                            "state": online_gate.state,
++                        }
++                        report["host_operation_seconds"] = list(online_gate.completed_seconds)
++                        if grant:
++                            execute(
++                                [
++                                    "docker",
++                                    "exec",
++                                    ids[1],
++                                    "sh",
++                                    "-c",
++                                    f"printf '%s' '{grant}' > /tmp/quote-online-permit.tmp && "
++                                    "mv /tmp/quote-online-permit.tmp /tmp/quote-online-permit",
++                                ]
++                            )
+                     current = {}
+                     for cid, role, memory, pids in [
+                         (ids[0], "db", 768, 128),
+@@ -734,36 +897,42 @@ def supervise(
+                         )
+                         current[role] = snapshots[role]["cpu_usec"]
+                     report["last_sampled_containers"] = dict(snapshots)
+-                    cpu_delta(previous, current, 600)
+-                    cpu_delta(dict.fromkeys(current, 0), current, 600)
++                    cpu_delta(previous, current, cpu_budget)
++                    cpu_delta(dict.fromkeys(current, 0), current, cpu_budget)
+                     previous = current
+                     time.sleep(0.1)
+                 if time.monotonic() >= command_deadline:
+                     raise ProofFailure("wall_budget")
+                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
+                     raise ProofFailure("micro_failed", returncode=child.returncode)
++                if online_gate and not online_gate.complete:
++                    raise ProofFailure("online_incomplete")
+                 report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
+             finally:
+                 if child.poll() is None:
+                     os.killpg(child.pid, signal.SIGKILL)
+                     child.wait(timeout=2)
+-        command_deadline = started + 900
++        if online_once:
++            final_deadline = min(started + 120, time.monotonic() + 20)
++        command_deadline = final_deadline if online_once else started + 900
+         # Containers remain alive: read final cgroup events after workload exit.
+         final = {
+             role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
+             for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
+         }
+-        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
++        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, cpu_budget)
+         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
+-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
++        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, cpu_budget)
+         report["lifetime_cpu_usec"] = lifetime_cpu
+-        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
++        if lifetime_cpu + canary_resources["cpu_usec"] > cpu_budget * 1_000_000:
+             raise ProofFailure("cpu_budget")
+-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
++        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, cpu_budget)
+         report["containers"] = final
+-        micro = micro_result(
+-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+-            single_record=single_record,
++        raw_result = execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"])
++        micro = (
++            online_result(raw_result)
++            if online_once
++            else micro_result(raw_result, single_record=single_record)
+         )
+         report["micro"] = micro
+         if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
+@@ -802,6 +971,32 @@ def supervise(
+                     else "invalid_evidence"
+                 )
+     finally:
++        # After workload failure or termination, only identity reconciliation/removal runs.
++        if online_once:
++            command_deadline = (
++                min(started + 150, time.monotonic() + 30)
++                if interrupted
++                else min(final_deadline, time.monotonic() + 20)
++            )
++        if online_started and report["status"] != "micro_passed_not_capacity":
++            # Client death does not stop in-container Python or an active SQL statement.
++            # Stop both already-validated exact IDs before any owner reconciliation.
++            stopped = True
++            for cid in reversed(ids[:2]):
++                try:
++                    execute(["docker", "kill", "--signal", "KILL", cid], timeout=5)
++                except (ProofFailure, OSError, ValueError):
++                    stopped = False
++            for cid in reversed(ids[:2]):
++                try:
++                    if (
++                        execute(["docker", "inspect", "--format", "{{.State.Running}}", cid])
++                        != "false"
++                    ):
++                        stopped = False
++                except (ProofFailure, OSError, ValueError):
++                    stopped = False
++            report["workload_stop"] = "verified_not_running" if stopped else "failed_or_unverified"
+         try:
+             for role in ("canary", "db", "worker"):
+                 cidfile = owned.with_suffix(f".{role}.cid")
+@@ -810,12 +1005,17 @@ def supervise(
+                     if cid not in ids:
+                         ids.append(cid)
+             if owned.with_suffix(".owner.json").exists():
+-                for cid in reconcile_owned(owned):
++                for cid in reconcile_owned(owned, execute if online_once else None):
+                     if cid not in ids:
+                         ids.append(cid)
+-            remove_owned(ids)
++            if online_once:
++                remove_owned(ids, execute)
++            else:
++                remove_owned(ids)
+             if creation_uncertain:
+                 raise ProofFailure("creation_outcome_uncertain")
++            if online_once and time.monotonic() >= started + 120:
++                report["status"] = "failed"
+             report["cleanup"] = "verified_absent"
+         except (ProofFailure, OSError, ValueError):
+             report["cleanup"] = "failed"
+@@ -834,7 +1034,9 @@ def main() -> None:
+     parser.add_argument("--commit", required=True)
+     parser.add_argument("--evidence", type=Path, required=True)
+     parser.add_argument("--owned", type=Path, required=True)
+-    parser.add_argument("--single-record-feasibility", action="store_true")
++    mode = parser.add_mutually_exclusive_group()
++    mode.add_argument("--single-record-feasibility", action="store_true")
++    mode.add_argument("--online-once", action="store_true")
+     args = parser.parse_args()
+     try:
+         supervise(
+@@ -844,6 +1046,7 @@ def main() -> None:
+             args.evidence,
+             args.owned,
+             single_record=args.single_record_feasibility,
++            online_once=args.online_once,
+         )
+     except ProofFailure:
+         raise SystemExit(1) from None
+diff --git a/services/platform/tests/quotes/test_quote_online_once_postgres.py b/services/platform/tests/quotes/test_quote_online_once_postgres.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..f2af712880e86051fcabd5512e4d834a4e03c84e
+--- /dev/null
++++ b/services/platform/tests/quotes/test_quote_online_once_postgres.py
+@@ -0,0 +1,271 @@
++"""One fixed 32+1 repository profile. Hosted handshake required before construction."""
++
++import json
++import os
++import time
++from contextlib import contextmanager
++from pathlib import Path
++
++import pytest
++from cycling_workshop.quotes.domain import DiscountLine, LaborLine, TaxLine
++from cycling_workshop.quotes.reconstruction import logical_record
++from cycling_workshop.quotes.repository import QuoteConflictError, QuoteRepository
++from cycling_workshop.quotes.requests import decode_initial_decision_request, decode_quote_request
++from cycling_workshop.quotes.storage import canonical_bytes, encode_lines, validate_history_bytes
++from cycling_workshop.service_orders.models import ServiceOrderRecord
++from sqlalchemy import text
++from test_administration_postgres import administration_postgres as administration_postgres
++from test_quote_record_feasibility_postgres import record_reference
++from test_quote_repository import admitted, counts, creation, decision, revision
++from test_quote_repository_postgres import quote_postgres as quote_postgres
++from test_quote_storage import NOW, uid
++
++
++def atomic_state(ordinal, state):
++    path = Path("/tmp/quote-online-state.json")
++    temporary = path.with_suffix(".tmp")
++    temporary.write_text(json.dumps(dict(ordinal=ordinal, state=state)))
++    temporary.replace(path)
++
++
++def wait_permit(value):
++    # Host owns the authoritative deadline and force-removes this container on expiry.
++    path = Path("/tmp/quote-online-permit")
++    while not path.exists() or path.read_text() != value:
++        time.sleep(0.01)
++
++
++@contextmanager
++def operation(ordinal, timings):
++    atomic_state(ordinal, "ready")
++    wait_permit(f"grant:{ordinal}")
++    started = time.monotonic()
++    yield started
++    timings.append(time.monotonic() - started)
++    assert timings[-1] < 20
++    atomic_state(ordinal, "done")
++    wait_permit(f"ack:{ordinal}")
++
++
++@pytest.mark.skipif(
++    os.environ.get("OCWP_QUOTE_MICRO") != "contained",
++    reason="host containment and handshake required",
++)
++def test_one_online_profile(quote_postgres):
++    db = quote_postgres
++    timings = []
++    records = []
++    raw_sizes = []
++    replay_cases = []
++    cpu_started = time.process_time()
++    for ordinal in range(1, 33):
++        with operation(ordinal, timings):
++            if ordinal == 1:
++                with db.factory() as session:
++                    assert session.scalar(text("SHOW lock_timeout")) == "15s"
++                    assert session.scalar(text("SHOW statement_timeout")) == "20s"
++                    assert int(session.scalar(text("SHOW server_version_num"))) // 10000 == 18
++                description = (
++                    "Synthetic inspection of braking steering bearings and drivetrain. " * 8
++                )[:499] + "."
++                assert len(description) == len(description.encode("ascii")) == 500
++                assert " ".join(description.split()) == description
++                charges = tuple(LaborLine(uid(1000 + i), description, 60, 10000) for i in range(80))
++                targets = tuple(line.line_id for line in charges[:50])
++                lines = (
++                    *charges,
++                    *(DiscountLine(uid(1080 + i), description, 50, targets) for i in range(10)),
++                    *(TaxLine(uid(1090 + i), description, 1000, targets) for i in range(10)),
++                )
++            document = dict(
++                kind="create" if ordinal == 1 else "revise",
++                operation_id=uid(199 + ordinal),
++                quote_id=uid(ordinal),
++                expected_order_version=1,
++                lines=encode_lines(lines),
++            )
++            if ordinal == 1:
++                document["currency"] = "MXN"
++            else:
++                document.update(
++                    lineage_id=uid(1),
++                    expected_head_id=uid(ordinal - 1),
++                    expected_head_version=ordinal - 1,
++                    expected_decision_sequence=0,
++                )
++            raw = canonical_bytes(document)
++            request = decode_quote_request([raw])
++            assert all(line.description == description for line in request.lines)
++            common = dict(
++                operation_id=request.operation_id,
++                quote_id=request.quote_id,
++                expected_order_version=request.expected_order_version,
++                lines=request.lines,
++            )
++            command = (
++                creation(**common, currency=request.currency)
++                if ordinal == 1
++                else revision(
++                    **common,
++                    lineage_id=request.lineage_id,
++                    expected_head_id=request.expected_head_id,
++                    expected_head_version=request.expected_head_version,
++                    expected_decision_sequence=request.expected_decision_sequence,
++                )
++            )
++            with db.factory() as session:
++                admitted(session)
++                result = QuoteRepository(session).apply(command, recorded_at=NOW)
++                session.commit()
++            assert result.ledger.history.head.version == ordinal
++            assert result.ledger.sequence == 0
++            totals = result.ledger.history.head.totals
++            assert (
++                totals.subtotal_minor,
++                totals.discount_minor,
++                totals.tax_minor,
++                totals.total_minor,
++            ) == (800000, 500, 499500, 1299000)
++            record = logical_record(command, result.ledger)
++            assert len(canonical_bytes(record)) <= 262144
++            records.append(record)
++            raw_sizes.append(len(raw))
++            if ordinal in (1, 16):
++                replay_cases.append((command, result.receipt))
++    with operation(33, timings):
++        excessive = revision(
++            operation_id=uid(232),
++            quote_id=uid(33),
++            lines=lines,
++            expected_head_id=uid(32),
++            expected_head_version=32,
++        )
++        with db.factory() as session:
++            admitted(session)
++            with pytest.raises(
++                QuoteConflictError, match="quote storage history count limit exceeded"
++            ):
++                QuoteRepository(session).apply(excessive, recorded_at=NOW)
++            assert counts(session) == (1, 32, 32, 32)
++            unchanged = QuoteRepository(session).load("a", "location-a", "order-a")
++            assert unchanged.ledger == result.ledger
++            order = session.get(ServiceOrderRecord, "order-a")
++            assert order.state == "DIAGNOSIS" and order.version == 1
++            session.commit()
++    with operation(34, timings):
++        note = (
++            "Synthetic customer approval recorded for this inspection and itemized estimate. " * 27
++        )[:1999] + "."
++        reference = record_reference()
++        assert len(note) == len(note.encode("ascii")) == 2000
++        assert len(reference) == len(reference.encode("ascii")) == 200
++        raw = canonical_bytes(
++            dict(
++                decision_id=uid(100),
++                expected_order_version=1,
++                lineage_id=uid(1),
++                expected_head_id=uid(32),
++                expected_head_version=32,
++                expected_decision_sequence=0,
++                evidence=dict(
++                    party_kind="customer",
++                    party_id="customer-a",
++                    channel="written",
++                    decided_at="2026-10-15T12:00:00.000000Z",
++                    source_reference=reference,
++                    note=note,
++                ),
++            )
++        )
++        request = decode_initial_decision_request([raw], action="authorize")
++        assert request.approved_line_ids == () and request.expected_order_version == 1
++        with db.factory() as session:
++            admitted(session)
++            locked = QuoteRepository(session).load("a", "location-a", "order-a")
++            selected = tuple(
++                line.line_id
++                for line in locked.ledger.history.head.lines
++                if isinstance(line, LaborLine)
++            )
++            assert len(selected) == 80
++            approve = decision(
++                decision_id=request.decision_id,
++                lineage_id=request.lineage_id,
++                quote_id=request.expected_head_id,
++                quote_version=request.expected_head_version,
++                expected_head_id=request.expected_head_id,
++                expected_head_version=request.expected_head_version,
++                expected_decision_sequence=request.expected_decision_sequence,
++                outcome="APPROVE",
++                approved_line_ids=selected,
++                evidence=request.evidence,
++            )
++            result = QuoteRepository(session).apply(approve, recorded_at=NOW)
++            assert result.order.state == "DIAGNOSIS" and result.order.version == 1
++            assert counts(session) == (1, 32, 33, 33)
++            session.commit()
++        assert result.ledger.sequence == 1
++        assert len(result.ledger.entries) == 1
++        assert result.ledger.entries[-1].command.outcome == "APPROVE"
++        assert result.ledger.entries[-1].command.approved_line_ids == selected
++        pricing = result.ledger.entries[-1].pricing
++        assert (
++            pricing.subtotal_minor,
++            pricing.discount_minor,
++            pricing.tax_minor,
++            pricing.total_minor,
++        ) == (800000, 500, 499500, 1299000)
++        assert sum(len(item.allocations) for item in pricing.discounts) == 500
++        assert sum(len(item.base_line_ids) for item in pricing.taxes) == 500
++        records.append(logical_record(approve, result.ledger))
++        raw_sizes.append(len(raw))
++        replay_cases.append((approve, result.receipt))
++    with operation(35, timings), db.factory() as session:
++        admitted(session)
++        snapshot = QuoteRepository(session).load("a", "location-a", "order-a")
++        assert snapshot.ledger == result.ledger
++        assert len(snapshot.receipts) == 33
++        assert len(snapshot.ledger.history.revisions) == 32
++        assert counts(session) == (1, 32, 33, 33)
++        session.commit()
++    for ordinal, (command, receipt) in enumerate(replay_cases, 36):
++        with operation(ordinal, timings), db.factory() as session:
++            admitted(session)
++            replay = QuoteRepository(session).apply(command, recorded_at=NOW)
++            assert replay.replayed and replay.receipt == receipt
++            assert replay.ledger == snapshot.ledger
++            assert replay.order.state == "DIAGNOSIS" and replay.order.version == 1
++            assert counts(session) == (1, 32, 33, 33)
++            session.commit()
++    with operation(39, timings) as final_started:
++        record_bytes = [len(canonical_bytes(record)) for record in records]
++        history_bytes = len(canonical_bytes(records))
++        validate_history_bytes(records)
++        assert len(record_bytes) == len(raw_sizes) == 33
++        assert all(0 < size <= 262144 for size in record_bytes)
++        assert all(0 < size <= 131072 for size in raw_sizes)
++        assert history_bytes == sum(record_bytes) + 34 <= 8650786
++        # Host deadline includes the evidence write and commit of the done checkpoint.
++        Path("/tmp/quote-micro-result.json").write_text(
++            json.dumps(
++                dict(
++                    new_operations=33,
++                    revisions=32,
++                    decisions=1,
++                    lines_per_revision=100,
++                    target_edges=1000,
++                    service_order_state="DIAGNOSIS",
++                    service_order_version=1,
++                    lock_timeout_ms=15000,
++                    statement_timeout_ms=20000,
++                    maximum_capacity_qualified=False,
++                    revision33_rejected=True,
++                    exact_retries=3,
++                    operation_seconds=[*timings, time.monotonic() - final_started],
++                    process_cpu_seconds=time.process_time() - cpu_started,
++                    record_bytes=record_bytes,
++                    history_bytes=history_bytes,
++                    raw_request_bytes=raw_sizes,
++                )
++            )
++        )
+diff --git a/tests/operations/test_quote_online_once.py b/tests/operations/test_quote_online_once.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e07b7fe1e20ce16b38ebbaa5017b99dd83a2f5a1
+--- /dev/null
++++ b/tests/operations/test_quote_online_once.py
+@@ -0,0 +1,287 @@
++"""Tiny state/deadline tests. No quote specimen or Docker execution."""
++
++import importlib.util
++import json
++from pathlib import Path
++
++import pytest
++
++PATH = Path(__file__).resolve().parents[2] / "scripts/ci/quote_capacity_micro.py"
++spec = importlib.util.spec_from_file_location("online_guard", PATH)
++m = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(m)
++
++
++def state(n, phase):
++    return json.dumps(dict(ordinal=n, state=phase))
++
++
++def test_fixed_handshake_never_refreshes_operation_deadline():
++    gate = m.OnlineGate(100, 0)
++    assert gate.observe(state(0, "bootstrap"), 1) is None
++    assert gate.observe(state(1, "ready"), 2) == "grant:1"
++    assert gate.deadline == 22
++    assert gate.observe(state(1, "ready"), 10) is None
++    assert gate.deadline == 22
++    assert gate.observe(state(1, "done"), 21) == "ack:1"
++    assert gate.observe(state(1, "done"), 22) is None
++    assert gate.observe(state(2, "ready"), 23) == "grant:2"
++    assert gate.deadline == 43
++
++
++@pytest.mark.parametrize(
++    "raw",
++    [state(2, "ready"), state(1, "done"), state(True, "ready"), "{}", "null", state(1, "other")],
++)
++def test_bad_initial_handshake_is_closed(raw):
++    with pytest.raises(m.ProofFailure):
++        m.OnlineGate(100, 0).observe(raw, 1)
++
++
++def test_deadline_covers_grant_command_and_late_success():
++    gate = m.OnlineGate(100, 0)
++    gate.observe(state(1, "ready"), 1)
++    with pytest.raises(m.ProofFailure):
++        gate.observe(state(1, "done"), 21)
++
++
++def test_bootstrap_and_gaps_cannot_hang():
++    gate = m.OnlineGate(100, 0)
++    with pytest.raises(m.ProofFailure):
++        gate.observe(state(0, "bootstrap"), 20)
++    gate = m.OnlineGate(100, 0)
++    gate.observe(state(1, "ready"), 1)
++    gate.observe(state(1, "done"), 2)
++    with pytest.raises(m.ProofFailure):
++        gate.observe(state(1, "done"), 22)
++
++
++def test_exact39_ordinals_and_no_replayed_completed_state():
++    gate = m.OnlineGate(100, 0)
++    for n in range(1, 40):
++        assert gate.observe(state(n, "ready"), n) == f"grant:{n}"
++        assert gate.observe(state(n, "done"), n + 0.1) == f"ack:{n}"
++    assert gate.complete
++    with pytest.raises(m.ProofFailure):
++        gate.observe(state(39, "ready"), 40)
++
++
++def test_aggregate_deadline_caps_last_operation():
++    gate = m.OnlineGate(10, 0)
++    gate.observe(state(1, "ready"), 9)
++    assert gate.deadline == 10
++    with pytest.raises(m.ProofFailure):
++        gate.observe(state(1, "done"), 10)
++
++
++def evidence():
++    return dict(
++        new_operations=33,
++        revisions=32,
++        decisions=1,
++        lines_per_revision=100,
++        target_edges=1000,
++        service_order_state="DIAGNOSIS",
++        service_order_version=1,
++        lock_timeout_ms=15000,
++        statement_timeout_ms=20000,
++        maximum_capacity_qualified=False,
++        operation_seconds=[0.1] * 39,
++        process_cpu_seconds=1.0,
++        record_bytes=[100] * 33,
++        history_bytes=3334,
++        raw_request_bytes=[100] * 33,
++        revision33_rejected=True,
++        exact_retries=3,
++    )
++
++
++def test_online_closed_result_and_framing():
++    assert m.online_result(json.dumps(evidence()))["history_bytes"] == 3334
++
++
++@pytest.mark.parametrize(
++    "key,value",
++    [
++        ("record_bytes", [262145] * 33),
++        ("history_bytes", 3335),
++        ("operation_seconds", [20] * 39),
++        ("new_operations", 34),
++        ("raw_request_bytes", [131073] * 33),
++        ("service_order_state", "AUTHORIZED"),
++        ("exact_retries", 2),
++    ],
++)
++def test_online_invalid_results_reject(key, value):
++    body = evidence()
++    body[key] = value
++    with pytest.raises(m.ProofFailure):
++        m.online_result(json.dumps(body))
++
++
++@pytest.mark.parametrize(
++    "fault",
++    [
++        "none",
++        "setup_deadline",
++        "grant_deadline",
++        "zero_exit_late",
++        "cleanup",
++        "stop_failed",
++        "aggregate",
++        "finalization",
++    ],
++)
++def test_host_deadlines_stop_work_and_cleanup_exact_owned(tmp_path, monkeypatch, fault):
++    from types import SimpleNamespace
++
++    now = [0.0]
++    pending = [state(n, phase) for n in range(1, 40) for phase in ("ready", "done")]
++    containers = []
++    actions = []
++    spawned = []
++    removed = []
++    timeouts = []
++    killed = []
++    monkeypatch.setattr(m.time, "monotonic", lambda: now[0])
++    monkeypatch.setattr(m.time, "sleep", lambda seconds: None)
++    monkeypatch.setattr(m.signal, "signal", lambda *args: None)
++    monkeypatch.setattr(m.os, "killpg", lambda *args: killed.append(args))
++    monkeypatch.setattr(
++        m,
++        "source_query",
++        lambda kind, execute: "c" * 40 if kind == "head" else "d" * 40 if kind == "tree" else "",
++    )
++    monkeypatch.setattr(m, "inspect_owned", lambda *args: None)
++    monkeypatch.setattr(m, "effective_privileges", lambda *args: {"uid": 10001})
++    monkeypatch.setattr(
++        m, "parse_probe", lambda *args: {"cpu_usec": 2_000_000, "memory_peak": 1000}
++    )
++
++    def reconcile(*args):
++        actions.append("reconcile")
++        if fault == "finalization":
++            now[0] += 21
++        return list(containers)
++
++    monkeypatch.setattr(m, "reconcile_owned", reconcile)
++
++    def canary(cid, execute):
++        containers.remove(cid)
++        return dict(cpu_usec=2_000_000, memory_peak=1000)
++
++    monkeypatch.setattr(m, "cancellation_canary", canary)
++
++    def fake_run(args, *, timeout=5):
++        assert 0 < timeout <= 10
++        timeouts.append(timeout)
++        now[0] += 0.001
++        if args[:3] == ["docker", "image", "inspect"]:
++            return "d" * 40 if "ocwp.source-tree" in args[4] else "sha256:" + "e" * 64
++        if args[1] == "create":
++            cid = str(len(containers) + 1) * 64
++            containers.append(cid)
++            Path(args[args.index("--cidfile") + 1]).write_text(cid)
++            if fault == "setup_deadline":
++                now[0] = 21
++            return cid
++        if args[1] == "exec" and args[-1] == "/tmp/quote-online-state.json":
++            if fault == "aggregate":
++                now[0] += 2
++            return pending.pop(0)
++        if args[1] == "exec" and args[-1] == "/tmp/quote-micro-result.json":
++            return json.dumps(evidence())
++        if (
++            args[1] == "exec"
++            and "grant:1" in args[-1]
++            and fault in {"grant_deadline", "stop_failed"}
++        ):
++            now[0] += 20
++        if args[1] == "kill":
++            actions.append("kill")
++            if fault == "stop_failed":
++                raise m.ProofFailure("command_timeout")
++        if args[1] == "inspect":
++            return "false"
++        if args[1] == "rm":
++            if fault == "cleanup":
++                raise m.ProofFailure("cleanup_failed")
++            removed.append(args[-1])
++            containers.remove(args[-1])
++        if args[1] == "ps":
++            return "\n".join(containers)
++        return ""
++
++    monkeypatch.setattr(m, "run", fake_run)
++
++    def popen(*args, **kwargs):
++        spawned.append(1)
++
++        def poll():
++            if fault == "zero_exit_late":
++                now[0] = 101
++                return 0
++            return None if pending else 0
++
++        return SimpleNamespace(poll=poll, returncode=0, pid=999, wait=lambda **kw: None)
++
++    monkeypatch.setattr(m.subprocess, "Popen", popen)
++    output = tmp_path / "result.json"
++    args = ("worker", "pg", "c" * 40, output, tmp_path / "owned.json")
++    if fault == "none":
++        m.supervise(*args, online_once=True)
++    else:
++        with pytest.raises(m.ProofFailure):
++            m.supervise(*args, online_once=True)
++    result = json.loads(output.read_text())
++    assert result["status"] == ("micro_passed_not_capacity" if fault == "none" else "failed")
++    assert result["cleanup"] == (
++        "failed" if fault in {"cleanup", "finalization"} else "verified_absent"
++    )
++    assert len(spawned) == (0 if fault == "setup_deadline" else 1)
++    if fault not in {"cleanup", "finalization"}:
++        assert not containers
++    if fault == "grant_deadline":
++        assert killed and result["online_progress"]["ordinal"] == 1
++    if fault in {"grant_deadline", "zero_exit_late", "stop_failed", "aggregate"}:
++        assert actions[:2] == ["kill", "kill"]
++        assert result["workload_stop"] == (
++            "failed_or_unverified" if fault == "stop_failed" else "verified_not_running"
++        )
++    if fault == "none":
++        assert len(result["host_operation_seconds"]) == 39
++    if fault == "aggregate":
++        assert result["elapsed_seconds"] < 85
++
++
++def test_dedicated_trigger_is_single_opened_run_and_single_job():
++    source = (PATH.parents[2] / ".github/workflows/quote-online-once-20261016.yml").read_text()
++    assert "types: [opened]" in source
++    assert "github.run_number == '1' && github.run_attempt == '1'" in source
++    assert "github.head_ref == 'codex/quote-online-once-20261016'" in source
++    assert "github.event.pull_request.head.repo.full_name == github.repository" in source
++    assert "github.repository == 'IzignaMx/open-cycling-workshop'" in source
++    assert source.count("    runs-on:") == 1
++    assert "--online-once" in source
++    assert all(
++        word not in source
++        for word in (
++            "workflow_dispatch:",
++            "schedule:",
++            "push:",
++            "matrix:",
++            "synchronize",
++            "reopened",
++        )
++    )
++
++
++def test_whole_job_and_preparation_deadlines_are_explicit():
++    source = (PATH.parents[2] / ".github/workflows/quote-online-once-20261016.yml").read_text()
++    assert "    timeout-minutes: 15" in source
++    assert "        timeout-minutes: 9" in source
++    assert source.count("--kill-after=5s 210s docker build") == 2
++    assert "--kill-after=5s 60s docker pull" in source
++    assert "--kill-after=30s 120s python3" in source
++    assert "timeout-minutes: 20" not in source
++    assert "timeout-minutes: 12" not in source

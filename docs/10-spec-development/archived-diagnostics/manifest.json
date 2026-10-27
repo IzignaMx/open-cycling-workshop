@@ -1,0 +1,113 @@
+{
+  "status": "historical_failed_consumed_not_executable",
+  "audited_main": "7d4c696666f1c129e10d7ead61cb6a0f7ba81f41",
+  "entries": [
+    {
+      "pr": 51,
+      "base": "dd224a679db05c3ffa79fc86e1ea48c01f3feca1",
+      "head": "530dd39637453796375c15e15ec713d181dc5edb",
+      "tree": "8ae1eeea20b52253b776243597be57b6e381b702",
+      "patch": "pr51.patch",
+      "bytes": 61959,
+      "sha256": "2c1a1481f41351c8647f7cf2dc1468a12cfa9d7a5a14ba08fa64942b0085b83c",
+      "files": [
+        {
+          "path": ".github/workflows/quote-online-once-20261016.yml",
+          "head_blob": "ca738b31e5d0249a5f3b300b012137b9853f88d8",
+          "status": "added"
+        },
+        {
+          "path": "CHANGELOG.md",
+          "head_blob": "7eb8b98f080273aac05960c11cea860e8f1331b3",
+          "status": "modified"
+        },
+        {
+          "path": "MANUAL-ACTIONS-CHECKLIST.md",
+          "head_blob": "4826e477d2452757dfb203b524512953b649cc84",
+          "status": "modified"
+        },
+        {
+          "path": "docs/10-spec-development/2026-10-16-quote-online-profile-once.md",
+          "head_blob": "9d8866c27be35fbaa78eee44acf6cbee2cbbeeac",
+          "status": "added"
+        },
+        {
+          "path": "docs/10-spec-development/execution-state.yaml",
+          "head_blob": "a937898f46d1823e559cd8e9e4f91e1234b66640",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/ci/quote_capacity_micro.py",
+          "head_blob": "efe12a103f9f64c3627f36489167edf92989ca85",
+          "status": "modified"
+        },
+        {
+          "path": "services/platform/tests/quotes/test_quote_online_once_postgres.py",
+          "head_blob": "f2af712880e86051fcabd5512e4d834a4e03c84e",
+          "status": "added"
+        },
+        {
+          "path": "tests/operations/test_quote_online_once.py",
+          "head_blob": "e07b7fe1e20ce16b38ebbaa5017b99dd83a2f5a1",
+          "status": "added"
+        }
+      ]
+    },
+    {
+      "pr": 56,
+      "base": "7c0dc84bf763cac7523f55f4fbc7d0a06c362b07",
+      "head": "20ad4451a4af962560b0315ee5b58e4bc0cf1d42",
+      "tree": "d108b36942e0daa88508634e67b1f2e53fe7bba8",
+      "patch": "pr56.patch",
+      "bytes": 89557,
+      "sha256": "b46d4e4d30d0066ec460a24bde91b5e08802f8d34737c92c1bb1088329b7532a",
+      "files": [
+        {
+          "path": ".github/workflows/quote-four-revision-profile.yml",
+          "head_blob": "3fa3497c51e846c3b635f05ac57b172c57c8088a",
+          "status": "added"
+        },
+        {
+          "path": "CHANGELOG.md",
+          "head_blob": "db27bfe82669e63ddcf6bc35cdc2c1c216b0ab04",
+          "status": "modified"
+        },
+        {
+          "path": "MANUAL-ACTIONS-CHECKLIST.md",
+          "head_blob": "1f1459d669ce1428f425d8bc0dd2c1a0e01038ae",
+          "status": "modified"
+        },
+        {
+          "path": "docs/10-spec-development/2026-10-16-quote-four-revision-profile.md",
+          "head_blob": "80b4ef968e447fabf13c0c13de2849ba51612a40",
+          "status": "added"
+        },
+        {
+          "path": "docs/10-spec-development/execution-state.yaml",
+          "head_blob": "fe338ce199c8f705077b99e4e720296463827b24",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/ci/quote_capacity_micro.py",
+          "head_blob": "1a1fd27300b109cf5717bf0866270fbb86ca7200",
+          "status": "modified"
+        },
+        {
+          "path": "services/platform/tests/quotes/test_quote_profile_postgres.py",
+          "head_blob": "406230205104249a00a3433a8f5839ac541766ae",
+          "status": "added"
+        },
+        {
+          "path": "tests/operations/test_quote_capacity_micro.py",
+          "head_blob": "38977b187e54cd9e8e6333f9515c680820621606",
+          "status": "modified"
+        },
+        {
+          "path": "tests/operations/test_quote_profile_guard.py",
+          "head_blob": "8f5747dd658c3b372e5481c0e88a94981e669dfc",
+          "status": "added"
+        }
+      ]
+    }
+  ]
+}

@@ -2,27 +2,28 @@
 
 ## Current queue · 2026-10-27
 
-- [x] Merge PR #58 and PR #59 under their specific approvals; verify main
-      `a9e161f7fdcb986828f85a59c46a5a47015c7b34` with CI 40428504739:
-      27/27, 4,727 collected / 4,669 passed / 58 expected skips, six restores,
-      both shards' primary/independent cleanup and direct/aggregate 86/86 retry 0.
-- [x] Close the canary allowance and full-history recovery hosted-evidence queue
-      for that source. Preserve earlier failures and unknown historical cleanup.
-- [ ] Complete and independently qualify Tasks 5/8 ingress/enrollment serialization
-      and authority/grant-adoption fences before any quote exposure. The
-      [bounded candidate](docs/10-spec-development/2026-10-27-quote-ingress-authority-fences.md)
-      needs final local/static/contracts, independent source review and exact-head
-      hosted PostgreSQL races/full qualification. Synthetic CLI tests do not
-      authorize real-account adoption or close mixed-old-writer rollout gates.
-- [ ] Keep R01-T035 and physical Windows/Android/laptop/Pi/manual accessibility
-      acceptance open; hosted browser/native ARM64 do not replace real devices.
-- [ ] Complete separately authorized installation inventory, isolated corruption/
-      actual-volume restore and measured RPO/RTO before reopening any installation.
-- [ ] Keep capacity/latency, transport/cancellation, old-writer and quote API/UI
-      activation gates separate. Do not repeat consumed trials or change limits.
-      Future PR merge needs specific approval; no deployment is authorized.
+- [x] Verify PR60 merged main `7d4c696` with CI 40474510277: 27/27,
+      4,794 collected / 4,736 passed / 58 expected skips, eight new actual-PG
+      cases and six restores all phases, both primary/independent cleanup proofs,
+      direct/aggregate 86/86 retry 0 and clean 20 + 9 + 5 + 10 repetitions.
+- [x] Close PR52–55 as actual main ancestors via PR57 after per-file and independent
+      review. Preserve original commits, branches and historical failures.
+- [ ] Integrate reviewed inert exact-diff archives for unique failed/consumed
+      PR51/56, then close them with replacement links and verify the open-PR list
+      is empty. No reexecution, workflow revival or branch deletion.
+- [ ] Continue bounded Tasks 5/8 inactive HTTP privacy/streaming prerequisites;
+      legacy ingress/enrollment and synthetic quote-adoption CLI are verified
+      on PR60, not full lifecycle or real-account adoption. Keep synchronous
+      Python/DB cancellation/total deadlines and mixed-old-writer gates open.
+- [ ] Keep R01-T035 physical Windows/Android/laptop/Pi/manual accessibility open;
+      hosted browser/native ARM64 do not replace actual devices.
+- [ ] Complete separately authorized installation inventory, isolated corruption,
+      actual-volume restore and measured RPO/RTO before reopening an installation.
+- [ ] Keep capacity/latency and quote API/UI activation separate. Do not repeat
+      consumed trials or change limits. Current user authorizes reviewed/tested
+      OCW consolidation and spec continuation, not bypass, deployment or grants.
 
-See [the source-bound terminal record](docs/10-spec-development/2026-10-27-pr59-postmerge-reconciliation.md).
+See the [current source-bound disposition/evidence record](docs/10-spec-development/2026-10-27-pr-backlog-reconciliation.md).
 All dated sections below retain their original checkpoint instructions/results;
 stale pending, draft and merge wording is historical, not the current action queue.
 
