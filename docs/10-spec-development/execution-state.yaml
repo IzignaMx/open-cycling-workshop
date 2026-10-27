@@ -1,5 +1,32 @@
 schema: 1
 
+canary_create_allowance_20261026:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-10-26-canary-create-allowance.md
+  approval: explicit_user_canary_only_5_to_15_and_one_new_validation
+  base_head: 3ac17ce16da87f46750b2b2d7af4c03c5d963ae2
+  base_tree: 6b367aed3e30d3f429d2d9c86ded344eb2bbd676
+  preserved_failed_ci: 40406623072
+  preserved_failure: canary_create_command_timeout_before_collection_creation_uncertain
+  preserved_owned_cleanup_both_shards: primary_and_independent_verified_absent
+  historical_40249194704_absence: unproven
+  underlying_delay_and_new_allowance_sufficiency: unknown
+  canary_create_seconds: 15
+  remaining_setup_cap_seconds: 65
+  other_default_controls_and_db_worker_create_seconds: 5
+  workload_supervisor_cleanup_seconds: unchanged_900_1020_55
+  job_minutes: unchanged_55
+  resource_safety_ownership_skip_restore_and_qualification_assertions: unchanged
+  finite_red: 32_failed_6_passed
+  finite_focused_green: 38_passed
+  combined_local_green: 509_passed_zero_skips
+  full_collection: 4727
+  independent_review: passed_source_docs_and_509_checks
+  new_hosted_validations_authorized: 1
+  hosted_exact_source: pending
+  pr59_merge: discretionary_only_after_qualified_checks
+  deployment_installation_reopening_quote_activation: not_authorized
+
 full_history_recovery_20261026:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-10-26-full-history-recovery.md

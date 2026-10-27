@@ -1,5 +1,16 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-26 · Approved canary-create allowance
+
+- [x] Complete independent source/documentation review and 509 local checks for
+      canary-only 5→15 seconds within unchanged 65-second setup.
+- [ ] Complete the single authorized exact-source normal hosted validation.
+      Stop on failure; no automatic retry or further limit change is authorized.
+- [ ] Consider PR59 merge only after required qualification and final review;
+      deployment, installation reopening and quote activation remain excluded.
+      Preserve old failures and historical cleanup uncertainty. See
+      [the evidence boundary](docs/10-spec-development/2026-10-26-canary-create-allowance.md).
+
 ## 2026-10-26 · Full-history recovery gate
 
 - [x] Complete independent source review and 89 focused recovery/operator tests.

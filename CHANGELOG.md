@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-26 · Approved canary-create allowance
+
+- Increase only full-Python canary `docker create` allowance from five to fifteen
+  seconds, still capped by remaining unchanged 65-second setup time. Database and
+  worker creates, other controls, all resource limits and qualification/cleanup
+  gates are unchanged. One new exact-source validation is authorized; no success
+  or underlying timeout cause is inferred. See
+  [the source-bound record](docs/10-spec-development/2026-10-26-canary-create-allowance.md).
+
 ## 2026-10-26 · Legacy recovery fixture schema correction
 
 - Preserve PR59's first failed CI checkpoint; replace its synthetic current-schema
