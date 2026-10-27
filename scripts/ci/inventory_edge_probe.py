@@ -28,6 +28,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "caddy:2.11.7-alpine"
 PRIVATE = "inventory-edge-private-canary"
+REQUEST_ID = "private-edge-request-id-canary"
 UNRELATED = "inventory-edge-unrelated-canary"
 MAX_COMMAND_OUTPUT = 64 * 1024
 SOURCE_PATHS = (
@@ -162,9 +163,16 @@ def startup_log_hints(name: str) -> dict[str, Any]:
 
 
 def check_logs(
-    logs: str, private: list[str], unrelated: str, expected_paths: list[str]
+    logs: str,
+    private: list[str],
+    unrelated: str | list[str],
+    expected_paths: list[str],
+    *,
+    quote_paths: list[str] | None = None,
 ) -> dict[str, Any]:
-    assert all(canary not in logs for canary in private), "private inventory query was logged"
+    assert all(canary not in logs for canary in private), "private query was logged"
+    assert REQUEST_ID not in logs, "private request ID was logged"
+    quote_paths = quote_paths or []
     errors = []
     for line in logs.splitlines():
         try:
@@ -178,26 +186,34 @@ def check_logs(
             and row.get("logger") == "http.log.error"
         ):
             errors.append(row)
-    for path in expected_paths:
+    for path in [*expected_paths, *quote_paths]:
         matching = [row for row in errors if row["request"].get("uri") == path]
-        assert matching, "missing actual inventory error log"
+        assert matching, "missing actual private error log"
         assert all(
             row["request"].get("method") == "GET" and row.get("status") in (502, 503)
             for row in matching
         )
-    assert any(unrelated in row["request"].get("uri", "") for row in errors), (
-        "unrelated query was suppressed"
-    )
+    unrelated_markers = [unrelated] if isinstance(unrelated, str) else unrelated
+    assert unrelated_markers
+    assert all(
+        any(marker in row["request"].get("uri", "") for row in errors)
+        for marker in unrelated_markers
+    ), "unrelated query was suppressed"
     return {
         "inventory_errors": len(expected_paths),
+        "quote_errors": len(quote_paths),
+        "private_request_ids_absent": True,
         "unrelated_query_preserved": True,
+        "unrelated_queries_verified": len(unrelated_markers),
         "private_queries_absent": True,
     }
 
 
 class SyntheticUpstream(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
-        body = json.dumps({"target": self.path}).encode()
+        body = json.dumps(
+            {"target": self.path, "request_id": self.headers.get("X-Request-ID")}
+        ).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -212,14 +228,16 @@ def docker(*args: str, timeout: int = 120) -> str:
     return run_bounded_command(["docker", *args], timeout=timeout)
 
 
-def request(target: str, *, tls: ssl.SSLContext | None) -> tuple[int, dict[str, str], bytes]:
+def request(
+    target: str, *, tls: ssl.SSLContext | None, headers: dict[str, str] | None = None
+) -> tuple[int, dict[str, str], bytes]:
     connection: http.client.HTTPConnection
     if tls is None:
         connection = http.client.HTTPConnection("127.0.0.1", 8080, timeout=5)
     else:
         connection = http.client.HTTPSConnection("localhost", 8443, context=tls, timeout=5)
     try:
-        connection.request("GET", target)
+        connection.request("GET", target, headers=headers or {})
         response = connection.getresponse()
         return response.status, dict(response.getheaders()), response.read(8192)
     finally:
@@ -382,6 +400,33 @@ def prepare_images(tag: str, base: Path, evidence: dict[str, Any]) -> str:
         raise EdgeProbeFailure({"phase": phase, **safe_error(error)}) from None
 
 
+def private_paths(*, tls: bool) -> tuple[list[str], list[str]]:
+    """Fixed bounded synthetic matrix; no selectors or size sweep."""
+    origin = "https://localhost:8443" if tls else "http://127.0.0.1:8080"
+    inventory = [
+        "/api/v1/inventory",
+        "/api/v1/inventory/",
+        "/api/v1/inventory/products/p/movements",
+        "/%61pi/v1/inventory/products",
+        "/api/v1/inventory%2Fproducts",
+    ]
+    inventory.append(origin + inventory[2])
+    quotes = [
+        "/api/v1/quotes",
+        "/api/v1/quotes/",
+        "/api/v1/quotes/revision/authorize",
+        "/%61pi/v1/%71uotes/revision",
+        "/api/v1/quotes%2Frevision",
+        "/api/v1/service-orders/order-1/quotes",
+        "/api/v1/service-orders/order-1/quotes/",
+        "/api/v1/service-orders/order-1/quotes/missing",
+        "/api/v1/service-orders/order-1%2Fquotes",
+        "/api/v1/%73ervice-orders/order-1/%71uotes",
+    ]
+    quotes += [origin + quotes[2], origin + quotes[5]]
+    return inventory, quotes
+
+
 def probe(config: str, base: Path, *, image: str = IMAGE) -> dict[str, Any]:
     name = "ocwp-inventory-edge-" + uuid.uuid4().hex
     data = base / config
@@ -435,42 +480,51 @@ def probe(config: str, base: Path, *, image: str = IMAGE) -> dict[str, Any]:
         phase = "version"
         version = docker("exec", name, "caddy", "version").strip()
         assert version.startswith("v2.11.7 "), "unexpected Caddy version"
-        paths = [
-            "/api/v1/inventory",
-            "/api/v1/inventory/",
-            "/api/v1/inventory/products/p/movements",
-            "/%61pi/v1/inventory/products",
-            "/api/v1/inventory%2Fproducts",
-        ]
-        # HTTP proxy absolute-form targets reach the same private backend path.
-        paths.append(("https://localhost:8443" if tls else "http://127.0.0.1:8080") + paths[2])
+        inventory_paths, quote_paths = private_paths(tls=tls is not None)
+        paths = inventory_paths + quote_paths
         canaries = [f"{PRIVATE}-{i}" for i in range(len(paths))]
         phase = "forwarding"
         for path, canary in zip(paths, canaries, strict=True):
             target = path + "?before=" + canary + "&limit=50"
-            status, headers, body = request(target, tls=tls)
+            status, headers, body = request(target, tls=tls, headers={"X-Request-ID": REQUEST_ID})
             assert status == 200 and headers.get("Cache-Control") == "no-store"
             # Reverse proxy converts absolute-form to origin-form, preserving the
             # actual private query. Logging must not change the forwarded request.
             expected_target = target[target.index("/api/") :] if "://" in target else target
-            assert json.loads(body)["target"] == expected_target
+            forwarded = json.loads(body)
+            assert forwarded["target"] == expected_target
+            assert forwarded["request_id"] == REQUEST_ID, "log filter changed forwarded header"
         upstream.shutdown()
         upstream.server_close()
         thread.join(timeout=5)
         upstream = None
         phase = "error_responses"
         for path, canary in zip(paths, canaries, strict=True):
-            status, headers, _ = request(path + "?before=" + canary, tls=tls)
+            status, headers, _ = request(
+                path + "?before=" + canary, tls=tls, headers={"X-Request-ID": REQUEST_ID}
+            )
             assert status in (502, 503) and headers.get("Cache-Control") == "no-store"
-        status, _, _ = request("/api/v1/inventory-other?marker=" + UNRELATED, tls=tls)
-        assert status in (502, 503)
+        unrelated_paths = [
+            "/api/v1/inventory-other",
+            "/api/v1/quotes-other",
+            "/api/v1/service-orders/order-1/quotes-other",
+            "/api/v1/service-orders/order-1%2Fextra/quotes",
+        ]
+        unrelated_markers = [f"{UNRELATED}-{i}" for i in range(len(unrelated_paths))]
+        for path, marker in zip(unrelated_paths, unrelated_markers, strict=True):
+            status, _, _ = request(path + "?marker=" + marker, tls=tls)
+            assert status in (502, 503)
         phase = "log_privacy"
         logs = docker("logs", name)
-        proof = check_logs(logs, canaries, UNRELATED, paths)
+        proof = check_logs(
+            logs, canaries, unrelated_markers, inventory_paths, quote_paths=quote_paths
+        )
         result = {
             "configuration": config,
             "version": version,
             "normal_forwarding_unchanged": True,
+            "request_id_forwarding_unchanged": True,
+            "proxy_error_correlation_id_qualified": False,
             "isolated_ca_verified": tls is not None,
             "elapsed_seconds": round(time.monotonic() - started, 3),
             **proof,

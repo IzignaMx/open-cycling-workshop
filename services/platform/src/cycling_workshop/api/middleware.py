@@ -8,6 +8,8 @@ from contextvars import ContextVar
 
 from cycling_workshop.inventory.http import inventory_path
 from cycling_workshop.inventory.logging import install_inventory_access_filter
+from cycling_workshop.quotes.http import quote_path
+from cycling_workshop.quotes.logging import install_quote_access_filter
 from fastapi import FastAPI, Request
 
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
@@ -28,6 +30,7 @@ class JsonFormatter(logging.Formatter):
 
 def configure_logging(level: str = "INFO") -> None:
     install_inventory_access_filter()
+    install_quote_access_filter()
     root = logging.getLogger()
     root.setLevel(level)
     if not root.handlers:
@@ -40,8 +43,12 @@ def install_request_context(app: FastAPI) -> None:
     @app.middleware("http")
     async def request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
         # Do not copy arbitrary user-controlled text into identity audit history.
-        sensitive = inventory_path(request.url.path) or request.url.path.startswith(
-            ("/api/v1/auth/", "/api/v1/admin/", "/api/v2/admin/", "/api/v1/locations")
+        sensitive = (
+            inventory_path(request.url.path)
+            or quote_path(request.scope["path"])
+            or request.url.path.startswith(
+                ("/api/v1/auth/", "/api/v1/admin/", "/api/v2/admin/", "/api/v1/locations")
+            )
         )
         request_id = (
             None if sensitive else request.headers.get("X-Request-ID")

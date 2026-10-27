@@ -29,7 +29,10 @@ def test_actual_log_evidence_requires_private_absence_and_unrelated_presence() -
     proof = check_logs(logs, [private], public, ["/api/v1/inventory/products/p/movements"])
     assert proof == {
         "inventory_errors": 1,
+        "quote_errors": 0,
+        "private_request_ids_absent": True,
         "unrelated_query_preserved": True,
+        "unrelated_queries_verified": 1,
         "private_queries_absent": True,
     }
     with pytest.raises(AssertionError):
@@ -92,16 +95,14 @@ def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch)
 
     from scripts.ci import inventory_edge_probe as probe
 
-    paths = [
-        "/api/v1/inventory",
-        "/api/v1/inventory/",
-        "/api/v1/inventory/products/p/movements",
-        "/%61pi/v1/inventory/products",
-        "/api/v1/inventory%2Fproducts",
-        "http://127.0.0.1:8080/api/v1/inventory/products/p/movements",
-    ]
+    inventory, quotes = probe.private_paths(tls=False)
+    paths = inventory + quotes
     logs = "\n".join(
-        event(path) for path in [*paths, "/api/v1/inventory-other?marker=" + probe.UNRELATED]
+        event(path)
+        for path in [
+            *paths,
+            *[f"/api/v1/quotes-other?marker={probe.UNRELATED}-{i}" for i in range(4)],
+        ]
     )
     responses = [(200, {}, b"")]
     for i, path in enumerate(paths):
@@ -109,9 +110,13 @@ def test_cleanup_failure_cannot_return_a_successful_probe(tmp_path, monkeypatch)
         if "://" in target:
             target = target[target.index("/api/") :]
         responses.append(
-            (200, {"Cache-Control": "no-store"}, json.dumps({"target": target}).encode())
+            (
+                200,
+                {"Cache-Control": "no-store"},
+                json.dumps({"target": target, "request_id": probe.REQUEST_ID}).encode(),
+            )
         )
-    responses += [(502, {"Cache-Control": "no-store"}, b"")] * 7
+    responses += [(502, {"Cache-Control": "no-store"}, b"")] * (len(paths) + 4)
     reached = []
 
     def docker(*args, **kwargs):
@@ -154,3 +159,60 @@ def test_missing_source_replaces_old_complete_evidence_before_hashing(
     evidence = json.loads(path.read_text())
     assert evidence["status"] == "incomplete" and evidence["cases"] == []
     assert evidence["run_id"] != "old"
+
+
+def test_quote_error_receipt_requires_both_route_families_and_header_absence():
+    from scripts.ci import inventory_edge_probe as probe
+
+    inventory = ["/api/v1/inventory"]
+    quotes = ["/api/v1/quotes", "/api/v1/service-orders/order-1/quotes"]
+    logs = "\n".join(event(path) for path in inventory + quotes)
+    logs += "\n" + event("/api/v1/inventory-other?marker=unrelated")
+    proof = probe.check_logs(logs, ["private-query"], "unrelated", inventory, quote_paths=quotes)
+    assert proof["inventory_errors"] == 1 and proof["quote_errors"] == 2
+    assert proof["private_request_ids_absent"] is True
+    with pytest.raises(AssertionError):
+        probe.check_logs(
+            logs + probe.REQUEST_ID, ["private-query"], "unrelated", inventory, quote_paths=quotes
+        )
+    with pytest.raises(AssertionError):
+        probe.check_logs(
+            logs.replace(event(quotes[1]), ""),
+            ["private-query"],
+            "unrelated",
+            inventory,
+            quote_paths=quotes,
+        )
+
+
+def test_quote_probe_plan_covers_aliases_both_route_families_and_absolute_targets():
+    from scripts.ci import inventory_edge_probe as probe
+
+    for tls in (False, True):
+        inventory, quotes = probe.private_paths(tls=tls)
+        assert len(inventory) == 6
+        for path in (
+            "/api/v1/quotes",
+            "/api/v1/quotes/",
+            "/api/v1/quotes/revision/authorize",
+            "/api/v1/service-orders/order-1/quotes",
+        ):
+            assert path in quotes
+        assert any("%" in path and "service" in path for path in quotes)
+        assert any(path.startswith("https://" if tls else "http://") for path in quotes)
+
+
+def test_each_unrelated_runtime_control_is_required():
+    logs = event("/api/v1/quotes") + "\n" + event("/api/v1/quotes-other?marker=public-one")
+    with pytest.raises(AssertionError):
+        check_logs(
+            logs, ["private"], ["public-one", "public-two"], [], quote_paths=["/api/v1/quotes"]
+        )
+    proof = check_logs(
+        logs + "\n" + event("/api/v1/service-orders/a/b/quotes?marker=public-two"),
+        ["private"],
+        ["public-one", "public-two"],
+        [],
+        quote_paths=["/api/v1/quotes"],
+    )
+    assert proof["unrelated_queries_verified"] == 2

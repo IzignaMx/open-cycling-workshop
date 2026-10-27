@@ -23,6 +23,7 @@ from cycling_workshop.identity.router import router as identity_router
 from cycling_workshop.identity.security import SessionTokenService
 from cycling_workshop.inventory.http import inventory_path
 from cycling_workshop.inventory.router import router as inventory_router
+from cycling_workshop.quotes.http import quote_path
 from cycling_workshop.service_orders.router import router as service_orders_router
 from cycling_workshop.settings import Settings
 from cycling_workshop.sync.baseline_codec import BaselineCodec
@@ -84,6 +85,7 @@ def create_app(
         is_private = (
             is_context
             or inventory_path(request.url.path)
+            or quote_path(request.scope["path"])
             or path
             in {
                 "/api/v1/auth/login",
@@ -110,7 +112,9 @@ def create_app(
                 raise
             # Keep unexpected failures generic, without leaking driver/session
             # details or allowing caches to retain a private response.
-            if inventory_path(request.url.path):
+            if quote_path(request.scope["path"]):
+                logging.getLogger(__name__).error("quote request failed")
+            elif inventory_path(request.url.path):
                 logging.getLogger(__name__).error(
                     "inventory request failed: method=%s path=%s exception=%s",
                     request.method,

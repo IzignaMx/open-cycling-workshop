@@ -8,13 +8,21 @@
       direct/aggregate 86/86 retry 0 and clean 20 + 9 + 5 + 10 repetitions.
 - [x] Close PR52–55 as actual main ancestors via PR57 after per-file and independent
       review. Preserve original commits, branches and historical failures.
-- [ ] Integrate reviewed inert exact-diff archives for unique failed/consumed
-      PR51/56, then close them with replacement links and verify the open-PR list
-      is empty. No reexecution, workflow revival or branch deletion.
-- [ ] Continue bounded Tasks 5/8 inactive HTTP privacy/streaming prerequisites;
-      legacy ingress/enrollment and synthetic quote-adoption CLI are verified
-      on PR60, not full lifecycle or real-account adoption. Keep synchronous
-      Python/DB cancellation/total deadlines and mixed-old-writer gates open.
+- [x] Merge reviewed exact-diff archives in PR61 at `993ac6c` after CI40550803639
+      and independent review; then close consumed PR51/56 with immutable links.
+      Fresh open-PR pages 1/2 were empty at 18:06 UTC. Preserve all branches and
+      failures; no diagnostic reexecution or workflow revival.
+- [x] Complete fresh main993ac6c postmerge CI40556696239 evidence review:
+      27/27, 4,794 collected / 4,736 passed / 58 exact expected skips, all eight
+      PG/six restore cases and both cleanup proofs; direct/aggregate 86/86 retry0.
+      Preserve optional QEMU failed NON-QUALIFYING and all external gates.
+- [ ] Independently qualify the bounded [quote privacy prerequisite](docs/10-spec-development/2026-10-27-quote-http-privacy.md):
+      exact private namespaces, bounded errors and app/Uvicorn/Caddy logging
+      boundaries. No routes, body adapter, OpenAPI/UI/grants or deployment.
+- [ ] Keep edge-local generated correlation, actual streamed-byte admission,
+      synchronous Python/DB cancellation/total deadlines, mixed-old-writer and
+      complete lifecycle gates open. PR60 ingress/adoption tests do not authorize
+      real-account adoption or quote exposure.
 - [ ] Keep R01-T035 physical Windows/Android/laptop/Pi/manual accessibility open;
       hosted browser/native ARM64 do not replace actual devices.
 - [ ] Complete separately authorized installation inventory, isolated corruption,

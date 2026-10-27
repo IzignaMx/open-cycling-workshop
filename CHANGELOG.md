@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-27 · Inactive quote HTTP privacy prerequisite (pending hosted proof)
+
+- Prepare exact quote-namespace private responses, generated request IDs and
+  bounded safe errors, with Uvicorn/edge redaction rather than endpoint exposure.
+- Preserve the verified zero-open-PR cleanup checkpoint and all separate
+  streaming/cancellation/capacity/physical/installation/activation gates. See the
+  [bounded scope](docs/10-spec-development/2026-10-27-quote-http-privacy.md).
+
 ## 2026-10-27 · PR backlog preservation and PR60 evidence reconciliation
 
 - Confirm PR52–55 are already integrated ancestors through PR57; close redundant
