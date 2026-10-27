@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-10-26 · Approved canary-create allowance
+
+- Increase only full-Python canary `docker create` allowance from five to fifteen
+  seconds, still capped by remaining unchanged 65-second setup time. Database and
+  worker creates, other controls, all resource limits and qualification/cleanup
+  gates are unchanged. One new exact-source validation is authorized; no success
+  or underlying timeout cause is inferred. See
+  [the source-bound record](docs/10-spec-development/2026-10-26-canary-create-allowance.md).
+
+## 2026-10-26 · Legacy recovery fixture schema correction
+
+- Preserve PR59's first failed CI checkpoint; replace its synthetic current-schema
+  database falsely stamped 0011 with a genuine disposable Alembic0011 migration.
+  Production recovery integrity, legacy-session/account/audit assertions, skip
+  policy and resource limits remain unchanged. Exact-source hosted proof is pending.
+
+## 2026-10-26 · Full-history recovery validation (pending hosted qualification)
+
+- Validate all retained scoped quote histories and linked generic effects before
+  maintenance incarnation rotation; reject orphan/unsupported/corrupt evidence
+  without repair, replay or publication. Preserve legacy quote-only history and
+  require preserved forward migration for populated schema0012.
+- Extend synthetic and mandatory real-restore regression coverage; installation,
+  physical-device and activation acceptance remain separate. See
+  [the evidence boundary](docs/10-spec-development/2026-10-26-full-history-recovery.md).
+
 ## Owned cleanup and native negative matcher reconciliation · 2026-10-26
 
 - Preserve failed CI 40249194704 on published head `41263b4012659c0baf3475b2a7a3e763fe2856e7`: native direct and aggregate browser reports each have 84 passes, two failures and zero flaky passes. The negative controls expose a cross-realm Promise matcher defect, not clean browser acceptance.

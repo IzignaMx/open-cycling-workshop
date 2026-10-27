@@ -1975,7 +1975,9 @@ def supervise_python(
                 )
             creation_uncertain = True
             stage = "create"
-            cid = identifier(execute(args))
+            # Only this setup canary create gets the approved allowance. execute
+            # still clips to the unchanged setup deadline and checks it afterward.
+            cid = identifier(execute(args, timeout=15 if role == "canary" else 5))
             creation_uncertain = False
             containers[role] = cid
             if role == "worker":

@@ -917,9 +917,9 @@ def test_explicit_legacy_transition_refuses_old_sessions_checkpoints_and_clients
     """Real SQLite maintenance/auth, mocked dump restoration: not PG restore proof."""
     from dataclasses import replace
 
+    from alembic import command as migrate
+    from alembic.config import Config
     from cycling_workshop.app import create_app
-    from cycling_workshop.db.base import Base
-    from cycling_workshop.db.registry import register_models
     from cycling_workshop.identity.audit import IdentityAuditRecord
     from cycling_workshop.identity.domain import Principal
     from cycling_workshop.identity.models import UserRecord
@@ -927,16 +927,23 @@ def test_explicit_legacy_transition_refuses_old_sessions_checkpoints_and_clients
     from cycling_workshop.shared.ids import new_id
     from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
     from fastapi.testclient import TestClient
-    from sqlalchemy import create_engine, select, text
+    from sqlalchemy import create_engine, inspect, select, text
     from sqlalchemy.orm import sessionmaker
 
     url = f"sqlite+pysqlite:///{tmp_path / 'synthetic-cutover.db'}"
     engine = create_engine(url)
-    register_models()
-    Base.metadata.create_all(engine)
-    with engine.begin() as connection:
-        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-        connection.execute(text("INSERT INTO alembic_version VALUES ('0011')"))
+    # Exercise the actual pre-quote schema. create_all() uses current models and
+    # cannot honestly stand in for revision0011 merely by stamping an old marker.
+    monkeypatch.delenv("OCWP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    service_root = Path(__file__).resolve().parents[2] / "services" / "platform"
+    config = Config(str(service_root / "alembic.ini"))
+    config.set_main_option("script_location", str(service_root / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    migrate.upgrade(config, "0011")
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
+        assert not inspect(connection).has_table("quote_lineages")
     factory = sessionmaker(engine, expire_on_commit=False)
     grants = ["customers.read", "customers.write", "sync.pull", "branding.read", "branding.write"]
     state = mixed_snapshot()

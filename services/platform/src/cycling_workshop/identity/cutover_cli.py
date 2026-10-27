@@ -15,6 +15,8 @@ from cycling_workshop.api.middleware import request_id_var
 from cycling_workshop.db.session import build_engine
 from cycling_workshop.identity.audit import IdentityAuditRecord, append_audit
 from cycling_workshop.identity.cutover import lock_compatibility
+from cycling_workshop.quotes.recovery import validate_recovered_quotes
+from cycling_workshop.quotes.repository import QuoteConflictError, QuoteIntegrityError
 from cycling_workshop.settings import Settings
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.tenancy.models import OrganizationRecord
@@ -130,6 +132,12 @@ def _change(
                         "incarnation_precondition_failed",
                         "inspect current state and audit before recovery",
                     )
+                try:
+                    validate_recovered_quotes(session, organization_id)
+                except (QuoteIntegrityError, QuoteConflictError):
+                    raise ApiError(
+                        500, "quote_integrity_failed", "stored quote history is invalid"
+                    ) from None
                 incarnation = str(uuid4())
                 if incarnation == organization.dataset_incarnation:
                     raise ApiError(

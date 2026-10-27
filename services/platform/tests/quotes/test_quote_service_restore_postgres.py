@@ -25,7 +25,7 @@ from cycling_workshop.quotes.service import QuoteDeadline, QuoteService
 from cycling_workshop.service_orders.models import ServiceOrderRecord
 from cycling_workshop.settings import Settings
 from cycling_workshop.tenancy.models import OrganizationRecord
-from sqlalchemy import JSON, Text, cast, create_engine, select
+from sqlalchemy import JSON, Text, bindparam, cast, create_engine, select, update
 from sqlalchemy.orm import Session
 from test_backup_postgres_integration import disposable_databases as disposable_databases
 from test_identity_migration import _config
@@ -213,6 +213,41 @@ def test_real_restore_preserves_version_one_service_effects_and_fresh_replay(
             assert organization.minimum_write_protocol == 1
             assert organization.dataset_incarnation == incarnation
             assert totals(session) == (2, 1, 1, 3)
+
+        # Ordinary SQL corruption in a fully restored retained pair must stop
+        # recovery before incarnation/audit changes. The fixture alone restores
+        # the exact original bytes afterward; the production gate never repairs.
+        effect_outbox_id = applied["receipt"]["effects"]["order_outbox_id"]
+        original_raw = next(
+            row["payload"] for row in before["outbox_events"] if row["event_id"] == effect_outbox_id
+        )
+        damaged = json.loads(original_raw)
+        damaged["reported_problem"] = "Synthetic retained mismatch"
+        with target.begin() as connection:
+            connection.execute(
+                update(OutboxRecord)
+                .where(OutboxRecord.event_id == effect_outbox_id)
+                .values(payload=damaged)
+            )
+        corrupted = retained_service_rows(target)
+        with pytest.raises(ApiError) as refused:
+            recover_cutover(
+                Settings(environment="test", database_url=target_url, cutover_enabled=True),
+                organization_id="a",
+                expected_incarnation=incarnation,
+            )
+        assert refused.value.code == "quote_integrity_failed"
+        assert retained_service_rows(target) == corrupted
+        with Session(target) as session:
+            assert session.get(OrganizationRecord, "a").dataset_incarnation == incarnation
+        with target.begin() as connection:
+            connection.execute(
+                update(OutboxRecord)
+                .where(OutboxRecord.event_id == effect_outbox_id)
+                .values(payload=cast(bindparam("retained_raw", type_=Text), JSON)),
+                {"retained_raw": original_raw},
+            )
+        assert retained_service_rows(target) == before
 
         # Recovery is explicit and target-only; no prior operation rotates identity.
         recovery = recover_cutover(

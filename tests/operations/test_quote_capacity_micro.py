@@ -742,10 +742,13 @@ def test_full_supervisor_terminal_paths_require_stop_and_both_cleanups(
     monkeypatch.setattr(verify_v01, "validate_full_python_collection", lambda *args: {})
 
     def execute(args, **kwargs):
+        if args[:2] != ["docker", "create"]:
+            assert kwargs["timeout"] <= 5
         if args[:2] == ["docker", "create"]:
+            role = ("canary", "db", "worker")[len(created)]
+            assert kwargs["timeout"] == (15 if role == "canary" else 5)
             if fault == "create":
                 raise module.ProofFailure("command_timeout")
-            role = ("canary", "db", "worker")[len(created)]
             memory, pids = {"canary": (512, 64), "db": (1024, 128), "worker": (768, 64)}[role]
             assert args[args.index("--memory") + 1] == f"{memory}m"
             assert args[args.index("--memory-swap") + 1] == f"{memory}m"
@@ -2638,3 +2641,53 @@ def test_full_cleanup_diagnostic_bad_cid_state_never_logs_contents(tmp_path, fau
     assert report["cidfiles"] == {"canary": state, "db": "unobserved", "worker": "unobserved"}
     assert "PRIVATE_CANARY" not in path.read_text()
     assert not removed
+
+
+@pytest.mark.parametrize("elapsed", [0.0, 49.0, 50.0, 51.0, 64.5, 65.0, 66.0])
+@pytest.mark.parametrize("outcome", ["timeout", "late_success"])
+def test_full_canary_create_timeout_is_capped_by_remaining_setup(
+    tmp_path, monkeypatch, elapsed, outcome
+):
+    import json
+
+    clock = [0.0]
+    identity = serial_identity("a")
+    calls = []
+
+    def identify(*args):
+        clock[0] = elapsed
+        return identity
+
+    def client(args, **kwargs):
+        calls.append((args, kwargs["timeout"]))
+        if args[:2] == ["docker", "create"]:
+            assert args[args.index("--name") + 1].endswith("-canary")
+            if outcome == "timeout":
+                raise module.ProofFailure("command_timeout")
+            clock[0] = 65.0
+            return "a" * 64
+        # Cleanup still uses its unchanged five-second controls, never fifteen.
+        assert args[:2] == ["docker", "ps"]
+        assert kwargs["timeout"] == 5
+        return ""
+
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(module.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(module, "full_identity", identify)
+    monkeypatch.setattr(module, "full_client", client)
+    monkeypatch.setattr(
+        module.subprocess, "Popen", lambda *a, **kw: pytest.fail("workload spawned")
+    )
+    receipt = tmp_path / "receipt.json"
+    with pytest.raises(module.ProofFailure, match="full_python_unqualified"):
+        module.supervise_python("worker", "pg", identity["commit"], receipt, tmp_path / "owned")
+    creates = [timeout for args, timeout in calls if args[:2] == ["docker", "create"]]
+    assert creates == ([min(15.0, 65.0 - elapsed)] if elapsed < 65 else [])
+    report = json.loads(receipt.read_text())
+    assert report["failure"] == "creation_uncertain"
+    assert report["containment"]["creation_uncertain"] is True
+    assert report["collection"] is report["result"] is None
+    assert report["primary_cleanup"] == "verified_absent"
+    assert report["independent_cleanup"] == "pending"
+    assert any(args[:2] == ["docker", "ps"] for args, _ in calls)
+    assert module.FULL_SECONDS == 900 and module.FULL_OUTER_SECONDS == 1020
