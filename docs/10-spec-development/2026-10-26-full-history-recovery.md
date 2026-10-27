@@ -1,5 +1,12 @@
 # Full retained quote history before recovery rotation
 
+> **2026-10-27 closure:** merged through PR #59 at `a9e161f`; exact-main
+> CI 40428504739 passed 27/27, all 4,727 collected Python cases (4,669 pass /
+> 58 expected skips), six restores, both cleanup proofs and retry-free direct/
+> aggregate browsers. See [terminal evidence and remaining gates](2026-10-27-pr59-postmerge-reconciliation.md).
+> The preparation/pending wording below is historical, not a new run or merge
+> authorization. Physical, installation, capacity and activation gates stay open.
+
 Status: implemented pending exact-candidate hosted evidence. No installation,
 reopening, quote activation or deployment is authorized by this source increment.
 

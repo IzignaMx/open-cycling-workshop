@@ -12,6 +12,7 @@ from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.identity.cutover import WriteAdmission
 from cycling_workshop.identity.domain import Principal, authorize
+from cycling_workshop.quotes.ingress import MANAGED_ORDER_MESSAGE, lock_legacy_order
 from cycling_workshop.service_orders.domain import (
     InvalidStateTransitionError,
     ServiceOrder,
@@ -483,8 +484,19 @@ class SyncService:
                 payload=order_payload(order),
             )
 
+        fence = lock_legacy_order(
+            self._session, order_id=mutation.entity_id, organization_id=mutation.organization_id
+        )
+        if fence is None:
+            raise SyncConflict("service order does not exist")
+        if fence.location_id != mutation.location_id:
+            raise SyncConflict("service order location scope mismatch")
+        transition = mutation.payload.get("transition")
+        action = transition.get("action") if isinstance(transition, dict) else None
+        if fence.managed and action != "cancel":
+            raise SyncConflict(MANAGED_ORDER_MESSAGE)
         existing = repository.get(
-            order_id=mutation.entity_id, organization_id=mutation.organization_id
+            order_id=mutation.entity_id, organization_id=mutation.organization_id, for_update=True
         )
         if existing is None:
             raise SyncConflict("service order does not exist")
