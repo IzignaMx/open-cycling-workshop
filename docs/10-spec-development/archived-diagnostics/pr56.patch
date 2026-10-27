@@ -1,0 +1,1902 @@
+diff --git a/.github/workflows/quote-four-revision-profile.yml b/.github/workflows/quote-four-revision-profile.yml
+new file mode 100644
+index 0000000000000000000000000000000000000000..3fa3497c51e846c3b635f05ac57b172c57c8088a
+--- /dev/null
++++ b/.github/workflows/quote-four-revision-profile.yml
+@@ -0,0 +1,88 @@
++name: Quote four-revision diagnostic profile once
++
++on:
++  pull_request:
++    types: [opened]
++
++permissions:
++  contents: read
++
++jobs:
++  quote-four-revision-profile:
++    if: >-
++      github.event.action == 'opened' &&
++      github.head_ref == 'codex/quote-four-revision-profile' &&
++      github.event.pull_request.head.repo.full_name == github.repository &&
++      github.repository == 'IzignaMx/open-cycling-workshop' &&
++      github.run_number == '1' && github.run_attempt == '1'
++    runs-on: ubuntu-latest
++    timeout-minutes: 15
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          ref: ${{ github.sha }}
++      - name: Build exact archived source with existing pinned runtime and lock
++        timeout-minutes: 9
++        shell: bash
++        run: |
++          set -euo pipefail
++          context="$(mktemp -d "$RUNNER_TEMP/quote-source.XXXXXX")"
++          git archive HEAD | tar -x -C "$context"
++          tree="$(git rev-parse HEAD^{tree})"
++          timeout --signal=TERM --kill-after=5s 210s docker build --target build \
++            -f "$context/infra/docker/platform.local.Dockerfile" -t ocwp-quote-base "$context"
++          cat > "$RUNNER_TEMP/quote-proof.Dockerfile" <<'DOCKERFILE'
++          FROM ocwp-quote-base
++          RUN uv sync --all-packages --group dev --locked
++          COPY tests /app/tests
++          COPY scripts /app/scripts
++          ARG SOURCE_TREE
++          LABEL ocwp.source-tree=$SOURCE_TREE
++          ENV PYTHONDONTWRITEBYTECODE=1
++          DOCKERFILE
++          timeout --signal=TERM --kill-after=5s 210s docker build \
++            -f "$RUNNER_TEMP/quote-proof.Dockerfile" --build-arg "SOURCE_TREE=$tree" \
++            -t ocwp-quote-micro "$context"
++          timeout --signal=TERM --kill-after=5s 60s docker pull postgres:18.4-trixie
++      - name: One fixed four-revision diagnostic, fresh load and exact retry
++        timeout-minutes: 3
++        shell: bash
++        run: |
++          set -euo pipefail
++          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
++            --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
++            --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-profile-owned.json" \
++            --evidence artifacts/quote-four-revision-profile.json --four-revision-profile
++      - name: Independently verify owned containers absent even after supervisor failure
++        if: always()
++        timeout-minutes: 1
++        shell: bash
++        run: |
++          python3 - <<'PY'
++          import os
++          from pathlib import Path
++          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
++          root = Path(os.environ['RUNNER_TEMP'])
++          failed = False
++          for stem in ('quote-profile-owned',):
++              try:
++                  ids = [identifier(path.read_text().strip()) for path in root.glob(f'{stem}.*.cid')]
++                  present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
++                  owned = root / f'{stem}.json'
++                  discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
++                  if not set(ids).intersection(present).issubset(discovered):
++                      raise ProofFailure('owned_identity_reconciliation')
++                  remove_owned(discovered)
++              except (ProofFailure, ValueError, OSError):
++                  failed = True
++          if failed:
++              raise SystemExit('Owned-container cleanup unverified')
++          PY
++      - name: Preserve closed profiling evidence
++        timeout-minutes: 1
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: quote-four-revision-profile-${{ github.run_id }}-${{ github.sha }}
++          path: artifacts/quote-four-revision-profile.json
++          if-no-files-found: error
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 9e2342944847ee5babb38a9ebf68f07519adc99c..db27bfe82669e63ddcf6bc35cdc2c1c216b0ab04 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -9,6 +9,14 @@
+ - Reproduce the held-delta race deterministically and preserve QA54's failed first
+   browser attempt. Browser timeouts and strict hosted qualification stay unchanged.
+ 
++## Unreleased · Prepare one bounded quote diagnostic profile
++
++- Add a test-only four-revision, fresh-load and exact-retry profile with closed
++  component timings and host-retained partial evidence under a 20-second workload.
++- Reuse containment and immediate worker/database stop on failure; a distinct
++  opened-only first-run workflow remains gated on prior CI and exact review.
++- No production change, elapsed-time extrapolation or capacity qualification.
++
+ ## Unreleased · Wait for administration visual identity
+ 
+ - Wait for the exact singleton workshop name before theme captures using the
+diff --git a/MANUAL-ACTIONS-CHECKLIST.md b/MANUAL-ACTIONS-CHECKLIST.md
+index b9a28ca239a83391d8e322a3f970795f16b11a08..1f1459d669ce1428f425d8bc0dd2c1a0e01038ae 100644
+--- a/MANUAL-ACTIONS-CHECKLIST.md
++++ b/MANUAL-ACTIONS-CHECKLIST.md
+@@ -25,6 +25,15 @@
+ 
+ ## Quote operation replay · 2026-10-16
+ 
++- [x] Close exact PR55 retry-free CI 38924829298 (218 browser tests, zero retries),
++      preserving earlier PR53/QA54 browser failures. Reconciled package review and
++      deliberate profile publication/opening remain pending.
++- [ ] Independently review exact test-only instrumentation and source package in
++      [the fixed profiling scope](docs/10-spec-development/2026-10-16-quote-four-revision-profile.md).
++- [ ] If subsequently authorized, execute the opened-only first attempt once,
++      preserve failure/skip as terminal, and independently review source-bound
++      profiling/containment/cleanup evidence before any capacity decision.
++
+ - [x] Independently review the operation-loop rewrite, frozen differential oracle,
+       all 19 invariants and final public/storage validation.
+ - [ ] Close exact final package/document review before publication.
+diff --git a/docs/10-spec-development/2026-10-16-quote-four-revision-profile.md b/docs/10-spec-development/2026-10-16-quote-four-revision-profile.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..80b4ef968e447fabf13c0c13de2849ba51612a40
+--- /dev/null
++++ b/docs/10-spec-development/2026-10-16-quote-four-revision-profile.md
+@@ -0,0 +1,190 @@
++# One bounded quote diagnostic profile
++
++## Status and purpose
++
++Reconciled on the qualified PR55 product-fix base: remote
++`7c0dc84bf763cac7523f55f4fbc7d0a06c362b07`, tree
++`5cd0717146d7f33331845ed08d1f95687e653df6`, local equivalent
++`3946942ac91af47fdc9d492e319bb070386c7ec8`. This retains PR53's quote code,
++QA54's workshop-identity readiness check and PR55's session-bound sync wake fix.
++Both earlier preparation worktrees and their evidence remain intact.
++[PR55 CI 38924829298](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/38924829298)
++qualified 218 browser tests with zero retries; ordinary runtime, security and
++native ARM passed. Failed nonqualifying QEMU evidence remains preserved.
++The coordinator closed that exact-source gate; this reconciled profile still
++requires independent exact package review and deliberate coordinator publication.
++Prior browser failures and retries remain preserved as historical evidence.
++No profile specimen, Docker container or maximum history was executed locally.
++
++The purpose is to observe where the corrected product spends time before making
++any separate capacity decision. Structural count reductions do not identify time
++coefficients. Do not project these measurements to 32 revisions, infer percentiles,
++claim representative physical hardware, or treat diagnostic success as capacity.
++The consumed PR51 maximum workflow is not present in this base and is not changed,
++renamed or revived. Its failed result remains valid historical evidence.
++
++## Fixed specimen and six actions
++
++One fresh PostgreSQL database contains one synthetic quote lineage:
++
++1. Create revision 1.
++2. Append revision 2.
++3. Append revision 3.
++4. Append revision 4.
++5. Load the complete history in a fresh transaction.
++6. Retry the exact original creation request, checking the historical receipt and
++   current ledger without new writes.
++
++Every revision uses the previously reviewed legal record recipe: 80 labor charges,
++10 discounts, 10 taxes, 500-ASCII-character normalized descriptions, 1,000 target
++edges, and deterministic valid prices. Each charge is 60 minutes at 10,000 minor
++units; each discount is 50 minor units over the first 50 charges; each tax is
++1,000 basis points over the same 50 charges. Totals remain
++800,000 / 500 / 499,500 / 1,299,000 minor units. No arbitrary padding, parameter
++search, direct SQL history seeding or decision is included. This is a short history
++with full-sized individual records, not a medium-sized record claim.
++
++Commands are rebuilt through the actual request decoder, with fixed operation and
++quote IDs, expected head/version/sequence, actor, organization and order scope.
++Recorded times increase by one second between revisions. Assertions retain all
++operation receipts, predecessor supersession, current ledger, zero decisions,
++unchanged full service-order row, exact replay, and cardinalities `(1,n,n,n)`.
++Request and joined operation-time logical-record bytes are measured. Canonical
++array bytes use those measured immutable member sizes plus brackets/commas; no
++extra historical replay is introduced just to measure the result.
++
++Only the six fixed calls exist. There is no configurable point count, sweep,
++maximum mode, automatic retry, fallback size or change of shape after a failure.
++
++## Instrumentation and interpretation
++
++All instrumentation is test-only. Production modules are unchanged. Wrappers time
++the repository-bound candidate `advance`, locked `_load_with_bytes`, and explicit
++commit. SQLAlchemy cursor events count client-observed cursor execution/wait;
++The fixed SELECT / INSERT / UPDATE / DELETE / OTHER verb counters sum to the
++cursor total and retain no statement text. They do not measure server CPU, all result fetching/hydration, or the whole
++transaction. Action time includes input construction/decoding, admission, Python
++validation, database work, commit and assertions.
++
++Per-action cProfile output is reduced to five reviewed exact code objects:
++
++| Closed label   | Source binding                    |
++| -------------- | --------------------------------- |
++| reconstruct    | reconstruction._reconstruct       |
++| row_assembly   | reconstruction._revision_document |
++| canonical_json | storage.canonical_bytes           |
++| quote_codec    | storage.encode_quote              |
++| command_proof  | commands.command_from_proof       |
++
++These report primitive/total calls and own/cumulative seconds. The host requires candidate/load/commit counts appropriate to each action,
++observed SQL SELECTs and all expected code objects. Only create legitimately
++has no reconstruction/row-assembly observation; these are null, not fabricated
++zero. Missing required instrumentation fails diagnostic qualification. Wrapper/cursor zero calls are valid observed
++absence under installed hooks. Inclusive candidate/load/commit/SQL spans and
++cumulative profile values overlap; never sum them as disjoint costs. Serialization
++is nested detail within candidate/load. `_revision_document` own time means row
++assembly including filtering, not pure filtering. Other reconstruction self time
++remains unattributed orchestration/row filtering. No helper extraction claims
++exact filter attribution. Profiling and polling have overhead and later actions
++have a warmed process/cache; neither is an uninstrumented latency benchmark.
++
++Row timing ends before profile extraction and atomic checkpoint publication.
++Top process CPU begins before PostgreSQL fixture setup and ends before the final
++checkpoint write. Final write, hook removal, pytest teardown and bootstrap remain
++inside host wall/cgroup measurements, not inside that process-CPU interval.
++
++## Containment, deadlines and evidence
++
++Reuse actual verified cgroup/controller/counter, source/image/container identity,
++non-root/capability/no-new-privilege, network and cancellation-canary checks.
++Worker: 1 CPU, 512 MiB, 64 PIDs. PostgreSQL: 1 CPU, 768 MiB, 128 PIDs. No extra swap.
++Keep existing SQL fixture values: lock timeout 15 seconds, statement timeout
++20 seconds. These are test settings, not claimed production defaults or UX goals.
++
++- Setup and canary: at most 20 seconds from immutable supervisor start.
++- Entire workload: one immutable 20-second deadline starting before pytest spawn,
++  including bootstrap, fixture setup, all six actions, profiling, polling, teardown
++  and final result read. Every subprocess uses remaining time. No action can
++  acquire a fresh deadline after exhaustion.
++- Successful final probes and cleanup: at most 20 additional seconds, also capped
++  by supervisor start + 120 seconds.
++- External watchdog: 120 seconds plus at most 30 seconds emergency cleanup only.
++  On workload failure or interruption, attempt immediate SIGKILL of the two exact
++  validated worker/DB IDs, prove non-running, then reconcile and remove owned IDs.
++  A blocked stop is failed/unverified; it never proves an exact execution cutoff.
++- Contained lifetime CPU ceiling: 240 seconds, including canary; this defensive
++  ceiling is not efficiency evidence. Whole job wall ceiling: 900 seconds with
++  image preparation 9 minutes, guarded step 3, cleanup 1, upload 1 and checkout
++  margin. Image-build CPU is unmeasured and outside contained counters.
++
++The complete host report and each worker checkpoint are bounded below 16 KiB.
++The host stores one metric copy only; report overflow fails closed with a compact
++source/cleanup summary and explicit omitted metrics. The worker atomically
++replaces its closed checkpoint before
++each action and immediately after each completed action. The host polls it during
++the original workload deadline, validates contiguous immutable records and stores
++its latest observation. Timeout retains this last observed prefix and observation
++time, which may lag the worker. An active ordinal is not proof of completion or
++commit. Expiry never grants a diagnostic read or delays stop to recover evidence.
++Zero pytest exit requires six valid completed records and completed final state.
++
++No raw request, financial proof, SQL, exception message, full process status,
++Docker inspect/environment or raw pstats is emitted. Missing final CPU/pressure
++measurements remain unavailable. Source/run/job metadata and exact artifact bytes
++must be independently checked before any diagnostic interpretation.
++
++## Deliberate one-shot execution gate
++
++Proposed workflow: `.github/workflows/quote-four-revision-profile.yml`, one job,
++`pull_request` activity `opened` only, exact head branch
++`codex/quote-four-revision-profile`, same-repository head and exact repository
++`IzignaMx/open-cycling-workshop`, `run_number == 1` and `run_attempt == 1`.
++There is no dispatch dependency, push trigger or synchronize trigger.
++
++GitHub documents that new workflow runs increment run number while reruns retain
++that number and increment run attempt. The explicit activity filter limits the
++trigger. See [context semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts)
++and [pull-request events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request).
++This fails closed on a previously consumed first run; it is not a durable
++repository-wide anti-duplication registry. Historical workflow absence across all
++remote history is unproven. If skipped, report and stop; do not rename, raise the
++number, reopen or rerun to bypass the gate. Branch/PR publication remains with the
++coordinator after PR55 CI closure and reconciled exact package review.
++If the required CI repair changes the published base, regenerate and independently
++review the exact parent/tree binding before publication; do not reuse a stale
++prepared tree merely because the diagnostic diff is unchanged.
++
++## Decision after a future authorized run
++
++First independently validate source binding, containment, six-action integrity,
++partial/final metrics and cleanup. If the workload expires, preserve the result
++without repeating it or increasing limits. Missing or overlapping attribution
++must not be turned into a favorable estimate. A clear remaining bottleneck calls
++for a separately reviewed narrow correction preserving full integrity checks.
++Only a later explicit parent decision could authorize a distinct capacity
++qualification. This profile does not resolve ordinary API percentiles,
++organization-lock contention, restored 32/128 histories or stage-3 activation.
++
++## Local preparation evidence
++
++Only small mock/process/schema and instrumentation-helper tests were selected:
++104 guard tests passed and six helper tests passed, with one explicit hosted
++specimen deselection and one existing Starlette deprecation warning. The initial
++three control tests failed before their implementation, then passed; the twelve
++closed-schema cases likewise failed before the validator was added. Later mocks
++cover checkpoint timeout with retained prefix, zero-exit incomplete output,
++deadline expiry during probes and worker/database stop before reconciliation.
++The full six-record metric encoding fits the existing 16-KiB command-output limit.
++
++Ruff check/format, strict mypy on the touched supervisor, Prettier and diff checks
++pass. Existing locked Python 3.13.5 / pytest 9.1.1 / Ruff 0.16.5 / mypy 1.20.2 /
++Prettier 3.9.6 tools were reused; no dependency or environment installation was
++performed. These results do not establish hosted feasibility, actual profiling
++cost, containment execution on this source, or capacity qualification.
++
++Independent review previously closed the instrumentation, whole-artifact bound,
++required observations, SQL counters and deadline findings on the QA54 preparation,
++including independently passing 104 guards and six helpers. The executable
++profile files remain byte-identical during PR55 reconciliation. Fresh selected
++small tests and exact commit/package/body review are required on this tree before
++publication. No hosted profile result exists.
+diff --git a/docs/10-spec-development/execution-state.yaml b/docs/10-spec-development/execution-state.yaml
+index 2d4219ebd266a0979b9905671ba482b189a95b52..fe338ce199c8f705077b99e4e720296463827b24 100644
+--- a/docs/10-spec-development/execution-state.yaml
++++ b/docs/10-spec-development/execution-state.yaml
+@@ -2063,3 +2063,13 @@ session_local_sync_wake_20261016:
+   static: web_typecheck_ESLint_Prettier_clean_diff_passed
+   profile_and_remote_actions: none
+   evidence: docs/10-spec-development/2026-10-16-session-local-sync-wake.md
++
++quote_four_revision_profile_20261016:
++  status: local_source_review_passed_package_pending_no_execution
++  scope: four_fixed_revisions_fresh_load_exact_retry_test_only_instrumentation
++  evidence: docs/10-spec-development/2026-10-16-quote-four-revision-profile.md
++  workload_seconds_including_bootstrap_and_profiling: 20
++  profile_publication_gate: pr55_retry_free_CI_closed_reconciled_exact_package_review_required
++  trigger: distinct_opened_only_exact_branch_run1_attempt1
++  production: unchanged
++  maximum_capacity: unqualified_separate_decision_required
+diff --git a/scripts/ci/quote_capacity_micro.py b/scripts/ci/quote_capacity_micro.py
+index f2b78ddea23892d2a663ea25fd0cd190a89abbda..1a1fd27300b109cf5717bf0866270fbb86ca7200 100644
+--- a/scripts/ci/quote_capacity_micro.py
++++ b/scripts/ci/quote_capacity_micro.py
+@@ -306,8 +306,11 @@ def cancellation_canary(cid: str, execute: Callable[..., str] | None = None) ->
+             client.wait(timeout=2)
+ 
+ 
+-def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
+-    fields = run(
++def inspect_owned(
++    cid: str, image: str, label: str, network: str, execute: Callable[..., str] | None = None
++) -> None:
++    execute = execute or run
++    fields = execute(
+         [
+             "docker",
+             "inspect",
+@@ -325,7 +328,7 @@ def inspect_owned(cid: str, image: str, label: str, network: str) -> None:
+         or fields[6:] != ["true"]
+     ):
+         raise ProofFailure("container_identity")
+-    mounts = run(
++    mounts = execute(
+         [
+             "docker",
+             "inspect",
+@@ -466,6 +469,232 @@ def micro_result(raw: str, *, single_record: bool = False) -> dict[str, object]:
+     return value
+ 
+ 
++def profile_result(raw: str, *, final: bool = False) -> dict[str, object]:
++    """Closed diagnostic schema: six fixed actions, never financial proof or SQL."""
++    if len(raw.encode("utf-8")) >= LIMIT:
++        raise ProofFailure("profile_output_limit")
++
++    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
++        result = dict(pairs)
++        if len(result) != len(pairs):
++            raise ProofFailure("profile_duplicate_key")
++        return result
++
++    value = json.loads(raw, object_pairs_hook=unique)
++
++    def exact(obj: object, keys: set[str]) -> dict[str, object]:
++        if type(obj) is not dict or set(obj) != keys:
++            raise ProofFailure("profile_schema")
++        return cast(dict[str, object], obj)
++
++    def number(obj: object, *, count: bool = False, maximum: float = 20) -> None:
++        if (
++            type(obj) not in ((int,) if count else (int, float))
++            or not 0 <= cast(float, obj) < maximum
++            or (type(obj) is float and not math.isfinite(obj))
++        ):
++            raise ProofFailure("profile_number")
++
++    exact(value, {"schema", "active_ordinal", "complete", "process_cpu_seconds", "records"})
++    if (
++        type(value["schema"]) is not int
++        or value["schema"] != 1
++        or type(value["complete"]) is not bool
++    ):
++        raise ProofFailure("profile_schema")
++    rows = value["records"]
++    if type(rows) is not list or len(rows) > 6:
++        raise ProofFailure("profile_records")
++    active = value["active_ordinal"]
++    if active is not None and (type(active) is not int or active != len(rows) + 1 or active > 6):
++        raise ProofFailure("profile_ordinal")
++    complete = value["complete"]
++    if (
++        complete != (len(rows) == 6)
++        or (complete and active is not None)
++        or (final and not complete)
++    ):
++        raise ProofFailure("profile_incomplete")
++    if complete:
++        number(value["process_cpu_seconds"])
++    elif value["process_cpu_seconds"] is not None:
++        raise ProofFailure("profile_partial_cpu")
++    actions = ("create", "revise", "revise", "revise", "fresh_load", "exact_retry")
++    total_bytes = 2
++    for ordinal, row in enumerate(rows, 1):
++        exact(
++            row,
++            {
++                "ordinal",
++                "action",
++                "wall_seconds",
++                "process_cpu_seconds",
++                "candidate",
++                "reconstruction",
++                "commit",
++                "sql",
++                "functions",
++                "raw_request_bytes",
++                "logical_bytes",
++                "history_bytes",
++                "revisions",
++                "receipts",
++                "counts",
++            },
++        )
++        if (
++            type(row["ordinal"]) is not int
++            or row["ordinal"] != ordinal
++            or row["action"] != actions[ordinal - 1]
++        ):
++            raise ProofFailure("profile_ordinal")
++        number(row["wall_seconds"])
++        number(row["process_cpu_seconds"])
++        for span in ("candidate", "reconstruction", "commit", "sql"):
++            metrics = exact(
++                row[span], {"calls", "seconds", "verbs"} if span == "sql" else {"calls", "seconds"}
++            )
++            number(metrics["calls"], count=True, maximum=1_000_001)
++            number(metrics["seconds"])
++            if cast(float, metrics["seconds"]) > row["wall_seconds"] + 0.000001:
++                raise ProofFailure("profile_span_time")
++            if metrics["calls"] == 0 and metrics["seconds"] != 0:
++                raise ProofFailure("profile_span_time")
++            expected_calls = {
++                "candidate": int(ordinal <= 4),
++                "reconstruction": int(ordinal > 1),
++                "commit": 1,
++            }
++            if span in expected_calls and metrics["calls"] != expected_calls[span]:
++                raise ProofFailure("profile_instrumentation_missing")
++            if span == "sql":
++                verbs = exact(metrics["verbs"], {"SELECT", "INSERT", "UPDATE", "DELETE", "OTHER"})
++                for count in verbs.values():
++                    number(count, count=True, maximum=1_000_001)
++                if (
++                    sum(cast(int, v) for v in verbs.values()) != metrics["calls"]
++                    or cast(int, verbs["SELECT"]) < 1
++                ):
++                    raise ProofFailure("profile_sql_counts")
++        functions = exact(
++            row["functions"],
++            {"reconstruct", "row_assembly", "canonical_json", "quote_codec", "command_proof"},
++        )
++        for label, observation in functions.items():
++            absent = ordinal == 1 and label in {"reconstruct", "row_assembly"}
++            if observation is None:
++                if not absent:
++                    raise ProofFailure("profile_instrumentation_missing")
++                continue
++            if absent:
++                raise ProofFailure("profile_unexpected_reconstruction")
++            stats = exact(
++                observation, {"primitive_calls", "total_calls", "own_seconds", "cumulative_seconds"}
++            )
++            for key in ("primitive_calls", "total_calls"):
++                number(stats[key], count=True, maximum=1_000_001)
++            for key in ("own_seconds", "cumulative_seconds"):
++                number(stats[key])
++            if not 1 <= cast(int, stats["primitive_calls"]) <= cast(int, stats["total_calls"]):
++                raise ProofFailure("profile_calls")
++            if (
++                not cast(float, stats["own_seconds"])
++                <= cast(float, stats["cumulative_seconds"])
++                <= row["wall_seconds"] + 0.000001
++            ):
++                raise ProofFailure("profile_function_time")
++        n = min(ordinal, 4)
++        for key in ("revisions", "receipts"):
++            if type(row[key]) is not int or row[key] != n:
++                raise ProofFailure("profile_counts")
++        if (
++            type(row["counts"]) is not list
++            or any(type(v) is not int for v in row["counts"])
++            or row["counts"] != [1, n, n, n]
++        ):
++            raise ProofFailure("profile_counts")
++        for key, bound in (("raw_request_bytes", 131072), ("logical_bytes", 262144)):
++            if ordinal <= 4:
++                number(row[key], count=True, maximum=bound + 1)
++                if row[key] == 0:
++                    raise ProofFailure("profile_bytes")
++            elif row[key] is not None:
++                raise ProofFailure("profile_bytes")
++        if ordinal <= 4:
++            total_bytes += cast(int, row["logical_bytes"]) + (ordinal > 1)
++        if type(row["history_bytes"]) is not int or row["history_bytes"] != total_bytes:
++            raise ProofFailure("profile_bytes")
++    if (
++        complete
++        and sum(row["process_cpu_seconds"] for row in rows)
++        > value["process_cpu_seconds"] + 0.000001
++    ):
++        raise ProofFailure("profile_cpu_intervals")
++    return cast(dict[str, object], value)
++
++
++def profile_report(report: dict[str, object]) -> str:
++    """Bound the entire artifact, including identities and its sole metric copy."""
++    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
++    if len(encoded.encode("utf-8")) < LIMIT:
++        return encoded
++    report["status"] = "failed"
++    fallback: dict[str, object] = {
++        "schema": 1,
++        "mode": "four_revision_diagnostic",
++        "status": "failed",
++        "failure": "profile_evidence_output_limit",
++        "profile_metrics": "omitted_due_output_limit",
++        "cleanup": report.get("cleanup")
++        if report.get("cleanup") in {"verified_absent", "failed"}
++        else "unavailable",
++    }
++    for key in ("commit", "tree"):
++        value = report.get(key)
++        if type(value) is str and re.fullmatch(r"[0-9a-f]{40}", value):
++            fallback[key] = value
++    return json.dumps(fallback, sort_keys=True, separators=(",", ":")) + "\n"
++
++
++def profile_observation(
++    previous: dict[str, object] | None, current: dict[str, object]
++) -> dict[str, object]:
++    """Repeated atomic reads are legal; completed records can never disappear/change."""
++    if previous is not None:
++        old, new = cast(list[object], previous["records"]), cast(list[object], current["records"])
++        if (
++            len(new) < len(old)
++            or new[: len(old)] != old
++            or (previous["complete"] and current != previous)
++        ):
++            raise ProofFailure("profile_progress_regressed")
++        if (
++            len(new) == len(old)
++            and previous["active_ordinal"] is not None
++            and current["active_ordinal"] != previous["active_ordinal"]
++        ):
++            raise ProofFailure("profile_progress_regressed")
++    return current
++
++
++def stop_profile(ids: list[str], execute: Callable[..., str]) -> bool:
++    """Stop only the two already-validated IDs before slow owner reconciliation."""
++    stopped = True
++    for cid in reversed(ids):
++        identifier(cid)
++        try:
++            execute(["docker", "kill", "--signal", "KILL", cid], timeout=5)
++        except (ProofFailure, OSError, ValueError):
++            stopped = False
++    for cid in reversed(ids):
++        try:
++            if execute(["docker", "inspect", "--format", "{{.State.Running}}", cid]) != "false":
++                stopped = False
++        except (ProofFailure, OSError, ValueError):
++            stopped = False
++    return stopped
++
++
+ def supervise(
+     worker_image: str,
+     pg_image: str,
+@@ -474,9 +703,15 @@ def supervise(
+     owned: Path,
+     *,
+     single_record: bool = False,
++    four_revision_profile: bool = False,
+ ) -> None:
+     started = time.monotonic()
+-    command_deadline = started + 900
++    command_deadline = started + (20 if four_revision_profile else 900)
++    cpu_budget = 240 if four_revision_profile else 600
++    profile_started = False
++    interrupted = False
++    final_deadline = started + 120
++    progress: dict[str, object] | None = None
+     micro_deadline = started  # Expired until the fixed workload actually starts.
+ 
+     def execute(args: list[str], *, timeout: float = 5) -> str:
+@@ -490,13 +725,21 @@ def supervise(
+     report: dict[str, object] = {
+         "schema": 1,
+         "commit": commit,
+-        "mode": "single_record_feasibility" if single_record else "micro_only",
++        "mode": "four_revision_diagnostic"
++        if four_revision_profile
++        else "single_record_feasibility"
++        if single_record
++        else "micro_only",
+         "maximum_capacity_qualified": False,
+         "status": "failed",
+         "phase": "setup_and_containment",
+     }
++    if four_revision_profile:
++        report["deadline_kind"] = "setup"
+ 
+     def interrupt(_signum: int, _frame: FrameType | None) -> None:
++        nonlocal interrupted
++        interrupted = True
+         raise ProofFailure("interrupted")
+ 
+     signal.signal(signal.SIGTERM, interrupt)
+@@ -627,7 +870,7 @@ def supervise(
+             creation_uncertain = False
+             ids.append(cid)
+             owned.write_text(json.dumps(ids))
+-            inspect_owned(cid, image, label, network)
++            inspect_owned(cid, image, label, network, execute if four_revision_profile else None)
+             execute(["docker", "start", cid])
+             snapshots[role] = parse_probe(
+                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+@@ -664,7 +907,7 @@ def supervise(
+                     "three_generations_survived_client_kill_then_container_absent"
+                 )
+         report["command_stage"] = "database_readiness"
+-        deadline = time.monotonic() + 30
++        deadline = min(time.monotonic() + 30, command_deadline)
+         while True:
+             try:
+                 execute(
+@@ -690,9 +933,21 @@ def supervise(
+         # Only now may pytest import the fixed three-operation specimen.
+         before = {role: data["cpu_usec"] for role, data in snapshots.items()}
+         previous = before
++        specimen = "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
++        if single_record:
++            specimen = "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
++        if four_revision_profile:
++            specimen = (
++                "services/platform/tests/quotes/test_quote_profile_postgres.py"
++                "::test_four_revisions_fresh_load_and_exact_retry"
++            )
+         with tempfile.TemporaryFile() as output:
+             micro_deadline = time.monotonic() + 20
+             command_deadline = micro_deadline
++            profile_started = four_revision_profile
++            if four_revision_profile:
++                report["deadline_kind"] = "workload"
++                report["command_stage"] = "profile_pytest_start"
+             child = subprocess.Popen(
+                 [
+                     "docker",
+@@ -706,71 +961,131 @@ def supervise(
+                     "no:cacheprovider",
+                     "--tb=no",
+                     "--basetemp=/tmp/quote-micro",
+-                    (
+-                        "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+-                        if single_record
+-                        else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+-                    ),
++                    specimen,
+                 ],
+                 stdout=output,
+                 stderr=output,
+                 start_new_session=True,
+                 preexec_fn=output_limit,
+             )
+-            micro_started = time.monotonic()
++            micro_started = micro_deadline - 20 if four_revision_profile else time.monotonic()
+             try:
+                 while child.poll() is None:
+-                    if time.monotonic() - micro_started > 20 or time.monotonic() - started > 900:
++                    if four_revision_profile:
++                        report["command_stage"] = "profile_monitor_deadline"
++                    if time.monotonic() >= micro_deadline or time.monotonic() - started > 900:
+                         raise ProofFailure("wall_budget")
+                     if os.fstat(output.fileno()).st_size >= LIMIT:
+                         raise ProofFailure("output_limit")
++                    if four_revision_profile:
++                        report["command_stage"] = "profile_checkpoint_read"
++                        raw_progress = execute(
++                            [
++                                "docker",
++                                "exec",
++                                ids[1],
++                                "sh",
++                                "-c",
++                                "if test -f /tmp/quote-profile-result.json; "
++                                "then cat /tmp/quote-profile-result.json; "
++                                "else printf unavailable; fi",
++                            ]
++                        )
++                        if raw_progress == "unavailable":
++                            if progress is not None:
++                                raise ProofFailure("profile_checkpoint_disappeared")
++                        else:
++                            progress = profile_observation(progress, profile_result(raw_progress))
++                            report["profile_last_observed"] = progress
++                            report["profile_observed_at_workload_seconds"] = (
++                                time.monotonic() - micro_started
++                            )
+                     current = {}
+                     for cid, role, memory, pids in [
+                         (ids[0], "db", 768, 128),
+                         (ids[1], "worker", 512, 64),
+                     ]:
++                        if four_revision_profile:
++                            report["command_stage"] = f"profile_{role}_pressure_probe"
+                         snapshots[role] = parse_probe(
+                             execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
+                         )
+                         current[role] = snapshots[role]["cpu_usec"]
+                     report["last_sampled_containers"] = dict(snapshots)
+-                    cpu_delta(previous, current, 600)
+-                    cpu_delta(dict.fromkeys(current, 0), current, 600)
++                    cpu_delta(previous, current, cpu_budget)
++                    cpu_delta(dict.fromkeys(current, 0), current, cpu_budget)
+                     previous = current
+                     time.sleep(0.1)
++                if four_revision_profile:
++                    report["command_stage"] = "profile_pytest_completion"
+                 if time.monotonic() >= command_deadline:
+                     raise ProofFailure("wall_budget")
+                 if child.returncode or os.fstat(output.fileno()).st_size >= LIMIT:
+                     raise ProofFailure("micro_failed", returncode=child.returncode)
+                 report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
++                if four_revision_profile:
++                    # Result read/validation also consumes the immutable workload budget.
++                    report["command_stage"] = "profile_final_result_read"
++                    progress = profile_observation(
++                        progress,
++                        profile_result(
++                            execute(
++                                ["docker", "exec", ids[1], "cat", "/tmp/quote-profile-result.json"]
++                            ),
++                            final=True,
++                        ),
++                    )
++                    if time.monotonic() >= micro_deadline:
++                        raise ProofFailure("wall_budget")
++                    report["profile_last_observed"] = progress
++                    report["profile_observed_at_workload_seconds"] = (
++                        time.monotonic() - micro_started
++                    )
++                    report["micro_wall_seconds"] = round(time.monotonic() - micro_started, 3)
+             finally:
+                 if child.poll() is None:
+                     os.killpg(child.pid, signal.SIGKILL)
+                     child.wait(timeout=2)
+-        command_deadline = started + 900
++        if four_revision_profile:
++            final_deadline = min(started + 120, time.monotonic() + 20)
++            report["deadline_kind"] = "finalization"
++            report["command_stage"] = "profile_final_pressure_probes"
++        command_deadline = final_deadline if four_revision_profile else started + 900
+         # Containers remain alive: read final cgroup events after workload exit.
+-        final = {
+-            role: parse_probe(execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids)
+-            for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]
+-        }
+-        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, 600)
++        final = {}
++        for cid, role, memory, pids in [(ids[0], "db", 768, 128), (ids[1], "worker", 512, 64)]:
++            if four_revision_profile:
++                report["command_stage"] = f"profile_final_{role}_pressure_probe"
++            final[role] = parse_probe(
++                execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
++            )
++        cpu_delta(previous, {role: value["cpu_usec"] for role, value in final.items()}, cpu_budget)
+         final_cpu = {role: value["cpu_usec"] for role, value in final.items()}
+-        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, 600)
++        lifetime_cpu = cpu_delta(dict.fromkeys(final_cpu, 0), final_cpu, cpu_budget)
+         report["lifetime_cpu_usec"] = lifetime_cpu
+-        if lifetime_cpu + canary_resources["cpu_usec"] > 600_000_000:
++        if lifetime_cpu + canary_resources["cpu_usec"] > cpu_budget * 1_000_000:
+             raise ProofFailure("cpu_budget")
+-        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, 600)
++        report["observed_workload_cpu_usec"] = cpu_delta(before, final_cpu, cpu_budget)
+         report["containers"] = final
+-        micro = micro_result(
+-            execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
+-            single_record=single_record,
++        micro = (
++            progress
++            if four_revision_profile
++            else micro_result(
++                execute(["docker", "exec", ids[1], "cat", "/tmp/quote-micro-result.json"]),
++                single_record=single_record,
++            )
+         )
+-        report["micro"] = micro
++        assert micro is not None
++        if not four_revision_profile:
++            report["micro"] = micro
+         if cast(float, micro["process_cpu_seconds"]) * 1_000_000 > final_cpu["worker"]:
+             raise ProofFailure("cpu_accounting_disagrees")
+         report["phase"] = "micro_complete"
+         report["status"] = "micro_passed_not_capacity"
+     except (ProofFailure, ValueError, OSError) as error:
++        if four_revision_profile:
++            report["failure_command_stage"] = report.get("command_stage", "unavailable")
++            report["failure_deadline_kind"] = report["deadline_kind"]
+         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
+         if isinstance(error, ProofFailure) and error.returncode is not None:
+             report["client_returncode"] = error.returncode
+@@ -802,7 +1117,21 @@ def supervise(
+                     else "invalid_evidence"
+                 )
+     finally:
++        if four_revision_profile:
++            command_deadline = (
++                min(started + 150, time.monotonic() + 30)
++                if interrupted
++                else min(final_deadline, time.monotonic() + 20)
++            )
++            report["deadline_kind"] = "emergency_cleanup" if interrupted else "finalization"
++        if profile_started and report["status"] != "micro_passed_not_capacity":
++            report["command_stage"] = "profile_stop_worker_and_database"
++            report["workload_stop"] = (
++                "verified_not_running" if stop_profile(ids[:2], execute) else "failed_or_unverified"
++            )
+         try:
++            if four_revision_profile:
++                report["command_stage"] = "profile_cleanup_reconciliation"
+             for role in ("canary", "db", "worker"):
+                 cidfile = owned.with_suffix(f".{role}.cid")
+                 if cidfile.exists():
+@@ -810,19 +1139,41 @@ def supervise(
+                     if cid not in ids:
+                         ids.append(cid)
+             if owned.with_suffix(".owner.json").exists():
+-                for cid in reconcile_owned(owned):
++                for cid in (
++                    reconcile_owned(owned, execute)
++                    if four_revision_profile
++                    else reconcile_owned(owned)
++                ):
+                     if cid not in ids:
+                         ids.append(cid)
+-            remove_owned(ids)
++            if four_revision_profile:
++                report["command_stage"] = "profile_cleanup_removal"
++                remove_owned(ids, execute)
++            else:
++                remove_owned(ids)
+             if creation_uncertain:
+                 raise ProofFailure("creation_outcome_uncertain")
++            if four_revision_profile and time.monotonic() >= command_deadline:
++                raise ProofFailure("finalization_wall_budget")
+             report["cleanup"] = "verified_absent"
+-        except (ProofFailure, OSError, ValueError):
++            if four_revision_profile and time.monotonic() >= started + 120:
++                report["status"] = "failed"
++        except (ProofFailure, OSError, ValueError) as cleanup_error:
+             report["cleanup"] = "failed"
+             report["status"] = "failed"
++            if four_revision_profile:
++                report["cleanup_failure"] = (
++                    str(cleanup_error)
++                    if isinstance(cleanup_error, ProofFailure)
++                    else "invalid_evidence"
++                )
+         report["elapsed_seconds"] = round(time.monotonic() - started, 3)
+         evidence.parent.mkdir(parents=True, exist_ok=True)
+-        evidence.write_text(json.dumps(report, sort_keys=True) + "\n")
++        evidence.write_text(
++            profile_report(report)
++            if four_revision_profile
++            else json.dumps(report, sort_keys=True) + "\n"
++        )
+     if report["status"] != "micro_passed_not_capacity":
+         raise ProofFailure("micro_unqualified")
+ 
+@@ -834,7 +1185,9 @@ def main() -> None:
+     parser.add_argument("--commit", required=True)
+     parser.add_argument("--evidence", type=Path, required=True)
+     parser.add_argument("--owned", type=Path, required=True)
+-    parser.add_argument("--single-record-feasibility", action="store_true")
++    modes = parser.add_mutually_exclusive_group()
++    modes.add_argument("--single-record-feasibility", action="store_true")
++    modes.add_argument("--four-revision-profile", action="store_true")
+     args = parser.parse_args()
+     try:
+         supervise(
+@@ -844,6 +1197,7 @@ def main() -> None:
+             args.evidence,
+             args.owned,
+             single_record=args.single_record_feasibility,
++            four_revision_profile=args.four_revision_profile,
+         )
+     except ProofFailure:
+         raise SystemExit(1) from None
+diff --git a/services/platform/tests/quotes/test_quote_profile_postgres.py b/services/platform/tests/quotes/test_quote_profile_postgres.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..406230205104249a00a3433a8f5839ac541766ae
+--- /dev/null
++++ b/services/platform/tests/quotes/test_quote_profile_postgres.py
+@@ -0,0 +1,556 @@
++"""One opt-in four-revision diagnostic; no capacity or latency qualification."""
++
++import cProfile
++import json
++import os
++import time
++from contextlib import contextmanager
++from dataclasses import replace
++from datetime import timedelta
++from pathlib import Path
++
++import pytest
++from cycling_workshop.quotes import commands, reconstruction, repository, storage
++from cycling_workshop.quotes.commands import CreateQuoteCommand, ReviseQuoteCommand
++from cycling_workshop.quotes.domain import DiscountLine, LaborLine, TaxLine
++from cycling_workshop.quotes.models import QuoteDecisionRecord
++from cycling_workshop.quotes.repository import QuoteRepository
++from cycling_workshop.quotes.requests import CreateQuoteRequest, decode_quote_request
++from cycling_workshop.service_orders.models import ServiceOrderRecord
++from sqlalchemy import event, func, select, text
++from test_administration_postgres import administration_postgres as administration_postgres
++from test_quote_repository import admitted, counts
++from test_quote_repository_postgres import quote_postgres as quote_postgres
++from test_quote_storage import NOW, uid
++
++# Bind exact code objects, not profiler string matches. These five source identities
++# are reviewed alongside the independent host validator. Timings overlap: neither
++# cumulative values nor the candidate/load/commit spans are additive buckets.
++PROFILE_FUNCTIONS = {
++    "reconstruct": reconstruction._reconstruct,
++    "row_assembly": reconstruction._revision_document,
++    "canonical_json": storage.canonical_bytes,
++    "quote_codec": storage.encode_quote,
++    "command_proof": commands.command_from_proof,
++}
++
++
++def profile_functions(profiler):
++    observed = {entry.code: entry for entry in profiler.getstats()}
++    result = {}
++    for label, function in PROFILE_FUNCTIONS.items():
++        entry = observed.get(function.__code__)
++        result[label] = (
++            None
++            if entry is None
++            else {
++                "primitive_calls": entry.callcount - entry.reccallcount,
++                "total_calls": entry.callcount,
++                "own_seconds": entry.inlinetime,
++                "cumulative_seconds": entry.totaltime,
++            }
++        )
++    return result
++
++
++def atomic_progress(destination, progress):
++    payload = json.dumps(progress, separators=(",", ":"), allow_nan=False).encode("ascii")
++    if len(payload) >= 16384:
++        raise ValueError("profile output exceeds fixed bound")
++    temporary = destination.with_name(destination.name + ".tmp")
++    temporary.write_bytes(payload)
++    os.replace(temporary, destination)
++
++
++def initial_progress():
++    return {
++        "schema": 1,
++        "active_ordinal": None,
++        "complete": False,
++        "process_cpu_seconds": None,
++        "records": [],
++    }
++
++
++class ProfileActions:
++    def __init__(self, progress, destination, *, cpu_started):
++        self.progress = progress
++        self.destination = destination
++        self.cpu_started = cpu_started
++        self.active = None
++        self.cursor_started = None
++        self.cursor_verb = None
++
++    @contextmanager
++    def span(self, label):
++        if self.active is None:
++            yield
++            return
++        started = time.monotonic()
++        try:
++            yield
++        finally:
++            self.active[label]["calls"] += 1
++            self.active[label]["seconds"] += time.monotonic() - started
++
++    def before_cursor(self, connection, cursor, statement, parameters, context, executemany):
++        # Deliberately retain no SQL text, parameters or execution context.
++        if self.active is not None:
++            assert self.cursor_started is None
++            self.cursor_started = time.monotonic()
++            first = statement.lstrip().split(None, 1)[0].upper() if statement.strip() else "OTHER"
++            self.cursor_verb = (
++                first if first in {"SELECT", "INSERT", "UPDATE", "DELETE"} else "OTHER"
++            )
++
++    def after_cursor(self, connection, cursor, statement, parameters, context, executemany):
++        if self.active is not None:
++            assert self.cursor_started is not None
++            self.active["sql"]["calls"] += 1
++            self.active["sql"]["seconds"] += time.monotonic() - self.cursor_started
++            self.active["sql"]["verbs"][self.cursor_verb] += 1
++            self.cursor_started = None
++            self.cursor_verb = None
++
++    def run(self, ordinal, action, operation):
++        expected = ("create", "revise", "revise", "revise", "fresh_load", "exact_retry")
++        assert type(ordinal) is int and 1 <= ordinal <= 6
++        assert ordinal == len(self.progress["records"]) + 1
++        assert action == expected[ordinal - 1] and not self.progress["complete"]
++        self.progress["active_ordinal"] = ordinal
++        atomic_progress(self.destination, self.progress)
++        self.active = {
++            label: {"calls": 0, "seconds": 0.0}
++            for label in ("candidate", "reconstruction", "commit", "sql")
++        }
++        self.active["sql"]["verbs"] = dict.fromkeys(
++            ("SELECT", "INSERT", "UPDATE", "DELETE", "OTHER"), 0
++        )
++        profiler = cProfile.Profile()
++        wall_started, cpu_started = time.monotonic(), time.process_time()
++        profiler.enable()
++        try:
++            evidence = operation()
++        finally:
++            profiler.disable()
++            wall_seconds = time.monotonic() - wall_started
++            cpu_seconds = time.process_time() - cpu_started
++            spans, self.active = self.active, None
++        # An exception never reaches this publication: its active ordinal and last
++        # contiguous completed prefix survive. Missing metrics are not zero-filled.
++        assert self.cursor_started is None
++        record = {
++            "ordinal": ordinal,
++            "action": action,
++            "wall_seconds": wall_seconds,
++            "process_cpu_seconds": cpu_seconds,
++            **spans,
++            "functions": profile_functions(profiler),
++            **evidence,
++        }
++        self.progress["records"].append(record)
++        self.progress["active_ordinal"] = None
++        if ordinal == 6:
++            self.progress["complete"] = True
++            self.progress["process_cpu_seconds"] = time.process_time() - self.cpu_started
++        atomic_progress(self.destination, self.progress)
++
++
++@pytest.fixture
++def profile_postgres(request):
++    # This starts before the ordinary PostgreSQL fixture, without modifying its
++    # setup or teardown. The host's 20s wall cutoff also includes pytest bootstrap.
++    assert os.environ.get("OCWP_QUOTE_MICRO") == "contained"
++    cpu_started = time.process_time()
++    progress = initial_progress()
++    destination = Path("/tmp/quote-profile-result.json")
++    atomic_progress(destination, progress)
++    db = request.getfixturevalue("quote_postgres")
++    return db, ProfileActions(progress, destination, cpu_started=cpu_started)
++
++
++@pytest.mark.skipif(
++    os.environ.get("OCWP_QUOTE_MICRO") != "contained", reason="host containment preflight required"
++)
++def test_four_revisions_fresh_load_and_exact_retry(profile_postgres, monkeypatch):
++    # No full-shape construction occurs on import or through the tiny helper tests.
++    assert os.environ.get("OCWP_QUOTE_MICRO") == "contained"
++    db, measurement = profile_postgres
++    with db.factory() as session:
++        assert session.scalar(text("SHOW lock_timeout")) == "15s"
++        assert session.scalar(text("SHOW statement_timeout")) == "20s"
++        assert int(session.scalar(text("SHOW server_version_num"))) // 10000 == 18
++        original_order = tuple(
++            session.execute(
++                select(ServiceOrderRecord.__table__).where(ServiceOrderRecord.id == "order-a")
++            ).one()
++        )
++
++    advance = repository.advance
++    load_with_bytes = QuoteRepository._load_with_bytes
++
++    def timed_advance(*args, **kwargs):
++        with measurement.span("candidate"):
++            return advance(*args, **kwargs)
++
++    def timed_load(self, *args, **kwargs):
++        with measurement.span("reconstruction"):
++            return load_with_bytes(self, *args, **kwargs)
++
++    monkeypatch.setattr(repository, "advance", timed_advance)
++    monkeypatch.setattr(QuoteRepository, "_load_with_bytes", timed_load)
++    event.listen(db.engine, "before_cursor_execute", measurement.before_cursor)
++    event.listen(db.engine, "after_cursor_execute", measurement.after_cursor)
++    receipts, results, logical_sizes = [], [], []
++    raw_create = None
++    loaded = None
++
++    def fixed_lines():
++        # Exactly the separately reviewed record shape; no size parameter, search,
++        # padding field or alternate recipe. Rebuild inside every append action.
++        description = ("Synthetic inspection of braking steering bearings and drivetrain. " * 8)[
++            :499
++        ] + "."
++        assert len(description) == len(description.encode("ascii")) == 500
++        assert " ".join(description.split()) == description
++        charges = tuple(LaborLine(uid(1000 + i), description, 60, 10000) for i in range(80))
++        targets = tuple(line.line_id for line in charges[:50])
++        lines = (
++            *charges,
++            *(DiscountLine(uid(1080 + i), description, 50, targets) for i in range(10)),
++            *(TaxLine(uid(1090 + i), description, 1000, targets) for i in range(10)),
++        )
++        assert len(lines) == 100
++        assert (
++            sum(len(line.scope_line_ids) for line in lines if isinstance(line, DiscountLine)) == 500
++        )
++        assert sum(len(line.base_line_ids) for line in lines if isinstance(line, TaxLine)) == 500
++        return lines
++
++    def command_from_request(raw):
++        request = decode_quote_request([raw])
++        common = {
++            "operation_id": request.operation_id,
++            "quote_id": request.quote_id,
++            "organization_id": "a",
++            "location_id": "location-a",
++            "order_id": "order-a",
++            "actor_id": "actor-a",
++            "expected_order_version": request.expected_order_version,
++            "lines": request.lines,
++        }
++        if isinstance(request, CreateQuoteRequest):
++            return CreateQuoteCommand(**common, currency=request.currency)
++        return ReviseQuoteCommand(
++            **common,
++            lineage_id=request.lineage_id,
++            expected_head_id=request.expected_head_id,
++            expected_head_version=request.expected_head_version,
++            expected_decision_sequence=request.expected_decision_sequence,
++        )
++
++    def assert_stored(session, revisions):
++        actual = counts(session)
++        assert actual == (1, revisions, revisions, revisions)
++        assert session.scalar(select(func.count()).select_from(QuoteDecisionRecord)) == 0
++        assert (
++            tuple(
++                session.execute(
++                    select(ServiceOrderRecord.__table__).where(ServiceOrderRecord.id == "order-a")
++                ).one()
++            )
++            == original_order
++        )
++        return list(actual)
++
++    def evidence(revisions, actual_counts, raw_size=None, logical_size=None):
++        # Canonical JSON arrays have only [, commas, ]; their member byte counts
++        # were measured from each immutable operation-time record, before supersession.
++        history_bytes = 2 + sum(logical_sizes) + len(logical_sizes) - 1
++        assert 0 < history_bytes <= 16 * 1024 * 1024
++        return {
++            "raw_request_bytes": raw_size,
++            "logical_bytes": logical_size,
++            "history_bytes": history_bytes,
++            "revisions": revisions,
++            "receipts": len(receipts),
++            "counts": actual_counts,
++        }
++
++    def append_revision(version):
++        nonlocal raw_create
++        lines = fixed_lines()
++        document = {
++            "kind": "create" if version == 1 else "revise",
++            "operation_id": uid(199 + version),
++            "quote_id": uid(version),
++            "expected_order_version": 1,
++            "lines": storage.encode_lines(lines),
++        }
++        if version == 1:
++            document["currency"] = "MXN"
++        else:
++            document.update(
++                lineage_id=uid(1),
++                expected_head_id=uid(version - 1),
++                expected_head_version=version - 1,
++                expected_decision_sequence=0,
++            )
++        raw = storage.canonical_bytes(document)
++        if version == 1:
++            raw_create = raw
++        command = command_from_request(raw)
++        assert command.lines == lines
++        recorded_at = NOW + timedelta(seconds=version - 1)
++        with db.factory() as session:
++            admitted(session)
++            result = QuoteRepository(session).apply(command, recorded_at=recorded_at)
++            assert not result.replayed
++            assert result.receipt.command == command
++            assert result.receipt.ordinal == result.receipt.quote_version == version
++            assert result.receipt.operation_id == uid(199 + version)
++            assert result.receipt.quote_id == uid(version)
++            assert result.receipt.decision_sequence == 0
++            assert result.receipt.recorded_at == recorded_at
++            assert result.receipt.quote_outbox_id not in {item.quote_outbox_id for item in receipts}
++            assert result.ledger.sequence == 0 and result.ledger.entries == ()
++            assert result.ledger.projection.outcome == "NO_CURRENT_DECISION"
++            head = result.ledger.history.head
++            assert head.quote_id == uid(version) and head.version == version
++            assert head.lines == lines and head.currency == "MXN"
++            assert len(result.ledger.history.revisions) == version
++            assert (
++                head.totals.subtotal_minor,
++                head.totals.discount_minor,
++                head.totals.tax_minor,
++                head.totals.total_minor,
++            ) == (800000, 500, 499500, 1299000)
++            if results:
++                previous = results[-1].ledger.history
++                assert result.ledger.history.revisions[:-2] == previous.revisions[:-1]
++                assert result.ledger.history.revisions[-2] == replace(
++                    previous.head, superseded_at=recorded_at, superseded_by=head.quote_id
++                )
++            assert (result.order.state, result.order.version) == ("DIAGNOSIS", 1)
++            logical_size = len(
++                storage.canonical_bytes(reconstruction.logical_record(command, result.ledger))
++            )
++            assert 0 < logical_size <= 256 * 1024
++            actual_counts = assert_stored(session, version)
++            with measurement.span("commit"):
++                session.commit()
++        receipts.append(result.receipt)
++        results.append(result)
++        logical_sizes.append(logical_size)
++        return evidence(version, actual_counts, len(raw), logical_size)
++
++    def fresh_load():
++        nonlocal loaded
++        with db.factory() as session:
++            admitted(session)
++            loaded = QuoteRepository(session).load("a", "location-a", "order-a")
++            assert loaded is not None
++            assert loaded.ledger == results[-1].ledger
++            assert loaded.receipts == tuple(receipts)
++            actual_counts = assert_stored(session, 4)
++            with measurement.span("commit"):
++                session.commit()
++        return evidence(4, actual_counts)
++
++    def exact_retry():
++        assert raw_create is not None and loaded is not None
++        command = command_from_request(raw_create)
++        assert command == receipts[0].command
++        with db.factory() as session:
++            admitted(session)
++            replay = QuoteRepository(session).apply(command, recorded_at=NOW)
++            assert replay.replayed and replay.receipt == receipts[0]
++            assert replay.ledger == loaded.ledger == results[-1].ledger
++            assert (replay.order.state, replay.order.version) == ("DIAGNOSIS", 1)
++            assert replay.ledger.entries == () and replay.ledger.sequence == 0
++            assert len(loaded.receipts) == len(receipts) == len(results) == len(logical_sizes) == 4
++            actual_counts = assert_stored(session, 4)
++            with measurement.span("commit"):
++                session.commit()
++        return evidence(4, actual_counts)
++
++    try:
++        measurement.run(1, "create", lambda: append_revision(1))
++        measurement.run(2, "revise", lambda: append_revision(2))
++        measurement.run(3, "revise", lambda: append_revision(3))
++        measurement.run(4, "revise", lambda: append_revision(4))
++        measurement.run(5, "fresh_load", fresh_load)
++        measurement.run(6, "exact_retry", exact_retry)
++    finally:
++        event.remove(db.engine, "before_cursor_execute", measurement.before_cursor)
++        event.remove(db.engine, "after_cursor_execute", measurement.after_cursor)
++
++
++def test_profile_helpers_report_only_observed_allowlisted_functions():
++    profiler = cProfile.Profile()
++    profiler.runcall(lambda: sum((1, 2)))
++    assert profile_functions(profiler) == {
++        "reconstruct": None,
++        "row_assembly": None,
++        "canonical_json": None,
++        "quote_codec": None,
++        "command_proof": None,
++    }
++
++
++def test_profile_helpers_atomic_replace_and_size_limit(tmp_path, monkeypatch):
++    destination = tmp_path / "progress.json"
++    initial = {"schema": 1, "records": []}
++    atomic_progress(destination, initial)
++    assert json.loads(destination.read_bytes()) == initial
++    original = destination.read_bytes()
++    with pytest.raises(ValueError, match="profile output exceeds fixed bound"):
++        atomic_progress(destination, {"padding": "x" * 16384})
++    assert destination.read_bytes() == original
++
++    def interrupted_replace(source, target):
++        assert Path(source).read_bytes() != original
++        assert Path(target) == destination
++        raise OSError("synthetic interruption")
++
++    monkeypatch.setattr("os.replace", interrupted_replace)
++    with pytest.raises(OSError, match="synthetic interruption"):
++        atomic_progress(destination, {"schema": 1, "records": [1]})
++    assert destination.read_bytes() == original
++
++
++def test_profile_helpers_failed_action_retains_completed_prefix(tmp_path):
++    progress = initial_progress()
++    destination = tmp_path / "progress.json"
++    measurement = ProfileActions(progress, destination, cpu_started=0.0)
++
++    def small_action():
++        return {
++            "raw_request_bytes": None,
++            "logical_bytes": None,
++            "history_bytes": None,
++            "revisions": 1,
++            "receipts": 1,
++            "counts": [1, 1, 1, 1],
++        }
++
++    measurement.run(1, "create", small_action)
++    completed = json.loads(destination.read_bytes())
++    assert completed["records"][0]["ordinal"] == 1
++    assert completed["records"][0]["functions"]["reconstruct"] is None
++    assert completed["process_cpu_seconds"] is None
++
++    def fail():
++        raise AssertionError("synthetic action failure")
++
++    with pytest.raises(AssertionError, match="synthetic action failure"):
++        measurement.run(2, "revise", fail)
++    interrupted = json.loads(destination.read_bytes())
++    assert interrupted["records"] == completed["records"]
++    assert interrupted["active_ordinal"] == 2
++    assert interrupted["complete"] is False
++    assert interrupted["process_cpu_seconds"] is None
++
++
++def test_profile_helpers_observed_tiny_json_has_own_and_cumulative_metrics():
++    profiler = cProfile.Profile()
++    assert profiler.runcall(storage.canonical_bytes, {"value": 1}) == b'{"value":1}'
++    metrics = profile_functions(profiler)
++    canonical = metrics["canonical_json"]
++    assert canonical["primitive_calls"] == canonical["total_calls"] == 1
++    assert 0 <= canonical["own_seconds"] <= canonical["cumulative_seconds"]
++    assert metrics["reconstruct"] is metrics["row_assembly"] is None
++    assert metrics["quote_codec"] is metrics["command_proof"] is None
++    assert set(canonical) == {"primitive_calls", "total_calls", "own_seconds", "cumulative_seconds"}
++
++
++def test_profile_helpers_six_tiny_actions_complete_without_domain_shape(tmp_path):
++    progress = initial_progress()
++    destination = tmp_path / "progress.json"
++    measurement = ProfileActions(progress, destination, cpu_started=time.process_time())
++
++    def small_action():
++        with measurement.span("candidate"):
++            storage.canonical_bytes({"value": 1})
++        with measurement.span("reconstruction"):
++            pass
++        measurement.before_cursor(None, None, "NOT RETAINED", (), None, False)
++        measurement.after_cursor(None, None, "NOT RETAINED", (), None, False)
++        with measurement.span("commit"):
++            pass
++        return {
++            "raw_request_bytes": None,
++            "logical_bytes": None,
++            "history_bytes": None,
++            "revisions": 0,
++            "receipts": 0,
++            "counts": [0, 0, 0, 0],
++        }
++
++    for ordinal, action in enumerate(
++        ("create", "revise", "revise", "revise", "fresh_load", "exact_retry"), 1
++    ):
++        measurement.run(ordinal, action, small_action)
++        saved = json.loads(destination.read_bytes())
++        assert [row["ordinal"] for row in saved["records"]] == list(range(1, ordinal + 1))
++        assert saved["active_ordinal"] is None
++        assert saved["complete"] is (ordinal == 6)
++    assert set(saved) == {"schema", "active_ordinal", "complete", "process_cpu_seconds", "records"}
++    assert saved["process_cpu_seconds"] >= 0
++    assert len(destination.read_bytes()) < 16384
++    assert b"NOT RETAINED" not in destination.read_bytes()
++    for row in saved["records"]:
++        assert set(row) == {
++            "ordinal",
++            "action",
++            "wall_seconds",
++            "process_cpu_seconds",
++            "candidate",
++            "reconstruction",
++            "commit",
++            "sql",
++            "functions",
++            "raw_request_bytes",
++            "logical_bytes",
++            "history_bytes",
++            "revisions",
++            "receipts",
++            "counts",
++        }
++        assert row["wall_seconds"] >= 0 and row["process_cpu_seconds"] >= 0
++        for label in ("candidate", "reconstruction", "commit", "sql"):
++            assert set(row[label]) == (
++                {"calls", "seconds", "verbs"} if label == "sql" else {"calls", "seconds"}
++            )
++            assert row[label]["calls"] == 1 and row[label]["seconds"] >= 0
++        assert row["sql"]["verbs"] == dict(SELECT=0, INSERT=0, UPDATE=0, DELETE=0, OTHER=1)
++    prior = destination.read_bytes()
++    with pytest.raises(AssertionError):
++        measurement.run(7, "revise", small_action)
++    assert destination.read_bytes() == prior
++
++
++def test_profile_helpers_sql_verbs_are_closed_counts_without_statements(tmp_path):
++    measurement = ProfileActions(initial_progress(), tmp_path / "unused.json", cpu_started=0)
++    measurement.active = {
++        "sql": {
++            "calls": 0,
++            "seconds": 0.0,
++            "verbs": dict.fromkeys(("SELECT", "INSERT", "UPDATE", "DELETE", "OTHER"), 0),
++        }
++    }
++    for statement in (
++        " select private",
++        "INSERT private",
++        "UPDATE private",
++        "DELETE private",
++        "SAVEPOINT private",
++        "",
++    ):
++        measurement.before_cursor(None, None, statement, None, None, False)
++        measurement.after_cursor(None, None, statement, None, None, False)
++    assert measurement.active["sql"]["calls"] == 6
++    assert measurement.active["sql"]["verbs"] == dict(
++        SELECT=1, INSERT=1, UPDATE=1, DELETE=1, OTHER=2
++    )
++    assert "private" not in json.dumps(measurement.active)
+diff --git a/tests/operations/test_quote_capacity_micro.py b/tests/operations/test_quote_capacity_micro.py
+index e6e5e22ee0caac3628686cb7062845298d1dbed2..38977b187e54cd9e8e6333f9515c680820621606 100644
+--- a/tests/operations/test_quote_capacity_micro.py
++++ b/tests/operations/test_quote_capacity_micro.py
+@@ -211,13 +211,18 @@ def test_closed_micro_report_rejects_raw_proof_and_nonfinite_timings():
+         "post_success_invalid",
+     ],
+ )
+-@pytest.mark.parametrize("single_record", [False, True])
++@pytest.mark.parametrize("single_record", [False, True, "profile"])
+ def test_supervisor_success_and_terminal_failures_are_closed(
+     tmp_path, monkeypatch, fault, single_record
+ ):
+     import json
+     from types import SimpleNamespace
+ 
++    from test_quote_profile_guard import profile_value
++
++    four_revision_profile = single_record == "profile"
++    single_record = single_record is True
++
+     commit, tree = "c" * 40, "d" * 40
+     clock = [0.0]
+     monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+@@ -234,6 +239,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+ 
+         def poll():
+             polls.append(1)
++            if fault == "checkpoint_timeout" and len(polls) <= 2:
++                return None
+             return None if fault == "mid_probe" and len(polls) == 1 else 0
+ 
+         return SimpleNamespace(poll=poll, returncode=1 if fault == "fixture_exit" else 0)
+@@ -255,6 +262,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+ 
+     if single_record:
+         micro = feasibility_result()
++    if four_revision_profile:
++        micro = profile_value()
+ 
+     def execute(args, **kwargs):
+         calls.append(args)
+@@ -275,6 +284,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+             return ""
+         if args[:2] == ["docker", "inspect"]:
+             cid = args[-1]
++            if args[3] == "{{.State.Running}}":
++                return "false"
+             if "range .Mounts" in args[3]:
+                 return "tmpfs /tmp"
+             label = next(
+@@ -288,6 +299,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+             if args[3] == "pg_isready":
+                 return ""
+             if args[3] == "cat":
++                if fault == "incomplete_profile":
++                    return json.dumps(profile_value(5))
+                 if args[-1] == "/tmp/quote-record-diagnostic.json":
+                     return json.dumps(
+                         dict(
+@@ -300,6 +313,11 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+                     clock[0] = 21.0
+                     return "{}"
+                 return json.dumps(micro)
++            if four_revision_profile and args[-1].startswith("if test -f /tmp/quote-profile"):
++                if fault == "checkpoint_timeout" and len(polls) == 2:
++                    clock[0] = 21.0
++                    raise module.ProofFailure("command_timeout")
++                return json.dumps(profile_value(2))
+             if fault == "mid_probe" and specimens:
+                 clock[0] = 21.0
+             return (
+@@ -319,6 +337,8 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+                 raise module.ProofFailure("command_failed")
+             containers.remove(args[-1])
+             return ""
++        if args[:2] == ["docker", "kill"]:
++            return ""
+         if args[:2] == ["docker", "ps"]:
+             return "\n".join(containers)
+         raise AssertionError(args)
+@@ -333,10 +353,17 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+         "effective_privileges",
+         lambda *args: {"uid": 10001, "effective_capabilities": 0, "no_new_privileges": True},
+     )
+-    monkeypatch.setattr(module, "reconcile_owned", lambda *args: list(containers))
++
++    def reconcile(*args):
++        calls.append(["reconcile"])
++        if fault == "slow_finalization":
++            clock[0] = 21.0
++        return list(containers)
++
++    monkeypatch.setattr(module, "reconcile_owned", reconcile)
+     original_remove = module.remove_owned
+     monkeypatch.setattr(module, "run", execute)
+-    monkeypatch.setattr(module, "remove_owned", lambda ids: original_remove(ids, execute))
++    monkeypatch.setattr(module, "remove_owned", lambda ids, *args: original_remove(ids, execute))
+     target = tmp_path / "report.json"
+     if fault == "none":
+         module.supervise(
+@@ -346,6 +373,7 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+             target,
+             tmp_path / "owned.json",
+             single_record=single_record,
++            four_revision_profile=four_revision_profile,
+         )
+     else:
+         with pytest.raises(module.ProofFailure):
+@@ -356,11 +384,14 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+                 target,
+                 tmp_path / "owned.json",
+                 single_record=single_record,
++                four_revision_profile=four_revision_profile,
+             )
+     report = json.loads(target.read_text())
+     assert report["status"] == ("micro_passed_not_capacity" if fault == "none" else "failed")
+     assert report["cleanup"] == (
+-        "failed" if fault in {"cleanup", "create_timeout"} else "verified_absent"
++        "failed"
++        if fault in {"cleanup", "create_timeout", "slow_finalization"}
++        else "verified_absent"
+     )
+     assert len(specimens) == (0 if fault == "create_timeout" else 1)
+     if fault == "fixture_exit":
+@@ -378,10 +409,81 @@ def test_supervisor_success_and_terminal_failures_are_closed(
+         assert report["identities"][2]["memory_max"] == 536870912
+         assert report["lifetime_cpu_usec"] == 200
+         assert specimens[0][-1] == (
+-            "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
++            "services/platform/tests/quotes/test_quote_profile_postgres.py::test_four_revisions_fresh_load_and_exact_retry"
++            if four_revision_profile
++            else "services/platform/tests/quotes/test_quote_record_feasibility_postgres.py"
+             if single_record
+             else "services/platform/tests/quotes/test_quote_capacity_micro_postgres.py"
+         )
++        if four_revision_profile:
++            assert "profile" not in report
++            assert len(target.read_bytes()) < module.LIMIT
++            assert len(report["profile_last_observed"]["records"]) == 6
++            # Include every actual host identity/counter field in the bound check.
++            maximal = json.loads(target.read_bytes())
++            maximal["last_sampled_containers"] = maximal["containers"]
++            maximal["canary_resources"].update(observed_processes=64, memory_peak=536870912)
++            for row in maximal["profile_last_observed"]["records"]:
++                row["sql"]["calls"] = 1_000_000
++                row["sql"]["verbs"] = dict(SELECT=999996, INSERT=1, UPDATE=1, DELETE=1, OTHER=1)
++                for metrics in row["functions"].values():
++                    if metrics is not None:
++                        metrics.update(
++                            primitive_calls=1_000_000,
++                            total_calls=1_000_000,
++                            own_seconds=0.09999999999999999,
++                            cumulative_seconds=0.09999999999999999,
++                        )
++            assert module.profile_result(json.dumps(maximal["profile_last_observed"]), final=True)
++            encoded = module.profile_report(maximal)
++            assert len(encoded.encode()) < module.LIMIT
++            assert maximal["status"] == "micro_passed_not_capacity"
++            partial = json.loads(encoded)
++            partial.update(
++                status="failed",
++                failure="command_timeout",
++                failure_command_stage="profile_checkpoint_read",
++                failure_deadline_kind="workload",
++                workload_stop="verified_not_running",
++            )
++            partial["profile_last_observed"]["records"].pop()
++            partial["profile_last_observed"].update(
++                complete=False, active_ordinal=6, process_cpu_seconds=None
++            )
++            assert module.profile_result(json.dumps(partial["profile_last_observed"]))
++            encoded_partial = module.profile_report(partial)
++            assert len(encoded_partial.encode()) < module.LIMIT
++            assert len(json.loads(encoded_partial)["profile_last_observed"]["records"]) == 5
++    if four_revision_profile and fault in {
++        "late_exit",
++        "mid_probe",
++        "fixture_exit",
++        "post_success_invalid",
++        "incomplete_profile",
++        "checkpoint_timeout",
++    }:
++        assert report["workload_stop"] == "verified_not_running"
++        kill_indexes = [i for i, row in enumerate(calls) if row[:2] == ["docker", "kill"]]
++        reconcile_index = next(i for i, row in enumerate(calls) if row == ["reconcile"])
++        assert len(kill_indexes) == 2 and max(kill_indexes) < reconcile_index
++        if fault in {"mid_probe", "checkpoint_timeout"}:
++            assert report["profile_last_observed"] == profile_value(2)
++            assert not any(row[-1] == "/tmp/quote-profile-result.json" for row in calls)
++            assert report["failure_deadline_kind"] == "workload"
++            assert report["failure_command_stage"] == (
++                "profile_worker_pressure_probe"
++                if fault == "mid_probe"
++                else "profile_checkpoint_read"
++            )
++    if fault == "slow_finalization":
++        assert report["cleanup_failure"] == "finalization_wall_budget"
++
++
++@pytest.mark.parametrize("fault", ["incomplete_profile", "checkpoint_timeout", "slow_finalization"])
++def test_profile_incomplete_zero_exit_and_checkpoint_timeout(tmp_path, monkeypatch, fault):
++    test_supervisor_success_and_terminal_failures_are_closed(
++        tmp_path, monkeypatch, fault, "profile"
++    )
+ 
+ 
+ @pytest.mark.parametrize(
+diff --git a/tests/operations/test_quote_profile_guard.py b/tests/operations/test_quote_profile_guard.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..8f5747dd658c3b372e5481c0e88a94981e669dfc
+--- /dev/null
++++ b/tests/operations/test_quote_profile_guard.py
+@@ -0,0 +1,198 @@
++"""No Docker or quote construction: fixed profile control-contract tests."""
++
++import json
++from pathlib import Path
++
++import pytest
++from test_quote_capacity_micro import module
++
++
++def profile_value(completed=6):
++    actions = ("create", "revise", "revise", "revise", "fresh_load", "exact_retry")
++    rows = []
++    for ordinal, action in enumerate(actions[:completed], 1):
++        n = min(ordinal, 4)
++        rows.append(
++            dict(
++                ordinal=ordinal,
++                action=action,
++                wall_seconds=0.1,
++                process_cpu_seconds=0.000001,
++                **{
++                    k: dict(calls=1, seconds=0.01)
++                    for k in ("candidate", "reconstruction", "commit", "sql")
++                },
++                functions={
++                    k: (
++                        None
++                        if ordinal == 1 and k in {"reconstruct", "row_assembly"}
++                        else dict(
++                            primitive_calls=1,
++                            total_calls=1,
++                            own_seconds=0.001,
++                            cumulative_seconds=0.005,
++                        )
++                    )
++                    for k in (
++                        "reconstruct",
++                        "row_assembly",
++                        "canonical_json",
++                        "quote_codec",
++                        "command_proof",
++                    )
++                },
++                raw_request_bytes=100 if ordinal <= 4 else None,
++                logical_bytes=200 if ordinal <= 4 else None,
++                history_bytes=201 * n + 1,
++                revisions=n,
++                receipts=n,
++                counts=[1, n, n, n],
++            )
++        )
++        rows[-1]["candidate"] = dict(calls=int(ordinal <= 4), seconds=0.01 if ordinal <= 4 else 0.0)
++        rows[-1]["reconstruction"] = dict(
++            calls=int(ordinal > 1), seconds=0.01 if ordinal > 1 else 0.0
++        )
++        rows[-1]["sql"]["verbs"] = dict(SELECT=1, INSERT=0, UPDATE=0, DELETE=0, OTHER=0)
++    return dict(
++        schema=1,
++        active_ordinal=None if completed == 6 else completed + 1,
++        complete=completed == 6,
++        process_cpu_seconds=0.00001 if completed == 6 else None,
++        records=rows,
++    )
++
++
++def test_fixed_profile_closed_schema_and_contiguous_prefix():
++    value = profile_value()
++    assert module.profile_result(json.dumps(value), final=True) == value
++    partial = profile_value(2)
++    assert module.profile_result(json.dumps(partial)) == partial
++    assert module.profile_observation(partial, value) == value
++    assert module.profile_observation(partial, partial) == partial
++    assert len(json.dumps(value).encode()) < module.LIMIT
++
++
++@pytest.mark.parametrize(
++    "mutation",
++    [
++        lambda v: v.update(extra="private"),
++        lambda v: v.update(process_cpu_seconds=float("nan")),
++        lambda v: v["records"][0].update(ordinal=True),
++        lambda v: v["records"][1].update(ordinal=1),
++        lambda v: v["records"][0].update(wall_seconds=-1),
++        lambda v: v["records"][0]["sql"].update(seconds=float("inf")),
++        lambda v: v["records"][0]["candidate"].update(calls=True),
++        lambda v: v["records"][0]["functions"].update(private=None),
++        lambda v: v["records"][0].update(counts=[1, 32, 32, 32]),
++        lambda v: v.update(active_ordinal=6),
++        lambda v: v["records"][0]["candidate"].update(calls=10**400),
++        lambda v: v["records"][0]["candidate"].update(calls=0, seconds=0),
++        lambda v: v["records"][1]["functions"].update(reconstruct=None),
++        lambda v: v["records"][0]["functions"].update(canonical_json=None),
++        lambda v: v["records"][0]["functions"]["quote_codec"].update(own_seconds=0.1),
++        lambda v: v["records"][0]["commit"].update(calls=0, seconds=0),
++        lambda v: v["records"][0]["sql"]["verbs"].update(OTHER=2),
++        lambda v: v["records"][0]["sql"].update(calls=0, seconds=0),
++        lambda v: v["records"][0]["sql"]["verbs"].update(PRIVATE=0),
++    ],
++)
++def test_profile_rejects_malformed_or_unbounded_metrics(mutation):
++    value = profile_value()
++    mutation(value)
++    with pytest.raises(module.ProofFailure):
++        module.profile_result(json.dumps(value), final=True)
++
++
++def test_zero_exit_cannot_accept_partial_profile_or_rewrite_prefix():
++    with pytest.raises(module.ProofFailure):
++        module.profile_result(
++            json.dumps(profile_value()).replace('"schema": 1', '"schema": 1, "schema": 1')
++        )
++    with pytest.raises(module.ProofFailure):
++        module.profile_result(json.dumps(profile_value(5)), final=True)
++    with pytest.raises(module.ProofFailure):
++        module.profile_observation(profile_value(3), profile_value(2))
++    previous, current = profile_value(2), profile_value(3)
++    current["records"][0]["wall_seconds"] = 0.2
++    with pytest.raises(module.ProofFailure):
++        module.profile_observation(previous, current)
++
++
++def test_six_full_metric_rows_fit_existing_output_bound():
++    value = profile_value()
++    for row in value["records"]:
++        for key in row["functions"]:
++            if row["functions"][key] is None:
++                continue
++            row["functions"][key] = dict(
++                primitive_calls=1_000_000,
++                total_calls=1_000_000,
++                own_seconds=0.09999999999999999,
++                cumulative_seconds=0.09999999999999999,
++            )
++    encoded = json.dumps(value)
++    assert len(encoded.encode()) < module.LIMIT
++    assert module.profile_result(encoded, final=True) == value
++
++
++def test_whole_profile_report_is_bounded_and_oversize_fails_closed():
++    report = dict(
++        mode="four_revision_diagnostic",
++        status="micro_passed_not_capacity",
++        cleanup="verified_absent",
++        profile_last_observed=profile_value(),
++        commit="a" * 40,
++        tree="b" * 40,
++    )
++    encoded = module.profile_report(report)
++    assert len(encoded.encode()) < module.LIMIT
++    assert json.loads(encoded) == report
++    report["unexpected_large"] = "private" * module.LIMIT
++    encoded = module.profile_report(report)
++    assert len(encoded.encode()) < module.LIMIT
++    assert report["status"] == "failed"
++    closed = json.loads(encoded)
++    assert closed["failure"] == "profile_evidence_output_limit"
++    assert closed["cleanup"] == "verified_absent"
++    assert "private" not in encoded
++
++
++def test_fixed_profile_has_distinct_opened_only_single_job_gate():
++    path = Path(__file__).resolve().parents[2] / ".github/workflows/quote-four-revision-profile.yml"
++    workflow = path.read_text()
++    for required in (
++        "types: [opened]",
++        "github.head_ref == 'codex/quote-four-revision-profile'",
++        "github.run_number == '1' && github.run_attempt == '1'",
++        "github.event.pull_request.head.repo.full_name == github.repository",
++        "github.repository == 'IzignaMx/open-cycling-workshop'",
++        "timeout-minutes: 15",
++        "--four-revision-profile",
++    ):
++        assert required in workflow
++    assert "--online-once" not in workflow
++    assert workflow.count("runs-on:") == 1
++
++
++def test_profile_stops_both_exact_containers_before_observing_stop():
++    calls = []
++
++    def execute(args, **kwargs):
++        calls.append(args)
++        return "false" if args[1] == "inspect" else ""
++
++    assert module.stop_profile(["a" * 64, "b" * 64], execute)
++    assert [call[1] for call in calls] == ["kill", "kill", "inspect", "inspect"]
++    assert [call[-1] for call in calls] == ["b" * 64, "a" * 64] * 2
++
++
++def test_profile_stop_timeout_is_unverified_and_still_attempts_database():
++    calls = []
++
++    def execute(args, **kwargs):
++        calls.append(args)
++        raise module.ProofFailure("command_timeout")
++
++    assert not module.stop_profile(["a" * 64, "b" * 64], execute)
++    assert [call[1] for call in calls] == ["kill", "kill", "inspect", "inspect"]

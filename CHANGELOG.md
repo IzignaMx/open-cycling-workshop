@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-27 · PR backlog preservation and PR60 evidence reconciliation
+
+- Confirm PR52–55 are already integrated ancestors through PR57; close redundant
+  proposals without deleting their branches/history. Preserve unique failed
+  PR51/56 diagnostic source as inert exact-diff archives, not active workflows.
+- Record PR60 merged-source hosted success while retaining failed diagnostics,
+  physical/installation/capacity/transport and quote activation gates. See the
+  [disposition matrix](docs/10-spec-development/2026-10-27-pr-backlog-reconciliation.md).
+
 ## 2026-10-27 · Quote ingress/authority fences (pending hosted proof)
 
 - Prepare scalar enrollment fences for legacy HTTP/sync/order-linked inventory
