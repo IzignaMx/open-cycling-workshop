@@ -1,5 +1,31 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Current queue · 2026-10-27
+
+- [x] Merge PR #58 and PR #59 under their specific approvals; verify main
+      `a9e161f7fdcb986828f85a59c46a5a47015c7b34` with CI 40428504739:
+      27/27, 4,727 collected / 4,669 passed / 58 expected skips, six restores,
+      both shards' primary/independent cleanup and direct/aggregate 86/86 retry 0.
+- [x] Close the canary allowance and full-history recovery hosted-evidence queue
+      for that source. Preserve earlier failures and unknown historical cleanup.
+- [ ] Complete and independently qualify Tasks 5/8 ingress/enrollment serialization
+      and authority/grant-adoption fences before any quote exposure. The
+      [bounded candidate](docs/10-spec-development/2026-10-27-quote-ingress-authority-fences.md)
+      needs final local/static/contracts, independent source review and exact-head
+      hosted PostgreSQL races/full qualification. Synthetic CLI tests do not
+      authorize real-account adoption or close mixed-old-writer rollout gates.
+- [ ] Keep R01-T035 and physical Windows/Android/laptop/Pi/manual accessibility
+      acceptance open; hosted browser/native ARM64 do not replace real devices.
+- [ ] Complete separately authorized installation inventory, isolated corruption/
+      actual-volume restore and measured RPO/RTO before reopening any installation.
+- [ ] Keep capacity/latency, transport/cancellation, old-writer and quote API/UI
+      activation gates separate. Do not repeat consumed trials or change limits.
+      Future PR merge needs specific approval; no deployment is authorized.
+
+See [the source-bound terminal record](docs/10-spec-development/2026-10-27-pr59-postmerge-reconciliation.md).
+All dated sections below retain their original checkpoint instructions/results;
+stale pending, draft and merge wording is historical, not the current action queue.
+
 ## 2026-10-26 · Approved canary-create allowance
 
 - [x] Complete independent source/documentation review and 509 local checks for

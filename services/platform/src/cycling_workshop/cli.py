@@ -22,6 +22,7 @@ from cycling_workshop.identity.cutover_cli import (
     recover_cutover,
 )
 from cycling_workshop.identity.models import UserRecord
+from cycling_workshop.identity.quote_cli import adopt_quotes
 from cycling_workshop.identity.repository import (
     SqlAlchemyUserRepository,
     UserAccount,
@@ -164,6 +165,14 @@ def _build_parser() -> argparse.ArgumentParser:
     adoption.add_argument("--organization-id", required=True)
     adoption.add_argument("--owner-id", required=True)
     adoption.add_argument("--expected-version", type=int, required=True)
+    quote_adoption = access_commands.add_parser(
+        "adopt-quotes",
+        allow_abbrev=False,
+        help="Explicitly add only quote grants to one active established owner",
+    )
+    quote_adoption.add_argument("--organization-id", required=True)
+    quote_adoption.add_argument("--owner-id", required=True)
+    quote_adoption.add_argument("--expected-version", type=int, required=True)
     cutover = subcommands.add_parser("cutover", help="Explicit local cutover maintenance")
     cutover_commands = cutover.add_subparsers(
         dest="cutover_command", required=True, parser_class=_SafeArgumentParser
@@ -180,7 +189,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if (
         args.command == "cutover"
-        or (args.command == "access" and args.access_command == "adopt-branding")
+        or (args.command == "access" and args.access_command in {"adopt-branding", "adopt-quotes"})
     ) and not (os.getenv("OCWP_DATABASE_URL") or os.getenv("OCWP_DATABASE_URL_FILE")):
         print(
             json.dumps(
@@ -227,6 +236,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(
                 json.dumps({"changed": False, "error": "branding_adoption_failed"}, sort_keys=True)
             )
+            return 1
+        print(json.dumps(report, sort_keys=True))
+        return 0
+    if args.command == "access" and args.access_command == "adopt-quotes":
+        try:
+            report = adopt_quotes(
+                settings,
+                organization_id=args.organization_id,
+                owner_id=args.owner_id,
+                expected_version=args.expected_version,
+            )
+        except ApiError as exc:
+            print(json.dumps({"changed": False, "error": exc.code}, sort_keys=True))
+            return 1
+        except (OSError, UnicodeError, ValidationError, SQLAlchemyError):
+            print(json.dumps({"changed": False, "error": "quote_adoption_failed"}, sort_keys=True))
             return 1
         print(json.dumps(report, sort_keys=True))
         return 0

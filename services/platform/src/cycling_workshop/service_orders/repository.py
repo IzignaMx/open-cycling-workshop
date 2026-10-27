@@ -39,11 +39,15 @@ class SqlAlchemyServiceOrderRepository:
         record.updated_at = order.updated_at
         record.version = order.version
 
-    def get(self, *, order_id: str, organization_id: str) -> ServiceOrder | None:
+    def get(
+        self, *, order_id: str, organization_id: str, for_update: bool = False
+    ) -> ServiceOrder | None:
         statement: Select[tuple[ServiceOrderRecord]] = select(ServiceOrderRecord).where(
             ServiceOrderRecord.id == order_id,
             ServiceOrderRecord.organization_id == organization_id,
         )
+        if for_update:
+            statement = statement.with_for_update().execution_options(populate_existing=True)
         record = self._session.scalar(statement)
         return self._to_domain(record) if record is not None else None
 

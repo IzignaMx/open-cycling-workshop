@@ -5,12 +5,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from cycling_workshop.api.errors import ApiError
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.db.dependencies import get_session
 from cycling_workshop.identity.cutover import WriteAdmission, commit_admitted, write_admission
 from cycling_workshop.identity.dependencies import require_capability
 from cycling_workshop.identity.domain import Principal, authorize
+from cycling_workshop.quotes.ingress import MANAGED_ORDER_MESSAGE, lock_legacy_order
 from cycling_workshop.service_orders.domain import (
     InvalidStateTransitionError,
     ServiceOrder,
@@ -136,18 +138,24 @@ def transition_service_order(
 ) -> ServiceOrderResponse:
     principal = lock_writer(session, principal, admission)
     repository = SqlAlchemyServiceOrderRepository(session)
-    order = repository.get(order_id=order_id, organization_id=principal.organization_id)
-    if order is None:
+    fence = lock_legacy_order(session, order_id=order_id, organization_id=principal.organization_id)
+    if fence is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
     try:
         authorize(
             principal,
             capability="orders.write",
-            organization_id=order.organization_id,
-            location_id=order.location_id,
+            organization_id=principal.organization_id,
+            location_id=fence.location_id,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    if fence.managed and payload.action != "cancel":
+        raise ApiError(409, "quote_managed_order", MANAGED_ORDER_MESSAGE)
+    order = repository.get(
+        order_id=order_id, organization_id=principal.organization_id, for_update=True
+    )
+    assert order is not None  # held scalar row lock
     try:
         result = order.transition(payload.action, actor_id=principal.user_id, note=payload.note)
     except InvalidStateTransitionError as exc:

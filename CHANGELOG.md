@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-27 · Quote ingress/authority fences (pending hosted proof)
+
+- Prepare scalar enrollment fences for legacy HTTP/sync/order-linked inventory
+  writes, retaining lawful cancellation and exact historical receipt replay.
+- Add explicit single-owner quote-only grant adoption with schema, CAS, audit and
+  session fences; synthetic fixtures only, no real grant or activation change.
+  Local regressions/static checks and independent final review pass; exact-source
+  hosted qualification remains pending. See the
+  [bounded scope](docs/10-spec-development/2026-10-27-quote-ingress-authority-fences.md).
+
+## 2026-10-27 · Merged PR58/59 evidence reconciliation
+
+- Record exact-main `a9e161f` CI 40428504739: 27/27 controls, 4,669 Python
+  passes / 58 expected skips, six restores, both cleanup proofs and direct/
+  aggregate browsers each 86/86 without retries. Reconcile stale pending and
+  unmerged documentation without rewriting historical failures.
+- Preserve physical, installation, capacity and quote activation gates; optional
+  QEMU remains failed/nonqualifying. No deployment, new merge permission or
+  consumed capacity trial follows. See the
+  [terminal evidence record](docs/10-spec-development/2026-10-27-pr59-postmerge-reconciliation.md).
+
+Earlier dated entries preserve their source-bound checkpoints, not current status.
+
 ## 2026-10-26 · Approved canary-create allowance
 
 - Increase only full-Python canary `docker create` allowance from five to fifteen

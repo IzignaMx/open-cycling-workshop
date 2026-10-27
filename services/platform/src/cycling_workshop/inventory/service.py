@@ -10,7 +10,7 @@ from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.inventory.domain import InventoryMovement, MovementKind, Product
 from cycling_workshop.inventory.repository import SqlAlchemyInventoryRepository
 from cycling_workshop.inventory.schemas import MovementCreateRequest
-from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
+from cycling_workshop.quotes.ingress import MANAGED_ORDER_MESSAGE, lock_legacy_order
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.sync.writes import lock_writer
 
@@ -63,6 +63,13 @@ def record_movement(
     principal = lock_writer(session, principal, admission)
     authorize_location(principal, "inventory.write", principal.location_id)
     repository = SqlAlchemyInventoryRepository(session)
+    fence = (
+        lock_legacy_order(
+            session, order_id=payload.order_id, organization_id=principal.organization_id
+        )
+        if payload.order_id is not None
+        else None
+    )
     # All public ledger writes acquire the same product lock. The idempotency,
     # stock and finalization reads MUST occur after it, in this transaction.
     product = scoped_product(
@@ -94,12 +101,10 @@ def record_movement(
         return existing
 
     if payload.order_id is not None:
-        order = SqlAlchemyServiceOrderRepository(session).get(
-            order_id=payload.order_id,
-            organization_id=principal.organization_id,
-        )
-        if order is None or order.location_id != product.location_id:
+        if fence is None or fence.location_id != product.location_id:
             raise ApiError(404, "order_not_found", "order not found in product location")
+        if fence.managed:
+            raise ApiError(409, "quote_managed_order", MANAGED_ORDER_MESSAGE)
 
     if payload.kind == MovementKind.RESERVE:
         stock = repository.available_quantity(
