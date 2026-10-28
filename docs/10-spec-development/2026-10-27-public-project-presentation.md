@@ -104,3 +104,47 @@ that changes to these entry documents receive a fresh preview check. Permissions
 runners, dependencies and resource limits are unchanged. This source correction
 requires new normal exact-source checks, not an identical-head workflow rerun.
 First-run CI/runtime evidence and successor acceptance are recorded separately.
+
+## Exact historical provenance triage · 2026-10-28
+
+Corrected head `dc36fa9` / merge checkout `fa203c2` / tree `367638ed` completed
+CI40637352427 with independent source-bound review: 4,895 collected / 4,837
+passed / 58 expected skips, eight actual PostgreSQL cases and six restores across
+phases, both owned cleanup proofs; aggregate 27/27, direct/aggregate browser
+86 each with retry 0, repetitions 20 + 9 + 5 + 10 and kernel 14. Fresh preview
+40637352498 passed 2/2 with actual desktop/mobile inspection and all eight output
+files matching an independent current-runtime rebuild. Native ARM, runtime,
+containment, Caddy privacy and branding passed within existing nonphysical and
+noncapacity limits. Optional QEMU failure remains nonqualifying.
+
+Security40637352541 passed ten real policy canaries but failed actual scanning:
+three public source SHA256 values in `docs/site/screenshots.json` matched the
+generic rule in both historical `e62336c` and merge `fa203c2` (six findings).
+Independent recomputation from immutable `a960bdd` confirms the manifest values
+for `apps/web/src/auth/workshop-read-access.ts` (1,352 bytes),
+`apps/web/src/runtime/account-access.ts` (1,000 bytes) and
+`packages/branding/src/tokens.css` (644 bytes). These are file digests, not
+credentials. Full-history/all-ref scanning includes the original branch, so a
+new branch or later representation change alone cannot remove these findings.
+
+The user explicitly authorized the exact path/three-value false-positive
+exception and revalidation. The bounded implementation adds one conjunctive
+`generic-api-key` exception: exact escaped provenance path AND fully anchored
+alternation of only those three literal digests. Default rules, other paths and
+values, full history/all refs, error handling and existing limits remain intact.
+No force-push, history rewrite, blanket hash exception or suppression beyond
+the explicitly authorized exact path/three-value matches.
+
+Acceptance requires twenty real pinned-scanner probes: original ten, each
+public digest's exact original context, one-nibble near miss and different path
+(nine), plus an unrelated synthetic credential at the provenance path. Existing
+mutation tests independently remove or broaden each of four exceptions (OR,
+path and value). The five explicit hosted-scanner skip cases are unchanged.
+Static policy guard was observed RED before implementation, then GREEN.
+Independent local native Gitleaks 8.30.1 (upstream archive checksum verified)
+passed all fifteen policy tests with zero skips: twenty real probes and all
+sixteen mutated policies rejected. Local full-history/all-ref scanning passed
+432 commits / 22.19 MB; this is local-ref coverage, not hosted coverage. Normal
+exact-source CI and the pinned hosted full-history scan are still required;
+this record is not a hosted security-pass claim. No Pages/OIDC/deployment,
+application/grant/quote activation or separate M0 publication is authorized here.

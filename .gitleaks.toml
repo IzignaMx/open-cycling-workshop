@@ -26,3 +26,10 @@ condition = "AND"
 paths = ['''^docs/10-spec-development/execution-state\.yaml$''']
 regexTarget = "secret"
 regexes = ['''^may_expand_beyond_retained_utf8_bytes$''']
+
+[[rules.allowlists]]
+description = "Three public source SHA256 provenance values; independently recomputed from a960bdd"
+condition = "AND"
+paths = ['''^docs/site/screenshots\.json$''']
+regexTarget = "secret"
+regexes = ['''^(?:b9e907a3a280f5283675258d58ea19767c002408e91dbab4a97a0adaebceb544|98221a1c2e0984fda8173ae7903158dd26aa1bfd72dd6f791b6ba0c1b35138f0|454e53d07c4329d205e2d66224524c3c288eea8bced38d3af03cd8c6ccbb0a7a)$''']

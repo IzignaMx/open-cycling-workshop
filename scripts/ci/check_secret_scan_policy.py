@@ -96,6 +96,51 @@ def qualify_policy(root: Path, output: Path, binary: Path | None = None) -> dict
             "github-pat",
         ),
     ]
+    # Frozen public source SHA256 values from a960bdd; not credentials. Keep
+    # their original key context so the real default rule is exercised.
+    provenance_path = "docs/site/screenshots.json"
+    provenance = (
+        (
+            "apps/web/src/auth/workshop-read-access.ts",
+            "b9e907a3a280f5283675258d58ea19767c002408e91dbab4a97a0adaebceb544",
+        ),
+        (
+            "apps/web/src/runtime/account-access.ts",
+            "98221a1c2e0984fda8173ae7903158dd26aa1bfd72dd6f791b6ba0c1b35138f0",
+        ),
+        (
+            "packages/branding/src/tokens.css",
+            "454e53d07c4329d205e2d66224524c3c288eea8bced38d3af03cd8c6ccbb0a7a",
+        ),
+    )
+    for index, (source_path, value) in enumerate(provenance):
+        line = json.dumps({source_path: value}) + "\n"
+        changed = value[:-1] + ("0" if value[-1] != "0" else "1")
+        cases.extend(
+            [
+                (f"exact_provenance_{index}", provenance_path, line, None),
+                (
+                    f"changed_provenance_{index}",
+                    provenance_path,
+                    json.dumps({source_path: changed}) + "\n",
+                    "generic-api-key",
+                ),
+                (
+                    f"provenance_other_path_{index}",
+                    "docs/site/OTHER.json",
+                    line,
+                    "generic-api-key",
+                ),
+            ]
+        )
+    cases.append(
+        (
+            "default_other_rule_in_provenance",
+            provenance_path,
+            'value = "' + "ghp_" + "AbcD0123456789" * 2 + "AbCd012345" + '"\n',
+            "github-pat",
+        )
+    )
     for name, path, content, expected_rule in cases:
         with tempfile.TemporaryDirectory(prefix="ocwp-secret-policy-") as directory:
             fixture = Path(directory)
