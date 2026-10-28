@@ -1,5 +1,17 @@
 schema: 1
 
+public_project_presentation_20261027:
+  status: in_progress
+  source_baseline: a960bddb94189c6c74c7f3d0a72472636c3caced
+  evidence: docs/10-spec-development/2026-10-27-public-project-presentation.md
+  design: docs/superpowers/specs/2026-10-27-public-project-presentation-design.md
+  plan: docs/superpowers/plans/2026-10-27-public-project-presentation.md
+  scope: static_public_documentation_readme_real_synthetic_screenshots_module_strategy
+  chosen_architecture: same_repo_static_site_no_runtime_plugin_loader
+  actual_pages_publication: blocked_specific_settings_and_permissions_authorization
+  screenshots: existing_exact_baseline_hosted_artifact_12767187707_pending_packaging
+  application_deployment_real_grants_quote_activation: not_performed
+
 quote_http_privacy_20261027:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-10-27-quote-http-privacy.md

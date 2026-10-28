@@ -1831,3 +1831,15 @@ remain open. See the [evidence record](docs/10-spec-development/2026-10-14-conne
 Unexecuted local preparation. Do not publish the fixed service-trigger branch until its independent guard prerequisite and exact service tree are accepted: a push launches the workload immediately. Do not open a PR merely to store the package, because ordinary CI also runs. A consumed/skipped first run stops without renaming or counter changes.
 
 Do not combine frozen service writes with schema 0013 unchanged: explicit effect-version write/replay handling is required. Real PostgreSQL migration, restore and resource evidence remain pending. SQLite service passes would establish only the named functional cases, not capacity, safe activation or physical readiness.
+
+## 2026-10-27 · Public documentation publication gate
+
+- [ ] Before enabling GitHub Pages or adding `pages: write` / `id-token: write`,
+      obtain specific authorization for the protected documentation-only
+      deployment. Build/test/artifact preparation may proceed with read-only
+      permissions. Never deploy the operational PWA, API, credentials or workshop
+      data as the public presentation. Verify the actual returned URL and source
+      SHA before calling the presentation live. See the
+      [plan](docs/superpowers/plans/2026-10-27-public-project-presentation.md).
+- Physical/device, real installation, quote activation and capacity gates remain
+  unchanged; publishing documentation does not close them.
