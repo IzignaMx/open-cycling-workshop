@@ -41,3 +41,34 @@ Public site implementation, README accuracy, compatible-module strategy,
 independent whole-branch review, exact-source CI and postmerge verification remain
 pending. No actual app deployment, quote activation, real grants, physical
 acceptance or consumed-capacity rerun is included.
+
+## Implementation and review checkpoint
+
+- Same-repository Spanish executive site, README/onboarding, source-mapped
+  architecture and collaboration/security reporting guides implemented. Module
+  strategy explicitly stages data-only M0, reviewed official composition and
+  later isolated service identities/connectors; no SDK runtime claimed.
+- Four original PNGs packaged with SHA256, native attachment identity, fixture,
+  viewport and source/run/artifact provenance. Runtime fingerprint includes
+  production sources, imported PWA policy, build manifests/config and capture
+  producer. Initial `--require-current` build passed. Normal builds label later
+  runtime drift historical rather than blocking unrelated Core changes.
+- Builder RED: missing implementation observed; first GREEN 27 cases. Destination
+  ancestor symlink and added-runtime drift regressions RED 2 / GREEN 30. Review
+  CSS string-image fetch and weakened/missing CSP regressions RED 5 / GREEN 35.
+  Dark-section focus regression RED 1 / GREEN 36. Final repository scope: 64 pass.
+- Independent review found normal-suite freshness coupling, CSS `image-set()` /
+  missing-CSP defense and dark focus contrast. All addressed. Actual hosted
+  keyboard/axe/reduced-motion/static-site desktop and 320px execution remains
+  pending; local source tests do not establish those browser results.
+- Ruling: fixture-only runtime snapshots are self-contained and refresh their
+  own hashes; real provenance is immutable. Initial current-source verification
+  is explicit, not a requirement imposed on every later Core commit.
+- Ruling: include the review's additional build inputs in the fingerprint now
+  because an omitted imported policy could mislabel changed runtime as current.
+- Read-only preview Actions adds no Pages/OIDC permissions and deploys nothing.
+  Every upload is a build/browser evidence artifact, not a public deployment.
+
+Whole Python and frontend baseline checks are in progress; exact candidate CI
+and postmerge verification remain required. No source/documentation claim
+closes the original physical, real-installation or activation gates.

@@ -1,0 +1,58 @@
+name: Public presentation preview
+
+on:
+  pull_request:
+    paths:
+      - 'docs/site/**'
+      - 'scripts/docs/**'
+      - 'apps/web/tools/public-site/**'
+      - 'apps/web/playwright.public-site.config.ts'
+      - '.github/workflows/public-presentation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/site/**'
+      - 'scripts/docs/**'
+      - 'apps/web/tools/public-site/**'
+      - 'apps/web/playwright.public-site.config.ts'
+      - '.github/workflows/public-presentation.yml'
+  workflow_dispatch:
+
+# Preview only: no Pages settings, deployment, OIDC or write-token permissions.
+permissions:
+  contents: read
+
+jobs:
+  static-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.17.0'
+      - name: Install existing locked browser tooling
+        run: pnpm install --frozen-lockfile
+      - name: Build only allowlisted public documentation
+        run: python3 scripts/docs/build_public_site.py --output artifacts/public-site/open-cycling-workshop
+      - name: Install Chromium
+        run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
+      - name: Verify actual static site at repository subpath
+        run: pnpm --filter @ocwp/web exec playwright test --config playwright.public-site.config.ts
+      - name: Preserve source-bound static preview and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-presentation-${{ github.sha }}
+          path: |
+            artifacts/public-site/
+            apps/web/test-results/public-site/
+            apps/web/playwright-report/public-site/
+          if-no-files-found: error
+          retention-days: 14
