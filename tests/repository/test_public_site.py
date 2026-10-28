@@ -215,3 +215,13 @@ def test_dark_section_focus_has_explicit_high_contrast_color():
     css = (ROOT / "docs/site/styles.css").read_text()
     assert ".dark a:focus-visible" in css
     assert "outline-color: #e1f3c3" in css
+
+
+@pytest.mark.parametrize("event", ["pull_request", "push"])
+@pytest.mark.parametrize("document", ["README.md", "ARCHITECTURE.md", "CONTRIBUTING.md"])
+def test_preview_workflow_checks_public_entry_document_changes(event, document):
+    workflow = (ROOT / ".github/workflows/public-presentation.yml").read_text()
+    section = workflow.split(f"  {event}:\n", 1)[1]
+    end = "  push:" if event == "pull_request" else "  workflow_dispatch:"
+    section = section.split(end, 1)[0]
+    assert f"      - '{document}'" in section

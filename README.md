@@ -50,6 +50,10 @@ is not a physical tablet or phone qualification.
 | Operations | Compose candidate, diagnostics, backup/restore and source-bound hosted runtime evidence       | Not proof of a real installation, physical ARM device or production release.                                          |
 | Extensions | Explicit source composition and API boundaries; staged compatibility strategy                 | `packages/plugin-sdk` remains a placeholder, not an installable plugin runtime.                                       |
 
+The implemented identity/security baseline includes:
+
+- persistent users, Argon2 password hashing, signed/revocable sessions, real login endpoints and capability-based RBAC with deny-by-default behavior
+
 The [execution state](docs/10-spec-development/execution-state.yaml),
 [changelog](CHANGELOG.md) and [manual gates](MANUAL-ACTIONS-CHECKLIST.md) are the
 scope/evidence references. A green unit test does not prove PostgreSQL, a PWA

@@ -72,3 +72,35 @@ acceptance or consumed-capacity rerun is included.
 Whole Python and frontend baseline checks are in progress; exact candidate CI
 and postmerge verification remain required. No source/documentation claim
 closes the original physical, real-installation or activation gates.
+
+## First hosted presentation and bounded correction · 2026-10-28
+
+Public draft [PR63](https://github.com/IzignaMx/open-cycling-workshop/pull/63)
+head `e62336c` has the exact locally reviewed `5db273f` tree
+`6aac1995858283176be5c4fcbe4c2a8bf42e5eb9`; authenticated connector publication
+changed commit metadata, not file content. PR checkout `bbeefbe9` has the same
+tree. No Pages settings, OIDC/deployment or M0 runtime/descriptor were published.
+
+[Preview40633914510](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40633914510)
+passed independent artifact review: native desktop1440 and mobile320, 2/2 cases,
+zero retries/flakes/skips/errors, keyboard/focus, reduced motion, repository
+subpath/assets, no overflow, axe and no unexpected network. Both actual full-page
+captures were visually inspected. Artifact12791689965 full ZIP SHA256
+`a2014c60f37312f213ca8713f11c13b42ba654dcf4b1c8e541c586baeca82b32` and CRC checked;
+all eight public output files match independent current-runtime rebuild. This
+qualifies that static preview, not a deployment or a later modified source tree.
+
+[Security40633914472](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40633914472)
+failed before scanning: its existing canary reads the exact `signed/revocable`
+identity sentence removed by the README rewrite. The resulting `StopIteration`
+is retained as a failure, not a secret finding or completed security scan. The
+bounded correction restores the truthful original sentence byte-for-byte, with
+a regression observed RED1 then GREEN. Scanner policy, exceptions, real-canary
+requirements and skip rules are unchanged.
+
+The preview trigger also now covers README/ARCHITECTURE/CONTRIBUTING changes for
+PRs and main pushes (six path-regression cases observed RED then GREEN), ensuring
+that changes to these entry documents receive a fresh preview check. Permissions,
+runners, dependencies and resource limits are unchanged. This source correction
+requires new normal exact-source checks, not an identical-head workflow rerun.
+First-run CI/runtime evidence and successor acceptance are recorded separately.
