@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "profile": "ocwp.module-descriptor.m0",
+  "id": "org.example.readonly-info",
+  "name": "Read-only information example",
+  "version": "0.0.0-m0",
+  "license": "AGPL-3.0-only",
+  "core": {
+    "requires": "ocwp-source:a960bddb94189c6c74c7f3d0a72472636c3caced"
+  },
+  "runtime": {
+    "type": "official-build"
+  },
+  "permissions": [],
+  "network": {
+    "hosts": []
+  },
+  "events": {
+    "subscribes": []
+  },
+  "secrets": [],
+  "data": {
+    "owns": []
+  },
+  "ui": {
+    "slots": []
+  },
+  "offline": {
+    "mode": "online-only"
+  }
+}
