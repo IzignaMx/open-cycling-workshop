@@ -1843,3 +1843,18 @@ Do not combine frozen service writes with schema 0013 unchanged: explicit effect
       [plan](docs/superpowers/plans/2026-10-27-public-project-presentation.md).
 - Physical/device, real installation, quote activation and capacity gates remain
   unchanged; publishing documentation does not close them.
+
+## 2026-10-28 · Authorized manual static Pages publication
+
+- [x] Specific authority received for the static-only manual workflow, Pages
+      Actions source, main-only github-pages environment and one first publication.
+- [ ] Existing maintainer login must configure Pages Source GitHub Actions and
+      github-pages environment with selected Branch main only, no tags. Available
+      connector lacks administration operations and cloud browser is logged out;
+      no setting was changed and no new credential is needed.
+- [ ] Qualify the exact workflow source and fresh merged main before dispatch;
+      verify artifact identity, returned URL, deployed bytes and actual browser
+      proof before calling the presentation live. See the
+      [bounded record](docs/10-spec-development/2026-10-28-manual-public-pages.md).
+- Earlier permission checkbox is historical; this authorization does not permit
+  application deployment, customer data, module execution, grants or new secrets.
