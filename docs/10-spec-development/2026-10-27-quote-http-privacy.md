@@ -2,8 +2,9 @@
 
 ## Status and normative scope
 
-Implemented and independently reviewed locally; exact-candidate hosted proof
-remains pending. This
+Implemented and independently reviewed; PR62 is merged as `a960bdd`, with
+independent fresh postmerge [CI40571345621](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40571345621)
+acceptance for this bounded source scope. This
 is a bounded Tasks 5/8 prerequisite, not quote endpoint activation or completion
 of V0.1, Task 5, Task 8 or the quote lifecycle.
 
@@ -122,3 +123,21 @@ are unchanged. Physical R01-T035 Windows/Android/laptop/Pi/manual accessibility,
 real-installation inventory, isolated corruption, actual-volume restore/RPO/RTO
 and mixed-old-writer rollout/real grant adoption remain separate open gates.
 No installation, reopening, deployment or quote activation was performed.
+
+## Fresh postmerge source reconciliation
+
+PR62 merged as `a960bddb94189c6c74c7f3d0a72472636c3caced`. Fresh CI
+`40571345621` was independently reviewed: 27/27 aggregate controls, 4,852
+collected / 4,794 passed / 58 exact expected skips, eight PostgreSQL cases and
+six restores across phases, and both owned cleanup proofs. Direct and aggregate
+browser runs each passed 86 cases without retries; repetitions and kernel proof
+passed separately. Actual Caddy evidence for both configurations preserves the
+private headers/logs and unchanged forwarding/unrelated controls. Qualifying
+Security, runtime and native ARM companions passed; optional QEMU failed and
+remains NON-QUALIFYING. No failed diagnostic is reclassified or rerun here.
+
+This closes only this source-privacy evidence gate. It does not qualify body
+streaming, total Python/database cancellation, malformed-wire behavior,
+proxy-generated correlation IDs, maximum capacity, real grants, installation,
+physical acceptance or quote activation. Earlier pending statements are retained
+as historical stages, not the current postmerge result.

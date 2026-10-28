@@ -17,13 +17,19 @@ def test_policy_extends_defaults_and_only_uses_conjunctive_exact_exceptions() ->
     rule = policy["rules"][0]
     assert rule["id"] == "generic-api-key"
     assert set(rule) == {"id", "allowlists"}
-    assert len(rule["allowlists"]) == 3
+    assert len(rule["allowlists"]) == 4
     assert {(entry["paths"][0], entry["regexes"][0]) for entry in rule["allowlists"]} == {
         (
             r"^tests/operations/test_local_compose_runtime\.py$",
             r"^eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiJhIn0\.signature$",
         ),
         (r"^README\.md$", r"^signed/revocable$"),
+        (
+            r"^docs/site/screenshots\.json$",
+            r"^(?:b9e907a3a280f5283675258d58ea19767c002408e91dbab4a97a0adaebceb544|"
+            r"98221a1c2e0984fda8173ae7903158dd26aa1bfd72dd6f791b6ba0c1b35138f0|"
+            r"454e53d07c4329d205e2d66224524c3c288eea8bced38d3af03cd8c6ccbb0a7a)$",
+        ),
         (
             r"^docs/10-spec-development/execution-state\.yaml$",
             r"^may_expand_beyond_retained_utf8_bytes$",
@@ -106,7 +112,7 @@ def test_actual_pinned_scanner_rejects_near_misses_and_other_paths(tmp_path: Pat
         pytest.skip("Actual scanner canaries are mandatory in the hosted Security workflow")
     evidence = qualify_policy(Path.cwd(), tmp_path, Path(binary))
     assert evidence["status"] == "passed"
-    assert evidence["cases"] == 10
+    assert evidence["cases"] == 20
 
 
 @pytest.mark.parametrize("exit_code", [0, 1])
@@ -182,3 +188,16 @@ def test_actual_scanner_canaries_reject_broadened_or_missing_exceptions(
         (tmp_path / ".gitleaks.toml").write_text(policy)
         with pytest.raises(security_scan.CoverageError, match="canary failed"):
             qualify_policy(tmp_path, tmp_path / "evidence", Path(binary))
+
+
+def test_public_readme_preserves_real_security_policy_canary_input() -> None:
+    # The hosted scanner qualifies exact and near-miss history exceptions using
+    # this truthful identity description. A README rewrite must retain its input.
+    # Split the known scanner-sensitive token in source, as the policy probe
+    # does for its synthetic token; only README has the exact path exception.
+    prose = (
+        "- persistent users, Argon2 password hashing, signed/"
+        "revocable sessions, real login endpoints and capability-based RBAC "
+        "with deny-by-default behavior"
+    )
+    assert prose in Path("README.md").read_text().splitlines()

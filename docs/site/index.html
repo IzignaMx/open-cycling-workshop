@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>OCWP · Un taller conectado. Sin perder tu autonomía.</title>
+    <meta
+      name="description"
+      content="Plataforma abierta, local-first y offline-first para talleres de bicicletas. Conoce el desarrollo, su arquitectura y cómo colaborar."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#contenido">Saltar al contenido</a>
+    <header class="masthead">
+      <a class="wordmark" href="#inicio" aria-label="OCWP, inicio"
+        ><span class="mark" aria-hidden="true">O / C</span> OCWP</a
+      >
+      <nav aria-label="Navegación principal">
+        <a href="#producto">Producto</a><a href="#arquitectura">Arquitectura</a
+        ><a href="#empezar">Empezar</a><a href="#modulos">Módulos</a
+        ><a href="#colaborar">Colaborar</a>
+      </nav>
+      <a class="repo" href="https://github.com/IzignaMx/open-cycling-workshop">Código abierto ↗</a>
+    </header>
+    <main id="contenido" tabindex="-1">
+      <section class="hero" id="inicio">
+        <p class="eyebrow">OPEN CYCLING WORKSHOP PLATFORM / EN DESARROLLO</p>
+        <h1>El trabajo avanza.<br /><span>Tu taller sigue siendo tuyo.</span></h1>
+        <p class="lede">
+          Una plataforma abierta para organizar clientes, bicicletas y órdenes de servicio. Diseñada
+          para trabajar cerca de tus datos, con independencia de proveedores y continuidad cuando la
+          conexión falla.
+        </p>
+        <div class="actions">
+          <a class="button" href="#empezar"
+            >Explorar el proyecto <span aria-hidden="true">↗</span></a
+          ><a class="text-link" href="#producto">Ver el producto real ↓</a>
+        </div>
+        <div class="principles">
+          <span>Local First</span><span>Offline First</span><span>AGPL-3.0-only</span
+          ><span>Sin SaaS obligatorio</span>
+        </div>
+      </section>
+      <aside class="notice" aria-label="Estado de desarrollo">
+        <strong>Desarrollo activo. No es una versión de producción.</strong> Hay evidencia
+        automatizada del código; siguen abiertas la aceptación física Windows/Android, las
+        revisiones manuales y la instalación real. Esta página presenta el proyecto: no ejecuta el
+        taller ni recibe sus datos.
+      </aside>
+      <section id="producto" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">01 / DEL MOSTRADOR AL BANCO DE TRABAJO</p>
+          <h2>Software que se puede ver.<br />Estado que se puede comprobar.</h2>
+          <p>
+            Para talleres, cooperativas, tiendas y equipos de servicio ciclista. El alcance
+            disponible y el roadmap son distintos: no presentamos funciones futuras como terminadas.
+          </p>
+        </div>
+        <figure class="hero-shot">
+          <img
+            src="assets/screenshots/banco-default-desktop.png"
+            width="1440"
+            height="1000"
+            alt="Aplicación real OCWP: Banco de trabajo con clientes, bicicletas y órdenes de prueba, estado de sincronización y navegación de taller"
+          />
+          <figcaption>
+            <strong>Banco de trabajo, aplicación real.</strong> Datos sintéticos de pruebas; captura
+            Chromium del 27 de octubre de 2026, código <code>a960bdd</code>. No es un mockup ni un
+            taller en producción.
+          </figcaption>
+        </figure>
+        <p class="capture-note">
+          <!-- CAPTURE_STATUS -->
+          · <a href="screenshots.json">Procedencia, dimensiones y hashes</a> ·
+          <a href="https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40571345621"
+            >Ejecución original de CI</a
+          >
+        </p>
+        <div class="cards three">
+          <article>
+            <span class="number">A</span>
+            <h3>Trabajo cotidiano</h3>
+            <p>
+              Clientes, bicicletas y órdenes; borradores y diario local con sincronización y
+              conflictos explícitos. La disponibilidad offline depende de la sesión, del contexto y
+              de los datos admitidos previamente.
+            </p>
+          </article>
+          <article>
+            <span class="number">B</span>
+            <h3>Control compartido</h3>
+            <p>
+              Cuentas, permisos y ubicaciones con validación del servidor. Inventario visible
+              mediante lecturas conectadas: no se promete inventario offline ni una pantalla de
+              cotizaciones.
+            </p>
+          </article>
+          <article>
+            <span class="number">C</span>
+            <h3>Identidad y autonomía</h3>
+            <p>
+              Cuatro presentaciones visuales, preferencias personales y branding del taller.
+              Arquitectura portable y servidor local sin servicios propietarios obligatorios.
+            </p>
+          </article>
+        </div>
+        <div class="gallery">
+          <figure>
+            <img
+              src="assets/screenshots/banco-tablet-touch.png"
+              width="834"
+              height="1100"
+              loading="lazy"
+              alt="Banco de trabajo real en viewport de tableta, con datos sintéticos y controles de taller"
+            />
+            <figcaption>
+              Tableta · viewport 834 × 1100. Es evidencia de navegador, no aceptación de un
+              dispositivo físico.
+            </figcaption>
+          </figure>
+          <figure class="mobile-shot">
+            <img
+              src="assets/screenshots/banco-mobile-320.png"
+              width="320"
+              height="900"
+              loading="lazy"
+              alt="Vista real de OCWP a 320 píxeles de ancho, con datos de prueba"
+            />
+            <figcaption>Reflow a 320 px · datos de prueba.</figcaption>
+          </figure>
+          <figure>
+            <img
+              src="assets/screenshots/noche-canonical-desktop-full.png"
+              width="1440"
+              height="3145"
+              loading="lazy"
+              alt="Captura completa real del tema Turno nocturno con formularios y datos sintéticos"
+            />
+            <figcaption>
+              Turno nocturno · captura completa, sin recortar ni recrear la interfaz.
+            </figcaption>
+          </figure>
+        </div>
+        <div class="boundary">
+          <h3>Lo que todavía no afirmamos</h3>
+          <p>
+            No hay una release de producción, una instalación real validada, un catálogo de plugins
+            instalables ni un flujo público de cotizaciones activado. Persistencia y reglas de
+            dominio no equivalen a una API o una experiencia publicada. Streaming, cancelación,
+            capacidad, recuperación y aceptación física conservan sus gates específicos.
+          </p>
+          <a
+            href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/docs/10-spec-development/execution-state.yaml"
+            >Consultar estado y límites de evidencia ↗</a
+          >
+        </div>
+      </section>
+      <section id="arquitectura" class="section dark">
+        <div class="section-heading">
+          <p class="eyebrow">02 / UNA ARQUITECTURA QUE PUEDES ENTENDER</p>
+          <h2>Cerca del taller.<br />Abierta por diseño.</h2>
+          <p>
+            Monolito modular, no una colección de servicios obligatorios. El navegador preserva el
+            trabajo local; el servidor aplica las reglas y la autoridad de los datos conectados.
+          </p>
+        </div>
+        <ol class="architecture" aria-label="Flujo de la arquitectura actual">
+          <li>
+            <span>01 · INTERFAZ</span>
+            <h3>PWA React + TypeScript</h3>
+            <p>Vite, temas y controles accesibles. <code>apps/web/src</code></p>
+          </li>
+          <li>
+            <span>02 · CONTINUIDAD LOCAL</span>
+            <h3>Dexie / IndexedDB</h3>
+            <p>
+              Repositorios, diario durable, contexto y conflictos. No todos los dominios están
+              disponibles offline.
+            </p>
+          </li>
+          <li>
+            <span>03 · CONTRATO Y AUTORIDAD</span>
+            <h3>REST / OpenAPI → FastAPI</h3>
+            <p>
+              Sesiones, capabilities y scopes. Mutaciones idempotentes, baseline y cambios
+              incrementales.
+            </p>
+          </li>
+          <li>
+            <span>04 · PERSISTENCIA</span>
+            <h3>PostgreSQL + Alembic</h3>
+            <p>
+              Datos conectados, auditoría y outbox interno. El outbox no es todavía una API pública
+              de eventos.
+            </p>
+          </li>
+        </ol>
+        <p class="diagram-caption">
+          Las respuestas y los cambios admitidos regresan al cliente. Los conflictos no se ocultan;
+          no se borra IndexedDB como solución. Docker Compose es la base del servidor, no GitHub
+          Pages.
+        </p>
+        <a
+          class="light-link"
+          href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/ARCHITECTURE.md"
+          >Ver diagrama técnico y mapa de código ↗</a
+        >
+      </section>
+      <section id="empezar" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">03 / ELIGE TU PUNTO DE ENTRADA</p>
+          <h2>De la primera lectura<br />a una contribución verificable.</h2>
+        </div>
+        <div class="cards three steps">
+          <article>
+            <span class="number">01</span>
+            <h3>Conocer y evaluar</h3>
+            <p>
+              Revisa el alcance real, capturas y límites. Para un taller, identifica primero qué
+              operación necesitas conservar offline y qué dispositivo usarás.
+            </p>
+            <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/README.md"
+              >Empezar por el README ↗</a
+            >
+          </article>
+          <article>
+            <span class="number">02</span>
+            <h3>Desarrollar</h3>
+            <p>
+              Clona el repositorio, usa Node y Python según los archivos fijados e instala con
+              lockfiles. Lee las especificaciones antes de cambiar comportamiento.
+            </p>
+            <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/CONTRIBUTING.md"
+              >Preparar el entorno y contribuir ↗</a
+            >
+          </article>
+          <article>
+            <span class="number">03</span>
+            <h3>Implementar con cuidado</h3>
+            <p>
+              Servidor local primero; luego calificación del dispositivo. Secretos fuera del
+              repositorio, backup con restore probado y preservación independiente del diario de
+              cada navegador.
+            </p>
+            <a
+              href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/docs/07-operations/2026-10-14-local-runtime.md"
+              >Guía de runtime e instalación candidata ↗</a
+            >
+          </article>
+        </div>
+      </section>
+      <section id="modulos" class="section tint">
+        <div class="section-heading">
+          <p class="eyebrow">04 / CRECER SIN ROMPER LOS LÍMITES</p>
+          <h2>Extensiones compatibles.<br />No privilegios implícitos.</h2>
+          <p>
+            La estrategia distingue código oficial revisado de componentes externos aislados. El SDK
+            actual es un placeholder: esta es una ruta de evolución, no una promesa de instalación
+            inmediata.
+          </p>
+        </div>
+        <div class="cards two">
+          <article>
+            <h3>Módulos oficiales</h3>
+            <p>
+              Integración explícita y revisada en build, bajo AGPL-3.0-only, con ownership, pruebas
+              de contratos y migraciones. Ninguna capacidad nueva amplía automáticamente roles o
+              grants existentes.
+            </p>
+          </article>
+          <article>
+            <h3>Integraciones externas</h3>
+            <p>
+              Procesos separados, API autenticada y permisos mínimos. Sin SQL directo ni acceso a
+              IndexedDB; no ejecutar código comunitario arbitrario dentro del Core. Identidades de
+              servicio y entrega pública de eventos aún requieren implementación.
+            </p>
+          </article>
+        </div>
+        <p>
+          <a
+            href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/docs/08-open-source/2026-10-27-compatible-modules.md"
+            >Estrategia, contrato propuesto y etapas verificables ↗</a
+          >
+        </p>
+      </section>
+      <section id="colaborar" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">05 / EL PROYECTO TAMBIÉN ES TUYO</p>
+          <h2>Conocimiento compartido.<br />Mejoras demostrables.</h2>
+          <p>
+            Mecánica, diseño, documentación, traducción, accesibilidad y código: hay más de una
+            forma de participar.
+          </p>
+        </div>
+        <div class="cards two">
+          <article>
+            <h3>Proponer y construir</h3>
+            <ol>
+              <li>Relaciona la mejora con una necesidad y su especificación.</li>
+              <li>Abre una propuesta concreta; separa alcance actual y futuro.</li>
+              <li>Añade pruebas, documentación y commits con DCO.</li>
+              <li>Solicita revisión; no eludas CI ni controles de seguridad.</li>
+            </ol>
+            <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/CONTRIBUTING.md"
+              >Ruta de contribución ↗</a
+            >
+          </article>
+          <article>
+            <h3>Reportar un problema</h3>
+            <p>
+              Incluye SHA/versión, dispositivo, pasos mínimos, resultado esperado/real y un ejemplo
+              sintético. Elimina tokens, datos de clientes y registros privados.
+            </p>
+            <a href="https://github.com/IzignaMx/open-cycling-workshop/issues/new"
+              >Abrir un bug no sensible ↗</a
+            >
+            <p>
+              <strong>¿Puede exponer usuarios o datos?</strong> No abras un issue público. Usa el
+              mecanismo privado de advisories cuando esté disponible, o contacta a maintainers de
+              forma privada.
+            </p>
+            <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/SECURITY.md"
+              >Política de seguridad ↗</a
+            >
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <a class="wordmark" href="#inicio">OCWP / OPEN CYCLING WORKSHOP PLATFORM</a>
+      <p>Software libre. Autonomía del taller. Evidencia antes que promesas.</p>
+      <p>
+        <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/LICENSE"
+          >AGPL-3.0-only</a
+        >
+        ·
+        <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/GOVERNANCE.md"
+          >Gobernanza</a
+        >
+        ·
+        <a href="https://github.com/IzignaMx/open-cycling-workshop/blob/main/CODE_OF_CONDUCT.md"
+          >Código de conducta</a
+        >
+      </p>
+      <small
+        >Presentación estática sin formularios, analítica, login ni datos reales de talleres.</small
+      >
+    </footer>
+  </body>
+</html>

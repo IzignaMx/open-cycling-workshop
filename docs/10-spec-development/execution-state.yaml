@@ -1,7 +1,41 @@
 schema: 1
 
+public_project_presentation_20261027:
+  status: in_progress
+  source_baseline: a960bddb94189c6c74c7f3d0a72472636c3caced
+  evidence: docs/10-spec-development/2026-10-27-public-project-presentation.md
+  design: docs/superpowers/specs/2026-10-27-public-project-presentation-design.md
+  plan: docs/superpowers/plans/2026-10-27-public-project-presentation.md
+  scope: static_public_documentation_readme_real_synthetic_screenshots_module_strategy
+  chosen_architecture: same_repo_static_site_no_runtime_plugin_loader
+  actual_pages_publication: blocked_specific_settings_and_permissions_authorization
+  screenshots: four_original_pngs_packaged_from_exact_baseline_artifact_12767187707
+  local_public_builder: 42_passed_including_six_public_document_trigger_regressions
+  first_public_head: e62336c62b2e60ad814de2415c80776a4bdf3810
+  first_public_tree: 6aac1995858283176be5c4fcbe4c2a8bf42e5eb9
+  first_native_preview: 40633914510_independently_verified_2_passed_retry0
+  first_security: 40633914472_failed_missing_readme_canary_before_scanning
+  correction: original_identity_sentence_restored_policy_unchanged_regression_red_green
+  corrected_exact_source_hosted: dc36fa9_ci40637352427_verified_4895_collected_4837_passed_58_expected_skips
+  corrected_aggregate: 27_of_27_direct_and_aggregate_86_each_retry0
+  corrected_security: 40637352541_failed_three_public_source_hash_values_in_two_commits
+  provenance_false_positive_fix: explicitly_authorized_exact_path_and_three_literal_hashes_only
+  provenance_local_policy: independently_verified_15_tests_zero_skips_20_real_probes_16_mutations
+  provenance_fix_acceptance: pending_fresh_exact_source_hosted_full_history_security_and_ci
+  independent_review: dc36fa9_artifacts_verified_bounded_security_source_reviewed_fresh_hosted_proof_pending
+  hosted_site_browser: 40637352498_verified_2_passed_retry0_actual_desktop_mobile
+  compatible_modules: docs/08-open-source/2026-10-27-compatible-modules.md
+  next_module_prerequisite: M0_data_only_canonical_schema_validator_fixtures_no_runtime_loader
+  application_deployment_real_grants_quote_activation: not_performed
+
 quote_http_privacy_20261027:
-  status: implemented_pending_evidence
+  status: verified
+  verification_scope: bounded_source_privacy_only_not_deployment_or_quote_activation
+  merged_main: a960bddb94189c6c74c7f3d0a72472636c3caced
+  postmerge_ci: 40571345621_independently_reviewed_terminal_pass
+  postmerge_python: 4852_collected_4794_passed_58_expected_skips
+  postmerge_browser: direct_and_aggregate_86_each_retry0
+  postmerge_actual_caddy: both_configs_private_headers_logs_and_unchanged_forwarding_verified
   evidence: docs/10-spec-development/2026-10-27-quote-http-privacy.md
   base_main: 993ac6cbf7558ad1b497198a35fc5d174a370bf4
   tasks: partial_5_and_8_not_complete
@@ -21,7 +55,7 @@ quote_http_privacy_20261027:
   independent_source_review: approved_308_overlapping_regressions_passed
   frontend_core: 934_web_plus_1_api_zero_skips
   frontend_static: web_api_typescript_eslint_contract_prettier_passed
-  final_document_package_review_and_hosted: pending
+  final_document_package_review_and_hosted: passed_pr62_and_fresh_postmerge_40571345621
   edge_local_failure_generated_correlation: unproven_separate_transport_gate
   malformed_uri_pre_router_private_headers_logs: unqualified_no_speculative_regex_expansion
   body_streaming_and_total_python_db_cancellation: not_implemented_or_qualified

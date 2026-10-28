@@ -1,172 +1,171 @@
 # Open Cycling Workshop Platform
 
-Open source, local-first, offline-first operating platform for bicycle workshops, stores, cooperatives, fleets, and cycling-related service organizations.
+### Your workshop. Your data. Your way forward.
 
-> Status: **V0.1 automated foundations have hosted evidence; physical Tier 1 qualification and manual reviews remain open. V0.2 Workshop Core increment 1 is complete; increment 2 adds inventory products/ledger and the scoped inventory API.** This repository is not a production release. See [changelog](CHANGELOG.md) and [execution status](docs/10-spec-development/execution-state.yaml) for implemented scope and verification limits.
+An open-source, **local-first and offline-first** operating platform for bicycle
+workshops, stores, cooperatives and service organizations. Built around a modular
+monolith, explicit permissions and vendor-neutral infrastructure.
 
-## Connected inventory visibility (candidate)
+[Explore the product](#see-the-real-application) · [Get started](#get-started) ·
+[Architecture](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md) ·
+[Module strategy](docs/08-open-source/2026-10-27-compatible-modules.md)
 
-The new read-only Inventory panel pages products, shows ledger-derived **available
-quantity** (including negative values), and pages a minimal movement history. It
-requires a freshly verified connected account with `inventory.read` and an
-authorized workshop. Organization-wide selection uses the existing directory only
-with `locations.read`. It does not open an offline baseline for inventory-only users.
+> **Development candidate — not a production release.** Automated source-bound
+> qualification exists; physical Windows/Android acceptance, manual reviews and
+> real installation gates remain open. GitHub Pages presentation sources are
+> prepared in [`docs/site`](docs/site); publication is separately gated. There is
+> no live workshop deployment implied by this repository or its screenshots.
 
-Inventory is not cached or available offline. Stock and movement pages are separate
-live reads with separate receipt times; one page is not a stock calculation or a
-snapshot. Existing local operational drafts and journals remain available offline.
-There is no product editor, movement command, inventory queue or quote UI in this
-slice. See the [read contract and current qualification limits](docs/10-spec-development/2026-10-15-connected-inventory-read.md).
+## See the real application
 
-## V0.2 Increment 2 progress
+![Actual OCWP Banco de trabajo UI with synthetic customers, bicycles and service orders](docs/site/assets/screenshots/banco-default-desktop.png)
 
-Task 4 adds the [pure quote domain](docs/10-spec-development/2026-10-13-quote-domain.md):
-integer-only labor/part/tax/discount calculations and immutable version history.
-Quote persistence, authorization, API, sync and UI remain unimplemented.
-Inventory API Task 3 was merged through PR #22 on 2026-10-14. See [Unreleased changes](CHANGELOG.md);
-development versions and existing physical/manual release gates are unchanged.
+**Real production-PWA build, synthetic test data — not a mockup.** Captured in
+Chromium on **2026-10-27**, source
+[`a960bdd`](https://github.com/IzignaMx/open-cycling-workshop/tree/a960bddb94189c6c74c7f3d0a72472636c3caced),
+[CI run 40571345621](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40571345621).
+These captures match the application source at this documentation increment;
+later runtime changes must refresh or label them historical. They do not prove
+physical-device acceptance or production readiness. Original PNGs, dimensions,
+fixture/test identity and SHA-256 are recorded in the
+[capture manifest](docs/site/screenshots.json).
 
-## Principles
+| Tablet viewport                                                                                             | Narrow 320px viewport                                                                                    |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| ![Actual tablet viewport with synthetic workshop data](docs/site/assets/screenshots/banco-tablet-touch.png) | ![Actual 320px viewport with synthetic workshop data](docs/site/assets/screenshots/banco-mobile-320.png) |
 
-- Offline First and Local First
-- Open Source First
-- Modular monolith with explicit bounded contexts
-- API First and vendor-neutral integrations
-- Privacy and Security by Default
-- WCAG 2.2 AA minimum target
-- Right to Repair friendly
-- White-label and implementer-friendly
+[View the complete Turno nocturno capture](docs/site/assets/screenshots/noche-canonical-desktop-full.png).
+Four visual themes share the same operational rules. Browser viewport evidence
+is not a physical tablet or phone qualification.
 
-## License
+## What is available — and what is not
 
-The Core and official applications are licensed under **GNU Affero General Public License v3.0 only (`AGPL-3.0-only`)**. See [`LICENSE`](LICENSE).
+| Area       | Current implemented source                                                                    | Important boundary                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Workshop   | Customers, bicycles, service orders, local journal, sync and conflict handling                | Offline admission depends on identity/context and previously admitted data; do not assume every screen works offline. |
+| Identity   | Connected account, users, permissions, locations and session administration                   | Server-enforced scoped capabilities; no implicit grants to new features.                                              |
+| Inventory  | Products/ledger domain and scoped connected read UI                                           | Inventory reads are online-only, not a local stock snapshot or inventory command UI.                                  |
+| Appearance | Four themes, personal preferences, local logo and shared workshop branding                    | Personal device presentation differs from shared workshop identity.                                                   |
+| Quotes     | Arithmetic/history, persistence/service prerequisites, authority fences and namespace privacy | No mounted quote API or quote UI; streaming/cancellation/capacity and activation gates remain open.                   |
+| Operations | Compose candidate, diagnostics, backup/restore and source-bound hosted runtime evidence       | Not proof of a real installation, physical ARM device or production release.                                          |
+| Extensions | Explicit source composition and API boundaries; staged compatibility strategy                 | `packages/plugin-sdk` remains a placeholder, not an installable plugin runtime.                                       |
 
-When users interact with the software over a network, deployments must preserve the corresponding-source obligations described by section 13 of the AGPL. The product UI will expose a visible Source Code link before V1.0.
+The implemented identity/security baseline includes:
 
-## V0.1 implemented baseline
-
-The current branch contains:
-
-- FastAPI application shell with request IDs, JSON logging and health endpoints
-- SQLAlchemy 2 models and Alembic migrations for tenants, customers, sync, outbox and jobs
 - persistent users, Argon2 password hashing, signed/revocable sessions, real login endpoints and capability-based RBAC with deny-by-default behavior
-- Customer REST API and deterministic OpenAPI contract
-- TypeScript API types generated from OpenAPI plus a typed API client
-- idempotent mutation ingestion, incremental change feed and explicit conflict results
-- Transactional Outbox and durable PostgreSQL-oriented job queue using `FOR UPDATE SKIP LOCKED`
-- filesystem BlobStorage adapter with content-addressed keys and traversal protection
-- React + TypeScript + Vite PWA scaffold
-- Dexie local database schema, durable mutation queue, sync cursor and Conflict Center persistence
-- local-first Customer create flow, scoped SyncCoordinator, session-scoped auth cache, visible sync status and Conflict Center
-- Docker Compose development topology for PostgreSQL 18.4, API and worker
-- `ocwpctl doctor` and `ocwpctl status` baseline
-- fixture sets for minimal, demo and load scenarios
-- CI, DCO, REUSE/SPDX and security workflow definitions, including hosted Playwright + axe qualification
-- PostgreSQL backup command wrapper that keeps passwords out of process arguments
 
-## Verification in the current execution environment
+The [execution state](docs/10-spec-development/execution-state.yaml),
+[changelog](CHANGELOG.md) and [manual gates](MANUAL-ACTIONS-CHECKLIST.md) are the
+scope/evidence references. A green unit test does not prove PostgreSQL, a PWA
+build does not prove offline operation, and a backup is incomplete without restore.
 
-Run the locally available V0.1 verification suite:
+## Get started
 
-```bash
-python scripts/ci/verify_v01.py --allow-blocked
-```
+### 1. Understand the project
 
-The verifier distinguishes failures from environment-dependent blockers. Run it
-in the current environment and inspect its exact-commit report rather than
-assuming another machine's tools or evidence apply. Local PostgreSQL/Docker or
-browser navigation may be unavailable; unit/static/build checks do not replace
-those runtime gates. Hosted CI supplies PostgreSQL and production-PWA browser
-qualification, while physical-device and operator reviews remain separate.
+- **Workshop operators:** start with the capability table and real captures above.
+  Identify your device, local connectivity and required offline workflows.
+- **Implementers:** read the [local runtime guide](docs/07-operations/2026-10-14-local-runtime.md)
+  and [backup/restore procedure](docs/07-operations/2026-10-14-backup-restore.md).
+  Installation is an explicitly reviewed operation, not a README one-liner.
+- **Developers/designers:** read [CONTRIBUTING](CONTRIBUTING.md), the
+  [architecture map](ARCHITECTURE.md) and [AGENTS](AGENTS.md).
+- **Extension authors:** read the [compatibility strategy](docs/08-open-source/2026-10-27-compatible-modules.md)
+  before assuming there is a published SDK or service-identity API.
 
-## Development commands
+### 2. Prepare a development checkout
 
-Backend tests:
+Use Node **22.16.0** (the hosted reference), Python **3.13.x**, pnpm **11.17.0** and
+uv. Check [`.nvmrc`](.nvmrc), [`.python-version`](.python-version),
+[`package.json`](package.json) and [`pyproject.toml`](pyproject.toml) before setup.
+No production credentials are needed for source/static checks.
 
-```bash
-PYTHONPATH=.:services/platform/src pytest -q
-```
-
-Frontend pure local-first tests without npm installation:
-
-```bash
-node apps/web/tools/run-core-tests.mjs
-```
-
-Fallback static TypeScript verification:
-
-```bash
-tsc -p apps/web/tsconfig.offline-check.json
-```
-
-Contract verification:
-
-```bash
-PYTHONPATH=services/platform/src python scripts/contracts/export_openapi.py --check
-python scripts/contracts/generate_ts_client.py --check
-```
-
-When registry access is available:
-
-```bash
+```sh
+git clone https://github.com/IzignaMx/open-cycling-workshop.git
+cd open-cycling-workshop
 corepack enable
-pnpm install
+corepack prepare pnpm@11.17.0 --activate
+pnpm install --frozen-lockfile
+uv sync --all-packages --group dev --locked
+```
+
+### 3. Verify the source before running an installation
+
+```sh
+pnpm contracts:check
+pnpm typecheck
+pnpm --filter @ocwp/web test
 pnpm --filter @ocwp/web build
+uv run python scripts/ci/verify_v01.py --allow-blocked
 ```
 
-Bootstrap the first administrator on a fresh migrated installation without exposing the password in process arguments:
+Inspect the verifier's failures and environment blockers rather than treating
+`--allow-blocked` as release acceptance. Full tests use `pnpm test`. With the activated Python environment, the direct
+backend command is `PYTHONPATH=.:services/platform/src pytest -q`. PostgreSQL,
+Docker and browser checks need their real runtimes. The production-PWA E2E suite
+requires a **dedicated disposable `_test` or `_e2e` database**; its setup is
+intentionally destructive and must never target workshop data.
 
-```bash
-printf '%s\n' 'replace-with-a-strong-password' > /tmp/ocwp-admin-password
-chmod 600 /tmp/ocwp-admin-password
-ocwpctl bootstrap admin \
-  --organization-name 'Mi taller' \
-  --location-name 'Sucursal principal' \
-  --username admin \
-  --display-name 'Administrador' \
-  --password-file /tmp/ocwp-admin-password
-rm /tmp/ocwp-admin-password
+For interactive development, `pnpm dev` starts Vite only; it is not a complete
+server/bootstrap procedure. Follow the [operations guide](docs/07-operations/2026-10-14-local-runtime.md)
+for server topology, secrets, migrations and explicitly authorized account setup.
+Keep secrets outside Git and preserve each browser's local journal separately
+from server backups. Never clear IndexedDB to fix an upgrade.
+
+### 4. Preview the public documentation
+
+This serves only static documentation, not the operational application:
+
+```sh
+python3 scripts/docs/build_public_site.py --output artifacts/public-preview
+python3 -m http.server 8088 --bind 127.0.0.1 --directory artifacts/public-preview
 ```
 
-Hosted browser qualification is defined with Playwright and axe. It requires `OCWP_E2E_DATABASE_URL` pointing only to a dedicated local `_test` or `_e2e` PostgreSQL database before the destructive setup script may run.
+Use a new/empty output directory each time. The builder rejects private/unexpected
+files and verifies screenshot hashes; `--require-current` additionally requires
+the runtime source to match its captures. Open `http://127.0.0.1:8088` locally.
+The read-only **Public presentation preview** workflow builds and checks repository
+subpath behavior, keyboard/reflow and axe, retaining artifacts. It does not enable
+or deploy Pages. See the [publication plan](docs/superpowers/plans/2026-10-27-public-project-presentation.md).
 
-When Docker is available, create `infra/compose/secrets/dev_auth_secret.txt` with a strong development secret and start:
+## How it fits together
 
-```bash
-docker compose -f infra/compose/docker-compose.dev.yml up --build
+```mermaid
+flowchart LR
+    U[Workshop operator] --> P[React + TypeScript PWA]
+    P <--> L[Dexie / IndexedDB\nAdmitted data + durable journal]
+    P <--> S[Scoped sync + REST / OpenAPI]
+    S <--> A[FastAPI modular monolith\nIdentity + domain authority]
+    A <--> D[(PostgreSQL)]
+    A --> O[Internal transactional outbox]
+    O --> W[Worker infrastructure\nNo registered business handlers yet]
 ```
 
-## Documentation
+Inventory reads and connected administration are not implicitly part of the
+local journal. Public connector delivery is not provided by the internal outbox.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for source paths, trust boundaries and
+extension stages.
 
-The normative design and execution specifications live under [`docs/`](docs/). Start with:
+## Collaborate and report bugs
 
-1. `docs/00-foundation/`
-2. `docs/10-spec-development/open-cycling-workshop-platform-phase-10-spec-development-master-execution-system-v0.1.md`
-3. `docs/10-spec-development/open-cycling-workshop-platform-agent-master-loop-v0.2.md`
-4. `docs/10-spec-development/execution-state.yaml`
-5. `MANUAL-ACTIONS-CHECKLIST.md`
-6. `docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md`
+1. Connect a proposal to a real workshop need and the normative specification.
+2. Keep a small branch/PR, add failing-then-passing tests and update evidence.
+3. Sign commits with `git commit -s` (DCO 1.1); preserve license and security rules.
+4. Follow review and exact-source CI; never weaken tests to obtain a green badge.
 
-## Current blockers
+For a non-sensitive [bug report](https://github.com/IzignaMx/open-cycling-workshop/issues/new),
+include source SHA, environment/device, minimal synthetic reproduction, expected
+versus observed behavior and redacted evidence. Do not upload customer data,
+tokens or private logs. Suspected vulnerabilities must follow
+[SECURITY.md](SECURITY.md): private advisories when available, otherwise private
+maintainer contact — not a public issue.
 
-The repository intentionally does not fake evidence for tools unavailable in the execution environment. `pnpm-lock.yaml` and `uv.lock` are generated by the hosted CI bootstrap when absent and published as the `v0.1-lockfiles` artifact before frozen installation. Docker/PostgreSQL smoke tests, browser IndexedDB tests, Android/Windows storage qualification and hosted security scans remain pending until their real runtimes execute.
+## License and independence
 
-## Local workshop MVP delivery
+Core and official apps: **GNU AGPL v3 only (`AGPL-3.0-only`)**. See [LICENSE](LICENSE).
+Preserve applicable corresponding-source obligations, including for modified
+network-interactive versions. Core has no mandatory proprietary SaaS dependency.
 
-The laptop-to-ARM64 delivery sequence and acceptance criteria are tracked in
-[the local workshop MVP plan](docs/10-spec-development/2026-10-14-local-workshop-mvp.md).
-The additive [local runtime](docs/07-operations/2026-10-14-local-runtime.md) and
-[recovery tools](docs/07-operations/2026-10-14-backup-restore.md) are implemented
-and pending hosted qualification; existing development instructions are not a production installation
-claim. Pending inventory/quote PRs are tracked separately from main. Physical-device
-and manual release gates remain open.
-
-### Personal presentation themes (implementation pending hosted qualification)
-
-Personalización offers Banco de trabajo (default), Plano técnico, Ritmo modular
-and Turno nocturno with shared operations, twelve palettes and touch controls.
-Appearance is saved per user and organization on this browser/device. A PNG/JPEG
-logo is an optional personal local view for the active location, available offline;
-it does not change the identity seen by other users. Shared workshop branding
-and cross-device preference synchronization are still pending. See the
-[theme scope and evidence](docs/10-spec-development/2026-10-14-structural-workshop-themes.md).
+[Foundation](docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md) ·
+[Governance](GOVERNANCE.md) · [Code of conduct](CODE_OF_CONDUCT.md) ·
+[Maintainers](MAINTAINERS.md)
