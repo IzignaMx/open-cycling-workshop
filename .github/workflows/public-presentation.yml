@@ -10,6 +10,8 @@ on:
       - 'scripts/docs/**'
       - 'apps/web/tools/public-site/**'
       - 'apps/web/playwright.public-site.config.ts'
+      - 'apps/web/playwright.public-site-live.config.ts'
+      - '.github/workflows/public-pages.yml'
       - '.github/workflows/public-presentation.yml'
   push:
     branches: [main]
@@ -21,6 +23,8 @@ on:
       - 'scripts/docs/**'
       - 'apps/web/tools/public-site/**'
       - 'apps/web/playwright.public-site.config.ts'
+      - 'apps/web/playwright.public-site-live.config.ts'
+      - '.github/workflows/public-pages.yml'
       - '.github/workflows/public-presentation.yml'
   workflow_dispatch:
 

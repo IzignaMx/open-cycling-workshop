@@ -1,15 +1,23 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { guardPublicSiteNetwork } from './public-site-network'
+
+test.use({ serviceWorkers: 'block' })
 
 for (const width of [1440, 320]) {
   test(`public presentation: ${width}px subpath, keyboard, assets and accessibility`, async ({
     page,
+    context,
+    baseURL,
   }, info) => {
+    if (!baseURL) throw new Error('Public site base URL is required')
+    const rejected: string[] = []
+    await guardPublicSiteNetwork(context, baseURL, rejected)
     await page.setViewportSize({ width, height: 1000 })
     const unexpected: string[] = []
     const failed: string[] = []
     page.on('request', (request) => {
-      if (!request.url().startsWith('http://127.0.0.1:5181/open-cycling-workshop/')) {
+      if (!request.url().startsWith(baseURL)) {
         unexpected.push(request.url())
       }
     })
@@ -54,6 +62,7 @@ for (const width of [1440, 320]) {
     const screenshot = info.outputPath(`public-site-${width}.png`)
     await page.screenshot({ path: screenshot, fullPage: true })
     await info.attach(`public-site-${width}`, { path: screenshot, contentType: 'image/png' })
+    expect(rejected).toEqual([])
     expect(unexpected).toEqual([])
     expect(failed).toEqual([])
   })
