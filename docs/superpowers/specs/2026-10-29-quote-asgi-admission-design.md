@@ -1,5 +1,16 @@
 # S1 · Unmounted quote ASGI byte admission
 
+> **Current receipt (2026-10-29): verified unmounted S1 scope.**
+> [PR #68](https://github.com/IzignaMx/open-cycling-workshop/pull/68) merged as
+> [`72927ca56d8337a07f5b9813902074d87523e920`](https://github.com/IzignaMx/open-cycling-workshop/commit/72927ca56d8337a07f5b9813902074d87523e920),
+> tree `2fffef9f478f714d6daea2ed77f3270f9b20bd64`;
+> [post-merge CI 40831394467](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40831394467)
+> passed 27/27 aggregate controls (5,081 collected, 5,023 passed, 58 expected skips), including
+> all 55 admission cases. Local-only/pending statements and failed local checks
+> below record the historical implementation checkpoint; their failure details
+> remain intact. S1 remains unmounted and cooperative, not a hard cancellation
+> guarantee, public route, quote activation or application deployment.
+
 Assistant-selected design under delegated local implementation authority. Source:
 `38a8542e7afda0e1da2ca488f0963543bf9cfa31`. No publication, activation or deployment.
 Normative for this bounded increment; the quote persistence/online boundary ADR

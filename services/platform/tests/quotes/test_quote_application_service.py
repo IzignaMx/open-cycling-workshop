@@ -1,9 +1,10 @@
-"""Prepared tiny synthetic service cases; never executed in the authoring host.
+"""Tiny synthetic service cases with authorized local SQLite characterization.
 
-SQLite is functional evidence only when this selection is later authorized in
-a contained venue. These tests do not qualify HTTP, PostgreSQL or capacity.
+SQLite is functional evidence only. These tests do not qualify HTTP, PostgreSQL,
+network cancellation, hard termination or capacity.
 """
 
+import asyncio
 import json
 from dataclasses import replace
 
@@ -376,3 +377,169 @@ def test_driver_budget_failure_invalidates_instead_of_returning_connection(
             execute(session, actors, creation())
         assert invalidated == [True]
         assert session.info["ocwp_quote_unusable"] is True
+
+
+def _capture_encoded_response(monkeypatch):
+    from cycling_workshop.quotes import service
+
+    original = service.encode_command_response
+    captured = []
+
+    def encode(response):
+        encoded = original(response)
+        captured.append(json.loads(encoded))
+        return encoded
+
+    monkeypatch.setattr(service, "encode_command_response", encode)
+    return captured
+
+
+def test_cancellation_before_commit_preserves_identity_and_rolls_back(
+    database, actors, monkeypatch
+):
+    from cycling_workshop.quotes import service
+
+    cancellation = asyncio.CancelledError("synthetic before-commit cancellation")
+    with Session(database) as session:
+        execute(session, actors, creation())
+        before = totals(session), counts(session)
+        session.rollback()
+        cleanup = []
+        rollback = session.rollback
+        release = QuoteService._release_hook
+
+        def cancel_after_writes(_):
+            assert totals(session) == (2, 1, 1, 3)
+            assert session.get(ServiceOrderRecord, "order-a").version == 2
+            raise cancellation
+
+        def forbidden_commit():
+            pytest.fail("cancelled command reached commit")
+
+        def observed_rollback():
+            cleanup.append("rollback")
+            rollback()
+
+        def observed_release(*args):
+            cleanup.append("hook")
+            release(*args)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(service, "encode_command_response", cancel_after_writes)
+            patch.setattr(session, "commit", forbidden_commit)
+            patch.setattr(session, "rollback", observed_rollback)
+            patch.setattr(QuoteService, "_release_hook", staticmethod(observed_release))
+            with pytest.raises(asyncio.CancelledError) as error:
+                execute(session, actors, decision())
+            assert error.value is cancellation
+            assert cleanup == ["rollback", "hook"]
+            assert not session.in_transaction()
+            assert session.info.get("ocwp_quote_unusable") is not True
+        assert (totals(session), counts(session)) == before
+        order = session.get(ServiceOrderRecord, "order-a")
+        assert (order.state, order.version) == ("DIAGNOSIS", 1)
+    with Session(database) as session:
+        assert (totals(session), counts(session)) == before
+
+
+def test_cancellation_after_actual_commit_preserves_identity_and_exact_replay(
+    database, actors, monkeypatch
+):
+    cancellation = asyncio.CancelledError("synthetic after-commit cancellation")
+    with Session(database) as session:
+        execute(session, actors, creation())
+        commit = session.commit
+        committed = []
+        with monkeypatch.context() as patch:
+            captured = _capture_encoded_response(patch)
+
+            def commit_then_cancel():
+                commit()
+                committed.append(True)
+                raise cancellation
+
+            patch.setattr(session, "commit", commit_then_cancel)
+            with pytest.raises(asyncio.CancelledError) as error:
+                execute(session, actors, decision())
+            assert error.value is cancellation
+            assert committed == [True] and len(captured) == 1
+            assert not session.in_transaction()
+    with Session(database) as session:
+        replay = execute(session, actors, decision(), enabled=False)
+        assert replay["delivery"] == "replayed"
+        assert replay["receipt"] == captured[0]["receipt"]
+        assert replay["order"]["state"] == "AUTHORIZED"
+        assert replay["order"]["version"] == 2
+        assert totals(session) == (2, 1, 1, 3)
+
+
+def test_successful_commit_returning_after_deadline_is_unknown_and_replays_exactly(
+    database, actors, monkeypatch
+):
+    clock = [0.0]
+    with Session(database) as session:
+        execute(session, actors, creation())
+        commit = session.commit
+        with monkeypatch.context() as patch:
+            captured = _capture_encoded_response(patch)
+
+            def commit_then_expire():
+                commit()
+                clock[0] = 9.0
+
+            patch.setattr(session, "commit", commit_then_expire)
+            with pytest.raises(QuoteServiceError) as error:
+                execute(
+                    session,
+                    actors,
+                    decision(),
+                    deadline=QuoteDeadline(expires_at=8.0, clock=lambda: clock[0]),
+                )
+            assert error.value.code == "quote_request_unavailable"
+            assert error.value.outcome_unknown is True
+            assert error.value.cleanup_unverified is False
+            assert clock == [9.0] and len(captured) == 1
+            assert not session.in_transaction()
+            assert session.info.get("ocwp_quote_unusable") is not True
+    with Session(database) as session:
+        replay = execute(session, actors, decision(), enabled=False)
+        assert replay["delivery"] == "replayed"
+        assert replay["receipt"] == captured[0]["receipt"]
+        assert totals(session) == (2, 1, 1, 3)
+
+
+def test_hook_failure_alone_after_commit_marks_unusable_and_replays_exactly(
+    database, actors, monkeypatch
+):
+    with Session(database) as session:
+        execute(session, actors, creation())
+        commit = session.commit
+        committed = []
+        with monkeypatch.context() as patch:
+            captured = _capture_encoded_response(patch)
+
+            def observed_commit():
+                commit()
+                committed.append(True)
+
+            def fail_hook(*_):
+                assert committed == [True]
+                raise OSError("synthetic hook removal failure only")
+
+            patch.setattr(session, "commit", observed_commit)
+            patch.setattr(QuoteService, "_release_hook", staticmethod(fail_hook))
+            with pytest.raises(QuoteServiceError) as error:
+                execute(session, actors, decision())
+            assert error.value.code == "quote_request_unavailable"
+            assert error.value.outcome_unknown is True
+            assert error.value.cleanup_unverified is True
+            assert session.info["ocwp_quote_unusable"] is True
+            assert not session.in_transaction()
+            assert committed == [True] and len(captured) == 1
+        with pytest.raises(QuoteServiceError, match="quote_request_unavailable"):
+            execute(session, actors, decision())
+    with Session(database) as session:
+        replay = execute(session, actors, decision(), enabled=False)
+        assert replay["delivery"] == "replayed"
+        assert replay["receipt"] == captured[0]["receipt"]
+        assert totals(session) == (2, 1, 1, 3)
