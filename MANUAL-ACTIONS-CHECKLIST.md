@@ -1,5 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Unmounted quote ASGI admission S1
+
+- [ ] Independently review the [local S1 contract and evidence](docs/superpowers/specs/2026-10-29-quote-asgi-admission-design.md)
+      and obtain separately authorized exact-source hosted evidence. Controlled
+      ASGI fixtures do not qualify wire framing, middleware/proxy composition,
+      total Python/DB cancellation or actual server memory bounds.
+- [ ] Keep route activation, HTTP error mapping, authenticated typed command
+      composition, capacity, physical-device and installation/recovery gates
+      separate. No real grants, deployment or new diagnostic run is included.
+
 ## 2026-10-29 · Temporary automatic QEMU diagnostic pause
 
 - [ ] Independently review and integrate the [local trigger-only pause](docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md).
