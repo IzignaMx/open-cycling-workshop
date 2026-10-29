@@ -1,5 +1,28 @@
 schema: 1
 
+quote_asgi_admission_s1_20261029:
+  status: implemented_pending_evidence
+  baseline_main: 38a8542e7afda0e1da2ca488f0963543bf9cfa31
+  design: docs/superpowers/specs/2026-10-29-quote-asgi-admission-design.md
+  plan: docs/superpowers/plans/2026-10-29-quote-asgi-admission.md
+  scope: unmounted_fixed_byte_admission_only_no_parser_or_business_execution
+  local_tdd: initial_50_failed_then_50_passed_exact_event_type_1_failed_53_passed
+  static: strict_mypy_ruff_openapi_generated_client_passed
+  focused_final: 200_passed_including_55_admission_cases_one_existing_warning
+  final_quote_suite: 1042_passed_397_environment_skips_10_warnings_76_50_seconds
+  final_quote_suite_limits: serial_900_seconds_768MiB_virtual_address_space
+  full_collection: 5081
+  independent_source_review: 58_cases_and_3000_malformed_inputs_no_remaining_blocker
+  full_local_attempt: failed_then_segfault_not_qualified
+  full_first_failure: node_virtual_coderange_reservation_under_inherited_768MiB_RLIMIT_AS
+  exact_base_first_failure: reproduced_38a8542_same_case_and_address_space_cap
+  full_jwt_segfault: root_cause_unproven_isolated_base_case_passed
+  hosted_exact_source: pending_ordinary_fixed_limit_draft_ci
+  cancellation: cooperative_receive_only_no_hard_python_db_cutoff
+  wire_proxy_actual_runtime_and_activation: unqualified_not_performed
+  routes_sql_grants_migrations_modules_pages_qemu_and_budgets: unchanged
+  publication: reviewed_for_separate_draft_ci_not_release_or_activation
+
 qemu_automatic_trigger_pause_20261029:
   status: implemented_pending_evidence
   baseline_main: 3c6513d685fe659816bd3ddb47dab91003d3a787
