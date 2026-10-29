@@ -543,3 +543,216 @@ def test_hook_failure_alone_after_commit_marks_unusable_and_replays_exactly(
         assert replay["delivery"] == "replayed"
         assert replay["receipt"] == captured[0]["receipt"]
         assert totals(session) == (2, 1, 1, 3)
+
+
+@pytest.mark.parametrize(
+    "original,rollback_fault,invalidate_fault,release_fault,winner",
+    [
+        ("ordinary", "first", None, None, "first"),
+        ("driver", None, "first", None, "first"),
+        ("ordinary", "cleanup_error", "first", None, "first"),
+        ("first", "second", None, None, "first"),
+        ("first", "cleanup_error", "second", None, "first"),
+        ("first", None, None, "second", "first"),
+        ("ordinary", "first", "second", None, "first"),
+        ("ordinary", None, "second", "first", "first"),
+        ("first", "first", None, None, "first"),
+        ("first", "cleanup_error", None, None, "first"),
+        ("ordinary", "first", "second", "second", "first"),
+        ("ordinary", "first", "first", None, "first"),
+    ],
+)
+def test_cleanup_control_flow_precedence(
+    database, actors, monkeypatch, original, rollback_fault, invalidate_fault, release_fault, winner
+):
+    from cycling_workshop.quotes import service
+
+    faults = {
+        "ordinary": ValueError("private ordinary canary"),
+        "cleanup_error": OSError("private cleanup canary"),
+        "driver": service._QuoteDriverUnavailable(),
+        "first": asyncio.CancelledError("private first canary"),
+        "second": asyncio.CancelledError("private secondary canary"),
+    }
+    calls = []
+    origin = []
+    first_observed_chain = []
+
+    def snapshot_before_secondary_cleanup():
+        if origin and not first_observed_chain:
+            current = faults[winner].__traceback__
+            while current is not None:
+                first_observed_chain.append(current)
+                current = current.tb_next
+
+    def first_site_marker(error):
+        try:
+            raise error
+        except BaseException as caught:
+            origin.append(caught.__traceback__)
+            raise
+
+    def secondary_site_marker(error):
+        raise error
+
+    def inject(name):
+        if name is None:
+            return
+        error = faults[name]
+        if error is faults[winner] and not origin:
+            first_site_marker(error)
+        else:
+            secondary_site_marker(error)
+
+    with Session(database) as session:
+        candidate = QuoteService(session, commands_enabled=True, now=lambda: NOW)
+        initial_attributes = dict(vars(candidate))
+        initial_info = dict(session.info)
+        rollback = session.rollback
+
+        def encode(_):
+            initial_info.update(session.info)
+            inject(original)
+
+        def observed_rollback():
+            snapshot_before_secondary_cleanup()
+            calls.append("rollback")
+            inject(rollback_fault)
+            rollback()
+
+        def observed_invalidate():
+            snapshot_before_secondary_cleanup()
+            calls.append("invalidate")
+            assert session.info["ocwp_quote_unusable"] is True
+            inject(invalidate_fault)
+            # No claim of backend invalidation: fixture rollback is teardown below.
+
+        def observed_release(*_):
+            snapshot_before_secondary_cleanup()
+            calls.append("release")
+            inject(release_fault)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(service, "encode_command_response", encode)
+            patch.setattr(session, "rollback", observed_rollback)
+            patch.setattr(session, "invalidate", observed_invalidate)
+            patch.setattr(QuoteService, "_release_hook", staticmethod(observed_release))
+            patch.setattr(session, "commit", lambda: pytest.fail("unexpected commit"))
+            with pytest.raises(asyncio.CancelledError) as caught:
+                candidate.execute(
+                    creation(),
+                    principal=actors,
+                    admission=WriteAdmission.for_fixtures(1, enabled=True),
+                    deadline=QuoteDeadline.start(),
+                )
+            assert caught.value is faults[winner]
+            chain = []
+            current = caught.value.__traceback__
+            while current is not None:
+                chain.append(current)
+                current = current.tb_next
+            assert origin[0] in chain
+            assert chain[-1] is origin[0]
+            assert first_observed_chain
+            assert chain[-len(first_observed_chain) :] == first_observed_chain
+            assert "secondary_site_marker" not in [tb.tb_frame.f_code.co_name for tb in chain]
+            expected = ["invalidate"] if original == "driver" else ["rollback"]
+            if original != "driver" and rollback_fault is not None:
+                expected.append("invalidate")
+            expected.append("release")
+            if release_fault is not None:
+                expected.append("invalidate")
+            assert calls == expected
+            assert calls.count("rollback") <= 1 and calls.count("invalidate") <= 2
+            assert calls.count("release") == 1
+            assert session.info == {**initial_info, "ocwp_quote_unusable": True}
+            assert vars(candidate) == initial_attributes
+            before_reuse = list(calls)
+            with pytest.raises(QuoteServiceError, match="quote_request_unavailable"):
+                execute(session, actors, creation())
+            assert calls == before_reuse
+        # Explicit fixture recovery, outside asserted service cleanup lifetime.
+        rollback()
+
+
+@pytest.mark.parametrize("ack_loss", [False, True])
+def test_committed_cleanup_control_flow_replays_exact_receipt(
+    database, actors, monkeypatch, ack_loss
+):
+    cancellation = asyncio.CancelledError("private committed cleanup canary")
+    calls = []
+    with Session(database) as session:
+        execute(session, actors, creation())
+        commit = session.commit
+
+        def observed_commit():
+            commit()
+            calls.append("commit")
+            if ack_loss:
+                raise OSError("private ACK loss canary")
+
+        def observed_invalidate():
+            assert session.info["ocwp_quote_unusable"] is True
+            calls.append("invalidate")
+            if ack_loss:
+                raise cancellation
+
+        def observed_release(*_):
+            calls.append("release")
+            if not ack_loss:
+                raise cancellation
+
+        with monkeypatch.context() as patch:
+            captured = _capture_encoded_response(patch)
+            patch.setattr(session, "commit", observed_commit)
+            patch.setattr(session, "invalidate", observed_invalidate)
+            patch.setattr(session, "rollback", lambda: pytest.fail("unexpected rollback"))
+            patch.setattr(QuoteService, "_release_hook", staticmethod(observed_release))
+            with pytest.raises(asyncio.CancelledError) as caught:
+                execute(session, actors, decision())
+            assert caught.value is cancellation
+            assert calls == (
+                ["commit", "invalidate", "release"]
+                if ack_loss
+                else ["commit", "release", "invalidate"]
+            )
+            assert session.info["ocwp_quote_unusable"] is True
+            assert not session.in_transaction()
+            assert len(captured) == 1
+        with pytest.raises(QuoteServiceError, match="quote_request_unavailable"):
+            execute(session, actors, decision())
+    with Session(database) as session:
+        replay = execute(session, actors, decision(), enabled=False)
+        assert replay["delivery"] == "replayed"
+        assert replay["receipt"] == captured[0]["receipt"]
+        assert totals(session) == (2, 1, 1, 3)
+
+
+@pytest.mark.parametrize("control_type", [SystemExit, KeyboardInterrupt])
+def test_cleanup_control_flow_family_parity(database, actors, monkeypatch, control_type):
+    from cycling_workshop.quotes import service
+
+    first = control_type("private control-flow canary")
+    second = asyncio.CancelledError("private later cancellation")
+    with Session(database) as session:
+
+        def ordinary(_):
+            raise ValueError("private ordinary canary")
+
+        def rollback():
+            raise first
+
+        def invalidate():
+            assert session.info["ocwp_quote_unusable"] is True
+            raise second
+
+        with monkeypatch.context() as patch:
+            patch.setattr(service, "encode_command_response", ordinary)
+            patch.setattr(session, "rollback", rollback)
+            patch.setattr(session, "invalidate", invalidate)
+            with pytest.raises(control_type) as caught:
+                execute(session, actors, creation())
+            assert caught.value is first
+            assert session.info["ocwp_quote_unusable"] is True
+        # Fixture-only teardown, not verified service rollback.
+        session.rollback()

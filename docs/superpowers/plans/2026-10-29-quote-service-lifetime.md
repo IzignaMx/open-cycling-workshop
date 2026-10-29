@@ -1,5 +1,17 @@
 # Quote-service lifetime characterization Implementation Plan
 
+> **Current source receipt · 2026-10-29:** [PR69](https://github.com/IzignaMx/open-cycling-workshop/pull/69)
+> merged `73661dbe86d54e19cad464f48e959cd001d202b7`, tree
+> `2c06102f24a42d6188a4d5e92e9f36d82698dc82`. Independently accepted fresh
+> [CI40842539417](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40842539417):
+> 27/27 aggregate controls; 5,085 collected / 5,027 passed / 58 expected skips;
+> all four S2a cases, 55 S1 cases, 14 JWT cases, eight PostgreSQL cases, six
+> restores, dual cleanup and runtime/browser evidence passed. Earlier local-only,
+> pending and failure statements below are historical checkpoints, not current
+> publication status. The new cases remain deterministic SQLite characterization;
+> cleanup-arriving cancellation precedence, hard cancellation, capacity, physical
+> acceptance and activation remain unqualified. No new deployment authority.
+
 > **For agentic workers:** Use superpowers:executing-plans; independent review before publication.
 
 **Goal:** Pin four existing service lifetime branches without adding behavior.
