@@ -1,5 +1,16 @@
 # Module descriptor M0: proposal contract, not a plugin runtime
 
+> **Current receipt (2026-10-29): verified data-only M0 scope.**
+> [PR #64](https://github.com/IzignaMx/open-cycling-workshop/pull/64) merged as
+> [`bd2dbd6b5a89631e0f95602220cb861c9a6cccc2`](https://github.com/IzignaMx/open-cycling-workshop/commit/bd2dbd6b5a89631e0f95602220cb861c9a6cccc2),
+> tree `7cd64ff4b5d42a0074d50d6b4cf94f5a9700472d`;
+> [post-merge CI 40668763286](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40668763286)
+> passed 27/27 aggregate controls (4,978 collected, 4,920 passed, 58 expected skips).
+> Pending/local checkpoint wording below is historical, not the current status.
+> The separate optional QEMU diagnostic failed NONQUALIFYING; that failure is not
+> erased by this receipt. The canonical source target remains `a960bdd`; M0 is
+> inert data only, with no module execution, SDK expansion or runtime qualification.
+
 Status: **implemented_pending_evidence** data-only prerequisite, source baseline `a960bdd`. The
 [design](../superpowers/specs/2026-10-27-module-descriptor-m0-design.md) and
 [implementation plan](../superpowers/plans/2026-10-27-module-descriptor-m0.md)

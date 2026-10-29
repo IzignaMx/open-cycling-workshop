@@ -1,9 +1,29 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Deterministic service lifetime S2a
+
+- [ ] Independently review the [four local characterization cases](docs/superpowers/specs/2026-10-29-quote-service-lifetime-design.md)
+      and qualify their exact source through separately authorized hosted CI.
+      SQLite faults are not PostgreSQL, network loss, hard cancellation or
+      bounded cleanup evidence. Cleanup-arriving cancellation precedence remains
+      unresolved; no executor, ledger or public command activation is added.
+
+## 2026-10-29 · Data-only M0 source reconciliation
+
+- [x] PR64 merged `bd2dbd6` with fresh CI40668763286: 27/27,
+      4,978 collected / 4,920 passed / 58 expected skips; all 83 descriptor cases
+      and named retained/PG/restore/cleanup/browser evidence accepted. This is
+      data-only descriptor qualification, not a runtime SDK or module execution.
+      Preserve original `ocwp-source:a960bdd` compatibility target and historical
+      failed NON-QUALIFYING QEMU40668763297.
+
 ## 2026-10-29 · Unmounted quote ASGI admission S1
 
-- [ ] Independently review the [local S1 contract and evidence](docs/superpowers/specs/2026-10-29-quote-asgi-admission-design.md)
-      and obtain separately authorized exact-source hosted evidence. Controlled
+- [x] Independently review the [S1 contract and evidence](docs/superpowers/specs/2026-10-29-quote-asgi-admission-design.md):
+      PR68 main `72927ca`, fresh CI40831394467 accepted 27/27 with
+      5,081 collected / 5,023 passed / 58 expected skips, all 55 admission cases
+      and named JWT/PG/restore/cleanup/browser gates. Preserve the earlier failed
+      local RLIMIT_AS attempt; this qualifies only unmounted S1 source. Controlled
       ASGI fixtures do not qualify wire framing, middleware/proxy composition,
       total Python/DB cancellation or actual server memory bounds.
 - [ ] Keep route activation, HTTP error mapping, authenticated typed command
