@@ -1,3 +1,4 @@
+import type Dexie from 'dexie'
 import { IncrementalTransactions } from './incremental-store.js'
 import type { IncrementalRequest } from './incremental-state.js'
 import {
@@ -63,6 +64,26 @@ interface Authorized {
 /** Isolated kernel with no credential storage or production wiring. Baseline entry
  * requires a supported verified context; the actual null-advertised server stays gated.
  */
+type CaptureCommitOutcome =
+  | { status: 'committed'; mutationIds: string[] }
+  | { status: 'not_committed'; reason: 'quota' | 'write_failure' }
+
+function captureFailureReason(error: unknown): 'quota' | 'write_failure' {
+  const visited = new Set<object>()
+  try {
+    for (let depth = 0; depth < 4 && error !== null && typeof error === 'object'; depth++) {
+      if (visited.has(error)) return 'write_failure'
+      visited.add(error)
+      const candidate = error as { name?: unknown; inner?: unknown }
+      if (candidate.name === 'QuotaExceededError') return 'quota'
+      error = candidate.inner
+    }
+  } catch {
+    // Error inspection must not replace an observed abort with a new exception.
+  }
+  return 'write_failure'
+}
+
 export class AccessKernel {
   #ticket: ContextTicket | null = null
   #sequence = 0
@@ -612,19 +633,47 @@ export class AccessKernel {
     online: boolean,
     action: (authorized: Authorized) => Promise<T>,
     current: () => boolean = () => true,
+    aborted?: (error: unknown) => T,
   ): Promise<T> {
     if (!current() || !this.live(ticket))
       throw new Error('Session fenced: no matching verified session in this kernel instance')
-    const outcome = await this.db.transaction('rw', this.tables(), async () => {
-      if (!current() || !this.live(ticket)) throw new Error('Session fenced')
-      const authorized = await this.authorized(ticket, online)
-      if (!current() || !this.live(ticket)) throw new Error('Session fenced')
-      if (typeof authorized === 'string') return { ok: false as const, error: authorized }
-      const value = await action(authorized)
-      this.checkLease(authorized.context, authorized.control.observedAt)
-      if (!current() || !this.live(ticket)) throw new Error('Session fenced')
-      return { ok: true as const, value }
-    })
+    let native: IDBTransaction | undefined
+    let sawAbort = false
+    let sawComplete = false
+    const onAbort = (event: Event) => {
+      if (event.target === native) sawAbort = true
+    }
+    const onComplete = (event: Event) => {
+      if (event.target === native) sawComplete = true
+    }
+    const execute = () =>
+      this.db.transaction('rw', this.tables(), async (transaction) => {
+        if (aborted) {
+          if (!transaction || transaction.db !== this.db || transaction.parent)
+            throw new Error('Capture requires an owned top-level transaction')
+          native = transaction.idbtrans
+          native.addEventListener('abort', onAbort)
+          native.addEventListener('complete', onComplete)
+        }
+        if (!current() || !this.live(ticket)) throw new Error('Session fenced')
+        const authorized = await this.authorized(ticket, online)
+        if (!current() || !this.live(ticket)) throw new Error('Session fenced')
+        if (typeof authorized === 'string') return { ok: false as const, error: authorized }
+        const value = await action(authorized)
+        this.checkLease(authorized.context, authorized.control.observedAt)
+        if (!current() || !this.live(ticket)) throw new Error('Session fenced')
+        return { ok: true as const, value }
+      })
+    let outcome
+    try {
+      outcome = await execute()
+    } catch (error) {
+      if (aborted && sawAbort && !sawComplete) return aborted(error)
+      throw error
+    } finally {
+      native?.removeEventListener('abort', onAbort)
+      native?.removeEventListener('complete', onComplete)
+    }
     if (!outcome.ok) throw new Error(outcome.error)
     if (!current() || !this.live(ticket))
       throw new Error('Session fenced while transaction completed')
@@ -655,27 +704,58 @@ export class AccessKernel {
     return (await this.commitLocalCommands(ticket, [supplied], current))[0]!
   }
 
-  async commitLocalCommands(
+  async commitLocalCommandsOutcome(
     ticket: ContextTicket,
     supplied: readonly LocalCommand[],
     current: () => boolean = () => true,
-  ): Promise<string[]> {
+  ): Promise<CaptureCommitOutcome> {
+    if ((this.db.constructor as typeof Dexie).currentTransaction)
+      throw new Error('Nested capture transaction is not supported')
+    const prepared = this.prepareCommands(ticket, supplied)
+    return this.run<CaptureCommitOutcome>(
+      prepared.ticket,
+      false,
+      async (authorized) => ({
+        status: 'committed',
+        mutationIds: await this.commitCommands(prepared.ticket, prepared.commands, authorized),
+      }),
+      current,
+      (error) => ({ status: 'not_committed', reason: captureFailureReason(error) }),
+    )
+  }
+
+  private prepareCommands(ticket: ContextTicket, supplied: readonly LocalCommand[]) {
     ticket = structuredClone(ticket)
     if (!Array.isArray(supplied) || supplied.length < 1 || supplied.length > 10)
       throw new Error('Invalid grouped command limit')
     const commands = structuredClone(supplied)
     if (new Set(commands.map((command) => command.envelope.mutation_id)).size !== commands.length)
       throw new Error('Invalid grouped command limit or duplicate ID')
+    return { ticket, commands }
+  }
+
+  private async commitCommands(
+    ticket: ContextTicket,
+    commands: readonly LocalCommand[],
+    authorized: Authorized,
+  ): Promise<string[]> {
+    const ids: string[] = []
+    for (const command of commands) {
+      ids.push(await this.commitCommand(ticket, command, authorized))
+    }
+    return ids
+  }
+
+  async commitLocalCommands(
+    ticket: ContextTicket,
+    supplied: readonly LocalCommand[],
+    current: () => boolean = () => true,
+  ): Promise<string[]> {
+    const prepared = this.prepareCommands(ticket, supplied)
     return this.run(
-      ticket,
+      prepared.ticket,
       false,
-      async (authorized) => {
-        const ids: string[] = []
-        for (const command of commands) {
-          ids.push(await this.commitCommand(ticket, command, authorized))
-        }
-        return ids
-      },
+      (authorized) => this.commitCommands(prepared.ticket, prepared.commands, authorized),
       current,
     )
   }

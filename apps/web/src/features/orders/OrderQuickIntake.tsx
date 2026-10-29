@@ -1,4 +1,10 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import {
+  captureFeedback,
+  CaptureSubmissionGate,
+  type CaptureFeedback,
+} from '../capture-feedback.js'
+import { captureValidation, type CaptureSubmissionResult } from '../../runtime/capture-outcome.js'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 
 import { hasOrderDraft } from '../draft-state.js'
 import { Button } from '@ocwp/ui'
@@ -14,7 +20,7 @@ export interface OrderQuickIntakeProps {
     priority: string
     brand: string | null
     model: string | null
-  }): Promise<void>
+  }): Promise<CaptureSubmissionResult>
 }
 
 export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeProps) {
@@ -27,24 +33,44 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
   const [withBicycle, setWithBicycle] = useState(false)
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
+  const gate = useRef(new CaptureSubmissionGate())
+  const [blocked, setBlocked] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  function finish(feedback: CaptureFeedback) {
+    gate.current.finish(feedback)
+    setBlocked(gate.current.blocked)
+    setMessage(feedback.message)
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!gate.current.begin()) return
     setBusy(true)
     setMessage(null)
     try {
-      const normalized = normalizeOrderIntake({
-        customerId,
-        reportedProblem,
-        intakeCondition,
-        accessories,
-        priority,
-        brand: withBicycle ? brand : null,
-        model: withBicycle ? model : null,
-      })
-      await onCreateOrder(normalized)
+      let normalized
+      try {
+        normalized = normalizeOrderIntake({
+          customerId,
+          reportedProblem,
+          intakeCondition,
+          accessories,
+          priority,
+          brand: withBicycle ? brand : null,
+          model: withBicycle ? model : null,
+        })
+      } catch (error) {
+        const validation = captureValidation(error)
+        if (!validation) throw error
+        finish(captureFeedback({ kind: 'resolved', value: validation }))
+        return
+      }
+      const result = await onCreateOrder(normalized)
+      const feedback = captureFeedback({ kind: 'resolved', value: result })
+      finish(feedback)
+      if (feedback.status !== 'saved') return
       // Customer and priority intentionally remain selected after a successful local save.
       // They become clean defaults only here; a refused/failed save keeps the draft dirty.
       setRetainedSelection({ customerId, priority })
@@ -56,7 +82,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
       setModel('')
       setMessage('Orden guardada localmente')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo guardar la orden')
+      finish(captureFeedback({ kind: 'rejected', error }))
     } finally {
       setBusy(false)
     }
@@ -71,6 +97,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
       className="grid gap-4"
       aria-describedby="order-intake-status"
       data-dirty={
+        blocked ||
         busy ||
         hasOrderDraft(
           {
@@ -193,7 +220,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           </label>
         </div>
       ) : null}
-      <Button type="submit" disabled={busy || customers.length === 0}>
+      <Button type="submit" disabled={blocked || busy || customers.length === 0}>
         {busy ? 'Guardando…' : 'Guardar orden'}
       </Button>
       <p id="order-intake-status" role="status" aria-live="polite" className="min-h-6 text-sm">

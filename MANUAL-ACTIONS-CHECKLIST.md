@@ -1,5 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Selective quota-safe capture (local qualification in progress)
+
+- [x] Independently review the [capture design](docs/superpowers/specs/2026-10-29-quota-safe-capture-design.md).
+      Rejected Dexie promises can follow a native commit, including quota-named
+      failures. Retry requires an already-observed native abort of the exact
+      top-level transaction; late/missing/conflicting evidence stays unknown.
+- [ ] Qualify the complete exact patch and actual production-PWA browser journeys.
+      Local core 959/959 passes with 25 added cases and no skips; four browser tests are authored/static-checked
+      but local pinned browser and API/PostgreSQL are unavailable. No actual
+      browser pass or universal quota-retry support is claimed.
+- [ ] Complete physical quota/eviction/capacity and screen-reader/touch acceptance.
+      A local mounted-form uncertainty latch is not a durable duplicate-prevention
+      guarantee across explicit discard/navigation or session changes. Do not
+      delete IndexedDB/queues, evict application data or add persistence grants.
+- The ownership experiment40927223929 remains spent. This work performs no new
+  measurement, Pages publication, operational deployment, route or module activation.
+
 ## 2026-10-29 · Consumed ownership measurement and local receipt correction
 
 - [x] Qualify PR71/main `c2512681` with fresh CI40919175924: independent27/27,
@@ -10,7 +27,10 @@
 - [ ] Establish ordinary-role/observer/H/S runtime evidence: **not established**.
       Receipt skipped/false/zero placeholders do not prove no admission. Actual
       admission and the historical failing boundary remain unknown.
-- [ ] Independently review and qualify the [receipt correction](docs/superpowers/specs/2026-10-29-quote-ownership-receipt-design.md):
+- [x] Independently review and qualify PR72/main6106028 with fresh CI40938841480:
+      27/27 controls, 5,499 passed/58 expected skips including 456 ownership mocks,
+      direct86/aggregate86 browser and retained repeat/kernel evidence, all retry0.
+      The [receipt correction](docs/superpowers/specs/2026-10-29-quote-ownership-receipt-design.md):
       schema2 unknown/null facts when observation is unavailable; strict valid early
       failed RESULT preservation. Pure/mock correction is not runtime validation
       and does not authorize another trial, new resources or production activation.
