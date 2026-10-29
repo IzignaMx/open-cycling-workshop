@@ -1,7 +1,34 @@
 schema: 1
 
-quote_service_lifetime_s2a_20261029:
+quote_cleanup_control_flow_s2b_20261029:
   status: implemented_pending_evidence
+  baseline_main: 73661dbe86d54e19cad464f48e959cd001d202b7
+  design: docs/superpowers/specs/2026-10-29-quote-cleanup-control-flow-design.md
+  plan: docs/superpowers/plans/2026-10-29-quote-cleanup-control-flow.md
+  decision: assistant_selected_first_non_Exception_BaseException_after_independent_design_review
+  scope: existing_synchronous_service_cleanup_precedence_only
+  preservation: identical_first_object_and_first_observed_traceback_suffix_normal_prepended_frames_allowed
+  retention: invocation_local_capture_no_new_persistent_roots_traceback_retains_frames
+  tdd: corrected_baseline_10_failed_4_passed_then_16_new_variants_green
+  sensitivity: five_capture_dominance_traceback_mutations_each_expected_RED_source_restored
+  affected: 417_passed_zero_skips_one_existing_warning
+  collection: 5101
+  static: mypy_124_source_files_ruff_openapi_types_repository_contract_passed
+  cleanup_topology: max_one_rollback_two_invalidations_one_release_no_elapsed_bound
+  ordinary_errors_commit_unknown_receipts_and_four_S2a_cases: preserved
+  implementation_review_and_hosted: pending
+  publication: local_only_not_authorized
+  routes_grants_workflows_budgets_modules_and_deployment: unchanged
+
+quote_service_lifetime_s2a_20261029:
+  status: verified
+  receipt_date: 2026-10-29
+  verification_scope: four_deterministic_SQLite_cases_only_no_cleanup_precedence_or_hard_cancellation
+  merged_main: 73661dbe86d54e19cad464f48e959cd001d202b7
+  merged_tree: 2c06102f24a42d6188a4d5e92e9f36d82698dc82
+  postmerge_ci: 40842539417_independently_accepted_terminal_27_of_27
+  postmerge_python: 5085_collected_5027_passed_58_expected_skips
+  retained_evidence: four_S2a_55_S1_14_JWT_8_PG_6_restore_dual_cleanup_runtime_browser_passed
   baseline_main: 72927ca56d8337a07f5b9813902074d87523e920
   design: docs/superpowers/specs/2026-10-29-quote-service-lifetime-design.md
   plan: docs/superpowers/plans/2026-10-29-quote-service-lifetime.md
@@ -11,10 +38,11 @@ quote_service_lifetime_s2a_20261029:
   full_collection: 5085
   sensitivity: four_targeted_mutations_each_one_expected_failure_source_restored
   production_routes_grants_budgets_modules_and_workflows: unchanged
-  cleanup_arriving_cancellation_precedence: unresolved_not_decided
-  independent_review_and_hosted: pending
+  historical_S2a_cleanup_arriving_cancellation_precedence: unresolved_at_PR69_S2b_separate_local_pending
+  independent_review_and_hosted: accepted_PR69_and_fresh_postmerge_source
   local_whole_suite: not_repeated_known_prior_harness_failure_not_qualified
-  publication: not_authorized_local_only
+  historical_local_publication_checkpoint: not_authorized_local_only_before_PR69
+  publication: merged_PR69_source_only_no_release_or_activation
 
 quote_asgi_admission_s1_20261029:
   status: verified
@@ -46,7 +74,14 @@ quote_asgi_admission_s1_20261029:
   publication: merged_PR68_source_only_no_release_or_activation
 
 qemu_automatic_trigger_pause_20261029:
-  status: implemented_pending_evidence
+  status: verified
+  receipt_date: 2026-10-29
+  verification_scope: trigger_pause_only_not_a_passing_QEMU_diagnostic
+  merged_main: 38a8542e7afda0e1da2ca488f0963543bf9cfa31
+  merged_tree: ab5ec8b31e5e0b46c13fde489038eceb389d2e13
+  postmerge_ci: 40820385839_independently_accepted_terminal_27_of_27
+  postmerge_python: 5026_collected_4968_passed_58_expected_skips
+  postmerge_runtime: native_ARM64_runtime_passed_QEMU_absent_as_intended
   baseline_main: 3c6513d685fe659816bd3ddb47dab91003d3a787
   plan: docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md
   scope: remove_only_qemu_pull_request_and_main_push_events
@@ -56,7 +91,8 @@ qemu_automatic_trigger_pause_20261029:
   prior_qemu_failures: preserved_failed_non_qualifying_root_cause_unproven
   reactivation: diagnosed_root_cause_reviewed_bounded_fix_and_specific_reenable_choice
   native_arm64_runtime_security_jobs_and_budgets: unchanged
-  independent_review_and_remote_integration: pending_local_preparation_only
+  historical_review_checkpoint: pending_local_preparation_only_before_PR67
+  independent_review_and_remote_integration: accepted_PR67_and_fresh_postmerge_source
 
 manual_public_pages_20261028:
   status: verified

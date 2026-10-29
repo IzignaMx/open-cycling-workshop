@@ -1,5 +1,15 @@
 # Temporary QEMU automatic-trigger pause Implementation Plan
 
+> **Current source receipt · 2026-10-29:** [PR67](https://github.com/IzignaMx/open-cycling-workshop/pull/67)
+> merged `38a8542e7afda0e1da2ca488f0963543bf9cfa31`, tree
+> `ab5ec8b31e5e0b46c13fde489038eceb389d2e13`. Independently accepted fresh
+> [CI40820385839](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40820385839):
+> 27/27 aggregate controls; 5,026 collected / 4,968 passed / 58 expected skips.
+> QEMU was absent as intended, not a passing diagnostic; manual dispatch remains
+> without new run authority, and native ARM64/runtime qualification is unchanged.
+> Local-only/pending statements below are historical preparation checkpoints.
+> All failed NON-QUALIFYING diagnostics and reactivation conditions remain intact.
+
 > **For agentic workers:** Use superpowers:executing-plans; independently review before integration.
 
 **Goal:** Pause only the QEMU diagnostic's automatic PR and main-push executions.

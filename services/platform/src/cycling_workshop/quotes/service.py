@@ -12,6 +12,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from types import TracebackType
 from typing import Any
 
 import psycopg
@@ -204,6 +205,14 @@ class QuoteService:
         failure: BaseException | None = None
         encoded: bytes | None = None
         cleanup_verified = True
+        control_flow: tuple[BaseException, TracebackType | None] | None = None
+
+        def capture_control_flow(error: BaseException) -> None:
+            nonlocal control_flow
+            if control_flow is None and not isinstance(error, Exception):
+                # Save before cleanup can re-raise even the same exception object.
+                control_flow = (error, error.__traceback__)
+
         try:
             deadline.check()
             if admission.protocol != 1 or not admission.enabled:
@@ -343,6 +352,7 @@ class QuoteService:
             self.session.commit()
             deadline.check()
         except BaseException as error:
+            capture_control_flow(error)
             # No retry or business work in cleanup. A lost commit acknowledgment
             # cannot be represented as proven rollback, even if rollback returns.
             if isinstance(error, SQLAlchemyError | OSError) and not isinstance(
@@ -350,16 +360,17 @@ class QuoteService:
             ):
                 # Invalidate before a rollback could release a questionable
                 # driver connection to the pool. No reconnect or retry follows.
-                cleanup_verified = self._invalidate()
+                cleanup_verified = self._invalidate(capture_control_flow)
             else:
-                cleanup_verified = self._rollback()
+                cleanup_verified = self._rollback(capture_control_flow)
             failure = self._failure(error, commit_started)
         finally:
             try:
                 self._release_hook(connection, budget_hook)
-            except BaseException:
+            except BaseException as error:
+                capture_control_flow(error)
                 cleanup_verified = False
-                self._invalidate()
+                self._invalidate(capture_control_flow)
                 if failure is None:
                     failure = QuoteServiceError(
                         "quote_request_unavailable", outcome_unknown=commit_started
@@ -368,25 +379,30 @@ class QuoteService:
                 self.session.info["ocwp_quote_unusable"] = True
                 if isinstance(failure, QuoteServiceError):
                     failure.cleanup_unverified = True
+        if control_flow is not None:
+            selected_error, original_traceback = control_flow
+            raise selected_error.with_traceback(original_traceback) from None
         if failure is not None:
             raise failure from None
         if encoded is None:
             raise QuoteServiceError("quote_internal_error")
         return encoded
 
-    def _invalidate(self) -> bool:
+    def _invalidate(self, capture: Callable[[BaseException], None]) -> bool:
         self.session.info["ocwp_quote_unusable"] = True
         try:
             self.session.invalidate()
-        except BaseException:
+        except BaseException as error:
+            capture(error)
             return False
         return True
 
-    def _rollback(self) -> bool:
+    def _rollback(self, capture: Callable[[BaseException], None]) -> bool:
         try:
             self.session.rollback()
-        except BaseException:
-            self._invalidate()
+        except BaseException as error:
+            capture(error)
+            self._invalidate(capture)
             return False
         return True
 

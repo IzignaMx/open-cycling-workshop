@@ -1,12 +1,28 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Cleanup control-flow S2b (local pending)
+
+- [ ] Independently review and qualify the [bounded first-control-flow change](docs/superpowers/specs/2026-10-29-quote-cleanup-control-flow-design.md).
+      Assistant-selected policy after independent design review: identical first
+      non-Exception BaseException and first-observed traceback suffix survive
+      cleanup; quarantine and finite attempt topology remain. Local deterministic
+      evidence: 16 new variants, 417 affected passes, five sensitivity mutations.
+      Ordinary errors, COMMIT-unknown and same-ID receipt recovery are unchanged.
+      No hosted S2b acceptance, hard cancellation, bounded cleanup, backend absence,
+      capacity, physical acceptance, route activation or publication is claimed.
+
 ## 2026-10-29 · Deterministic service lifetime S2a
 
-- [ ] Independently review the [four local characterization cases](docs/superpowers/specs/2026-10-29-quote-service-lifetime-design.md)
-      and qualify their exact source through separately authorized hosted CI.
+- [x] Independently review the [four local characterization cases](docs/superpowers/specs/2026-10-29-quote-service-lifetime-design.md)
+      and qualify their exact source: PR69 main `73661dbe`, tree `2c06102f`,
+      fresh CI40842539417 accepted 27/27 aggregate controls;
+      5,085 collected / 5,027 passed / 58 expected skips, all four new cases,
+      retained 55 S1 / 14 JWT / eight PG / six restores, dual cleanup and browser.
+      This 2026-10-29 receipt supersedes the historical pending checkpoint.
       SQLite faults are not PostgreSQL, network loss, hard cancellation or
-      bounded cleanup evidence. Cleanup-arriving cancellation precedence remains
-      unresolved; no executor, ledger or public command activation is added.
+      bounded cleanup evidence. S2a left cleanup-arriving cancellation precedence
+      unresolved; the separate S2b local change above is not yet qualified. No
+      executor, ledger or public command activation is added.
 
 ## 2026-10-29 · Data-only M0 source reconciliation
 
@@ -32,7 +48,10 @@
 
 ## 2026-10-29 · Temporary automatic QEMU diagnostic pause
 
-- [ ] Independently review and integrate the [local trigger-only pause](docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md).
+- [x] Independently review and integrate the [local trigger-only pause](docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md).
+      PR67 main `38a8542e`, tree `ab5ec8b`, fresh CI40820385839 accepted
+      27/27 aggregate controls; 5,026 collected / 4,968 passed / 58 expected skips
+      (2026-10-29 receipt). QEMU absent as intended is not a passing diagnostic.
       Only QEMU `pull_request` and main `push` events are removed; manual dispatch
       remains without new run authority. Native ARM64/runtime qualification,
       full diagnostic jobs, security controls and resource budgets are unchanged.
