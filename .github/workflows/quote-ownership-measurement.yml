@@ -1,0 +1,240 @@
+name: One-shot quote ownership measurement (NOT production qualification)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: Independently reviewed main commit
+        required: true
+        type: string
+      expected_tree_sha:
+        description: Independently reviewed source tree
+        required: true
+        type: string
+      expected_workflow_id:
+        description: Independently pinned registered workflow ID (never rotate)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ocwp-quote-ownership-once
+  cancel-in-progress: false
+
+jobs:
+  ownership-measurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      OCWP_EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      OCWP_EXPECTED_TREE_SHA: ${{ inputs.expected_tree_sha }}
+      OCWP_EXPECTED_WORKFLOW_ID: ${{ inputs.expected_workflow_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Bind checkout and refuse before images on any spent or unknown grant
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_SHA" = "$OCWP_EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$OCWP_EXPECTED_TREE_SHA"
+          test -z "$(git status --porcelain)"
+          timeout --signal=TERM --kill-after=5s 45s python3 -m scripts.ci.quote_ownership_actions_adapter \
+            --phase prebuild --evidence artifacts/quote-ownership/guard-prebuild.json
+          nonce="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+          printf 'nonce=%s\n' "$nonce" >> "$GITHUB_OUTPUT"
+      - name: Prepare fixed docker build images and disposable ordinary-role fixture
+        id: prepare
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/full-python-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          export OCWP_FULL_CONTEXT="$context"
+          cat > "$RUNNER_TEMP/full-python.Dockerfile" <<'DOCKERFILE'
+          FROM node:22.16.0-bookworm-slim AS node
+          RUN npm install --global pnpm@11.17.0
+          WORKDIR /app
+          COPY . /app
+          RUN pnpm install --frozen-lockfile
+          FROM ghcr.io/astral-sh/uv:0.11.15 AS uv
+          FROM python:3.13.14-slim-trixie
+          COPY --from=uv /uv /bin/uv
+          COPY --from=node /usr/local/bin/node /usr/local/bin/node
+          COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+          RUN ln -s /usr/local/lib/node_modules/pnpm/bin/pnpm.mjs /usr/local/bin/pnpm
+          ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never PYTHONDONTWRITEBYTECODE=1
+          WORKDIR /app
+          COPY --from=node /app /app
+          RUN uv sync --all-packages --group dev --locked
+          RUN set -eu; printf '%s\n' 'OCWP build: base dependencies'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg git libstdc++6; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PGDG signing key'; \
+              install -d -m 0755 /usr/share/postgresql-common/pgdg; \
+              curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc; \
+              gpg --batch --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /tmp/pgdg-key-info; \
+              keys="$(awk -F: '$1 == "pub" {n++} END {print n+0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG primary keys: %s\n' "$keys"; test "$keys" = 1; \
+              fingerprint="$(awk -F: '$1 == "pub" {primary=1; next} primary && $1 == "fpr" {print $10; primary=0}' /tmp/pgdg-key-info)"; \
+              printf 'PGDG fingerprint: %s\n' "$fingerprint"; \
+              test "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8; \
+              printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt-archive.postgresql.org/pub/repos/apt trixie-pgdg-archive main' > /etc/apt/sources.list.d/pgdg.list; \
+              rm /tmp/pgdg-key-info
+          RUN set -eu; printf '%s\n' 'OCWP build: pinned PostgreSQL packages'; \
+              apt-get update -qq; \
+              apt-get install -y -qq --no-install-recommends postgresql-client-18=18.4-1.pgdg13+1 libpq5=18.4-1.pgdg13+1; \
+              rm -rf /var/lib/apt/lists/*
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL package versions'; \
+              for package in postgresql-client-18 libpq5; do \
+                version="$(dpkg-query -W -f='${Version}' "$package")"; \
+                printf '%s: %s\n' "$package" "$version"; test "$version" = 18.4-1.pgdg13+1; \
+              done
+          RUN set -eu; printf '%s\n' 'OCWP build: PostgreSQL client versions and links'; \
+              for tool in pg_dump pg_restore psql; do \
+                printf 'PostgreSQL client: %s\n' "$tool"; \
+                ln -s /usr/lib/postgresql/18/bin/$tool /usr/local/bin/$tool || exit 1; \
+                version="$(/usr/lib/postgresql/18/bin/$tool --version)" || exit 1; \
+                printf '%s\n' "$version"; \
+                case "$version" in "$tool (PostgreSQL) 18.4"|"$tool (PostgreSQL) 18.4 (Debian 18.4-1.pgdg13+1)") ;; *) exit 1;; esac; \
+                ldd /usr/lib/postgresql/18/bin/$tool > /tmp/client-link-check || exit 1; \
+                cat /tmp/client-link-check; \
+                if grep -F 'not found' /tmp/client-link-check; then exit 1; else status=$?; test "$status" -eq 1 || exit 1; fi; \
+              done; rm /tmp/client-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node runtime links'; \
+              ldd /usr/local/bin/node > /tmp/node-link-check; cat /tmp/node-link-check; \
+              if grep -F 'not found' /tmp/node-link-check; then exit 1; else status=$?; test "$status" -eq 1; fi; \
+              rm /tmp/node-link-check
+          RUN set -eu; printf '%s\n' 'OCWP build: Node version assertion'; version="$(node --version)"; \
+              printf 'OCWP build: Node version: %s\n' "$version"; test "$version" = v22.16.0
+          RUN set -eu; printf '%s\n' 'OCWP build: pnpm version assertion'; version="$(pnpm --version)"; \
+              printf 'OCWP build: pnpm version: %s\n' "$version"; test "$version" = 11.17.0
+          RUN set -eu; printf '%s\n' 'OCWP build: Playwright package assertion'; version="$(node -p 'require("./apps/web/node_modules/@playwright/test/package.json").version')"; \
+              printf 'OCWP build: Playwright package version: %s\n' "$version"; test "$version" = 1.62.0
+          ARG SOURCE_TREE
+          LABEL ocwp.source-tree=$SOURCE_TREE
+          DOCKERFILE
+          timeout --signal=TERM --kill-after=30s 660s python3 - <<'PY'
+          import os
+          import time
+          from pathlib import Path
+          from scripts.ci.quote_capacity_micro import (
+              FULL_BUILD_SPOOL_LIMIT, LIMIT, ProofFailure, full_client,
+              full_preparation_diagnostic, source_query,
+          )
+          deadline = time.monotonic() + 650
+          context = os.environ['OCWP_FULL_CONTEXT']
+          diagnostics = Path('artifacts/quote-ownership/preparation')
+          def execute(args, *, timeout=5, stage='source_tree'):
+              remaining = deadline - time.monotonic()
+              limit = FULL_BUILD_SPOOL_LIMIT if stage == 'image_build' else LIMIT
+              if remaining <= 0 or timeout <= 0:
+                  full_preparation_diagnostic(None, diagnostics, stage, 'preparation_deadline', None, False, spool_limit=limit)
+                  raise ProofFailure('preparation_deadline')
+              return full_client(args, timeout=min(timeout, remaining), limit=limit, preparation=(diagnostics, stage))
+          tree = source_query('tree', execute)
+          execute(['docker', 'build', '--progress=plain', '-f',
+                   str(Path(os.environ['RUNNER_TEMP']) / 'full-python.Dockerfile'),
+                   '--build-arg', f'SOURCE_TREE={tree}', '-t', 'ocwp-full-python', context], timeout=590, stage='image_build')
+          from scripts.ci.quote_ownership_images import base_reference, verify_reference
+          pg_deadline = min(deadline, time.monotonic() + 60)
+          execute(['docker', 'pull', '--quiet', 'postgres:18.4-trixie'],
+                  timeout=pg_deadline - time.monotonic(), stage='postgres_pull')
+          inspection_format = '{"Id":{{json .Id}},"RepoDigests":{{json .RepoDigests}},"Os":{{json .Os}},"Architecture":{{json .Architecture}}}'
+          raw_base = execute(['docker', 'image', 'inspect', '--format', inspection_format, 'postgres:18.4-trixie'],
+                             timeout=min(5, pg_deadline - time.monotonic()), stage='postgres_image')
+          base, reference = base_reference(raw_base)
+          raw_selected = execute(['docker', 'image', 'inspect', '--format', inspection_format, reference],
+                                 timeout=min(5, pg_deadline - time.monotonic()), stage='postgres_image')
+          verify_reference(raw_selected, base, reference)
+          execute(['docker', 'build', '--progress=plain', '-f',
+                   str(Path(context) / 'infra/docker/quote-ownership-postgres.fixture.Dockerfile'),
+                   '--build-arg', f'PG_BASE_IMAGE={reference}', '--build-arg', f'SOURCE_TREE={tree}',
+                   '-t', 'ocwp-quote-ownership-postgres', context],
+                  timeout=pg_deadline - time.monotonic(), stage='image_build')
+          pg_image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', 'ocwp-quote-ownership-postgres'],
+                             timeout=min(5, pg_deadline - time.monotonic()), stage='postgres_image')
+          worker_image = execute(['docker', 'image', 'inspect', '--format', '{{.Id}}', 'ocwp-full-python'],
+                                 stage='worker_image')
+          import re
+          if any(re.fullmatch(r'sha256:[0-9a-f]{64}', image) is None for image in (base, pg_image, worker_image)):
+              raise ProofFailure('image_identity')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key, value in [('pg_base_image_id', base), ('pg_base_reference', reference),
+                                 ('pg_image_id', pg_image), ('image_id', worker_image)]:
+                  output.write(f'{key}={value}\n')
+          PY
+      - name: Fresh guard inside original setup window then exactly one measurement
+        id: measurement
+        timeout-minutes: 18
+        shell: bash
+        env:
+          OCWP_OWNERSHIP_NONCE: ${{ steps.identity.outputs.nonce }}
+          OCWP_OWNERSHIP_WORKER_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_OWNERSHIP_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_IMAGE_ID: ${{ steps.prepare.outputs.pg_base_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_REFERENCE: ${{ steps.prepare.outputs.pg_base_reference }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 1020s bash -euo pipefail <<'MEASUREMENT'
+          export OCWP_OWNERSHIP_SETUP_DEADLINE_NS="$(python3 -c 'import time; print(time.monotonic_ns() + 65_000_000_000)')"
+          read -r guard_seconds guard_kill_seconds < <(python3 -c 'import os; from scripts.ci.quote_ownership_actions_adapter import setup_wrapper_budget; print(*setup_wrapper_budget(os.environ))')
+          timeout --signal=TERM --kill-after="${guard_kill_seconds}s" "${guard_seconds}s" \
+            python3 -m scripts.ci.quote_ownership_actions_adapter \
+            --phase setup --evidence artifacts/quote-ownership/guard-setup.json
+          python3 -m scripts.ci.quote_ownership_measurement --supervise \
+            --worker-image "$OCWP_OWNERSHIP_WORKER_IMAGE_ID" --pg-image "$OCWP_OWNERSHIP_PG_IMAGE_ID" \
+            --commit "$GITHUB_SHA" --guard-evidence artifacts/quote-ownership/guard-setup.json \
+            --owned "$RUNNER_TEMP/quote-ownership-owned.json" --evidence artifacts/quote-ownership/receipt.json
+          MEASUREMENT
+      - name: Independently finalize only this attempt's owned fixtures
+        if: always()
+        timeout-minutes: 1
+        shell: bash
+        env:
+          OCWP_OWNERSHIP_NONCE: ${{ steps.identity.outputs.nonce }}
+          OCWP_OWNERSHIP_WORKER_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_OWNERSHIP_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_IMAGE_ID: ${{ steps.prepare.outputs.pg_base_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_REFERENCE: ${{ steps.prepare.outputs.pg_base_reference }}
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 55s python3 -m scripts.ci.quote_ownership_measurement --finalize \
+            --worker-image "$OCWP_OWNERSHIP_WORKER_IMAGE_ID" --pg-image "$OCWP_OWNERSHIP_PG_IMAGE_ID" \
+            --commit "$GITHUB_SHA" --guard-evidence artifacts/quote-ownership/guard-setup.json \
+            --owned "$RUNNER_TEMP/quote-ownership-owned.json" --evidence artifacts/quote-ownership/receipt.json
+      - name: Stage bounded closed evidence without following source links
+        id: evidence
+        if: always()
+        shell: bash
+        env:
+          OCWP_OWNERSHIP_NONCE: ${{ steps.identity.outputs.nonce }}
+          OCWP_OWNERSHIP_WORKER_IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          OCWP_OWNERSHIP_PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_IMAGE_ID: ${{ steps.prepare.outputs.pg_base_image_id }}
+          OCWP_OWNERSHIP_PG_BASE_REFERENCE: ${{ steps.prepare.outputs.pg_base_reference }}
+        run: |
+          set -uo pipefail
+          python3 -m scripts.ci.quote_ownership_actions_adapter --write-missing-guard-evidence
+          fallback_status=$?
+          directory=$(python3 -m scripts.ci.quote_ownership_staging)
+          staging_status=$?
+          if [ -n "$directory" ]; then
+            printf 'directory=%s\n' "$directory" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$fallback_status" -ne 0 ]; then exit "$fallback_status"; fi
+          exit "$staging_status"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.evidence.outputs.directory != ''
+        with:
+          name: quote-ownership-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.evidence.outputs.directory }}
+          if-no-files-found: error

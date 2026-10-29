@@ -1,6 +1,26 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-10-29 · Cleanup control-flow S2b (local pending)
+## 2026-10-29 · One-shot ownership preparation (hosted qualification pending)
+
+- [x] Independently review the [disposable-role initializer adaptation](docs/superpowers/specs/2026-10-29-quote-ownership-measurement-design.md#disposable-role-adaptation-and-retained-blocker-history)
+      for mocked implementation: unchanged initializer in COPY-only source-bound
+      fixture image, ordinary disposable ocwp role/database. Bootstrap demotion is
+      prohibited; no role SQL has run. Preserve the historical blocked pure snapshot.
+- [x] Complete independent concrete controller/finalizer review and combined
+      mocked/static checks: 430 ownership tests, 715 including retained containment,
+      strict source checks.
+- [ ] Complete exact-source hosted qualification before the single coordinator
+      dispatch. Authored manual-only workflow is not executed.
+      Pure/mock tests do not establish real backend absence or hard cancellation.
+      Original setup65 includes the fresh API guard; experiment26, cleanup55 and
+      finalizer60 remain unchanged. First dispatch is spent even on setup failure.
+      The one-shot remains unconsumed; no automatic trigger or extra privilege.
+
+## 2026-10-29 · Cleanup control-flow S2b (historical local checkpoint)
+
+Current source receipt: PR70 merged main `0726b922`, CI40856084229 accepted
+27/27 aggregate controls, 5,043 passed / 58 expected skips. The following local
+checkpoint predates that receipt and preserves its original scope and limitations.
 
 - [ ] Independently review and qualify the [bounded first-control-flow change](docs/superpowers/specs/2026-10-29-quote-cleanup-control-flow-design.md).
       Assistant-selected policy after independent design review: identical first
@@ -21,7 +41,8 @@
       This 2026-10-29 receipt supersedes the historical pending checkpoint.
       SQLite faults are not PostgreSQL, network loss, hard cancellation or
       bounded cleanup evidence. S2a left cleanup-arriving cancellation precedence
-      unresolved; the separate S2b local change above is not yet qualified. No
+      unresolved at that checkpoint; the later PR70 S2b receipt above qualifies only
+      its synchronous cleanup policy, not hard cancellation. No
       executor, ledger or public command activation is added.
 
 ## 2026-10-29 · Data-only M0 source reconciliation

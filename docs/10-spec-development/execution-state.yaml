@@ -1,7 +1,32 @@
 schema: 1
 
+quote_ownership_measurement_preparation_20261029:
+  status: independently_reviewed_local_mocked_preparation_hosted_pending
+  baseline_main: 0726b9221bfbdffd708c7dbb7d456ee0771a6791
+  design: docs/superpowers/specs/2026-10-29-quote-ownership-measurement-design.md
+  plan: docs/superpowers/plans/2026-10-29-quote-ownership-measurement.md
+  scope: fixed_two_case_manual_measurement_preparation_not_runtime_qualification
+  historical_pure_checkpoint: 65_codec_135_guard_passed_role_scope_blocked_at_that_time
+  role_scope: existing_initializer_disposable_application_role_only_now_permitted
+  initializer_and_venue_design: independently_accepted_for_mocked_implementation
+  bootstrap_role: cannot_demote_no_attempt_ordinary_ocwp_created_by_unchanged_initializer
+  current_authored: closed_codec_DB_worker_controller_finalizer_guard_adapter_images_staging_manual_workflow
+  local_component_evidence: codec_89_DB_38_worker_42_controller_31_guard_adapter_images_staging_230_mocked_tests
+  complete_source_review_and_combined_checks: accepted_430_mocked_715_with_existing_containment
+  static: strict_mypy_8_source_files_ruff_18_files_passed
+  runtime_role_creation_and_dispatch: not_executed
+  one_shot: unconsumed_no_H_S_or_actual_child_stop
+  setup_budget: original_65_seconds_including_fresh_API_guard_no_reset
+  experiment_cleanup_finalizer_seconds: 26_55_60_unchanged
+  automatic_trigger_privilege_resource_expansion: none
+  publication: candidate_hosted_qualification_pending
+
 quote_cleanup_control_flow_s2b_20261029:
-  status: implemented_pending_evidence
+  status: verified_merged_source_only
+  merged_main: 0726b9221bfbdffd708c7dbb7d456ee0771a6791
+  postmerge_ci: 40856084229_accepted_27_of_27_aggregate_controls
+  postmerge_python: 5043_passed_58_expected_skips
+  historical_local_checkpoint: following_local_evidence_and_pending_fields_predate_PR70
   baseline_main: 73661dbe86d54e19cad464f48e959cd001d202b7
   design: docs/superpowers/specs/2026-10-29-quote-cleanup-control-flow-design.md
   plan: docs/superpowers/plans/2026-10-29-quote-cleanup-control-flow.md
@@ -16,8 +41,8 @@ quote_cleanup_control_flow_s2b_20261029:
   static: mypy_124_source_files_ruff_openapi_types_repository_contract_passed
   cleanup_topology: max_one_rollback_two_invalidations_one_release_no_elapsed_bound
   ordinary_errors_commit_unknown_receipts_and_four_S2a_cases: preserved
-  implementation_review_and_hosted: pending
-  publication: local_only_not_authorized
+  historical_implementation_review_and_hosted: pending_at_local_checkpoint
+  historical_publication: local_only_not_authorized_before_PR70
   routes_grants_workflows_budgets_modules_and_deployment: unchanged
 
 quote_service_lifetime_s2a_20261029:
