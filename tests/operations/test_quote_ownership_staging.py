@@ -180,6 +180,7 @@ def test_real_receipt_uses_environment_identity():
     )
     expected = identity_from_environment(env)
     value = receipt.__wrapped__(expected)
+    value.update(schema=2, owner_observation="accepted")
     check = stage.validators_for_environment(env)["receipt.json"]
     check(json.dumps(value).encode())
     value["identity"]["run_id"] = "999"

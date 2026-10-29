@@ -331,6 +331,9 @@ def validate_observation(value: Any, identity: dict[str, object]) -> None:
 
 
 def validate_receipt(value: Any, identity: dict[str, object]) -> None:
+    _require(type(value) is dict)
+    schema = value.get("schema")
+    _integer(schema, 1, 2)
     _keys(
         value,
         {
@@ -346,12 +349,30 @@ def validate_receipt(value: Any, identity: dict[str, object]) -> None:
             "resources",
             "primary_cleanup",
             "independent_cleanup",
-        },
+        }
+        | ({"owner_observation"} if schema == 2 else set()),
     )
-    _integer(value["schema"], 1, 1)
     _require(value["kind"] == "ocwp.quote_ownership.receipt")
     _identity(value["identity"], identity)
     _require(value["status"] in ("passed", "pending_cleanup", "failed"))
+    for field in ("primary_cleanup", "independent_cleanup"):
+        _require(value[field] in ("pending", "verified_absent", "unknown"))
+    if schema == 2:
+        _require(value["owner_observation"] in ("accepted", "unavailable"))
+        if value["owner_observation"] == "unavailable":
+            _require(value["status"] == "failed")
+            _require(type(value["failure"]) is str and value["failure"] in CODES)
+            _require(
+                all(
+                    value[key] is None
+                    for key in ("setup_ns", "elapsed_ns", "observer", "resources")
+                )
+            )
+            _require(
+                value["cases"]
+                == [{"name": "H", "status": "unknown"}, {"name": "S", "status": "unknown"}]
+            )
+            return
     validate_observation(
         {
             "status": "failed" if value["status"] == "failed" else "observed",
@@ -388,6 +409,12 @@ def validate_receipt(value: Any, identity: dict[str, object]) -> None:
         _require(value["independent_cleanup"] == "verified_absent")
     else:
         _require(value["independent_cleanup"] == "pending")
+
+
+def validate_current_receipt(value: Any, identity: dict[str, object]) -> None:
+    """Current writer/sealer/stager cannot promote historical schema1 evidence."""
+    validate_receipt(value, identity)
+    _require(value["schema"] == 2)
 
 
 def encode_receipt(value: dict[str, object], identity: dict[str, object]) -> bytes:
