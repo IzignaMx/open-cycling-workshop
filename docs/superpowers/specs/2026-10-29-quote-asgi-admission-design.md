@@ -97,7 +97,6 @@ run was interrupted at 55% after overlap was noticed, not counted as completed.
 The local implementation remains uncommitted/unpublished pending coordinator
 assessment. Production router/client/workflows, grants and M0 remain unchanged.
 
-
 ## Draft qualification handoff
 
 The local-only checkpoint above is preserved as history. The bounded reviewed
