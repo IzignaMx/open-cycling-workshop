@@ -10,6 +10,13 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-27-public-project-presentation-design.md`, with the authorization and bounded refinement below.
 
+## Completion receipt
+
+Completed through the first actual static publication on 2026-10-29; see the
+[source-bound receipt](../../10-spec-development/2026-10-28-manual-public-pages.md#first-live-publication--2026-10-29).
+Earlier preflight/setup statements below describe the original checkpoint.
+No operational app or module activation and no additional dispatch is implied.
+
 ## Authority and design refinement
 
 The maintainer authorized preparing/integrating the manual workflow, enabling
@@ -46,26 +53,26 @@ if absent, request operator setup without creating credentials or grants.
 **Files:** `.github/workflows/public-pages.yml`, `tests/repository/test_public_pages_workflow.py`, existing preview trigger list.
 **Interfaces:** required string input expected_source_sha; build produces github-pages artifact; deploy produces page_url; verify consumes that URL and a fresh deterministic build at github.sha.
 
-- [ ] Write workflow contract tests for exact triggers, permissions, guards, job dependencies, timeouts and upload leaf; observe RED for missing workflow.
-- [ ] Implement minimal jobs using existing locked browser tools and static builder; no repository scripts in privileged job.
-- [ ] Run tests GREEN and mutate guards/permissions/artifact path to establish regression sensitivity.
+- [x] Write workflow contract tests for exact triggers, permissions, guards, job dependencies, timeouts and upload leaf; observe RED for missing workflow.
+- [x] Implement minimal jobs using existing locked browser tools and static builder; no repository scripts in privileged job.
+- [x] Run tests GREEN and mutate guards/permissions/artifact path to establish regression sensitivity.
 
 ### Task 2: Live proof
 
 **Files:** `scripts/docs/verify_public_site.py`, `tests/repository/test_public_site_deployment.py`, live Playwright config and shared site tests.
 **Interfaces:** CLI --url and --directory checks returned URL before any network, bounded no-redirect reads and exact content comparison; live config runs equivalent existing browser checks without starting a localhost server.
 
-- [ ] Test bad URL variants, redirects, bad/missing/extra/symlink content and byte mismatches RED.
-- [ ] Implement finite allowlisted retrieval and source-bound output; verify GREEN.
-- [ ] Test live configuration destination restrictions and existing local preview equivalence.
+- [x] Test bad URL variants, redirects, bad/missing/extra/symlink content and byte mismatches RED.
+- [x] Implement finite allowlisted retrieval and source-bound output; verify GREEN.
+- [x] Test live configuration destination restrictions and existing local preview equivalence.
 
 ### Task 3: Qualification and operator handoff
 
 **Files:** execution-state, manual checklist, public evidence record.
 
-- [ ] Record local results and pending hosted/settings/live gates truthfully; independent patch review and fresh full suite.
-- [ ] Publish draft PR; validate exact source using ordinary CI and native preview. Formal PR approval requires specific confirmation, not blanket delegation.
-- [ ] Merge only qualified source; fresh postmerge validation. Configure Pages/environment only through supported authorized access, otherwise report operator blocker.
-- [ ] One manual dispatch of the previously qualified exact main SHA, validate artifact digest, returned URL, deployed bytes, browser/axe and source identity. Preserve failure evidence; no blind reruns.
+- [x] Record local results and pending hosted/settings/live gates truthfully; independent patch review and fresh full suite.
+- [x] Publish draft PR; validate exact source using ordinary CI and native preview. Formal PR approval requires specific confirmation, not blanket delegation.
+- [x] Merge only qualified source; fresh postmerge validation. Configure Pages/environment only through supported authorized access, otherwise report operator blocker.
+- [x] One manual dispatch of the previously qualified exact main SHA, validate artifact digest, returned URL, deployed bytes, browser/axe and source identity. Preserve failure evidence; no blind reruns.
 
 Provider references checked 2026-10-28: [custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [Pages REST](https://docs.github.com/en/rest/pages/pages). Settings administration is separate from the two deployment token permissions.

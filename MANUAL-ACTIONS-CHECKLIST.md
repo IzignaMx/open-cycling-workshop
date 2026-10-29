@@ -1,5 +1,20 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## Current static publication receipt · 2026-10-29
+
+- [x] Verify Pages Source GitHub Actions and `github-pages` selected Branch
+      `main` only, with no tag rule, before dispatch.
+- [x] Publish exact qualified main `3c6513d685fe659816bd3ddb47dab91003d3a787`
+      once; [run 40807430478](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40807430478)
+      completed build, deployment and live verification successfully.
+- [x] Independently verify uploaded artifact/source identity, all eight live
+      files and actual desktop/mobile accessibility plus redirect-canary proof:
+      3/3 tests, zero retries/skips. See the
+      [receipt](docs/10-spec-development/2026-10-28-manual-public-pages.md#first-live-publication--2026-10-29).
+- [ ] Preserve physical-device, installation/recovery, streaming/cancellation,
+      capacity and quote/module activation gates. Static publication does not
+      close them or authorize additional deployments.
+
 ## Current queue · 2026-10-27
 
 - [x] Verify PR60 merged main `7d4c696` with CI 40474510277: 27/27,

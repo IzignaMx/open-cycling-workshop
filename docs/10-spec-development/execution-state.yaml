@@ -1,17 +1,27 @@
 schema: 1
 
 manual_public_pages_20261028:
-  status: implemented_pending_evidence
+  status: verified
+  verification_scope: first_static_presentation_only_not_operational_application
+  published_source: 3c6513d685fe659816bd3ddb47dab91003d3a787
+  published_tree: c8512994d19af082eddfb98ef77121f113218290
+  publication_run: 40807430478
+  deployment_id: 7402583560
+  published_url: https://izignamx.github.io/open-cycling-workshop/
+  uploaded_artifact: 12869255568
+  live_evidence_artifact: 12868772654
+  actual_live_browser: 3_passed_zero_retries_skips_flaky
+  exact_live_files: 8_of_8_match_uploaded_payload_and_strict_current_rebuild
   baseline_main: bd2dbd6b5a89631e0f95602220cb861c9a6cccc2
   evidence: docs/10-spec-development/2026-10-28-manual-public-pages.md
   plan: docs/superpowers/plans/2026-10-28-manual-public-pages.md
   authorization: manual_static_workflow_main_environment_and_one_initial_publication
-  settings: blocked_existing_maintainer_login_unavailable_no_mutation_attempted
+  settings: verified_Actions_source_selected_Branch_main_only_no_tags_20261029
   local_browser: blocked_missing_bundled_chromium_and_system_socket_permission
   focused_local: 89_passed_strict_types_lint_format_11_security_mutations
   independent_source_review: no_remaining_blocker_not_formal_pr_approval
-  hosted_exact_source: pending
-  live_url_bytes_browser_artifact_identity: pending_no_publication
+  hosted_exact_source: PR65_and_fresh_main_CI40711265914_27_of_27_4967_passed_58_expected_skips
+  live_url_bytes_browser_artifact_identity: independently_verified_run40807430478_attempt1
   operational_app_modules_grants_and_release_gates: unchanged
 
 module_descriptor_m0_20261027:
@@ -43,7 +53,7 @@ public_project_presentation_20261027:
   plan: docs/superpowers/plans/2026-10-27-public-project-presentation.md
   scope: static_public_documentation_readme_real_synthetic_screenshots_module_strategy
   chosen_architecture: same_repo_static_site_no_runtime_plugin_loader
-  actual_pages_publication: blocked_specific_settings_and_permissions_authorization
+  actual_pages_publication: verified_see_manual_public_pages_20261028
   screenshots: four_original_pngs_packaged_from_exact_baseline_artifact_12767187707
   local_public_builder: 42_passed_including_six_public_document_trigger_regressions
   first_public_head: e62336c62b2e60ad814de2415c80776a4bdf3810
