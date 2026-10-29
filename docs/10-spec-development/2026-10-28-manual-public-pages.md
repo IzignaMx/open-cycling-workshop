@@ -39,7 +39,7 @@ Optional QEMU failure remains nonqualifying and does not prove physical devices.
   Final acceptance must independently bind run/head SHA, deployment, uploaded
   artifact ID/digest and whole ZIP hash/CRC, returned URL, bytes and browser proof.
 
-## Current evidence and remaining gates
+## Historical implementation checkpoint · 2026-10-28
 
 Initial workflow contracts failed for the absent workflow (two RED tests); after
 implementation, the workflow and existing builder suite passed 45 tests. Live
@@ -80,6 +80,52 @@ Operator steps (no new credentials):
 3. After qualified merge/postmerge proof, dispatch once from main with the exact
    independently qualified full SHA. Do not rerun a failed attempt blindly.
 
-No live publication has been performed. Physical acceptance, real installation,
+At that checkpoint no live publication had been performed. Physical acceptance, real installation,
 streaming/cancellation/capacity, quote activation and module runtime gates remain
 open. This workflow does not close any of them.
+
+## First live publication · 2026-10-29
+
+The previous pending/setup statements are historical, superseded for the static
+presentation by this receipt. PR65 merged normally at
+`3c6513d685fe659816bd3ddb47dab91003d3a787`, tree
+`c8512994d19af082eddfb98ef77121f113218290`. Fresh postmerge
+[CI 40711265914](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40711265914)
+passed 4,967 tests with 58 expected skips (5,025 collected), all 27 aggregate
+controls and direct/aggregate browser 86/86 without retries. Native preview
+40711265947 passed three tests. Optional QEMU 40711266047 remains failed and
+nonqualifying; native ARM is not physical Raspberry Pi acceptance.
+
+Before dispatch, authenticated inspection confirmed Pages Source GitHub Actions
+and selected Branch `main` only on `github-pages`, with no tag rule. Main was
+unchanged. One manual dispatch used that exact full expected source SHA.
+[Run 40807430478](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40807430478),
+attempt 1, completed build (123229617809), deploy (123229871130) and live verify
+(123229948886) successfully. Deployment 7402583560 records that same main SHA.
+The returned and browser-observed URL is
+[the public presentation](https://izignamx.github.io/open-cycling-workshop/).
+
+Independent acceptance checked:
+
+- Pages artifact 12869255568, complete ZIP digest
+  `ed148f5fbc9fbf8ffaf069b0e41456d405dc123fd3219d359abd7a000a20ceac`,
+  all ZIP CRCs and safe tar entries; all nine leaf files equal a strict-current
+  rebuild of the exact deployed source (including empty local `.nojekyll`).
+- All eight remotely checked public files match that uploaded payload. No claim
+  is made that `.nojekyll` was fetched from the website.
+- Live evidence artifact 12868772654, complete ZIP digest
+  `b8488b38a028754468f475f14b3d58ffe5dc139c16d1bf6987a36e5a969641b0`,
+  all CRCs and exact source binding. Actual live browser passed 3/3, zero retries,
+  skips or flaky results: redirect canary plus desktop 1440/mobile 320 keyboard,
+  reflow, image and axe checks. Actual live screenshots were visually inspected.
+- A separate local direct network probe returned `E_NETWORK`; it is not claimed
+  as live transport proof. Hosted remote-byte/browser proof and authenticated
+  browser observation establish the result instead.
+
+Only the static presentation is live. No operational PWA/API, customer data,
+module execution, real grants or quote activation was deployed. The workflow
+remains manual-only; this receipt does not dispatch or authorize another run.
+Node action-runtime deprecation and hosted image-migration notices are retained
+as maintenance observations, not reasons to change budgets or rerun successful
+qualification. Physical, installation/recovery, streaming/cancellation and
+capacity gates remain open.
