@@ -162,7 +162,7 @@ for (const scenario of cases) {
       await form.getByLabel('Agregar bicicleta').check()
     }
     for (const [label, value] of Object.entries(values)) {
-      await form.getByLabel(label, { exact: true }).fill(value)
+      await form.getByRole('textbox', { name: label, exact: true }).fill(value)
     }
     const before = await snapshot(page)
     expect(before.journal).toHaveLength(1) // unrelated pending work must survive
@@ -179,7 +179,7 @@ for (const scenario of cases) {
     await expect(form).toHaveAttribute('data-dirty', 'true')
     await expect(page.locator('body')).not.toContainText(CANARY)
     for (const [label, value] of Object.entries(values)) {
-      await expect(form.getByLabel(label, { exact: true })).toHaveValue(value)
+      await expect(form.getByRole('textbox', { name: label, exact: true })).toHaveValue(value)
     }
     if (!customer) {
       await expect(form.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveValue(
@@ -208,7 +208,10 @@ for (const scenario of cases) {
     // The one-shot injection is now exhausted; a second admission would succeed
     // or change the counters. Editing, Enter and direct native form submission
     // must all preserve the UNKNOWN latch rather than retry implicitly.
-    const editable = form.getByLabel(customer ? 'Nombre' : 'Condición al recibir', { exact: true })
+    const editable = form.getByRole('textbox', {
+      name: customer ? 'Nombre' : 'Condición al recibir',
+      exact: true,
+    })
     await editable.fill('Borrador editado después del fallo')
     await editable.press('Enter')
     await form.evaluate((element) => (element as HTMLFormElement).requestSubmit())
@@ -218,7 +221,8 @@ for (const scenario of cases) {
       observations.calls,
     )
 
-    for (const label of Object.keys(values)) await form.getByLabel(label, { exact: true }).fill('')
+    for (const label of Object.keys(values))
+      await form.getByRole('textbox', { name: label, exact: true }).fill('')
     if (!customer) {
       await form.getByLabel('Agregar bicicleta').uncheck()
       await form.getByRole('combobox', { name: 'Cliente', exact: true }).selectOption('')
