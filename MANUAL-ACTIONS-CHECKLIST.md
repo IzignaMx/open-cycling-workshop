@@ -1,5 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Temporary automatic QEMU diagnostic pause
+
+- [ ] Independently review and integrate the [local trigger-only pause](docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md).
+      Only QEMU `pull_request` and main `push` events are removed; manual dispatch
+      remains without new run authority. Native ARM64/runtime qualification,
+      full diagnostic jobs, security controls and resource budgets are unchanged.
+- [ ] Before reactivation, diagnose the root cause, review a bounded fix and
+      obtain a specific choice to re-enable automatic triggers. Preserve all
+      historical failed NON-QUALIFYING outcomes; pausing is not passing.
+
 ## Current static publication receipt · 2026-10-29
 
 - [x] Verify Pages Source GitHub Actions and `github-pages` selected Branch
