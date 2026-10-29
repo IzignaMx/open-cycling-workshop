@@ -343,13 +343,17 @@ def test_aggregate_rejects_every_non_success_dependency(
     assert "physical Raspberry qualification remains OPEN" in result.stdout
 
 
+def test_qemu_automatic_triggers_are_temporarily_paused() -> None:
+    workflow = QEMU_WORKFLOW.read_text()
+    events = workflow.split("\non:\n", 1)[1].split("\npermissions:\n", 1)[0]
+    assert events == "  workflow_dispatch:\n"
+
+
 def test_qemu_workflow_is_separate_public_non_qualifying_read_only_diagnostic() -> None:
     workflow = QEMU_WORKFLOW.read_text()
     for token in (
         "NON-QUALIFYING",
         "workflow_dispatch:",
-        "pull_request:",
-        "branches: [main]",
         "contents: read",
         "runs-on: ubuntu-latest",
         "if: always()",

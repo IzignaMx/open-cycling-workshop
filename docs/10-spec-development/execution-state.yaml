@@ -1,5 +1,18 @@
 schema: 1
 
+qemu_automatic_trigger_pause_20261029:
+  status: implemented_pending_evidence
+  baseline_main: 3c6513d685fe659816bd3ddb47dab91003d3a787
+  plan: docs/superpowers/plans/2026-10-29-qemu-trigger-pause.md
+  scope: remove_only_qemu_pull_request_and_main_push_events
+  local_verification: trigger_regression_red_then_263_focused_passed_zero_skips
+  unchanged_scope_proof: exact_three_line_removal_all_other_workflows_byte_identical
+  manual_dispatch: retained_no_new_run_authority
+  prior_qemu_failures: preserved_failed_non_qualifying_root_cause_unproven
+  reactivation: diagnosed_root_cause_reviewed_bounded_fix_and_specific_reenable_choice
+  native_arm64_runtime_security_jobs_and_budgets: unchanged
+  independent_review_and_remote_integration: pending_local_preparation_only
+
 manual_public_pages_20261028:
   status: verified
   verification_scope: first_static_presentation_only_not_operational_application

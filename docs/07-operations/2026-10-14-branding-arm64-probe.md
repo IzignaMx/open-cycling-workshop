@@ -47,8 +47,14 @@ The existing Local runtime workflow retains the three `linux/arm64` image builds
 ephemeral exact-SHA tag into that runner's Docker store, with `push: false`; no
 registry publication, paid runner, account or deployment is introduced.
 
-The separate `ARM64 QEMU diagnostic (NON-QUALIFYING)` workflow uses the same
-PR, main-push and manual trigger types, `contents: read`, exact event checkout and
+The separate `ARM64 QEMU diagnostic (NON-QUALIFYING)` workflow retains only
+manual dispatch after the 2026-10-29 temporary automatic-trigger pause. PR and
+main-push diagnostic executions are paused, not passing. Retaining dispatch does
+not authorize a manual run. Reactivation requires a diagnosed root cause, a
+reviewed bounded fix and a specific choice to re-enable automatic triggers.
+Historical failures remain failed and NON-QUALIFYING; the original cause remains
+unproven. Native ARM64/runtime qualification and required-check settings are
+unchanged. The diagnostic retains `contents: read`, exact event checkout and
 exact boolean-public guard on an ordinary public x86 runner. It builds/loads one
 additional ephemeral API image with read-only access to the existing build cache,
 no cache export, disabled build-record upload and no registry/image publication.
