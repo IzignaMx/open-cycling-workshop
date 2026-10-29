@@ -1,6 +1,27 @@
 schema: 1
 
+quote_ownership_receipt_correction_20261029:
+  status: local_mocked_correction_pending_independent_exact_patch_review
+  baseline_main: c2512681c8c2169dc5b39eaddd7ef4042b8c7064
+  pr71_postmerge_ci: 40919175924_independently_accepted_27_of_27
+  postmerge_python: 5531_collected_5473_passed_58_expected_skips
+  postmerge_browser: direct86_aggregate86_repeats20_9_5_10_kernel14_all_retry0
+  consumed_measurement_run: 40927223929_attempt1_failed_protocol_no_retry_authorized
+  consumed_artifact: 12922020170_sha256_f6b61040348ffb5cab14dd95ac45794ba36ac942df1e43623b196d6642912b27
+  actual_admission: unknown_no_accepted_ordinary_role_observer_H_S_evidence
+  observed_cleanup: primary_and_independent_verified_absent_independent_526442143ns
+  historical_cause: unresolved_suppressed_diagnostics_do_not_identify_boundary
+  proven_local_defects: fallback_skipped_placeholders_and_valid_pre_GO_failed_RESULT_masking
+  design: docs/superpowers/specs/2026-10-29-quote-ownership-receipt-design.md
+  plan: docs/superpowers/plans/2026-10-29-quote-ownership-receipt.md
+  correction: schema2_unavailable_unknown_null_facts_and_strict_early_failed_RESULT
+  local_mocked_evidence: 26_new_456_ownership_741_with_retained_containment_passed
+  local_static: strict_mypy3_ruff5_locked_prettier4_passed
+  runtime_validation_of_correction: not_executed_no_new_trial_or_guard_reset
+  production_routes_grants_modules_resources_and_deployment: unchanged
+
 quote_ownership_measurement_preparation_20261029:
+  historical_checkpoint: authored_before_PR71_and_consumed_run_latest_receipt_above
   status: independently_reviewed_local_mocked_preparation_hosted_pending
   baseline_main: 0726b9221bfbdffd708c7dbb7d456ee0771a6791
   design: docs/superpowers/specs/2026-10-29-quote-ownership-measurement-design.md

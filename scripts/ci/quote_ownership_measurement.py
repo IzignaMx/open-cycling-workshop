@@ -22,10 +22,11 @@ from scripts.ci.quote_ownership_evidence import (
     encode_receipt,
     identity_from_environment,
     validate_cleanup,
+    validate_current_receipt,
     validate_fixture_preparation,
     validate_observation,
 )
-from scripts.ci.quote_ownership_worker import PipeChannel, WorkerRefusal, _empty_case
+from scripts.ci.quote_ownership_worker import PipeChannel, WorkerRefusal
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -117,30 +118,17 @@ def container_args(
 
 def _initial_report(identity: dict[str, object]) -> dict[str, Any]:
     return {
-        "schema": 1,
+        "schema": 2,
         "kind": "ocwp.quote_ownership.receipt",
         "identity": identity,
         "status": "failed",
         "failure": "preflight",
-        "setup_ns": 0,
-        "elapsed_ns": 0,
-        "observer": {
-            **dict.fromkeys(
-                ("reserved", "read_only", "transaction_idle", "closed", "reaped"), False
-            ),
-            **dict.fromkeys(("process", "reserved_setup_ns", "closed_ns", "reaped_ns")),
-        },
-        "cases": [_empty_case("H"), _empty_case("S")],
-        "resources": dict.fromkeys(
-            (
-                "worker_peak_bytes",
-                "pg_peak_bytes",
-                "worker_processes",
-                "pg_processes",
-                "pressure_events",
-            ),
-            0,
-        ),
+        "owner_observation": "unavailable",
+        "setup_ns": None,
+        "elapsed_ns": None,
+        "observer": None,
+        "cases": [{"name": "H", "status": "unknown"}, {"name": "S", "status": "unknown"}],
+        "resources": None,
         "primary_cleanup": "unknown",
         "independent_cleanup": "pending",
     }
@@ -157,6 +145,7 @@ def supervise_measurement(runtime: Any, setup_deadline_ns: int) -> dict[str, Any
         observation, resources = runtime.observe(setup_deadline_ns)
         validate_observation(observation, runtime.expected)
         report.update(observation)
+        report["owner_observation"] = "accepted"
         report["resources"] = resources
         report["status"] = "pending_cleanup" if observation["status"] == "observed" else "failed"
     except Exception as error:
@@ -564,8 +553,25 @@ class HostRuntime:
         channel = PipeChannel(
             self.host_child.stdout.fileno(), self.host_child.stdin.fileno(), self.expected, "host"
         )
-        ready = channel.receive("owner", deadline, case="setup")
-        if ready["event"] != "RESERVED" or self.now() >= deadline:
+        ready = channel.receive("owner", deadline)
+        if ready["event"] == "RESULT" and ready["case"] == "teardown":
+            result = ready["payload"]
+            validate_observation(result, self.expected)
+            if (
+                result["status"] != "failed"
+                or result["elapsed_ns"] != 0
+                or result["setup_ns"] > 65 * SECOND
+                or any(case["status"] != "skipped" for case in result["cases"])
+                or self.now() >= deadline
+            ):
+                raise WorkerRefusal("protocol")
+            # First terminal frame: no GO was sent. Retain validated failure,
+            # without converting unknown transport failures into skipped claims.
+            self.host_child.wait(timeout=max(0, (deadline - self.now()) / SECOND))
+            if self.host_child.returncode != 1 or self.now() >= deadline:
+                raise WorkerRefusal("reap_unknown")
+            return result, self.resources
+        if ready["event"] != "RESERVED" or ready["case"] != "setup" or self.now() >= deadline:
             raise WorkerRefusal("setup_deadline")
         go = self.now()
         end = go + 26 * SECOND
@@ -608,6 +614,7 @@ class HostRuntime:
         return True
 
     def save(self, report: dict[str, Any]) -> None:
+        validate_current_receipt(report, self.expected)
         encode_receipt(report, self.expected)
         _write_closed(self.evidence, report)
 
@@ -616,6 +623,7 @@ def seal_receipt(
     report: dict[str, Any], identity: dict[str, object], absent: bool
 ) -> dict[str, Any]:
     """Independent absence never upgrades an already failed measurement."""
+    validate_current_receipt(report, identity)
     encode_receipt(report, identity)
     sealed = dict(report)
     sealed["independent_cleanup"] = "verified_absent" if absent else "unknown"

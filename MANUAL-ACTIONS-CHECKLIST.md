@@ -1,5 +1,23 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-29 · Consumed ownership measurement and local receipt correction
+
+- [x] Qualify PR71/main `c2512681` with fresh CI40919175924: independent27/27,
+      5,473 passed/58 expected skips, all430 new mocks, retained checks and retry-free browser.
+- [x] Execute the single approved run40927223929 once. It failed `protocol`;
+      both owned-container cleanup receipts verified absence. Artifact12922020170
+      remains immutable. The grant is spent; no rerun or workflow identity rotation.
+- [ ] Establish ordinary-role/observer/H/S runtime evidence: **not established**.
+      Receipt skipped/false/zero placeholders do not prove no admission. Actual
+      admission and the historical failing boundary remain unknown.
+- [ ] Independently review and qualify the [receipt correction](docs/superpowers/specs/2026-10-29-quote-ownership-receipt-design.md):
+      schema2 unknown/null facts when observation is unavailable; strict valid early
+      failed RESULT preservation. Pure/mock correction is not runtime validation
+      and does not authorize another trial, new resources or production activation.
+
+The following preparation section preserves its pre-publication checkpoint;
+its unconsumed/pending wording is superseded by the dated receipt above.
+
 ## 2026-10-29 · One-shot ownership preparation (hosted qualification pending)
 
 - [x] Independently review the [disposable-role initializer adaptation](docs/superpowers/specs/2026-10-29-quote-ownership-measurement-design.md#disposable-role-adaptation-and-retained-blocker-history)

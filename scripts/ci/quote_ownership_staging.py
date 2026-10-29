@@ -258,7 +258,7 @@ def validators_for_environment(env: Mapping[str, str]) -> dict[str, Callable[[by
         else:
             identity = evidence.identity_from_environment(dict(env))
             if name == "receipt.json":
-                evidence.validate_receipt(value, identity)
+                evidence.validate_current_receipt(value, identity)
             elif name == "cleanup.json":
                 evidence.validate_cleanup(value, identity)
             else:
