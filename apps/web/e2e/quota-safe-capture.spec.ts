@@ -116,6 +116,16 @@ for (const scenario of cases) {
     await page.setViewportSize({ width: 1440, height: 1000 })
     const seeded = await seedWorkshop(page, request)
     await page.getByRole('button', { name: 'Personalización', exact: true }).click()
+    // Banco is the default. Exercise a real keyboard change before returning
+    // to it, rather than claiming an already-selected radio persisted a change.
+    if (scenario.theme === 'banco') {
+      const alternate = page.getByRole('radio', { name: /Plano técnico/ })
+      await alternate.focus()
+      await alternate.press('Space')
+      await expect(alternate).toBeChecked()
+      await expect(page.locator('.workshop-shell')).toHaveAttribute('data-theme', 'plano')
+      await expect(page.locator('.preference-status')).toContainText('guardada en este dispositivo')
+    }
     const theme = page.getByRole('radio', { name: new RegExp(scenario.label) })
     await theme.focus()
     await theme.press('Space')
@@ -145,8 +155,10 @@ for (const scenario of cases) {
           Modelo: 'Modelo de prueba',
         }
     if (!customer) {
-      await form.getByLabel('Cliente', { exact: true }).selectOption(seeded.customerId)
-      await form.getByLabel('Prioridad', { exact: true }).selectOption('high')
+      await form
+        .getByRole('combobox', { name: 'Cliente', exact: true })
+        .selectOption(seeded.customerId)
+      await form.getByRole('combobox', { name: 'Prioridad', exact: true }).selectOption('high')
       await form.getByLabel('Agregar bicicleta').check()
     }
     for (const [label, value] of Object.entries(values)) {
@@ -170,8 +182,12 @@ for (const scenario of cases) {
       await expect(form.getByLabel(label, { exact: true })).toHaveValue(value)
     }
     if (!customer) {
-      await expect(form.getByLabel('Cliente', { exact: true })).toHaveValue(seeded.customerId)
-      await expect(form.getByLabel('Prioridad', { exact: true })).toHaveValue('high')
+      await expect(form.getByRole('combobox', { name: 'Cliente', exact: true })).toHaveValue(
+        seeded.customerId,
+      )
+      await expect(form.getByRole('combobox', { name: 'Prioridad', exact: true })).toHaveValue(
+        'high',
+      )
       await expect(form.getByLabel('Agregar bicicleta')).toBeChecked()
     }
     if (scenario.fault === 'quota') {
@@ -205,8 +221,8 @@ for (const scenario of cases) {
     for (const label of Object.keys(values)) await form.getByLabel(label, { exact: true }).fill('')
     if (!customer) {
       await form.getByLabel('Agregar bicicleta').uncheck()
-      await form.getByLabel('Cliente', { exact: true }).selectOption('')
-      await form.getByLabel('Prioridad', { exact: true }).selectOption('normal')
+      await form.getByRole('combobox', { name: 'Cliente', exact: true }).selectOption('')
+      await form.getByRole('combobox', { name: 'Prioridad', exact: true }).selectOption('normal')
     }
     await expect(form).toHaveAttribute('data-dirty', 'true')
     await expect(submit).toBeDisabled()

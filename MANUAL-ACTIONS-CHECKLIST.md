@@ -1,6 +1,6 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-10-29 · Selective quota-safe capture (local qualification in progress)
+## 2026-10-29 · Selective quota-safe capture (hosted qualification in progress)
 
 - [x] Independently review the [capture design](docs/superpowers/specs/2026-10-29-quota-safe-capture-design.md).
       Rejected Dexie promises can follow a native commit, including quota-named
@@ -10,6 +10,10 @@
       Local core 959/959 passes with 25 added cases and no skips; four browser tests are authored/static-checked
       but local pinned browser and API/PostgreSQL are unavailable. No actual
       browser pass or universal quota-retry support is claimed.
+- First PR73 candidate CI40953371358: Python 5,499 passed/58 expected skips;
+  direct browser 87/90 passed, including all 86 retained cases. Three new cases
+  failed before fault injection on default-theme/combobox fixture setup. Preserve
+  this failure; correct only setup and require fresh exact-source browser proof.
 - [ ] Complete physical quota/eviction/capacity and screen-reader/touch acceptance.
       A local mounted-form uncertainty latch is not a durable duplicate-prevention
       guarantee across explicit discard/navigation or session changes. Do not

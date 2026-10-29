@@ -177,3 +177,19 @@ remains open. No dependency installation, actual browser
 fault, ownership experiment or remote publication was performed by this task.
 All tests use existing discovery; original resource ceilings and noncapture
 security/error semantics remain enforced.
+
+## First hosted checkpoint and bounded correction (2026-10-29)
+
+PR73 head `ea6f67ac` / CI40953371358 passed the independently checked full
+Python suite (5,499 passed, 58 expected skips). Direct browser execution reported
+87/90 passed: all 86 retained cases and the new Ritmo customer-preparation case.
+Banco, Plano and Noche failed during fixture setup, before fault injection.
+Banco was already the default selected theme, so no save message was expected;
+the order selectors incorrectly used exact wrapping-label text instead of the
+existing accessible combobox-role pattern. Correct only these setup operations:
+perform a genuine alternate-to-Banco theme change and use exact-role Cliente /
+Prioridad combobox locators for select, assertion and clear. Keep every fault,
+no-repeat, preserved-data, keyboard, dirty-state and axe assertion. The first
+failed cases also failed their configured retries; no retry-zero qualification
+is claimed. Fresh exact-source full CI remains required; no identical-head rerun,
+resource increase or consumed measurement retry is permitted.

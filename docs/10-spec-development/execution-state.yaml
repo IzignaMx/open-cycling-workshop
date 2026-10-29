@@ -1,7 +1,14 @@
 schema: 1
 
 quota_safe_capture_20261029:
-  status: local_core959_passed_exact_patch_review_and_hosted_pending
+  status: PR73_first_hosted_browser_setup_failed_correction_pending
+  first_candidate_head: ea6f67ac20f081e5893c7010d15eac9549b531b4
+  first_candidate_ci: 40953371358
+  first_candidate_python: 5557_collected_5499_passed_58_expected_skips_independently_accepted
+  first_candidate_direct_browser: 90_total_87_passed_3_setup_failed_all86_retained_passed
+  browser_failure_boundary: before_fault_injection_default_theme_no_change_and_wrapping_label_select_locators
+  browser_correction: genuine_theme_change_and_existing_exact_role_combobox_locators_no_assertions_removed
+  hosted_browser_qualification: pending_new_exact_source_run_no_identical_head_retry
   baseline_main: 6106028696c02b70a891c0d2bf44aeaeaf5fbcc3
   design: docs/superpowers/specs/2026-10-29-quota-safe-capture-design.md
   plan: docs/superpowers/plans/2026-10-29-quota-safe-capture.md
