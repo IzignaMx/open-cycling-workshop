@@ -1,19 +1,41 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-10-29 · Selective quota-safe capture (hosted qualification in progress)
+## 2026-10-30 · Existing order transition feedback
+
+- [x] Independently review the [bounded design](docs/superpowers/specs/2026-10-30-order-transition-feedback-design.md):
+      preserve positive local commit across follow-up read failure, never infer
+      rollback from rejection, fixed safe feedback and synchronous per-order guard.
+- [ ] Qualify the exact final patch and six actual PWA journeys. Local focused
+      35 cases passed; a subsequent full run reports 994/994 with zero skips.
+      Preserve first full 988/989: retained probe-backoff case observed 0 calls
+      instead of 1; focused case passed unchanged, historical cause unproved.
+      No timeout or assertion was weakened. Hosted browser remains pending.
+- The guard belongs to the mounted list and survives filtering/pagination only.
+  Full workspace unmount, including automatic reconnect verification, loses it:
+  that is NOT noncommit or reconciliation evidence. Existing auth/read fences
+  still apply; no new recovery/unblock authority or automatic retry is introduced.
+- Physical Windows/Android R01-T035 remains distinct from quota/eviction,
+  screen-reader/touch, installation/recovery and inactive quote/module gates.
+  Ownership40927223929 stays spent; Pages source3c6513d is unchanged.
+
+## 2026-10-30 · Selective quota-safe capture (PR73 accepted)
 
 - [x] Independently review the [capture design](docs/superpowers/specs/2026-10-29-quota-safe-capture-design.md).
       Rejected Dexie promises can follow a native commit, including quota-named
       failures. Retry requires an already-observed native abort of the exact
       top-level transaction; late/missing/conflicting evidence stays unknown.
-- [ ] Qualify the complete exact patch and actual production-PWA browser journeys.
-      Local core 959/959 passes with 25 added cases and no skips; four browser tests are authored/static-checked
-      but local pinned browser and API/PostgreSQL are unavailable. No actual
-      browser pass or universal quota-retry support is claimed.
+- [x] Qualify PR73/main `b393c58`, tree `243e19f`, fresh CI40977757107:
+      5,499 Python passed/58 exact expected skips; core959/959; aggregate27/27;
+      direct90/aggregate90, repeats20/9/5/10 and kernel14 all retry0. Independent
+      source-bound archives and all four actual screenshots accepted. Synthetic
+      failure handling is not universal quota-retry or physical-capacity proof.
 - First PR73 candidate CI40953371358: Python 5,499 passed/58 expected skips;
   direct browser 87/90 passed, including all 86 retained cases. Three new cases
   failed before fault injection on default-theme/combobox fixture setup. Preserve
-  this failure; correct only setup and require fresh exact-source browser proof.
+  this failure. Retain CI40961595576's 88/90 wrapping-label failure after fault
+  injection (draft preserved), and CI40967259534's offline Dexie declaration
+  failure despite browser90/90. Minimal exact-role textbox and declaration-only
+  corrections passed candidate CI40972596703 and the fresh postmerge proof above.
 - [ ] Complete physical quota/eviction/capacity and screen-reader/touch acceptance.
       A local mounted-form uncertainty latch is not a durable duplicate-prevention
       guarantee across explicit discard/navigation or session changes. Do not

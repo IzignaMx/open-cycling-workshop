@@ -1,7 +1,13 @@
-import { useState, type CSSProperties, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent } from 'react'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
 import { orderActionsFor, type OrderAction } from './state-machine.js'
+import type { OrderTransitionResult } from '../../runtime/order-transition-outcome.js'
+import {
+  OrderTransitionGate,
+  orderTransitionFeedback,
+  type OrderTransitionState,
+} from './transition-feedback.js'
 
 export interface OrderListProps {
   orders: readonly LocalServiceOrder[]
@@ -9,7 +15,7 @@ export interface OrderListProps {
   canTransition: boolean
   canReadBicycleInfo: boolean
   onTimeline?(orderId: string): Promise<void>
-  onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
+  onTransition(order: LocalServiceOrder, action: OrderAction): Promise<OrderTransitionResult>
 }
 
 function OrderRecord({
@@ -19,16 +25,18 @@ function OrderRecord({
   canTransition,
   canReadBicycleInfo,
   onTimeline,
+  transitionState,
 }: {
   order: LocalServiceOrder
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
   canReadBicycleInfo: boolean
-  onTransition: OrderListProps['onTransition']
+  onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
   onTimeline: OrderListProps['onTimeline']
+  transitionState: OrderTransitionState | undefined
 }) {
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [historyMessage, setHistoryMessage] = useState<string | null>(null)
+  const message = transitionState?.feedback?.message ?? historyMessage
   const actions = canTransition ? orderActionsFor(order.state) : []
   const tone = ['READY', 'CLOSED'].includes(order.state)
     ? 'success'
@@ -37,22 +45,6 @@ function OrderRecord({
       : ['CANCELLED', 'REJECTED'].includes(order.state)
         ? 'danger'
         : 'info'
-  async function transition(action: OrderAction) {
-    if (busy || !canTransition) return
-    setBusy(true)
-    setMessage(null)
-    try {
-      await onTransition(order, action)
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo guardar el cambio. La orden sigue disponible.',
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
   return (
     <li className="order-card" aria-label={`Orden ${order.reported_problem}`}>
       <div className="order-summary">
@@ -76,8 +68,8 @@ function OrderRecord({
               key={action}
               type="button"
               className="secondary-button"
-              disabled={busy}
-              onClick={() => void transition(action)}
+              disabled={transitionState !== undefined}
+              onClick={() => void onTransition(order, action)}
             >
               {TRANSITION_ACTION_LABELS[action] ?? action}
             </button>
@@ -96,7 +88,7 @@ function OrderRecord({
           className="secondary-button"
           onClick={() => {
             void onTimeline(order.order_id).catch(() =>
-              setMessage('No se pudo cargar el historial local.'),
+              setHistoryMessage('No se pudo cargar el historial local.'),
             )
           }}
         >
@@ -135,6 +127,41 @@ export function OrderList({
   onTimeline,
 }: OrderListProps) {
   const [query, setQuery] = useState('')
+  const gate = useRef(new OrderTransitionGate())
+  const mounted = useRef(false)
+  const [states, setStates] = useState<ReadonlyMap<string, OrderTransitionState>>(() => new Map())
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  function publish(orderId: string) {
+    const state = gate.current.get(orderId)
+    setStates((previous) => {
+      const next = new Map(previous)
+      if (state) next.set(orderId, state)
+      else next.delete(orderId)
+      return next
+    })
+  }
+  async function transition(order: LocalServiceOrder, action: OrderAction) {
+    if (!mounted.current || !canTransition) return
+    const token = gate.current.begin(order.order_id)
+    if (!token) return
+    publish(order.order_id)
+    let feedback
+    try {
+      feedback = orderTransitionFeedback({
+        kind: 'resolved',
+        value: await onTransition(order, action),
+      })
+    } catch (error) {
+      feedback = orderTransitionFeedback({ kind: 'rejected', error })
+    }
+    if (!mounted.current) return
+    if (gate.current.finish(order.order_id, token, feedback)) publish(order.order_id)
+  }
   const filtered = orders.filter((order) =>
     `${order.reported_problem} ${order.order_id} ${ORDER_STATE_LABELS[order.state] ?? order.state}`
       .toLocaleLowerCase()
@@ -177,7 +204,8 @@ export function OrderList({
                 key={order.order_id}
                 order={order}
                 events={events.filter((event) => event.order_id === order.order_id)}
-                onTransition={onTransition}
+                onTransition={transition}
+                transitionState={states.get(order.order_id)}
                 canTransition={canTransition}
                 canReadBicycleInfo={canReadBicycleInfo}
                 onTimeline={onTimeline}
