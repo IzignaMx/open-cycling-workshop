@@ -15,7 +15,10 @@
       1,021 core cases passed with zero skips, including27 new cases. Six initial
       controller RED cases included2 repository calls instead of1. Scope mismatch,
       retained startup, actual controller reconnect, late old settlement, logout
-      non-resurrection and capacity refusal are covered. Static checks passed.
+      non-resurrection and capacity refusal are covered. Source-only lint passed;
+      the initial all-static-pass summary was incorrect: preserved test lint exit1
+      reported an empty catch. PR75 CI41005801485 independently failed frontend
+      lint before direct browser execution. Preserve this failed candidate.
 - [ ] Qualify the exact source in hosted CI: five new actual PWA cases plus all96
       retained, full Python/PG restores/security/runtime and aggregate evidence.
       Local Python3.12 lacks pytest; actual browser has not run locally.

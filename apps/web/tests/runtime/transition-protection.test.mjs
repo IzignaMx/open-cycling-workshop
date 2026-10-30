@@ -130,10 +130,12 @@ test('transition protection snapshots do not expose mutable admission state', ()
   assert.equal(p.begin('a'), null)
   p.finish('a', t, unknown)
   const state = p.getSnapshot().states.get('a')
-  try {
+  assert.throws(() => {
     state.feedback.block = false
+  }, TypeError)
+  assert.throws(() => {
     state.busy = true
-  } catch {}
+  }, TypeError)
   assert.equal(p.begin('a'), null)
   assert.equal(p.getSnapshot().states.get('a').busy, false)
   assert.equal(p.getSnapshot().states.get('a').feedback.block, true)

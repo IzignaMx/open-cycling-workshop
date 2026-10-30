@@ -133,9 +133,24 @@ Files: this plan/design, `MANUAL-ACTIONS-CHECKLIST.md`,
 ## Current checkpoint
 
 Local implementation and independent product/browser-source reviews completed.
-Core1,021/1,021 zero skips, normal/offline/browser types, source/test lint and
-repository contract pass. Five browser cases are authored/discovered only; no
+Core1,021/1,021 zero skips, normal/offline/browser types, source-only lint and
+repository contract passed. The initial test-lint pass summary was incorrect;
+the preserved test-lint exit code is1 (empty catch). Five browser cases are authored/discovered only; no
 actual-browser RED or GREEN is claimed locally. The initial controller six RED
 cases and UI ownership RED are retained. Host qualification including all101
 browser cases remains pending. Local source baseline has main's exact tree but a
 preserved different commit identity; never call that local commit current main.
+
+## First hosted lint failure and evidence correction
+
+PR75 candidate54979197, CI41005801485, failed frontend lint on the empty catch in
+`transition-protection.test.mjs`; direct browser execution was skipped. Replace
+the catch with two independent TypeError assertions for the frozen assignments,
+retaining the admission/snapshot assertions. No runtime behavior or lint rule changes.
+
+Do not overwrite the failed local receipt or equate source-only lint with all lint.
+Before reporting combined local validation, require every named exit receipt to
+exist, parse as an integer and equal zero; include a negative check using the
+original test-lint exit1. Fresh full root ESLint and core tests plus independent
+exact-diff review are required before publishing a successor. Hosted/browser
+qualification remains pending; no identical-head rerun is authorized.

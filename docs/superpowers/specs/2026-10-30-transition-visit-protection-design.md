@@ -153,8 +153,12 @@ receipt into this substantive slice rather than a separate receipt-only PR.
 1,021 frontend core tests passed with zero skips, including16 pure owner and11
 controller cases. Initial controller RED showed duplicate repository invocation
 (2 instead of1) and absent reconnect protection; UI ownership test also failed
-before its correction. Final source/test lint, normal/offline and explicit browser
-types, repository contract passed. Five new actual PWA cases are authored and
+before its correction. Source-only lint, normal/offline and explicit browser
+types and repository contract passed. The initial all-lint pass summary was wrong:
+the preserved test-lint exit1 and PR75 CI41005801485 identify an empty catch in the
+new owner test. Two explicit frozen-assignment TypeError assertions replace that
+catch without weakening admission assertions. Require all named exit receipts
+present and zero before any combined pass statement; preserve the failed receipt. Five new actual PWA cases are authored and
 discovered, not locally executed; all96 prior cases remain required. Local
 Python3.12.14 lacks pytest and cannot qualify the Python3.13 baseline. Full hosted
 source-bound validation and fresh postmerge proof remain mandatory.
