@@ -1,15 +1,48 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-10-30 · Existing order transition feedback
+## 2026-10-30 · Transition visit protection (local, hosted pending)
+
+- [x] Complete independent final review of the [transition-only design](docs/superpowers/specs/2026-10-30-transition-visit-protection-design.md)
+      and [TDD plan](docs/superpowers/plans/2026-10-30-transition-visit-protection.md).
+      Proposed host visit retains protection across automatic verification; no
+      authentication fence is suppressed. Fifty entries is a conservative UI
+      bound, not measured capacity; unresolved entries cannot be evicted.
+- Scope changes propose content-free transition-only denial, not an auth/read/sync
+  hold. Automatic logout must not be confused with explicit resolution. Capture
+  forms/drafts and full reload recovery require separate designs; missing journal
+  rows or matching values cannot prove rollback or identify an unknown intent.
+- [x] Implement and independently review local owner/controller/UI behavior:
+      1,021 core cases passed with zero skips, including27 new cases. Six initial
+      controller RED cases included2 repository calls instead of1. Scope mismatch,
+      retained startup, actual controller reconnect, late old settlement, logout
+      non-resurrection and capacity refusal are covered. Source-only lint passed;
+      the initial all-static-pass summary was incorrect: preserved test lint exit1
+      reported an empty catch. PR75 CI41005801485 independently failed frontend
+      lint before direct browser execution. Preserve this failed candidate.
+- [ ] Qualify the exact source in hosted CI: five new actual PWA cases plus all96
+      retained, full Python/PG restores/security/runtime and aggregate evidence.
+      Local Python3.12 lacks pytest; actual browser has not run locally.
+      Native-completion barrier after reconnect remains UNKNOWN; post-repository
+      controller barrier preserves known commit. Browser old-callback delivery is
+      smoke evidence, not full-settlement/token-sensitivity proof; controller
+      awaits the original promise. Real capability edits revoke the bearer, so
+      browser proves a negative auth fence, not a fabricated ready scope change.
+- No concrete ordinary-create refresh defect was reproduced: existing saved/held
+  behavior and tests remain valid; no speculative create fix was added.
+- Ownership40927223929 remains spent and Pages3c6513d unchanged.
+
+## 2026-10-30 · Existing order transition feedback (PR74 accepted)
 
 - [x] Independently review the [bounded design](docs/superpowers/specs/2026-10-30-order-transition-feedback-design.md):
       preserve positive local commit across follow-up read failure, never infer
       rollback from rejection, fixed safe feedback and synchronous per-order guard.
-- [ ] Qualify the exact final patch and six actual PWA journeys. Local focused
-      35 cases passed; a subsequent full run reports 994/994 with zero skips.
-      Preserve first full 988/989: retained probe-backoff case observed 0 calls
-      instead of 1; focused case passed unchanged, historical cause unproved.
-      No timeout or assertion was weakened. Hosted browser remains pending.
+- [x] Qualify PR74/main `ff890bca`, tree `f9ddd024`, fresh CI40994045589:
+      Python5,499/58 exact expected skips; core994/994; aggregate27/27;
+      direct96/aggregate96, repeats20/9/5/10 and kernel14 all retry0. Independent
+      source-bound archives and all six actual screenshots accepted.
+      Preserve first local full988/989: retained probe-backoff case observed0 calls
+      instead of1; focused case passed unchanged, historical cause unproved.
+      No timeout or assertion was weakened. Synthetic tests are not physical proof.
 - The guard belongs to the mounted list and survives filtering/pagination only.
   Full workspace unmount, including automatic reconnect verification, loses it:
   that is NOT noncommit or reconciliation evidence. Existing auth/read fences

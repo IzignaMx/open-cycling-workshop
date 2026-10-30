@@ -1,18 +1,16 @@
-import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent } from 'react'
+import { useState, type CSSProperties, type ChangeEvent } from 'react'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
 import { orderActionsFor, type OrderAction } from './state-machine.js'
 import type { OrderTransitionResult } from '../../runtime/order-transition-outcome.js'
-import {
-  OrderTransitionGate,
-  orderTransitionFeedback,
-  type OrderTransitionState,
-} from './transition-feedback.js'
+import type { OrderTransitionState } from './transition-feedback.js'
+import type { TransitionProtectionSnapshot } from '../../runtime/transition-protection.js'
 
 export interface OrderListProps {
   orders: readonly LocalServiceOrder[]
   events: readonly LocalServiceOrderEvent[]
   canTransition: boolean
+  protection: TransitionProtectionSnapshot
   canReadBicycleInfo: boolean
   onTimeline?(orderId: string): Promise<void>
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<OrderTransitionResult>
@@ -26,6 +24,7 @@ function OrderRecord({
   canReadBicycleInfo,
   onTimeline,
   transitionState,
+  transitionDisabled,
 }: {
   order: LocalServiceOrder
   events: readonly LocalServiceOrderEvent[]
@@ -34,6 +33,7 @@ function OrderRecord({
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
   onTimeline: OrderListProps['onTimeline']
   transitionState: OrderTransitionState | undefined
+  transitionDisabled: boolean
 }) {
   const [historyMessage, setHistoryMessage] = useState<string | null>(null)
   const message = transitionState?.feedback?.message ?? historyMessage
@@ -68,7 +68,7 @@ function OrderRecord({
               key={action}
               type="button"
               className="secondary-button"
-              disabled={transitionState !== undefined}
+              disabled={transitionState !== undefined || transitionDisabled}
               onClick={() => void onTransition(order, action)}
             >
               {TRANSITION_ACTION_LABELS[action] ?? action}
@@ -125,42 +125,17 @@ export function OrderList({
   canTransition,
   canReadBicycleInfo,
   onTimeline,
+  protection,
 }: OrderListProps) {
   const [query, setQuery] = useState('')
-  const gate = useRef(new OrderTransitionGate())
-  const mounted = useRef(false)
-  const [states, setStates] = useState<ReadonlyMap<string, OrderTransitionState>>(() => new Map())
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
-  function publish(orderId: string) {
-    const state = gate.current.get(orderId)
-    setStates((previous) => {
-      const next = new Map(previous)
-      if (state) next.set(orderId, state)
-      else next.delete(orderId)
-      return next
-    })
-  }
   async function transition(order: LocalServiceOrder, action: OrderAction) {
-    if (!mounted.current || !canTransition) return
-    const token = gate.current.begin(order.order_id)
-    if (!token) return
-    publish(order.order_id)
-    let feedback
+    if (!canTransition || protection.notice || protection.states.has(order.order_id)) return
+    // Admission and outcome ownership live in the host, not this replaceable view.
     try {
-      feedback = orderTransitionFeedback({
-        kind: 'resolved',
-        value: await onTransition(order, action),
-      })
-    } catch (error) {
-      feedback = orderTransitionFeedback({ kind: 'rejected', error })
+      await onTransition(order, action)
+    } catch {
+      /* Never echo arbitrary errors. */
     }
-    if (!mounted.current) return
-    if (gate.current.finish(order.order_id, token, feedback)) publish(order.order_id)
   }
   const filtered = orders.filter((order) =>
     `${order.reported_problem} ${order.order_id} ${ORDER_STATE_LABELS[order.state] ?? order.state}`
@@ -169,6 +144,11 @@ export function OrderList({
   )
   return (
     <>
+      {protection.notice ? (
+        <p role="alert" className="order-error">
+          {protection.notice}
+        </p>
+      ) : null}
       <div className="order-tools">
         <label>
           Buscar órdenes
@@ -205,7 +185,8 @@ export function OrderList({
                 order={order}
                 events={events.filter((event) => event.order_id === order.order_id)}
                 onTransition={transition}
-                transitionState={states.get(order.order_id)}
+                transitionState={protection.states.get(order.order_id)}
+                transitionDisabled={protection.notice !== null}
                 canTransition={canTransition}
                 canReadBicycleInfo={canReadBicycleInfo}
                 onTimeline={onTimeline}

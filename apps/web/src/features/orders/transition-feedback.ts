@@ -39,7 +39,7 @@ export interface OrderTransitionState {
   readonly feedback: OrderTransitionFeedback | null
 }
 
-/** Mounted-list exclusion only: no reconnect/reload or durable replay guarantee. */
+/** Synchronous entry exclusion; its owner defines the lifetime, never durable replay. */
 export class OrderTransitionGate {
   private readonly entries = new Map<string, { token: object; state: OrderTransitionState }>()
 
@@ -52,6 +52,22 @@ export class OrderTransitionGate {
 
   get(orderId: string): OrderTransitionState | undefined {
     return this.entries.get(orderId)?.state
+  }
+
+  get size(): number {
+    return this.entries.size
+  }
+
+  snapshot(): ReadonlyMap<string, OrderTransitionState> {
+    return new Map(
+      [...this.entries].map(([id, { state }]) => [
+        id,
+        Object.freeze({
+          busy: state.busy,
+          feedback: state.feedback ? Object.freeze({ ...state.feedback }) : null,
+        }),
+      ]),
+    )
   }
 
   finish(orderId: string, token: object, feedback: OrderTransitionFeedback): boolean {

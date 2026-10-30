@@ -234,6 +234,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             <>
               <OrderList
                 orders={state.orders}
+                protection={state.transitionProtection}
                 events={state.events}
                 canTransition={writeOrders}
                 canReadBicycleInfo={readBicycles}
