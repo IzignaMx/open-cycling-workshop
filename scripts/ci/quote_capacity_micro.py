@@ -657,15 +657,21 @@ def supervise(
                 args += [image, "-c", "import time; time.sleep(900)"]
             report["command_stage"] = f"{role}_containment"
             creation_uncertain = True
+            report["command_operation"] = "create"
             cid = identifier(execute(args))
             creation_uncertain = False
             ids.append(cid)
+            report["command_operation"] = "record_identity"
             owned.write_text(json.dumps(ids))
+            report["command_operation"] = "inspect"
             inspect_owned(cid, image, label, network)
+            report["command_operation"] = "start"
             execute(["docker", "start", cid])
+            report["command_operation"] = "resource_probe"
             snapshots[role] = parse_probe(
                 execute(["docker", "exec", cid, "sh", "-c", PROBE]), memory, pids
             )
+            report["command_operation"] = "privileges"
             privileges = effective_privileges(cid, role != "db", execute)
             identities.append(
                 {
@@ -684,6 +690,7 @@ def supervise(
                 }
             )
             if role == "canary":
+                report["command_operation"] = "cancellation_canary"
                 canary_resources = cancellation_canary(cid, execute)
                 report["canary_resources"] = canary_resources
                 cpu_delta(
@@ -697,6 +704,7 @@ def supervise(
                 report["cancellation_canary"] = (
                     "three_generations_survived_client_kill_then_container_absent"
                 )
+        report.pop("command_operation", None)
         report["command_stage"] = "database_readiness"
         deadline = time.monotonic() + 30
         while True:
@@ -805,6 +813,7 @@ def supervise(
         report["phase"] = "micro_complete"
         report["status"] = "micro_passed_not_capacity"
     except (ProofFailure, ValueError, OSError) as error:
+        report["failure_operation"] = report.get("command_operation", "not_recorded")
         report["failure"] = str(error) if isinstance(error, ProofFailure) else "invalid_evidence"
         if isinstance(error, ProofFailure) and error.returncode is not None:
             report["client_returncode"] = error.returncode
@@ -837,17 +846,16 @@ def supervise(
                 )
     finally:
         try:
-            for role in ("canary", "db", "worker"):
-                cidfile = owned.with_suffix(f".{role}.cid")
-                if cidfile.exists():
-                    cid = identifier(cidfile.read_text().strip())
-                    if cid not in ids:
-                        ids.append(cid)
-            if owned.with_suffix(".owner.json").exists():
-                for cid in reconcile_owned(owned):
-                    if cid not in ids:
-                        ids.append(cid)
-            remove_owned(ids)
+            # Incomplete CID hints must not bypass strict manifest reconciliation.
+            # Diagnostic publication is best effort and never a workload receipt.
+            with suppress(OSError):
+                evidence.parent.mkdir(parents=True, exist_ok=True)
+            diagnosed_full_reconcile(
+                owned,
+                run,
+                evidence.with_suffix(".cleanup.json"),
+                kind="ocwp.quote_micro.cleanup_diagnostic",
+            )
             if creation_uncertain:
                 raise ProofFailure("creation_outcome_uncertain")
             report["cleanup"] = "verified_absent"
@@ -1268,13 +1276,21 @@ def full_reconcile(
     remove_owned(found, execute)
 
 
-def diagnosed_full_reconcile(owned: Path, execute: Callable[..., str], diagnostic: Path) -> None:
+def diagnosed_full_reconcile(
+    owned: Path,
+    execute: Callable[..., str],
+    diagnostic: Path,
+    *,
+    kind: str = "ocwp.full_python.cleanup_diagnostic",
+) -> None:
     """Best-effort bounded observations, never an absence or workload receipt."""
-    from scripts.ci.verify_v01 import write_full_python_json
-
     report: dict[str, object] = {
         "schema": 1,
-        "kind": "ocwp.full_python.cleanup_diagnostic",
+        # Invalid observation metadata cannot prevent resource cleanup or be echoed.
+        "kind": kind
+        if type(kind) is str
+        and kind in {"ocwp.full_python.cleanup_diagnostic", "ocwp.quote_micro.cleanup_diagnostic"}
+        else "ocwp.full_python.cleanup_diagnostic",
         "qualification": "not_a_receipt",
         "outcome": "failed",
         "stage": "cidfiles",
@@ -1343,7 +1359,9 @@ def diagnosed_full_reconcile(owned: Path, execute: Callable[..., str], diagnosti
     finally:
         # An unavailable diagnostic sink must not prevent owned cleanup or alter
         # the authoritative receipt/independent-absence acceptance path.
-        with suppress(OSError, ValueError):
+        with suppress(ImportError, OSError, ValueError):
+            from scripts.ci.verify_v01 import write_full_python_json
+
             write_full_python_json(diagnostic, report)
 
 
