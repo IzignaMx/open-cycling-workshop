@@ -10,5 +10,9 @@
     "rootDir": ".",
     "skipLibCheck": true
   },
-  "include": ["src/runtime/**/*.ts", "src/features/capture-feedback.ts"]
+  "include": [
+    "src/runtime/**/*.ts",
+    "src/features/capture-feedback.ts",
+    "src/features/orders/transition-feedback.ts"
+  ]
 }

@@ -3097,3 +3097,232 @@ for (const form of ['customer', 'order']) {
     assert.equal(f.runtime.getSnapshot().phase, 'ready')
   })
 }
+
+async function transitionFixture(t) {
+  const f = setup(t)
+  await login(f.runtime)
+  f.env.online = false
+  await f.runtime.offline()
+  await f.runtime.createOrder({
+    customerId: 'historical-A',
+    reportedProblem: 'Transition fixture',
+    intakeCondition: null,
+    accessories: null,
+    priority: 'normal',
+    brand: null,
+    model: null,
+  })
+  return { ...f, order: f.runtime.getSnapshot().orders[0] }
+}
+
+async function transitionEvidence(f) {
+  return {
+    journal: await f.database.operationJournal.toArray(),
+    events: await f.database.operationEvents.toArray(),
+    records: await f.database.cacheRecords.toArray(),
+  }
+}
+
+test('transition outcome positively identifies the actual offline commit and updated view', async (t) => {
+  const f = await transitionFixture(t)
+  const before = await transitionEvidence(f)
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'committed',
+    view: 'updated',
+  })
+  const after = await transitionEvidence(f)
+  assert.equal(after.journal.length, before.journal.length + 1)
+  assert.equal(after.events.length, before.events.length + 1)
+  assert.equal(f.runtime.getSnapshot().orders[0].state, 'DIAGNOSIS')
+  assert.equal(f.runtime.getSnapshot().events[0].action, 'start_diagnosis')
+})
+
+for (const committed of [false, true]) {
+  test(`transition outcome rejection is unknown even with actual commit=${committed}`, async (t) => {
+    const f = await transitionFixture(t)
+    const before = await transitionEvidence(f)
+    const original = f.runtime.kernel.commitLocalCommands.bind(f.runtime.kernel)
+    f.runtime.kernel.commitLocalCommands = async (...args) => {
+      if (committed) await original(...args)
+      throw new DOMException('private-transition-canary', 'QuotaExceededError')
+    }
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+      status: 'unknown',
+    })
+    const after = await transitionEvidence(f)
+    assert.equal(after.journal.length, before.journal.length + Number(committed))
+    assert.equal(after.events.length, before.events.length + Number(committed))
+    if (!committed) assert.deepEqual(after, before)
+    else {
+      assert.deepEqual(after.records, before.records)
+      assert.equal(after.journal.filter((row) => row.optimistic.state === 'DIAGNOSIS').length, 1)
+    }
+  })
+}
+
+for (const boundary of ['refresh', 'timeline']) {
+  test(`transition outcome preserves actual commit after ${boundary} read failure`, async (t) => {
+    const f = await transitionFixture(t)
+    const before = await transitionEvidence(f)
+    let historyReads = 0
+    const original = f.runtime.repositories.localTimeline.bind(f.runtime.repositories)
+    f.runtime.repositories.localTimeline = async (...args) => {
+      historyReads++
+      if (boundary === 'timeline') throw new Error('private-transition-canary')
+      return original(...args)
+    }
+    if (boundary === 'refresh')
+      f.runtime.repositories.page = async () => {
+        throw new Error('private-transition-canary')
+      }
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+      status: 'committed',
+      view: 'unavailable',
+    })
+    const after = await transitionEvidence(f)
+    assert.equal(after.journal.length, before.journal.length + 1)
+    assert.equal(after.events.length, before.events.length + 1)
+    assert.deepEqual(after.records, before.records)
+    assert.equal(after.journal.filter((row) => row.optimistic.state === 'DIAGNOSIS').length, 1)
+    assert.equal(historyReads, boundary === 'timeline' ? 1 : 0)
+    assert.equal(f.runtime.getSnapshot().phase, boundary === 'refresh' ? 'held' : 'ready')
+  })
+}
+
+for (const boundary of ['repository', 'refresh', 'timeline']) {
+  test(`transition outcome cannot follow replacement owner after ${boundary} await`, async (t) => {
+    const f = await transitionFixture(t)
+    const before = await transitionEvidence(f)
+    let reached,
+      release,
+      wakes = 0
+    const entered = new Promise((resolve) => {
+      reached = resolve
+    })
+    const held = new Promise((resolve) => {
+      release = resolve
+    })
+    const target =
+      boundary === 'repository'
+        ? f.runtime.repositories
+        : boundary === 'refresh'
+          ? f.runtime
+          : f.runtime.repositories
+    const name =
+      boundary === 'repository'
+        ? 'transition'
+        : boundary === 'refresh'
+          ? 'refresh'
+          : 'localTimeline'
+    const original = target[name].bind(target)
+    let first = true
+    target[name] = async (...args) => {
+      const value = await original(...args)
+      if (first) {
+        first = false
+        reached()
+        await held
+      }
+      return value
+    }
+    const historyOwners = []
+    const history = f.runtime.repositories.localTimeline.bind(f.runtime.repositories)
+    f.runtime.repositories.localTimeline = async (source, ...args) => {
+      historyOwners.push(source.context.principal.userId)
+      return history(source, ...args)
+    }
+    f.runtime.wakeLocalSync = () => {
+      wakes++
+    }
+    const pending = f.runtime.transition(f.order.order_id, 'start_diagnosis')
+    await entered
+    f.env.online = true
+    await login(f.runtime, 'B')
+    const replacement = f.runtime.getSnapshot()
+    release()
+    assert.deepEqual(await pending, { status: 'committed', view: 'unavailable' })
+    assert.deepEqual(f.runtime.getSnapshot(), replacement)
+    assert.deepEqual(historyOwners, boundary === 'timeline' ? ['A'] : [])
+    assert.equal(wakes, 0)
+    const after = await transitionEvidence(f)
+    assert.equal(after.journal.length, before.journal.length + 1)
+    assert.equal(after.events.length, before.events.length + 1)
+    assert.equal(after.journal.filter((row) => row.optimistic.state === 'DIAGNOSIS').length, 1)
+  })
+}
+
+for (const form of ['customer', 'order']) {
+  test(`transition read availability does not downgrade committed ${form} capture on refresh false`, async (t) => {
+    const f = await transitionFixture(t)
+    const before = await transitionEvidence(f)
+    f.runtime.repositories.page = async () => {
+      throw new Error('private-read-canary')
+    }
+    const value =
+      form === 'customer'
+        ? await f.runtime.createCustomer({ displayName: 'Committed before read hold' })
+        : await f.runtime.createOrder({
+            customerId: 'historical-A',
+            reportedProblem: 'Committed',
+            intakeCondition: null,
+            accessories: null,
+            priority: 'normal',
+            brand: null,
+            model: null,
+          })
+    assert.deepEqual(value, { status: 'saved' })
+    assert.equal(f.runtime.getSnapshot().phase, 'held')
+    assert.equal((await transitionEvidence(f)).journal.length, before.journal.length + 1)
+  })
+}
+
+for (const availability of [undefined, false, 1]) {
+  test(`transition outcome requires explicit positive refresh availability ${String(availability)}`, async (t) => {
+    const f = await transitionFixture(t)
+    f.runtime.refresh = async () => availability
+    let reads = 0
+    f.runtime.repositories.localTimeline = async () => {
+      reads++
+      return { events: [], partial: false }
+    }
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+      status: 'committed',
+      view: 'unavailable',
+    })
+    assert.equal(reads, 0)
+    assert.equal(
+      (await transitionEvidence(f)).journal.filter((row) => row.optimistic.state === 'DIAGNOSIS')
+        .length,
+      1,
+    )
+  })
+}
+
+test('transition outcome missing authorized timeline order is unavailable not updated', async (t) => {
+  const f = await transitionFixture(t)
+  const original = f.runtime.kernel.readEntity.bind(f.runtime.kernel)
+  let calls = 0
+  f.runtime.kernel.readEntity = async (...args) => (++calls === 1 ? original(...args) : null)
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'committed',
+    view: 'unavailable',
+  })
+  assert.equal(calls, 2)
+  assert.equal(
+    (await transitionEvidence(f)).journal.filter((row) => row.optimistic.state === 'DIAGNOSIS')
+      .length,
+    1,
+  )
+})
+
+test('transition outcome remote history failure retains available local view', async (t) => {
+  const f = await transitionFixture(t)
+  // Network hint alone enables remote-history lookup, not verified sync wake.
+  f.env.online = true
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'committed',
+    view: 'updated',
+  })
+  assert.match(f.runtime.getSnapshot().timelineMessage, /historial remoto no está disponible/)
+  assert.equal(f.runtime.getSnapshot().events[0].action, 'start_diagnosis')
+})

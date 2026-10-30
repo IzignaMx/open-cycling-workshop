@@ -311,50 +311,66 @@ export async function pendingMutationCount(page: Page) {
 /** Deterministic post-commit notification barrier, not a manufactured transaction or sleep. */
 export async function holdJournalCompletion(
   page: Page,
-  expected: { entityType: 'customer' | 'service_order'; payloadKey: string; value: string },
+  expected:
+    | { entityType: 'customer' | 'service_order'; payloadKey: string; value: string }
+    | { entityType: 'service_order'; orderId: string; transitionAction: string },
 ) {
-  await page.evaluate((expected) => {
-    const prototype = IDBTransaction.prototype
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'oncomplete')!
-    const originalAdd = IDBObjectStore.prototype.add
-    const matchingTransactions = new WeakSet<IDBTransaction>()
-    const restore = () => {
-      Object.defineProperty(prototype, 'oncomplete', descriptor)
-      IDBObjectStore.prototype.add = originalAdd
-    }
-    const gate = { held: false, release: restore }
-    Object.assign(window, { journalCompletionGate: gate })
-    // Kernel transactions include the whole store set, even for dispatch selection.
-    // Mark the actual target command write, not the next unrelated transaction.
-    IDBObjectStore.prototype.add = function (...args: Parameters<IDBObjectStore['add']>) {
-      const result = originalAdd.apply(this, args)
-      const row = args[0] as
-        { entityType?: string; envelope?: { payload?: Record<string, unknown> } } | undefined
-      if (
-        this.name === 'operationJournal' &&
-        row?.entityType === expected.entityType &&
-        row.envelope?.payload?.[expected.payloadKey] === expected.value
-      )
-        matchingTransactions.add(this.transaction)
-      return result
-    }
-    Object.defineProperty(prototype, 'oncomplete', {
-      configurable: true,
-      get: descriptor.get!,
-      set(callback: (this: IDBTransaction, event: Event) => void) {
-        descriptor.set!.call(this, function (this: IDBTransaction, event: Event) {
-          if (matchingTransactions.has(this)) {
-            restore()
-            gate.held = true
-            gate.release = () => {
-              gate.release = () => {}
-              callback.call(this, event)
+  await page.evaluate(
+    ({ expected, database }) => {
+      const prototype = IDBTransaction.prototype
+      const descriptor = Object.getOwnPropertyDescriptor(prototype, 'oncomplete')!
+      const originalAdd = IDBObjectStore.prototype.add
+      const matchingTransactions = new WeakSet<IDBTransaction>()
+      const restore = () => {
+        Object.defineProperty(prototype, 'oncomplete', descriptor)
+        IDBObjectStore.prototype.add = originalAdd
+      }
+      const gate = { held: false, release: restore }
+      Object.assign(window, { journalCompletionGate: gate })
+      // Kernel transactions include the whole store set, even for dispatch selection.
+      // Mark the actual target command write, not the next unrelated transaction.
+      IDBObjectStore.prototype.add = function (...args: Parameters<IDBObjectStore['add']>) {
+        const result = originalAdd.apply(this, args)
+        const row = args[0] as
+          | {
+              entityType?: string
+              entityId?: string
+              envelope?: { operation?: string; payload?: Record<string, unknown> }
             }
-          } else callback.call(this, event)
-        })
-      },
-    })
-  }, expected)
+          | undefined
+        if (
+          this.name === 'operationJournal' &&
+          row?.entityType === expected.entityType &&
+          ('transitionAction' in expected
+            ? this.transaction.db.name === database &&
+              row.entityId === expected.orderId &&
+              row.envelope?.operation === 'update' &&
+              (row.envelope.payload?.transition as { action?: string } | undefined)?.action ===
+                expected.transitionAction
+            : row.envelope?.payload?.[expected.payloadKey] === expected.value)
+        )
+          matchingTransactions.add(this.transaction)
+        return result
+      }
+      Object.defineProperty(prototype, 'oncomplete', {
+        configurable: true,
+        get: descriptor.get!,
+        set(callback: (this: IDBTransaction, event: Event) => void) {
+          descriptor.set!.call(this, function (this: IDBTransaction, event: Event) {
+            if (matchingTransactions.has(this)) {
+              restore()
+              gate.held = true
+              gate.release = () => {
+                gate.release = () => {}
+                callback.call(this, event)
+              }
+            } else callback.call(this, event)
+          })
+        },
+      })
+    },
+    { expected, database: DATABASE },
+  )
 }
 export async function releaseJournalCompletion(page: Page) {
   await page.evaluate(() =>

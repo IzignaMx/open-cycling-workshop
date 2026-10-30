@@ -1,4 +1,5 @@
 import type { CaptureSubmissionResult } from './capture-outcome.js'
+import type { OrderTransitionResult } from './order-transition-outcome.js'
 import { BrandingSnapshotRepository } from '../branding/cache.js'
 import {
   BrandingDisplayController,
@@ -1364,7 +1365,7 @@ export class WorkshopController {
       throw new Error('Se requiere una sesión verificada.')
     return source
   }
-  async refresh(type?: 'customer' | 'service_order', afterId?: string) {
+  async refresh(type?: 'customer' | 'service_order', afterId?: string): Promise<boolean> {
     const source = this.requireActive(),
       current = () => this.#active === source && source.isCurrent(source.identity)
     try {
@@ -1378,7 +1379,7 @@ export class WorkshopController {
           : null,
         this.repositories.issues(source),
       ])
-      if (!current()) return
+      if (!current()) return false
       this.publish({
         ...(customers
           ? {
@@ -1418,8 +1419,10 @@ export class WorkshopController {
           ? { sync: 'conflict' as const }
           : {}),
       })
+      return current()
     } catch {
       if (current()) this.held('storage_or_fence_failure')
+      return false
     }
   }
   async loadIssues(afterSequence?: number) {
@@ -1472,27 +1475,48 @@ export class WorkshopController {
     this.wakeLocalSync(source, networkSequence)
     return { status: 'saved' }
   }
-  async transition(orderId: string, action: OrderAction) {
-    const source = this.requireActive(),
-      networkSequence = this.#networkSequence
-    await this.repositories.transition(source, orderId, action)
-    if (this.#active !== source) return
-    await this.refresh()
-    await this.timeline(orderId)
-    this.wakeLocalSync(source, networkSequence)
+  async transition(orderId: string, action: OrderAction): Promise<OrderTransitionResult> {
+    let source: BaselineSession
+    const networkSequence = this.#networkSequence
+    try {
+      source = this.requireActive()
+      await this.repositories.transition(source, orderId, action)
+    } catch {
+      // Rejection can follow a native commit. Never infer rollback or replay.
+      return { status: 'unknown' }
+    }
+    const unavailable: OrderTransitionResult = { status: 'committed', view: 'unavailable' }
+    const current = () =>
+      this.#active === source &&
+      source.isCurrent(source.identity) &&
+      this.#snapshot.phase === 'ready'
+    try {
+      if (!current()) return unavailable
+      const refreshed = await this.refresh()
+      if (refreshed !== true || !current()) return unavailable
+      const history = await this.refreshTimeline(source, orderId)
+      if (history !== true || !current()) return unavailable
+      this.wakeLocalSync(source, networkSequence)
+      return { status: 'committed', view: 'updated' }
+    } catch {
+      return unavailable
+    }
   }
   async timeline(orderId: string) {
-    const source = this.requireActive(),
-      current = () => this.#active === source && source.isCurrent(source.identity)
+    await this.refreshTimeline(this.requireActive(), orderId)
+  }
+  private async refreshTimeline(source: BaselineSession, orderId: string): Promise<boolean> {
+    const current = () => this.#active === source && source.isCurrent(source.identity)
+    if (!current()) return false
     const authorizedOrder = await this.kernel.readEntity(
       source.ticket,
       'service_order',
       orderId,
       current,
     )
-    if (!authorizedOrder || !current()) return
+    if (!authorizedOrder || !current()) return false
     const local = await this.repositories.localTimeline(source, orderId)
-    if (!current()) return
+    if (!current()) return false
     let events = local.events,
       message = local.partial
         ? 'Historial local parcial.'
@@ -1516,11 +1540,12 @@ export class WorkshopController {
       }
     } else
       message = 'Sin conexión: el historial remoto no está disponible. Se muestran cambios locales.'
-    if (current())
-      this.publish({
-        events: events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)),
-        timelineMessage: message,
-      })
+    if (!current()) return false
+    this.publish({
+      events: events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)),
+      timelineMessage: message,
+    })
+    return current()
   }
   async sync(): Promise<void> {
     const source = this.#active
