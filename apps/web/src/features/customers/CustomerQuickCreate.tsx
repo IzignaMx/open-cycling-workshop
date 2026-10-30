@@ -1,4 +1,10 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import {
+  captureFeedback,
+  CaptureSubmissionGate,
+  type CaptureFeedback,
+} from '../capture-feedback.js'
+import type { CaptureSubmissionResult } from '../../runtime/capture-outcome.js'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 
 import { hasCustomerDraft } from '../draft-state.js'
 import { Button } from '@ocwp/ui'
@@ -8,32 +14,44 @@ export interface CustomerQuickCreateProps {
     displayName: string
     email: string | null
     phone: string | null
-  }): Promise<void>
+  }): Promise<CaptureSubmissionResult>
 }
 
 export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const gate = useRef(new CaptureSubmissionGate())
+  const [blocked, setBlocked] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  function finish(feedback: CaptureFeedback) {
+    gate.current.finish(feedback)
+    setBlocked(gate.current.blocked)
+    setMessage(feedback.message)
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!gate.current.begin()) return
     setBusy(true)
     setMessage(null)
     try {
-      await onCreate({
+      const result = await onCreate({
         displayName,
         email: email || null,
         phone: phone || null,
       })
+      const feedback = captureFeedback({ kind: 'resolved', value: result })
+      finish(feedback)
+      if (feedback.status !== 'saved') return
       setDisplayName('')
       setEmail('')
       setPhone('')
       setMessage('Cliente guardado localmente')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el cliente')
+      finish(captureFeedback({ kind: 'rejected', error }))
     } finally {
       setBusy(false)
     }
@@ -44,7 +62,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
       onSubmit={submit}
       className="grid gap-4"
       aria-describedby="customer-create-status"
-      data-dirty={busy || hasCustomerDraft({ displayName, email, phone })}
+      data-dirty={blocked || busy || hasCustomerDraft({ displayName, email, phone })}
     >
       <label className="grid gap-1">
         <span className="font-medium">Nombre</span>
@@ -78,7 +96,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           autoComplete="tel"
         />
       </label>
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy || blocked}>
         {busy ? 'Guardando…' : 'Guardar cliente'}
       </Button>
       <p id="customer-create-status" role="status" aria-live="polite" className="min-h-6 text-sm">

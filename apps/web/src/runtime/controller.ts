@@ -1,3 +1,4 @@
+import type { CaptureSubmissionResult } from './capture-outcome.js'
 import { BrandingSnapshotRepository } from '../branding/cache.js'
 import {
   BrandingDisplayController,
@@ -1451,21 +1452,25 @@ export class WorkshopController {
     displayName: string
     email?: string | null
     phone?: string | null
-  }) {
+  }): Promise<CaptureSubmissionResult> {
     const source = this.requireActive(),
       networkSequence = this.#networkSequence
-    await this.repositories.createCustomer(source, input)
-    if (this.#active !== source) return
+    const outcome = await this.repositories.createCustomer(source, input)
+    if (outcome.status === 'not_saved') return outcome
+    if (this.#active !== source) return { status: 'saved' }
     await this.refresh()
     this.wakeLocalSync(source, networkSequence)
+    return { status: 'saved' }
   }
-  async createOrder(input: IntakeInput) {
+  async createOrder(input: IntakeInput): Promise<CaptureSubmissionResult> {
     const source = this.requireActive(),
       networkSequence = this.#networkSequence
-    await this.repositories.createOrder(source, input)
-    if (this.#active !== source) return
+    const outcome = await this.repositories.createOrder(source, input)
+    if (outcome.status === 'not_saved') return outcome
+    if (this.#active !== source) return { status: 'saved' }
     await this.refresh()
     this.wakeLocalSync(source, networkSequence)
+    return { status: 'saved' }
   }
   async transition(orderId: string, action: OrderAction) {
     const source = this.requireActive(),

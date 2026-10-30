@@ -421,8 +421,21 @@ test('push backoff is not reported as all work synchronized', async (t) => {
 })
 
 test('late recovery issue remains visible and global conflict survives an empty later page', async (t) => {
-  const f = setup(t)
+  const server = api()
+  let reachable = true
+  const f = setup(t, {
+    server: {
+      ...server,
+      fetch: (...args) => {
+        if (!reachable) return Promise.reject(new TypeError('Synthetic offline transport'))
+        return server.fetch(...args)
+      },
+    },
+  })
   await login(f.runtime)
+  // A navigator hint alone intentionally does not suppress reachability probes.
+  // Keep this offline-journal fixture actually unreachable while rewriting rows.
+  reachable = false
   f.env.online = false
   await f.runtime.offline()
   for (let i = 0; i < 51; i++) await f.runtime.createCustomer({ displayName: `Retained ${i}` })
@@ -441,6 +454,7 @@ test('late recovery issue remains visible and global conflict survives an empty 
   assert.equal(f.runtime.getSnapshot().issues.length, 1)
   assert.equal(f.runtime.getSnapshot().issues[0].mutationId, rows[50].mutationId)
   assert.equal(f.runtime.getSnapshot().hasIssues, true)
+  reachable = true
   f.env.online = true
   await f.runtime.reconnect()
   await until(
@@ -2953,5 +2967,133 @@ for (const mixed of ['applied-and-delta-retry', 'push-retry-and-progressed-delta
     }
     t.diagnostic(`Immediate cycles without/with local wake: ${scheduled.join('/')}`)
     assert.equal(scheduled[1], scheduled[0], 'local wake must not add a mixed-outcome drain')
+  })
+}
+
+test('capture feedback returns saved only after actual local customer and order commits', async (t) => {
+  const f = setup(t)
+  await login(f.runtime)
+  f.env.online = false
+  await f.runtime.offline()
+  assert.deepEqual(await f.runtime.createCustomer({ displayName: 'Capture outcome' }), {
+    status: 'saved',
+  })
+  assert.deepEqual(
+    await f.runtime.createOrder({
+      customerId: 'historical-A',
+      reportedProblem: 'Brake',
+      intakeCondition: null,
+      accessories: null,
+      priority: 'normal',
+      brand: 'Synthetic',
+      model: null,
+    }),
+    { status: 'saved' },
+  )
+  assert.equal(await f.database.operationJournal.count(), 3)
+})
+
+test('capture feedback pre-write validation preserves fixed guidance without journal effects', async (t) => {
+  const f = setup(t)
+  await login(f.runtime)
+  f.env.online = false
+  await f.runtime.offline()
+  assert.deepEqual(await f.runtime.createCustomer({ displayName: '  ' }), {
+    status: 'not_saved',
+    reason: 'validation',
+    code: 'customer_name_required',
+  })
+  assert.deepEqual(
+    await f.runtime.createOrder({
+      customerId: 'historical-A',
+      reportedProblem: ' ',
+      intakeCondition: null,
+      accessories: null,
+      priority: 'normal',
+      brand: null,
+      model: null,
+    }),
+    {
+      status: 'not_saved',
+      reason: 'validation',
+      code: 'order_problem_required',
+    },
+  )
+  assert.equal(await f.database.operationJournal.count(), 0)
+})
+
+for (const form of ['customer', 'order']) {
+  test(`capture feedback propagates proven native abort through actual ${form} repository`, async (t) => {
+    const f = setup(t)
+    await login(f.runtime)
+    f.env.online = false
+    await f.runtime.offline()
+    await f.runtime.createCustomer({ displayName: 'Prior unrelated pending work' })
+    const before = await f.database.operationJournal.toArray()
+    const sequence = (await f.database.deviceControl.get('device')).localSequence
+    const kernel = f.runtime.kernel
+    const original = kernel.commitCommand.bind(kernel)
+    let calls = 0
+    kernel.commitCommand = async (...args) => {
+      const native = f.database.constructor.currentTransaction.idbtrans
+      const id = await original(...args)
+      calls += 1
+      if (calls < (form === 'order' ? 2 : 1)) return id
+      const terminal = new Promise((resolve) =>
+        native.addEventListener('abort', resolve, { once: true }),
+      )
+      native.abort()
+      await terminal
+      throw new DOMException('private-runtime-canary', 'QuotaExceededError')
+    }
+    const submit = () =>
+      form === 'customer'
+        ? f.runtime.createCustomer({ displayName: 'Preserved draft' })
+        : f.runtime.createOrder({
+            customerId: 'historical-A',
+            reportedProblem: 'Brake',
+            intakeCondition: null,
+            accessories: null,
+            priority: 'normal',
+            brand: 'Synthetic',
+            model: 'M',
+          })
+    assert.deepEqual(await submit(), { status: 'not_saved', reason: 'quota' })
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    assert.deepEqual(await f.database.operationJournal.toArray(), before)
+    assert.equal((await f.database.deviceControl.get('device')).localSequence, sequence)
+    kernel.commitCommand = original
+    assert.deepEqual(await submit(), { status: 'saved' })
+    assert.equal(
+      await f.database.operationJournal.count(),
+      before.length + (form === 'order' ? 2 : 1),
+    )
+  })
+
+  test(`capture feedback does not promote early quota rejection through actual ${form} repository`, async (t) => {
+    const f = setup(t)
+    await login(f.runtime)
+    f.env.online = false
+    await f.runtime.offline()
+    const fail = () => {
+      throw new DOMException('private-runtime-canary', 'QuotaExceededError')
+    }
+    f.database.operationJournal.hook('creating', fail)
+    const submit = () =>
+      form === 'customer'
+        ? f.runtime.createCustomer({ displayName: 'Uncertain draft' })
+        : f.runtime.createOrder({
+            customerId: 'historical-A',
+            reportedProblem: 'Brake',
+            intakeCondition: null,
+            accessories: null,
+            priority: 'normal',
+            brand: 'Synthetic',
+            model: null,
+          })
+    await assert.rejects(submit())
+    f.database.operationJournal.hook('creating').unsubscribe(fail)
+    assert.equal(await f.database.operationJournal.count(), 0)
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
   })
 }

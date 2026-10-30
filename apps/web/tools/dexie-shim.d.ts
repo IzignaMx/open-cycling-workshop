@@ -40,6 +40,9 @@ declare module 'dexie' {
   }
 
   export interface Transaction {
+    db: Dexie
+    idbtrans: IDBTransaction
+    parent?: Transaction
     table<T = unknown>(name: string): Table<T>
   }
 
@@ -49,12 +52,17 @@ declare module 'dexie' {
   }
 
   export default class Dexie {
+    static currentTransaction: Transaction
     constructor(name: string)
     version(version: number): Version
     on(event: 'populate', callback: (transaction: Transaction) => Promise<void>): void
     on(event: 'versionchange', callback: () => void): void
     close(): void
-    transaction<T>(mode: 'rw' | 'r', tables: unknown[], callback: () => Promise<T>): Promise<T>
+    transaction<T>(
+      mode: 'rw' | 'r',
+      tables: unknown[],
+      callback: (transaction: Transaction) => PromiseLike<T> | T,
+    ): Promise<T>
     transaction<T>(mode: 'rw' | 'r', ...args: unknown[]): Promise<T>
   }
 }

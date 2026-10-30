@@ -64,6 +64,7 @@ try {
     'tests/access-kernel/incremental-coordinator.test.mjs',
     'tests/access-kernel/push-runtime.test.mjs',
     'tests/runtime/controller.test.mjs',
+    'tests/runtime/capture-feedback.test.mjs',
     'tests/runtime/account-access.test.mjs',
     'tests/runtime/connected-read.test.mjs',
     'tests/inventory/fixture-http.test.mjs',

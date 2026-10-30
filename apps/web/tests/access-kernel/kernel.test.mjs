@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto'
+import Dexie from 'dexie'
 import { completedMetadata } from './baseline-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -835,4 +836,283 @@ test('projection candidate pages stay bounded and retain older eligible fallback
     'Older eligible overlay',
   )
   assert.ok(largestPage > 0 && largestPage <= 100)
+})
+
+test('capture outcome reports committed through the existing atomic command batch', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  assert.equal(typeof kernel.commitLocalCommandsOutcome, 'function')
+  assert.deepEqual(await kernel.commitLocalCommandsOutcome(ticket, [command()]), {
+    status: 'committed',
+    mutationIds: ['operation-A'],
+  })
+  assert.equal(await db.operationJournal.count(), 1)
+  assert.equal(await db.operationDelivery.count(), 1)
+})
+
+test('capture outcome refuses nested transactions before writing', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  assert.equal(typeof kernel.commitLocalCommandsOutcome, 'function')
+  await db.transaction('rw', db.tables, async () => {
+    await assert.rejects(kernel.commitLocalCommandsOutcome(ticket, [command()]), /nested/i)
+  })
+  assert.equal(await db.operationJournal.count(), 0)
+})
+
+for (const kind of ['resolve', 'generic', 'quota']) {
+  test(`capture outcome never relabels persisted after-scope ${kind} rejection`, async (t) => {
+    const { db, kernel } = await setup(t)
+    const ticket = await completedBaseline(db, kernel)
+    const original = kernel.commitCommand.bind(kernel)
+    let complete = false
+    let aborted = false
+    kernel.commitCommand = async (...args) => {
+      const native = Dexie.currentTransaction.idbtrans
+      native.addEventListener(
+        'complete',
+        () => {
+          complete = true
+        },
+        { once: true },
+      )
+      native.addEventListener(
+        'abort',
+        () => {
+          aborted = true
+        },
+        { once: true },
+      )
+      const id = await original(...args)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      if (kind === 'quota') throw new DOMException('private-canary', 'QuotaExceededError')
+      if (kind === 'generic') throw new Error('private-canary')
+      return id
+    }
+    await assert.rejects(kernel.commitLocalCommandsOutcome(ticket, [command()]))
+    assert.equal(complete, true)
+    assert.equal(aborted, false)
+    assert.equal(await db.operationJournal.count(), 1)
+  })
+}
+
+test('capture outcome keeps a hook rejection unknown when native abort is still pending', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  let aborted = false
+  const fail = () => {
+    Dexie.currentTransaction.idbtrans.addEventListener(
+      'abort',
+      () => {
+        aborted = true
+      },
+      { once: true },
+    )
+    throw new DOMException('private-canary', 'QuotaExceededError')
+  }
+  db.operationEvents.hook('creating', fail)
+  await assert.rejects(kernel.commitLocalCommandsOutcome(ticket, [command()]))
+  assert.equal(aborted, false)
+  db.operationEvents.hook('creating').unsubscribe(fail)
+  assert.equal(await db.operationJournal.count(), 0)
+  assert.equal(aborted, true)
+})
+
+for (const kind of ['quota', 'generic']) {
+  test(`capture outcome reports only already observed native abort (${kind})`, async (t) => {
+    const { db, kernel } = await setup(t)
+    const ticket = await completedBaseline(db, kernel)
+    const original = kernel.commitCommand.bind(kernel)
+    let observed = false
+    kernel.commitCommand = async (...args) => {
+      const native = Dexie.currentTransaction.idbtrans
+      await original(...args)
+      // Test-only delayed scope failure after a REAL native abort. No synthetic
+      // event dispatch or production wait; this does not claim typical quota ordering.
+      const terminal = new Promise((resolve) =>
+        native.addEventListener(
+          'abort',
+          () => {
+            observed = true
+            resolve()
+          },
+          { once: true },
+        ),
+      )
+      native.abort()
+      await terminal
+      if (kind === 'quota') throw new DOMException('private-canary', 'QuotaExceededError')
+      throw new Error('private-canary')
+    }
+    assert.deepEqual(await kernel.commitLocalCommandsOutcome(ticket, [command()]), {
+      status: 'not_committed',
+      reason: kind === 'quota' ? 'quota' : 'write_failure',
+    })
+    assert.equal(observed, true)
+    assert.equal(await db.operationJournal.count(), 0)
+    assert.equal(await db.operationDelivery.count(), 0)
+    assert.equal(await db.operationEvents.count(), 0)
+    kernel.commitCommand = original
+    assert.equal((await kernel.commitLocalCommandsOutcome(ticket, [command()])).status, 'committed')
+    assert.equal(await db.operationJournal.count(), 1)
+  })
+}
+
+test('capture abort provenance is invocation-local when the same error object is reused after commit', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  const original = kernel.commitCommand.bind(kernel)
+  const shared = new Error('private-reused-canary')
+  kernel.commitCommand = async (...args) => {
+    const native = Dexie.currentTransaction.idbtrans
+    await original(...args)
+    const terminal = new Promise((resolve) =>
+      native.addEventListener('abort', resolve, { once: true }),
+    )
+    native.abort()
+    await terminal
+    throw shared
+  }
+  assert.equal(
+    (await kernel.commitLocalCommandsOutcome(ticket, [command()])).status,
+    'not_committed',
+  )
+  let completed = false
+  kernel.commitCommand = async (...args) => {
+    Dexie.currentTransaction.idbtrans.addEventListener(
+      'complete',
+      () => {
+        completed = true
+      },
+      { once: true },
+    )
+    return original(...args)
+  }
+  await assert.rejects(
+    kernel.commitLocalCommandsOutcome(ticket, [command()], () => {
+      if (completed) throw shared
+      return true
+    }),
+    (error) => error === shared,
+  )
+  assert.equal(await db.operationJournal.count(), 1)
+})
+
+test('capture grouped late abort preserves prior work and does not change legacy error semantics', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  await kernel.commitLocalCommand(ticket, command('prior', 'prior-customer'))
+  const before = await db.operationJournal.toArray()
+  const sequence = (await db.deviceControl.get('device')).localSequence
+  const failure = new Error('private-legacy-canary')
+  const fail = () => {
+    throw failure
+  }
+  db.operationEvents.hook('creating', fail)
+  await assert.rejects(
+    kernel.commitLocalCommands(ticket, [command('legacy')]),
+    (error) => error === failure,
+  )
+  await assert.rejects(
+    kernel.commitLocalCommandsOutcome(ticket, [
+      command('new-1', 'new-customer-1'),
+      command('new-2', 'new-customer-2'),
+    ]),
+  )
+  db.operationEvents.hook('creating').unsubscribe(fail)
+  assert.deepEqual(await db.operationJournal.toArray(), before)
+  assert.equal((await db.deviceControl.get('device')).localSequence, sequence)
+})
+
+for (const kind of ['wrapped', 'cycle', 'getter']) {
+  test(`capture abort classification defensively handles ${kind} errors`, async (t) => {
+    const { db, kernel } = await setup(t)
+    const ticket = await completedBaseline(db, kernel)
+    const original = kernel.commitCommand.bind(kernel)
+    const error = new Error('private-canary')
+    if (kind === 'wrapped') error.inner = new Dexie.QuotaExceededError('private-inner')
+    if (kind === 'cycle') error.inner = error
+    if (kind === 'getter')
+      Object.defineProperty(error, 'inner', {
+        get() {
+          throw new Error('private-getter')
+        },
+      })
+    kernel.commitCommand = async (...args) => {
+      const native = Dexie.currentTransaction.idbtrans
+      await original(...args)
+      const terminal = new Promise((resolve) =>
+        native.addEventListener('abort', resolve, { once: true }),
+      )
+      native.abort()
+      await terminal
+      throw error
+    }
+    assert.deepEqual(await kernel.commitLocalCommandsOutcome(ticket, [command()]), {
+      status: 'not_committed',
+      reason: kind === 'wrapped' ? 'quota' : 'write_failure',
+    })
+    assert.equal(await db.operationJournal.count(), 0)
+  })
+}
+
+test('capture native observers are removed on settlement and noncapture installs none', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  const transaction = db.transaction.bind(db)
+  const events = []
+  db.transaction = (mode, tables, scope) =>
+    transaction(mode, tables, async (tx) => {
+      const native = tx.idbtrans
+      const add = native.addEventListener.bind(native)
+      const remove = native.removeEventListener.bind(native)
+      native.addEventListener = (type, listener, options) => {
+        events.push(['add', type, listener])
+        return add(type, listener, options)
+      }
+      native.removeEventListener = (type, listener, options) => {
+        events.push(['remove', type, listener])
+        return remove(type, listener, options)
+      }
+      return scope(tx)
+    })
+  assert.equal((await kernel.commitLocalCommandsOutcome(ticket, [command()])).status, 'committed')
+  const removed = events.filter((row) => row[0] === 'remove')
+  assert.deepEqual(
+    events.slice(0, 2).map((row) => row.slice(0, 2)),
+    [
+      ['add', 'abort'],
+      ['add', 'complete'],
+    ],
+  )
+  assert.deepEqual(
+    removed.map((row) => row.slice(0, 2)),
+    [
+      ['remove', 'abort'],
+      ['remove', 'complete'],
+    ],
+  )
+  assert.equal(events[0][2], removed[0][2])
+  assert.equal(events[1][2], removed[1][2])
+  events.length = 0
+  await kernel.commitLocalCommand(ticket, command('legacy-observer', 'other-customer'))
+  assert.equal(events.filter((row) => row[0] === 'remove').length, 0)
+})
+
+test('capture missing native observation fails closed before action writes', async (t) => {
+  const { db, kernel } = await setup(t)
+  const ticket = await completedBaseline(db, kernel)
+  const transaction = db.transaction.bind(db)
+  db.transaction = (mode, tables, scope) =>
+    transaction(mode, tables, async (tx) => {
+      tx.idbtrans.addEventListener = () => {
+        throw new Error('observer-unavailable')
+      }
+      return scope(tx)
+    })
+  await assert.rejects(
+    kernel.commitLocalCommandsOutcome(ticket, [command()]),
+    /observer-unavailable/,
+  )
+  assert.equal(await db.operationJournal.count(), 0)
 })

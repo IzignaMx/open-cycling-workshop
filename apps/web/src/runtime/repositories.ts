@@ -1,3 +1,4 @@
+import { captureValidation, type CaptureRepositoryResult } from './capture-outcome.js'
 import type { AccessKernel } from '../access-kernel/kernel.js'
 import type { BaselineSession } from '../access-kernel/baseline-coordinator.js'
 import type { LocalCommand } from '../access-kernel/types.js'
@@ -74,13 +75,18 @@ export class WorkshopRepositories {
   async createCustomer(
     source: BaselineSession,
     input: Omit<CreateCustomerInput, 'organizationId' | 'locationId'>,
-  ): Promise<LocalCustomer> {
-    const captured = this.capture(source),
-      { customer, mutation } = buildLocalCustomerCreate(
-        { ...input, ...captured.scope },
-        captured.dependencies,
-      )
-    await this.kernel.commitLocalCommands(
+  ): Promise<CaptureRepositoryResult<LocalCustomer>> {
+    const captured = this.capture(source)
+    let prepared
+    try {
+      prepared = buildLocalCustomerCreate({ ...input, ...captured.scope }, captured.dependencies)
+    } catch (error) {
+      const validation = captureValidation(error)
+      if (validation) return validation
+      throw error
+    }
+    const { customer, mutation } = prepared
+    const outcome = await this.kernel.commitLocalCommandsOutcome(
       captured.ticket,
       [
         {
@@ -92,11 +98,36 @@ export class WorkshopRepositories {
       ],
       captured.current,
     )
-    return customer
+    if (outcome.status === 'not_committed') return { status: 'not_saved', reason: outcome.reason }
+    return { status: 'committed', entity: customer }
   }
-  async createOrder(source: BaselineSession, input: IntakeInput): Promise<LocalServiceOrder> {
+  async createOrder(
+    source: BaselineSession,
+    input: IntakeInput,
+  ): Promise<CaptureRepositoryResult<LocalServiceOrder>> {
     const captured = this.capture(source),
       commands: LocalCommand[] = []
+    let order
+    try {
+      order = this.prepareOrder(captured, input, commands)
+    } catch (error) {
+      const validation = captureValidation(error)
+      if (validation) return validation
+      throw error
+    }
+    const outcome = await this.kernel.commitLocalCommandsOutcome(
+      captured.ticket,
+      commands,
+      captured.current,
+    )
+    if (outcome.status === 'not_committed') return { status: 'not_saved', reason: outcome.reason }
+    return { status: 'committed', entity: order }
+  }
+  private prepareOrder(
+    captured: ReturnType<WorkshopRepositories['capture']>,
+    input: IntakeInput,
+    commands: LocalCommand[],
+  ): LocalServiceOrder {
     let bicycleId: string | null = null
     if (input.brand) {
       const { bicycle, mutation } = buildLocalBicycleCreate(
@@ -129,7 +160,6 @@ export class WorkshopRepositories {
       dependsOn: commands.map((c) => c.envelope.mutation_id),
       localEvents: [],
     })
-    await this.kernel.commitLocalCommands(captured.ticket, commands, captured.current)
     return order
   }
   async transition(
