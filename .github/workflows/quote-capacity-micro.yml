@@ -65,18 +65,19 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
-          from scripts.ci.quote_capacity_micro import ProofFailure, identifier, reconcile_owned, remove_owned, run
+          from contextlib import suppress
+          from scripts.ci.quote_capacity_micro import ProofFailure, diagnosed_full_reconcile, run
           root = Path(os.environ['RUNNER_TEMP'])
           failed = False
+          with suppress(OSError):
+              Path('artifacts').mkdir(exist_ok=True)
           for stem in ('quote-owned', 'quote-record-owned'):
               try:
-                  ids = [identifier(path.read_text().strip()) for path in root.glob(f'{stem}.*.cid')]
-                  present = run(['docker', 'ps', '--all', '--no-trunc', '--format', '{{.ID}}']).splitlines()
-                  owned = root / f'{stem}.json'
-                  discovered = reconcile_owned(owned) if owned.with_suffix('.owner.json').exists() else []
-                  if not set(ids).intersection(present).issubset(discovered):
-                      raise ProofFailure('owned_identity_reconciliation')
-                  remove_owned(discovered)
+                  diagnosed_full_reconcile(
+                      root / f'{stem}.json', run,
+                      Path('artifacts') / f'{stem}-finalizer-cleanup.json',
+                      kind='ocwp.quote_micro.cleanup_diagnostic',
+                  )
               except (ProofFailure, ValueError, OSError):
                   failed = True
           if failed:
@@ -95,4 +96,15 @@ jobs:
         with:
           name: quote-record-feasibility-${{ github.sha }}
           path: artifacts/quote-record-feasibility.json
+          if-no-files-found: error
+      - name: Upload bounded cleanup observations (not workload receipts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-micro-cleanup-diagnostics-${{ github.sha }}
+          path: |
+            artifacts/quote-capacity-micro.cleanup.json
+            artifacts/quote-record-feasibility.cleanup.json
+            artifacts/quote-owned-finalizer-cleanup.json
+            artifacts/quote-record-owned-finalizer-cleanup.json
           if-no-files-found: error

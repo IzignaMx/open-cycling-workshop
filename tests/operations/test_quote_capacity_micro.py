@@ -1336,6 +1336,7 @@ def test_invalid_container_id_never_reaches_docker():
 def test_failed_preflight_never_launches_specimen(tmp_path, monkeypatch):
     commit, tree = "c" * 40, "d" * 40
     calls = []
+    present = ["a" * 64]
 
     def fake(args, **kwargs):
         calls.append(args)
@@ -1348,11 +1349,16 @@ def test_failed_preflight_never_launches_specimen(tmp_path, monkeypatch):
         if args[:3] == ["docker", "image", "inspect"]:
             return tree if "ocwp.source-tree" in args[4] else "sha256:" + "e" * 64
         if args[:2] == ["docker", "create"]:
+            Path(args[args.index("--cidfile") + 1]).write_text("a" * 64)
             return "a" * 64
         if args[:2] == ["docker", "start"]:
             return ""
         if args[:2] == ["docker", "ps"]:
-            return ""
+            return "\n".join(present)
+        if args[:2] == ["docker", "inspect"]:
+            create = next(call for call in calls if call[:2] == ["docker", "create"])
+            token = create[create.index("--label") + 1].split("=")[1]
+            return f"sha256:{'e' * 64}|{token}|/ocwp-quote-{token}-canary"
         if args[:2] == ["docker", "exec"]:
             return "missing controller"
         raise AssertionError(args)
@@ -1360,7 +1366,12 @@ def test_failed_preflight_never_launches_specimen(tmp_path, monkeypatch):
     monkeypatch.setattr(module, "run", fake)
     monkeypatch.setattr(module, "inspect_owned", lambda *args: None)
     cleaned = []
-    monkeypatch.setattr(module, "remove_owned", lambda ids: cleaned.extend(ids))
+
+    def remove(ids, execute):
+        cleaned.extend(ids)
+        present.clear()
+
+    monkeypatch.setattr(module, "remove_owned", remove)
     monkeypatch.setattr(
         module.subprocess, "Popen", lambda *a, **kw: pytest.fail("specimen spawned")
     )
@@ -1567,7 +1578,7 @@ def test_supervisor_success_and_terminal_failures_are_closed(
     monkeypatch.setattr(module, "reconcile_owned", lambda *args: list(containers))
     original_remove = module.remove_owned
     monkeypatch.setattr(module, "run", execute)
-    monkeypatch.setattr(module, "remove_owned", lambda ids: original_remove(ids, execute))
+    monkeypatch.setattr(module, "remove_owned", lambda ids, run: original_remove(ids, run))
     target = tmp_path / "report.json"
     if fault == "none":
         module.supervise(

@@ -1,7 +1,31 @@
 schema: 1
 
+micro_owned_cleanup_20261030:
+  status: local_mock_first_implementation_independently_reviewed_hosted_pending
+  local_focused: 304_passed15_subtests19_new_stdlib_cases
+  local_full: 5576_collected4905_passed671_environment_skips12_warnings_exit0
+  local_environment: recovered_existing_Python3_13_5_pytest9_1_1_no_install
+  original_RED_and_Ruff_SIM117_failure: retained_corrected_without_control_weakening
+  design_plan: docs/superpowers/plans/2026-10-30-micro-owned-cleanup.md
+  baseline_main: 7c69071ab322d8a0cdcc80bf15633feac39aa593
+  failed_run: 41011497919
+  failed_artifact: 12957332756
+  historical_failure: command_timeout_canary_containment_exact_operation_unknown
+  historical_cleanup: primary_failed_finalizer_unverified_actual_owned_absence_unknown
+  proven_separate_defect: empty_partial_CID_hint_aborts_before_strict_owner_reconciliation
+  selected_fix: reuse_existing_exact_manifest_name_image_token_reconciler_no_new_matcher
+  resource_budgets_permissions_and_workload: unchanged
+  historical_retry: prohibited_no_same_head_rerun_or_measurement_replay
+
 transition_visit_protection_20261030:
-  status: local_implementation_independent_reviews_accepted_hosted_qualification_pending
+  status: PR75_merged_candidate_qualified_fresh_main_partial_micro_companion_failed
+  merged_main: 7c69071ab322d8a0cdcc80bf15633feac39aa593
+  merged_tree: eb7e7d01c31d617dc32efbc58ec3ff4a2b2ec971
+  accepted_candidate_ci: 41007988890
+  accepted_candidate: python5499_passed58_expected_skips_core1021_aggregate27of27
+  accepted_candidate_browser: direct101_aggregate101_repeats20_9_5_10_kernel14_retry0
+  postmerge_ci: 41011497902
+  postmerge_micro_failure: 41011497919_cleanup_unverified_no_full_main_qualification
   baseline_main: ff890bcadb816857e3f4b5ebcd7a762c6d72fa95
   baseline_tree: f9ddd024eeec1a61f6604c416c8069906014f039
   design: docs/superpowers/specs/2026-10-30-transition-visit-protection-design.md

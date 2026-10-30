@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-30 · Microfixture cleanup blocker after PR75
+
+- PR75 merged as `7c69071a`, tree `eb7e7d01`, after candidate CI41007988890
+  passed Python5,499/58 expected skips, core1,021, aggregate27/27 and direct101/
+  aggregate101 with all retained repetitions and kernel14, zero retries.
+- [ ] Close fresh-main containment qualification: run41011497919 failed during
+      canary containment with command_timeout; primary cleanup failed and finalizer
+      was unverified. Empty identities do not prove no container. Exact historical
+      operation, cause and owned-resource absence remain unknown. Generic runner
+      orphan-process cleanup is not an owned-container absence receipt.
+- [x] Independently review the bounded correction:19 new mock cases,304 focused
+      tests plus15 subtests; full local4,905 passed/671 environment skips with12
+      retained dependency warnings. No hosted corrective proof is claimed.
+- A separate mock reproduction proves incomplete CID hints can abort cleanup
+  before strict owner reconciliation. The [bounded correction plan](docs/superpowers/plans/2026-10-30-micro-owned-cleanup.md)
+  reuses existing exact ownership checks; it does not prove this caused the run.
+  No timeout increase, old-run retry, spent ownership measurement replay, Pages
+  redeploy or raw owner/credential publication is permitted.
+- Candidate qualification is not fresh-main qualification. Other postmerge
+  checks continue independently; do not erase the failed companion or claim its
+  resources were historically cleaned by a later source correction.
+
 ## 2026-10-30 · Transition visit protection (local, hosted pending)
 
 - [x] Complete independent final review of the [transition-only design](docs/superpowers/specs/2026-10-30-transition-visit-protection-design.md)
