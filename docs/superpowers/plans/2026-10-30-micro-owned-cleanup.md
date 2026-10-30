@@ -82,3 +82,53 @@ remain recorded; the corrected focused source passes Ruff and formatting.
 Independent exact four-file implementation/test/workflow review accepted ownership,
 privacy, unchanged limits and both-finalizer-stem behavior. Fresh hosted proof is
 still required; no local or later proof repairs the historical unknown outcome.
+
+## First hosted invocation failure and bounded correction
+
+PR76 head eb2baffb, micro run41018864858, failed while importing the diagnostic
+writer: the workflow invoked the file directly, so Python did not expose the
+repository root as the scripts package. The import preceded primary cleanup.
+The independent inline finalizer completed strict ownership reconciliation; its
+observations remain explicitly not workload receipts. No primary workload receipt
+exists and the second record specimen was skipped. Do not infer workload success
+or historical41011497919 cleanup from that finalizer.
+
+Use the module entrypoint from the repository root for both existing workflow
+commands, without changing arguments or timeouts. Import the diagnostic writer
+only inside its best-effort finalization scope: unavailable diagnostic imports
+must neither prevent reconciliation nor replace an original cleanup exception.
+Add mock import-failure regressions for both cleanup success and failure, plus
+exact workflow/module invocation parity verification without a container trial.
+Package-import tests alone did not exercise the deployed entrypoint; preserve
+this lesson and require the actual invocation shape in future proof. Fresh hosted
+qualification follows a reviewed source correction, never an identical-head rerun.
+
+## First hosted reporting incompatibility
+
+The same candidate Python shard A stopped with duplicate_phase while new unittest
+subTest matrices emitted multiple call reports for one collected node. Its result
+is incomplete, not a full pass; the retained diagnostic does not expose the first
+underlying assertion, so do not invent that attribution. Both shards' primary and
+independent owned cleanup was verified absent; the failed sealing step is not a
+failed container-removal claim. Shard B passed2,153/47 expected skips.
+
+Expand all15 scenarios in the three matrices into distinct collected test methods,
+preserving every assertion and the strict verifier. Exercise actual pytest report
+invocation on the mock-only file and verify unique setup/call/teardown phases and
+complete collection; retain negative duplicate-report rejection. Local pytest
+without the production reporting contract did not establish hosted compatibility.
+Consolidate this test-only correction with the invocation fix and require fresh
+whole-suite receipts before any combined local pass claim.
+
+## Consolidated corrective local checkpoint
+
+The corrected source passes323 focused tests with no subtests and the full local
+standard pytest suite:5,595 collected,4,924 passed,671 environment skips,12
+deprecation warnings, exit0 in681.61 seconds. The earlier import-only and
+pre-environment-isolation full runs remain historical, not proof for this tree.
+Actual pytest observation confirms34 independent mock nodes/102 unique phase
+reports; a deliberate duplicate-subtest fixture remains rejected. Four nested
+pytest integration cases cover clean/hostile parent environments and positive/
+negative report shapes. Strip inherited proof/database/plugin/addopts activation
+and explicitly disable autoload in that mock-only child; no production verifier
+or resource limit changes. Fresh hosted qualification is still required.

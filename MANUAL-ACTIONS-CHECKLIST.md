@@ -13,6 +13,21 @@
 - [x] Independently review the bounded correction:19 new mock cases,304 focused
       tests plus15 subtests; full local4,905 passed/671 environment skips with12
       retained dependency warnings. No hosted corrective proof is claimed.
+- PR76 first micro run41018864858 failed because direct-file invocation could not
+  import the package needed by a diagnostic writer before primary cleanup. Its
+  independent finalizer succeeded after strict ownership reconciliation; uploaded
+  observations are not workload receipts. The primary workload receipt is absent
+  and the second record specimen was skipped. Preserve this separate failure.
+  A module-entrypoint correction and diagnostic-import isolation require fresh
+  validation; no same-head rerun or retrospective workload success is claimed.
+- First PR76 Python shard A also produced an invalid incomplete proof because
+  unittest subtest reports repeated a call phase for one node. The strict verifier
+  correctly rejected this; both shards' owned cleanup is verified absent. Preserve
+  the incomplete A result and expand all15 matrix scenarios into separately
+  collected tests without relaxing the reporter. No full-suite pass is inferred
+  from that failed hosted run. The consolidated corrective local suite passed
+  4,924/671 environment skips, focused323 with no subtests; actual mock-pytest
+  phase and hostile-environment checks passed. Fresh hosted proof remains open.
 - A separate mock reproduction proves incomplete CID hints can abort cleanup
   before strict owner reconciliation. The [bounded correction plan](docs/superpowers/plans/2026-10-30-micro-owned-cleanup.md)
   reuses existing exact ownership checks; it does not prove this caused the run.

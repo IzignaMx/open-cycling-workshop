@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+          timeout --signal=TERM --kill-after=30s 120s python3 -m scripts.ci.quote_capacity_micro \
             --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
             --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-owned.json" \
             --evidence artifacts/quote-capacity-micro.json
@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=30s 120s python3 scripts/ci/quote_capacity_micro.py \
+          timeout --signal=TERM --kill-after=30s 120s python3 -m scripts.ci.quote_capacity_micro \
             --worker-image ocwp-quote-micro --pg-image postgres:18.4-trixie \
             --commit "$(git rev-parse HEAD)" --owned "$RUNNER_TEMP/quote-record-owned.json" \
             --evidence artifacts/quote-record-feasibility.json --single-record-feasibility

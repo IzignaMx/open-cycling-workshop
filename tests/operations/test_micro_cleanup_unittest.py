@@ -1,5 +1,6 @@
 """Mock-only micro cleanup regressions; never launch Docker, processes or trials."""
 
+import builtins
 import json
 import os
 import tempfile
@@ -154,22 +155,29 @@ class MicroCleanupTests(unittest.TestCase):
             self.finalizer()
         self.assertEqual(self.removed, [CID])
 
-    def test_closed_operation_codes_preserve_initial_failure(self):
-        for fault, expected in (
-            ("create", "create"),
-            ("inspect", "inspect"),
-            ("start", "start"),
-            ("probe", "resource_probe"),
-            ("privileges", "privileges"),
-        ):
-            with self.subTest(fault=fault):
-                self.fault = fault
-                self.hint = CID
-                self.present[:] = [CID]
-                self.removed.clear()
-                report = self.supervisor()
-                self.assertEqual(report["failure_operation"], expected)
-                self.assertEqual(report["command_stage"], "canary_containment")
+    def assert_operation_failure(self, fault, expected):
+        self.fault = fault
+        self.hint = CID
+        self.present[:] = [CID]
+        self.removed.clear()
+        report = self.supervisor()
+        self.assertEqual(report["failure_operation"], expected)
+        self.assertEqual(report["command_stage"], "canary_containment")
+
+    def test_create_operation_preserves_initial_failure(self):
+        self.assert_operation_failure("create", "create")
+
+    def test_inspect_operation_preserves_initial_failure(self):
+        self.assert_operation_failure("inspect", "inspect")
+
+    def test_start_operation_preserves_initial_failure(self):
+        self.assert_operation_failure("start", "start")
+
+    def test_probe_operation_preserves_initial_failure(self):
+        self.assert_operation_failure("probe", "resource_probe")
+
+    def test_privileges_operation_preserves_initial_failure(self):
+        self.assert_operation_failure("privileges", "privileges")
 
     def test_metadata_failure_is_not_labeled_create_failure(self):
         original = Path.write_text
@@ -210,6 +218,66 @@ class MicroCleanupTests(unittest.TestCase):
         for forbidden in (CID, IMAGE, TOKEN, "PRIVATE_CANARY"):
             self.assertNotIn(forbidden, raw)
 
+    def test_missing_diagnostic_import_cannot_prevent_owned_cleanup(self):
+        self.manifest()
+        original = builtins.__import__
+        attempts = []
+
+        def import_module(name, *args, **kwargs):
+            if name == "scripts.ci.verify_v01":
+                attempts.append(list(self.removed))
+                raise ModuleNotFoundError("PRIVATE_CANARY")
+            return original(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", import_module):
+            module.diagnosed_full_reconcile(
+                self.owned, self.execute, self.root / "diagnostic.json", kind=MICRO_KIND
+            )
+        self.assertEqual(self.removed, [CID])
+        self.assertFalse(self.present)
+        self.assertEqual(attempts, [[CID]])
+        self.assertFalse((self.root / "diagnostic.json").exists())
+
+    def test_missing_diagnostic_import_preserves_exact_cleanup_failure(self):
+        self.manifest()
+        original_import = builtins.__import__
+        original_failure = module.ProofFailure("command_timeout")
+        operations = []
+
+        def execute(args, **kwargs):
+            operations.append(args[1])
+            if args[1] == "inspect":
+                raise original_failure
+            return self.execute(args, **kwargs)
+
+        def import_module(name, *args, **kwargs):
+            if name == "scripts.ci.verify_v01":
+                raise ImportError("PRIVATE_CANARY")
+            return original_import(name, *args, **kwargs)
+
+        with (
+            patch.object(builtins, "__import__", import_module),
+            self.assertRaises(module.ProofFailure) as caught,
+        ):
+            module.diagnosed_full_reconcile(
+                self.owned, execute, self.root / "diagnostic.json", kind=MICRO_KIND
+            )
+        self.assertIs(caught.exception, original_failure)
+        self.assertEqual(operations, ["ps", "ps", "inspect"])
+        self.assertFalse(self.removed)
+        self.assertEqual(self.present, [CID])
+
+    def test_reconciliation_import_error_is_not_suppressed(self):
+        original_failure = ImportError("reconcile dependency unavailable")
+        with (
+            patch.object(module, "full_reconcile", side_effect=original_failure),
+            self.assertRaises(ImportError) as caught,
+        ):
+            module.diagnosed_full_reconcile(
+                self.owned, self.execute, self.root / "diagnostic.json", kind=MICRO_KIND
+            )
+        self.assertIs(caught.exception, original_failure)
+
     def test_default_diagnostic_kind_unchanged(self):
         self.manifest()
         path = self.root / "diagnostic.json"
@@ -235,31 +303,57 @@ class MicroCleanupTests(unittest.TestCase):
             json.loads(path.read_text())["kind"], "ocwp.full_python.cleanup_diagnostic"
         )
 
-    def test_negative_owner_matrix_never_claims_absence(self):
-        for fault in ("image", "token", "name", "list", "inspect", "remove", "still_present"):
-            with self.subTest(fault=fault):
-                self.identity_fault = fault
-                self.present[:] = [CID]
-                self.removed.clear()
-                self.manifest()
-                path = self.root / "diagnostic.json"
-                with self.assertRaises(module.ProofFailure):
-                    module.diagnosed_full_reconcile(self.owned, self.execute, path, kind=MICRO_KIND)
-                self.assertEqual(json.loads(path.read_text())["outcome"], "failed")
-                if fault != "still_present":
-                    self.assertFalse(self.removed)
-                self.assertEqual(self.present, [CID])
+    def assert_owner_failure(self, fault):
+        self.identity_fault = fault
+        self.present[:] = [CID]
+        self.removed.clear()
+        self.manifest()
+        path = self.root / "diagnostic.json"
+        with self.assertRaises(module.ProofFailure):
+            module.diagnosed_full_reconcile(self.owned, self.execute, path, kind=MICRO_KIND)
+        self.assertEqual(json.loads(path.read_text())["outcome"], "failed")
+        if fault != "still_present":
+            self.assertFalse(self.removed)
+        self.assertEqual(self.present, [CID])
 
-    def test_invalid_and_incomplete_without_manifest_never_remove(self):
-        for hint, manifest in (("PRIVATE_CANARY", True), ("", False), ("c" * 12, False)):
-            with self.subTest(hint=hint, manifest=manifest):
-                self.hint = hint
-                self.manifest()
-                if not manifest:
-                    self.owned.with_suffix(".owner.json").unlink()
-                with self.assertRaises(module.ProofFailure):
-                    module.full_reconcile(self.owned, self.execute)
-                self.assertFalse(self.removed)
+    def test_owner_image_failure_never_claims_absence(self):
+        self.assert_owner_failure("image")
+
+    def test_owner_token_failure_never_claims_absence(self):
+        self.assert_owner_failure("token")
+
+    def test_owner_name_failure_never_claims_absence(self):
+        self.assert_owner_failure("name")
+
+    def test_owner_list_failure_never_claims_absence(self):
+        self.assert_owner_failure("list")
+
+    def test_owner_inspect_failure_never_claims_absence(self):
+        self.assert_owner_failure("inspect")
+
+    def test_owner_remove_failure_never_claims_absence(self):
+        self.assert_owner_failure("remove")
+
+    def test_owner_still_present_failure_never_claims_absence(self):
+        self.assert_owner_failure("still_present")
+
+    def assert_hint_failure(self, hint, manifest):
+        self.hint = hint
+        self.manifest()
+        if not manifest:
+            self.owned.with_suffix(".owner.json").unlink()
+        with self.assertRaises(module.ProofFailure):
+            module.full_reconcile(self.owned, self.execute)
+        self.assertFalse(self.removed)
+
+    def test_invalid_hint_with_manifest_never_removes(self):
+        self.assert_hint_failure("PRIVATE_CANARY", True)
+
+    def test_empty_hint_without_manifest_never_removes(self):
+        self.assert_hint_failure("", False)
+
+    def test_partial_hint_without_manifest_never_removes(self):
+        self.assert_hint_failure("c" * 12, False)
 
     def test_finalizer_rejects_wrong_identity_and_keeps_failure_diagnostic(self):
         self.manifest()
@@ -286,6 +380,8 @@ class MicroCleanupTests(unittest.TestCase):
         self.assertIn("timeout-minutes: 20", workflow)
         self.assertIn("timeout-minutes: 1", workflow)
         self.assertEqual(workflow.count("--kill-after=30s 120s python3"), 2)
+        self.assertEqual(workflow.count("python3 -m scripts.ci.quote_capacity_micro"), 2)
+        self.assertNotIn("python3 scripts/ci/quote_capacity_micro.py", workflow)
         self.assertNotIn("workflow_dispatch", workflow)
         upload = workflow.split("- name: Upload bounded cleanup observations", 1)[1]
         for path in (

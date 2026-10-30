@@ -1284,8 +1284,6 @@ def diagnosed_full_reconcile(
     kind: str = "ocwp.full_python.cleanup_diagnostic",
 ) -> None:
     """Best-effort bounded observations, never an absence or workload receipt."""
-    from scripts.ci.verify_v01 import write_full_python_json
-
     report: dict[str, object] = {
         "schema": 1,
         # Invalid observation metadata cannot prevent resource cleanup or be echoed.
@@ -1361,7 +1359,9 @@ def diagnosed_full_reconcile(
     finally:
         # An unavailable diagnostic sink must not prevent owned cleanup or alter
         # the authoritative receipt/independent-absence acceptance path.
-        with suppress(OSError, ValueError):
+        with suppress(ImportError, OSError, ValueError):
+            from scripts.ci.verify_v01 import write_full_python_json
+
             write_full_python_json(diagnostic, report)
 
 

@@ -2702,3 +2702,128 @@ def test_full_canary_create_timeout_is_capped_by_remaining_setup(
     assert report["independent_cleanup"] == "pending"
     assert any(args[:2] == ["docker", "ps"] for args, _ in calls)
     assert module.FULL_SECONDS == 900 and module.FULL_OUTER_SECONDS == 1020
+
+
+@pytest.mark.parametrize("duplicate_calls", [False, True])
+@pytest.mark.parametrize("hostile_parent_env", [False, True])
+def test_micro_unittest_actual_pytest_reports_have_unique_phases(
+    tmp_path, duplicate_calls, hostile_parent_env
+):
+    """Run only the finite mocked file; never recurse into this integration test."""
+    import json
+    import os
+    import subprocess
+    import sys
+    import textwrap
+
+    root = Path(__file__).resolve().parents[2]
+    output = tmp_path / "phase-records.json"
+    plugin = tmp_path / "micro_phase_observer.py"
+    plugin.write_text(
+        textwrap.dedent(
+            """
+            import json
+            import os
+            from pathlib import Path
+            records = []
+            def pytest_runtest_logreport(report):
+                records.append([report.nodeid, report.when, report.outcome])
+            def pytest_sessionfinish(session, exitstatus):
+                seen = set()
+                duplicates = []
+                for nodeid, phase, outcome in records:
+                    if (nodeid, phase) in seen:
+                        duplicates.append([nodeid, phase])
+                    seen.add((nodeid, phase))
+                Path(os.environ['OCWP_MOCK_PHASE_OUTPUT']).write_text(json.dumps({
+                    'records': records, 'duplicates': duplicates,
+                    'original_exit': int(exitstatus),
+                    'unexpected_env': sorted(key for key in os.environ
+                        if key.startswith(('OCWP_', 'PG', 'POSTGRES', 'DATABASE', 'DB_',
+                                           'TEST_DATABASE', 'SQLALCHEMY'))
+                        and key != 'OCWP_MOCK_PHASE_OUTPUT'),
+                    'autoload_disabled': os.environ.get('PYTEST_DISABLE_PLUGIN_AUTOLOAD'),
+                }))
+                if duplicates:
+                    session.exitstatus = 1
+            """
+        )
+    )
+    target = root / "tests/operations/test_micro_cleanup_unittest.py"
+    if duplicate_calls:
+        target = tmp_path / "test_duplicate_phase_fixture.py"
+        target.write_text(
+            "import unittest\n"
+            "class DeliberateDuplicates(unittest.TestCase):\n"
+            "    def test_two_subtests(self):\n"
+            "        for value in (1, 2):\n"
+            "            with self.subTest(value=value):\n"
+            "                self.assertGreater(value, 0)\n"
+        )
+    env = dict(os.environ)
+    forbidden = tmp_path / "unexpected-parent-plugin.txt"
+    if hostile_parent_env:
+        (tmp_path / "ocwp_forbidden_parent_plugin.py").write_text(
+            f"from pathlib import Path\nPath({str(forbidden)!r}).write_text('unexpected')\n"
+        )
+        env.update(
+            {
+                "PYTEST_PLUGINS": "ocwp_forbidden_parent_plugin",
+                "PYTEST_ADDOPTS": "--unknown-hostile-parent-option",
+                "OCWP_FULL_PYTHON_ENABLED": "hostile-parent-value",
+                "OCWP_TEST_DATABASE_URL": "synthetic-invalid://never-contact",
+                "PGHOST": "never-contact",
+                "POSTGRES_PASSWORD": "synthetic-only",
+                "DATABASE_URL": "synthetic-invalid://never-contact",
+                "DB_HOST": "never-contact",
+                "TEST_DATABASE_URL": "synthetic-invalid://never-contact",
+                "SQLALCHEMY_DATABASE_URI": "synthetic-invalid://never-contact",
+            }
+        )
+    # The nested fixture may observe reports only: no inherited plugins, extra
+    # targets, proof writers or database activation. Preserve the fixed CLI below.
+    env = {
+        key: value
+        for key, value in env.items()
+        if key not in {"PYTEST_ADDOPTS", "PYTEST_PLUGINS"}
+        and not key.startswith(
+            ("OCWP_", "PG", "POSTGRES", "DATABASE", "DB_", "TEST_DATABASE", "SQLALCHEMY")
+        )
+    }
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    env["PYTHONPATH"] = os.pathsep.join((str(tmp_path), str(root)))
+    env["OCWP_MOCK_PHASE_OUTPUT"] = str(output)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-o",
+            "addopts=",
+            "-p",
+            "micro_phase_observer",
+            "-q",
+            str(target),
+        ],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert not forbidden.exists()
+    assert result.returncode == (1 if duplicate_calls else 0)
+    report = json.loads(output.read_text())
+    assert report["original_exit"] == 0
+    assert report["unexpected_env"] == []
+    assert report["autoload_disabled"] == "1"
+    assert len(report["duplicates"]) == (2 if duplicate_calls else 0)
+    assert all(phase == "call" for _node, phase in report["duplicates"])
+    nodes = {node for node, _phase, _outcome in report["records"]}
+    assert len(nodes) == (1 if duplicate_calls else 34)
+    for node in nodes:
+        phases = [phase for current, phase, _outcome in report["records"] if current == node]
+        assert phases.count("setup") == phases.count("teardown") == 1
+        assert phases.count("call") == (3 if duplicate_calls else 1)
+    assert all(outcome == "passed" for _node, _phase, outcome in report["records"])
