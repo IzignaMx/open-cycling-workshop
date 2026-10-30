@@ -3326,3 +3326,286 @@ test('transition outcome remote history failure retains available local view', a
   assert.match(f.runtime.getSnapshot().timelineMessage, /historial remoto no está disponible/)
   assert.equal(f.runtime.getSnapshot().events[0].action, 'start_diagnosis')
 })
+
+async function transitionBarrier(f) {
+  let entered, release
+  const reached = new Promise((resolve) => {
+    entered = resolve
+  })
+  const waiting = new Promise((resolve) => {
+    release = resolve
+  })
+  const original = f.runtime.repositories.transition.bind(f.runtime.repositories)
+  let calls = 0
+  f.runtime.repositories.transition = async (...args) => {
+    calls++
+    const value = await original(...args)
+    if (calls === 1) {
+      entered()
+      await waiting
+    }
+    return value
+  }
+  return { reached, release, calls: () => calls }
+}
+
+test('transition visit controller owns synchronous exclusion before repository await', async (t) => {
+  const f = await transitionFixture(t)
+  const barrier = await transitionBarrier(f)
+  const first = f.runtime.transition(f.order.order_id, 'start_diagnosis')
+  try {
+    await barrier.reached
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+      status: 'unknown',
+    })
+    assert.equal(barrier.calls(), 1)
+  } finally {
+    barrier.release()
+    await first
+  }
+})
+
+test('transition visit pending survives actual reconnect and nonready snapshots hide identifiers', async (t) => {
+  const f = await transitionFixture(t)
+  f.runtime.scheduleSync = () => {}
+  const barrier = await transitionBarrier(f)
+  const first = f.runtime.transition(f.order.order_id, 'start_diagnosis')
+  const nonready = []
+  const unsubscribe = f.runtime.subscribe(() => {
+    const s = f.runtime.getSnapshot()
+    if (s.phase !== 'ready') nonready.push(s)
+  })
+  try {
+    await barrier.reached
+    f.env.online = true
+    await f.runtime.reconnect()
+    await until(() => f.runtime.getSnapshot().phase === 'ready', 'reconnect did not become ready')
+    assert.ok(nonready.length > 0)
+    assert.ok(nonready.every((s) => s.transitionProtection?.states.size === 0))
+    assert.equal(
+      f.runtime.getSnapshot().transitionProtection.states.get(f.order.order_id).busy,
+      true,
+    )
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'authorize'), {
+      status: 'unknown',
+    })
+    assert.equal(barrier.calls(), 1)
+  } finally {
+    barrier.release()
+    await first
+    unsubscribe()
+  }
+  assert.equal(
+    f.runtime.getSnapshot().transitionProtection.states.get(f.order.order_id).busy,
+    false,
+  )
+  assert.ok(
+    f.runtime.getSnapshot().transitionProtection.states.get(f.order.order_id).feedback.block,
+  )
+})
+
+for (const kind of ['unknown', 'unavailable'])
+  test(`transition visit ${kind} survives same-scope reconnect without another command`, async (t) => {
+    const f = await transitionFixture(t)
+    f.runtime.scheduleSync = () => {}
+    const original = f.runtime.kernel.commitLocalCommands.bind(f.runtime.kernel)
+    const history = f.runtime.repositories.localTimeline.bind(f.runtime.repositories)
+    if (kind === 'unknown')
+      f.runtime.kernel.commitLocalCommands = async (...args) => {
+        await original(...args)
+        throw new Error('private-visit-canary')
+      }
+    else
+      f.runtime.repositories.localTimeline = async () => {
+        throw new Error('private-visit-canary')
+      }
+    await f.runtime.transition(f.order.order_id, 'start_diagnosis')
+    f.runtime.kernel.commitLocalCommands = original
+    f.runtime.repositories.localTimeline = history
+    const before = await transitionEvidence(f)
+    f.env.online = true
+    await f.runtime.reconnect()
+    await until(() => f.runtime.getSnapshot().phase === 'ready', 'reconnect did not become ready')
+    assert.equal(
+      f.runtime.getSnapshot().transitionProtection.states.get(f.order.order_id).busy,
+      false,
+    )
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'authorize'), {
+      status: 'unknown',
+    })
+    assert.deepEqual((await transitionEvidence(f)).journal, before.journal)
+    assert.equal(
+      JSON.stringify(f.runtime.getSnapshot().transitionProtection).includes('private-visit-canary'),
+      false,
+    )
+  })
+
+for (const online of [false, true])
+  test(`transition visit fresh retained startup online=${online} permits independently authorized action`, async (t) => {
+    const f = await transitionFixture(t)
+    f.runtime.dispose()
+    const next = setup(t, { storage: f.storage, name: f.name, online })
+    next.runtime.scheduleSync = () => {}
+    await next.runtime.start()
+    await until(
+      () => next.runtime.getSnapshot().phase === 'ready',
+      'retained startup did not become ready',
+    )
+    const result = await next.runtime.transition(f.order.order_id, 'start_diagnosis')
+    assert.deepEqual(result, { status: 'committed', view: 'updated' })
+    assert.equal(next.runtime.getSnapshot().transitionProtection.states.size, 0)
+  })
+
+test('transition visit scope capability change hides identifiers and only denies transitions', async (t) => {
+  const originalServer = api()
+  let changed = false
+  const server = {
+    fetch: async (url, init) => {
+      const r = await originalServer.fetch(url, init)
+      const data = await r.json()
+      if (changed) {
+        const context = new URL(url).pathname.endsWith('/auth/context') ? data : data.context
+        if (context?.capabilities)
+          context.capabilities = context.capabilities.filter((x) => x !== 'bicycles.write')
+      }
+      return response(url, data)
+    },
+  }
+  const f = setup(t, { server })
+  await login(f.runtime)
+  f.env.online = false
+  await f.runtime.offline()
+  f.runtime.scheduleSync = () => {}
+  await f.runtime.createOrder({
+    customerId: 'historical-A',
+    reportedProblem: 'Protected',
+    intakeCondition: null,
+    accessories: null,
+    priority: 'normal',
+    brand: null,
+    model: null,
+  })
+  const order = f.runtime.getSnapshot().orders[0]
+  const original = f.runtime.kernel.commitLocalCommands.bind(f.runtime.kernel)
+  f.runtime.kernel.commitLocalCommands = async (...args) => {
+    await original(...args)
+    throw new Error('private-visit-canary')
+  }
+  await f.runtime.transition(order.order_id, 'start_diagnosis')
+  f.runtime.kernel.commitLocalCommands = original
+  changed = true
+  f.env.online = true
+  await f.runtime.reconnect()
+  await until(() => f.runtime.getSnapshot().phase === 'ready', 'changed scope not ready')
+  const state = f.runtime.getSnapshot()
+  assert.equal(state.transitionProtection.states.size, 0)
+  assert.ok(state.transitionProtection.notice)
+  assert.equal(state.phase, 'ready')
+  const before = await transitionEvidence(f)
+  assert.deepEqual(await f.runtime.transition(order.order_id, 'authorize'), { status: 'unknown' })
+  assert.deepEqual((await transitionEvidence(f)).journal, before.journal)
+  assert.deepEqual(await f.runtime.createCustomer({ displayName: 'Still permitted' }), {
+    status: 'saved',
+  })
+  changed = false
+  await f.runtime.reconnect()
+  await until(() => f.runtime.getSnapshot().phase === 'ready', 'same scope not ready')
+  assert.ok(f.runtime.getSnapshot().transitionProtection.notice)
+})
+
+test('transition visit invalid workshop selection cannot clear an uncertain action', async (t) => {
+  const f = await transitionFixture(t)
+  const original = f.runtime.kernel.commitLocalCommands.bind(f.runtime.kernel)
+  f.runtime.kernel.commitLocalCommands = async () => {
+    throw new Error('unknown')
+  }
+  await f.runtime.transition(f.order.order_id, 'start_diagnosis')
+  f.runtime.kernel.commitLocalCommands = original
+  await f.runtime.selectWorkshop('not-authorized')
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'unknown',
+  })
+  assert.equal(f.runtime.getSnapshot().transitionProtection.states.size, 1)
+})
+
+test('transition visit capacity refuses before repository and never creates missing orders', async (t) => {
+  const f = await transitionFixture(t)
+  let calls = 0
+  const original = f.runtime.repositories.transition.bind(f.runtime.repositories)
+  f.runtime.repositories.transition = async (...args) => {
+    calls++
+    return original(...args)
+  }
+  const before = await transitionEvidence(f)
+  for (let i = 0; i < 50; i++)
+    assert.deepEqual(await f.runtime.transition('missing-' + i, 'start_diagnosis'), {
+      status: 'unknown',
+    })
+  assert.equal(calls, 50)
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'unknown',
+  })
+  assert.equal(calls, 50)
+  assert.deepEqual(await transitionEvidence(f), before)
+  assert.ok(f.runtime.getSnapshot().transitionProtection.notice)
+})
+
+test('transition visit late old settlement cannot release same-order new-login protection', async (t) => {
+  const f = await transitionFixture(t)
+  f.runtime.scheduleSync = () => {}
+  const barrier = await transitionBarrier(f)
+  const first = f.runtime.transition(f.order.order_id, 'start_diagnosis')
+  try {
+    await barrier.reached
+    await f.runtime.logout()
+    f.env.online = true
+    await login(f.runtime)
+    const original = f.runtime.kernel.commitLocalCommands.bind(f.runtime.kernel)
+    f.runtime.kernel.commitLocalCommands = async () => {
+      throw new Error('new-visit-unknown')
+    }
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'authorize'), {
+      status: 'unknown',
+    })
+    f.runtime.kernel.commitLocalCommands = original
+    const replacement = f.runtime.getSnapshot()
+    barrier.release()
+    assert.deepEqual(await first, { status: 'committed', view: 'unavailable' })
+    assert.deepEqual(f.runtime.getSnapshot(), replacement)
+    assert.deepEqual(await f.runtime.transition(f.order.order_id, 'authorize'), {
+      status: 'unknown',
+    })
+  } finally {
+    barrier.release()
+    await first
+  }
+})
+
+test('transition visit logout followed by retained metadata verification does not reopen admission', async (t) => {
+  const f = await transitionFixture(t)
+  f.runtime.scheduleSync = () => {}
+  const retained = f.storage.getItem('ocwp.session.v2')
+  await f.runtime.logout()
+  // Reintroduced saved metadata is not a new explicit login. Fresh real context
+  // verification can authorize reads, but cannot resurrect the closed visit gate.
+  f.storage.setItem('ocwp.session.v2', retained)
+  f.env.online = true
+  await f.runtime.retryVerification()
+  await until(
+    () => f.runtime.getSnapshot().phase === 'ready',
+    'verified retained context not ready',
+  )
+  await f.runtime.start()
+  const before = await transitionEvidence(f)
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'unknown',
+  })
+  assert.deepEqual(await transitionEvidence(f), before)
+  assert.equal(f.runtime.getSnapshot().transitionProtection.states.size, 0)
+  assert.ok(f.runtime.getSnapshot().transitionProtection.notice)
+  await login(f.runtime)
+  assert.deepEqual(await f.runtime.transition(f.order.order_id, 'start_diagnosis'), {
+    status: 'committed',
+    view: 'updated',
+  })
+})

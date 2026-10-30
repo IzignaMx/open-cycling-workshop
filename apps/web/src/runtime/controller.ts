@@ -1,3 +1,5 @@
+import { TransitionProtection, type TransitionProtectionSnapshot } from './transition-protection.js'
+import { orderTransitionFeedback } from '../features/orders/transition-feedback.js'
 import type { CaptureSubmissionResult } from './capture-outcome.js'
 import type { OrderTransitionResult } from './order-transition-outcome.js'
 import { BrandingSnapshotRepository } from '../branding/cache.js'
@@ -69,6 +71,7 @@ export interface WorkshopSnapshot {
   legacyPresent: boolean
   timelineMessage: string | null
   identityKey: string
+  transitionProtection: TransitionProtectionSnapshot
 }
 const empty = (): WorkshopSnapshot => ({
   phase: 'locked',
@@ -92,6 +95,7 @@ const empty = (): WorkshopSnapshot => ({
   legacyPresent: false,
   timelineMessage: null,
   identityKey: '',
+  transitionProtection: Object.freeze({ states: new Map(), notice: null }),
 })
 const safeMessage = (reason: string) =>
   reason === 'client_upgrade_required'
@@ -145,6 +149,7 @@ export class WorkshopController {
   #locationsNetworkSequence = -1
   #disposed = false
   #sequence = 0
+  readonly #transitionProtection = new TransitionProtection()
   #active: BaselineSession | null = null
   #working: BaselineSession | null = null
   #brandingAdmissionRefresh: BaselineSession | null = null
@@ -168,6 +173,7 @@ export class WorkshopController {
   readonly #incremental: ReturnType<typeof createIncrementalCoordinator>
   readonly #push: ReturnType<typeof createPushCoordinator>
   constructor(private readonly options: RuntimeOptions) {
+    this.#transitionProtection.startVisit()
     this.#now = options.now ?? Date.now
     this.#probe = new ReachabilityProbe({
       now: this.#now,
@@ -848,6 +854,7 @@ export class WorkshopController {
     return source
   }
   async login(input: LoginRequestPayload): Promise<void> {
+    this.#transitionProtection.startVisit()
     const previous = this.#active ?? this.#working
     const sequence = this.blank('verifying'),
       current = () => this.current(sequence)
@@ -1101,6 +1108,7 @@ export class WorkshopController {
     if (!current()) return
     const connected = online && this.#verifiedOnline
     this.#brandingAdmissionRefresh = connected ? source : null
+    this.observeTransitionScope(source)
     this.publish({
       phase: 'ready',
       user,
@@ -1109,6 +1117,7 @@ export class WorkshopController {
       message: connected ? null : 'Acceso local verificado hasta el vencimiento de la sesión.',
       sync: connected ? 'local' : 'offline',
       identityKey: `${saved.bindingId}:${scope.locationId}`,
+      transitionProtection: this.#transitionProtection.getSnapshot(),
     })
     this.armLease(source)
     if (!connected) this.probeOffline(source)
@@ -1276,11 +1285,15 @@ export class WorkshopController {
     )
       return
     const saved = this.sessionStore.getSnapshot()
-    if (saved) await this.verifyStored(saved, locationId)
+    if (saved) {
+      this.#transitionProtection.startVisit()
+      await this.verifyStored(saved, locationId)
+    }
   }
   async changeWorkshop() {
     const saved = this.sessionStore.getSnapshot()
     if (saved?.user?.location_id === null) {
+      this.#transitionProtection.endVisit()
       const source = this.#active
       const sequence = this.blank('selector')
       if (source) await this.kernel.lockContext(source.ticket).catch(() => undefined)
@@ -1335,6 +1348,7 @@ export class WorkshopController {
     else this.publish({ message: 'Conéctate para verificar la sesión y reintentar.' })
   }
   async logout() {
+    this.#transitionProtection.endVisit()
     const source = this.#active ?? this.#working
     this.blank('locked')
     this.sessionStore.clear()
@@ -1475,11 +1489,58 @@ export class WorkshopController {
     this.wakeLocalSync(source, networkSequence)
     return { status: 'saved' }
   }
+  private observeTransitionScope(source: BaselineSession): void {
+    this.#transitionProtection.observeScope({
+      apiRealm: source.context.principal.apiRealm,
+      organizationId: source.context.principal.organizationId,
+      userId: source.context.principal.userId,
+      selectedLocationId: source.context.selectedLocationId,
+      datasetIncarnation: source.context.datasetIncarnation,
+      authorizationEpoch: source.context.authorizationEpoch,
+      policyRevision: source.context.policyRevision,
+      capabilities: source.context.capabilities,
+      sessionBindingId: source.identity.sessionHandle,
+    })
+  }
   async transition(orderId: string, action: OrderAction): Promise<OrderTransitionResult> {
     let source: BaselineSession
-    const networkSequence = this.#networkSequence
     try {
       source = this.requireActive()
+    } catch {
+      return { status: 'unknown' }
+    }
+    this.observeTransitionScope(source)
+    const token = this.#transitionProtection.begin(orderId)
+    if (!token) {
+      this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
+      return { status: 'unknown' }
+    }
+    this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
+    let result: OrderTransitionResult
+    try {
+      result = await this.executeTransition(source, orderId, action)
+    } catch {
+      result = { status: 'unknown' }
+    }
+    const settled = this.#transitionProtection.finish(
+      orderId,
+      token,
+      orderTransitionFeedback({ kind: 'resolved', value: result }),
+    )
+    const active = this.#active
+    if (settled && active?.isCurrent(active.identity) && this.#snapshot.phase === 'ready') {
+      this.observeTransitionScope(active)
+      this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
+    }
+    return result
+  }
+  private async executeTransition(
+    source: BaselineSession,
+    orderId: string,
+    action: OrderAction,
+  ): Promise<OrderTransitionResult> {
+    const networkSequence = this.#networkSequence
+    try {
       await this.repositories.transition(source, orderId, action)
     } catch {
       // Rejection can follow a native commit. Never infer rollback or replay.
@@ -1653,6 +1714,7 @@ export class WorkshopController {
     }
   }
   dispose() {
+    this.#transitionProtection.endVisit()
     this.#disposed = true
     this.cancel()
     this.#observer?.unsubscribe()

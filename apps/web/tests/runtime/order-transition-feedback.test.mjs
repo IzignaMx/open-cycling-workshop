@@ -90,7 +90,7 @@ test('transition gate retains unknown across card hide/show and changed action/v
   const value = gate(),
     token = value.begin('a')
   assert.equal(value.finish('a', token, uncertain()), true)
-  // The gate is list-owned; filtered cards/row inputs have no reset authority.
+  // Filtered cards/row inputs have no reset authority over the host-owned gate.
   for (let version = 1; version < 5; version++) {
     assert.equal(value.begin('a'), null)
     assert.equal(value.get('a').busy, false)
@@ -126,13 +126,14 @@ test('transition gate allows only a new explicit action after positive updated c
   assert.equal(value.get('a').busy, true)
 })
 
-test('transition UI owns gate above filtered rows and does not render arbitrary exceptions', async () => {
+test('transition UI presents host protection without a second component gate or raw exceptions', async () => {
   const source = await readFile(
     new URL('../../src/features/orders/OrderList.tsx', import.meta.url),
     'utf8',
   )
-  assert.match(source, /OrderTransitionGate/)
+  assert.doesNotMatch(source, /OrderTransitionGate|useRef|mounted/)
   assert.doesNotMatch(source, /error\.message/)
-  assert.match(source, /useRef/)
-  assert.match(source, /mounted/)
+  assert.match(source, /protection\.states\.get/)
+  assert.match(source, /protection\.notice/)
+  assert.match(source, /transitionDisabled/)
 })
