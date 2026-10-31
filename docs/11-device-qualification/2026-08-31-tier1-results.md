@@ -1,5 +1,13 @@
 # Resultados de Calificación Tier 1 · V0.1 · 2026-08-31
 
+> **HISTÓRICO; NO EJECUTAR.** Este registro de agosto conserva instrucciones y
+> supuestos supersedidos; no es el procedimiento operativo vigente ni prueba
+> física actual. No seguir sus credenciales, limpieza de volúmenes, flags,
+> reinstalación ni presión de disco. Usar el
+> [protocolo seguro](2026-10-31-safe-tier1-protocol.md) y la
+> [plantilla vigente](2026-10-31-safe-tier1-results.md). El contenido inferior se
+> conserva como evidencia histórica; sus casillas no cierran los gates actuales.
+
 > Plantilla de registro. Completa cada campo con evidencia real; un paso sin evidencia NO se marca como pase. Adjunta capturas en `docs/11-device-qualification/evidence/`.
 
 ## Dispositivos

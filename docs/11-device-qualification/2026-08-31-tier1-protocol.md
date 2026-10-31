@@ -1,5 +1,15 @@
 # Protocolo de Calificación Física Tier 1 · V0.1
 
+> **HISTÓRICO; NO EJECUTAR.** Este registro de agosto conserva instrucciones y
+> supuestos supersedidos; no es el procedimiento operativo vigente ni prueba
+> física actual. No seguir sus credenciales, limpieza de volúmenes, flags,
+> reinstalación ni presión de disco. Usar el
+> [protocolo seguro](2026-10-31-safe-tier1-protocol.md) y la
+> [plantilla vigente](2026-10-31-safe-tier1-results.md). El contenido inferior se
+> conserva como evidencia histórica; sus casillas no cierran los gates actuales.
+> La contraseña de fixture citada anteriormente se ha retirado de este documento;
+> no reutilizarla ni tratarla como acceso a una instalación.
+
 > Ejecutable por el operador con dos dispositivos: **este equipo Windows** (navegador Chromium) y una **tablet Android**. Cada paso define qué hacer, qué evidencia capturar y el criterio de pase. Registra todo en `2026-08-31-tier1-results.md` (plantilla adjunta) y archiva las capturas en `docs/11-device-qualification/evidence/`.
 
 ## 0. Preparación del host (una vez, en el PC Windows)
@@ -16,7 +26,7 @@ pnpm --filter @ocwp/web exec vite preview --host 127.0.0.1 --port 5173
 ```
 
 - URL de la app: `http://127.0.0.1:5173` (mismo origen; el preview proxya `/api` al backend 8000).
-- Credenciales sembradas por el smoke anterior: organización `01a0560c-2f58-7a84-b52d-e3f3c13b4710` · usuario `admin` · contraseña `compose-smoke-password-1234`. Si prefieres un ambiente limpio: `docker compose ... down -v` y `ocwpctl bootstrap admin` de nuevo.
+- Credenciales sembradas por el smoke anterior: organización `01a0560c-2f58-7a84-b52d-e3f3c13b4710` · usuario `admin` · contraseña **[valor histórico de fixture retirado; no usar como credencial de acceso]**. Si prefieres un ambiente limpio: `docker compose ... down -v` y `ocwpctl bootstrap admin` de nuevo.
 - **localhost es contexto seguro** → Service Worker e instalación PWA funcionan sin HTTPS.
 
 ## 1. Windows Tier 1 (navegador Chromium de escritorio)

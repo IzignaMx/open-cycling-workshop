@@ -1,5 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-10-31 · Protocolo físico seguro, ejecución pendiente
+
+- [ ] Ejecutar únicamente el [protocolo seguro](docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md)
+      cuando sus precondiciones y autorizaciones del operador estén satisfechas.
+      Registrar T1–T8 por dispositivo en la [plantilla vigente](docs/11-device-qualification/2026-10-31-safe-tier1-results.md).
+- No cierra R01-T035: el spike de 100,000 registros, almacenamiento físico,
+  conflicto, reinstalación, presión, recuperación y accesibilidad integral
+  mantienen gates separados. Ninguna prueba física fue ejecutada por este cambio.
+- Los documentos de agosto quedan históricos; no copiar credenciales, borrar
+  volúmenes/IndexedDB, desactivar protecciones ni llenar discos. La preparación
+  de runtime/certificados/permisos requiere su propio alcance autorizado.
+- [ ] Validar el candidato exacto y el main posterior en CI. Los resultados
+      anteriores pertenecen a sus fuentes; no califican esta nueva documentación.
+- Recuperación: el paquete local de 30 de octubre no estaba disponible tras el
+  reinicio. Esta reconstrucción del mismo alcance tiene nuevos bytes y pruebas;
+  no se presenta como el commit anterior. Véase el [plan](docs/superpowers/plans/2026-10-31-safe-physical-acceptance.md).
+
 ## 2026-10-30 · Microfixture cleanup blocker after PR75
 
 - PR75 merged as `7c69071a`, tree `eb7e7d01`, after candidate CI41007988890
@@ -1167,15 +1184,17 @@ is claimed.
 
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-> **RESUMEN EJECUTIVO DE ACCIONES MANUALES PENDIENTES (2026-09-01).** Todo lo automatizable está probado y en verde (V0.1 completo salvo físico; V0.2 Increment 1 completo; Increment 2 en curso). Lo único que avanza este proyecto ahora requiere manos humanas, en este orden de prioridad:
+> **Resumen histórico de septiembre; no es un estado vigente de release.**
+> No todos los gates están cerrados y lo físico no es el único bloqueador.
 
-## 1 · Cerrar V0.1 — Calificación física Tier 1 (ÚNICO bloqueador de release)
+## 1 · Calificación física Tier 1 (pendiente, no cierre automático de release)
 
-- **Ejecutar el protocolo** `docs/11-device-qualification/2026-08-31-tier1-protocol.md`:
-  - **Windows (este equipo)**: pasos W1–W8 (~20 min): login → instalar PWA → offline create → reload offline → reconexión exactly-once (verificar `count(*) = 1` en PG) → conflicto → teclado → reinstalación.
-  - **Android tablet**: pasos A1–A7 (~25 min) con **Opción A recomendada** (`adb reverse tcp:5173 tcp:5173` mantiene localhost como contexto seguro) o B (flag de origen seguro + `docker-compose.tier1.yml`).
-- **Registrar evidencia** en `docs/11-device-qualification/2026-08-31-tier1-results.md` + capturas en `evidence/`.
-- Al entregar resultados: se cierra R01-T035, V0.1 se declara calificado y se archiva el checkpoint de release.
+- Seguir el [protocolo seguro actual](docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md)
+  y registrar resultados reales en la [plantilla actual](docs/11-device-qualification/2026-10-31-safe-tier1-results.md).
+- No ejecutar W1–W8/A1–A7 de agosto. Sus supuestos de credenciales, conectividad,
+  reinstalación y presión han sido retirados como instrucciones operativas.
+- No cierra R01-T035 automáticamente: requiere su propia evidencia 100,000 y
+  baseline física además de los demás gates de recuperación y aceptación.
 
 ## 2 · Revisiones manuales de accesibilidad (P1, cierran gates de V0.1)
 
@@ -1186,7 +1205,7 @@ is claimed.
 
 ## 3 · Observación de almacenamiento (P0 pendiente parcial)
 
-- Presión de cuota IndexedDB (protocolo A6) y **decisión sobre `navigator.storage.persist()`** — hallazgo recurrente; si el desalojo ocurre, abre issue y lo implementamos.
+- Presión de cuota/evicción sigue pendiente con plan separado, límites y recuperación. No ejecutar el antiguo A6 ni llenar discos; revisar el comportamiento actual antes de decidir cambios de persistencia.
 
 ## 4 · Gobernanza (cuando aplique)
 
@@ -1320,7 +1339,7 @@ is claimed.
 
 ## P0 · Tier 1 physical device qualification
 
-> **Protocolo operativo listo (2026-08-31):** ejecuta `docs/11-device-qualification/2026-08-31-tier1-protocol.md` (Windows en este equipo + tablet Android con las dos opciones de conectividad) y registra la evidencia en `docs/11-device-qualification/2026-08-31-tier1-results.md`. Para la opción sin cable usa `infra/compose/docker-compose.tier1.yml`.
+> **Protocolo seguro vigente:** usar `docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md` y `docs/11-device-qualification/2026-10-31-safe-tier1-results.md`. Los gates listados abajo siguen pendientes; conflicto, reinstalación y presión no se ejecutan mediante el ensayo básico T1–T8.
 
 - [ ] **Windows Tier 1 test.**
   - Supported Chromium-based browser.
