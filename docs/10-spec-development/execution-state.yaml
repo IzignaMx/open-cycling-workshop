@@ -2260,10 +2260,18 @@ v02_increment_1_evidence:
   suite_counts: core_43_e2e_7_python_165
 
 tier1_protocol:
-  document: docs/11-device-qualification/2026-08-31-tier1-protocol.md
-  results_template: docs/11-device-qualification/2026-08-31-tier1-results.md
-  lan_override: infra/compose/docker-compose.tier1.yml
-  status: awaiting_operator_execution
+  document: docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md
+  results_template: docs/11-device-qualification/2026-10-31-safe-tier1-results.md
+  status: safe_documentation_prepared_hosted_validation_pending
+  physical_execution: not_performed
+  T1_T8: pending_on_both_physical_devices
+  R01_T035: open_requires_separate_100k_and_device_evidence
+  conflict_reinstall_pressure_recovery: separate_plan_and_authorization_required
+  historical_protocol: docs/11-device-qualification/2026-08-31-tier1-protocol.md
+  historical_results: docs/11-device-qualification/2026-08-31-tier1-results.md
+  recovery: original_local_bytes_unavailable_same_scope_reconstructed_new_evidence_required
+  plan: docs/superpowers/plans/2026-10-31-safe-physical-acceptance.md
+  runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
   - preserve PR58 source-bound qualification and independently review the final integration candidate before any separately authorized merge
