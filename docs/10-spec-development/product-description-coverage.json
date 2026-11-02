@@ -101,13 +101,14 @@
         "ARCHITECTURE.md",
         "packages/plugin-sdk",
         "scripts/plugins/validate_manifest.py",
-        "docs/08-open-source/2026-10-27-module-descriptor-m0.md"
+        "docs/08-open-source/2026-10-27-module-descriptor-m0.md",
+        "docs/10-spec-development/2026-11-02-official-module-reference.md"
       ],
       "acceptance": [
         "Reject malformed/incompatible descriptors without installing code, widening grants or joining sync.",
         "Reference module disable/error leaves capture intact; external connector requires revocable identity, isolation, lifecycle and source-bound compatibility evidence."
       ],
-      "remaining": "M0 descriptor verified historically; runtime SDK, installer, external connector identity and public delivery are not implemented."
+      "remaining": "M0 descriptor verified historically; M1 host-only static metadata reference is in progress, not operational offline support. SDK, installer, external connector identity, public delivery and full compatibility qualification remain unimplemented or unqualified."
     },
     {
       "id": "white_label",

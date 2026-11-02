@@ -46,6 +46,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.inventory-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
+    'tests/module-information/reference.test.mjs',
     'tests/access-kernel/context.test.mjs',
     'tests/access-kernel/cutover-context.test.mjs',
     'tests/access-kernel/server-context.test.mjs',

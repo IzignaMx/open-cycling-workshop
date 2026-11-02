@@ -1,0 +1,26 @@
+.module-information summary {
+  min-height: 44px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: inherit;
+  border: 1px solid var(--ocwp-color-control-border, currentColor);
+  border-radius: var(--ocwp-radius-sm, 6px);
+  overflow-wrap: anywhere;
+}
+.module-information summary:focus-visible {
+  outline: 3px solid var(--ocwp-color-focus, Highlight);
+  outline-offset: 3px;
+}
+.module-information dd {
+  margin-inline-start: 0;
+  overflow-wrap: anywhere;
+}
+.module-information dt {
+  font-weight: 700;
+}
+.module-information dl > div {
+  margin-block: 12px;
+}
+[data-density='workshop'] .module-information summary {
+  min-height: 56px;
+}

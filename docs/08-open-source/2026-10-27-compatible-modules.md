@@ -2,6 +2,21 @@
 
 Baseline reviewed: `a960bddb94189c6c74c7f3d0a72472636c3caced`. This is a recommendation for spec-development, not a runtime certification, deployment, grant, or installed extension. All source references below are relative to https://github.com/IzignaMx/open-cycling-workshop/tree/a960bdd.
 
+## M1 host-only metadata clarification · 2026-11-02
+
+M0 is already source-qualified in its data-only scope (PR64); the dated
+"next M0" selection below is historical. Its fixed source target and schema are
+not requalified or changed by M1. Current bounded work is the
+[official reference](../10-spec-development/2026-11-02-official-module-reference.md).
+
+The first reference may display public build-time metadata while offline: this
+is not operational offline support. Its declared operational mode stays online-only;
+no data read/write, network action, sync enrollment or authority is introduced.
+This clarifies the inert module-information alternative below, not an exception
+allowing offline connector operations. Empty permissions describe only this
+reference, not the host's permissions or a sandbox guarantee. SDK/compatibility
+qualification remains incomplete; no M0 history or future task is marked complete.
+
 ## Executive finding
 
 OCW is a modular application with explicit composition, **not an implemented extensible plugin platform**. Safest and cheapest path: formalize reviewed build-time official modules first; independently qualify external process/API connectors later. Do not add a dynamic Python loader, npm remote modules, arbitrary JS, marketplace installer, or database plugin hooks now. Capability requests and manifest validation must never confer authority.
