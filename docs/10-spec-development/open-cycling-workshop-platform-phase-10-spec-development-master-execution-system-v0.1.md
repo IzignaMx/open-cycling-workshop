@@ -293,8 +293,8 @@ Servidor remoto para multisucursal, acceso remoto, portal público y servicios a
 | E24  | Data Portability & Migration       | imports, exports, migration tooling y reconciliation           |
 | E25  | Commercial Implementation          | discovery, demo, templates, supportability y pilot             |
 | E26  | Release & Continuous Improvement   | qualification, release, governance y post release              |
-| E27 | Scheduling | citas, recursos, disponibilidad y conflictos explícitos |
-| E28 | Staff Operations | perfiles, asignación, disponibilidad y carga sin nómina |
+| E27  | Scheduling                         | citas, recursos, disponibilidad y conflictos explícitos        |
+| E28  | Staff Operations                   | perfiles, asignación, disponibilidad y carga sin nómina        |
 
 ## 14. Dependency Map
 
@@ -998,37 +998,37 @@ Las tareas siguientes representan el orden inicial de implementación. El agente
 
 ### V0.2 · Workshop Core
 
-| ID       | Epic | Tarea                                                                                     | Depends  | Evidence mínima              |
-| -------- | ---- | ----------------------------------------------------------------------------------------- | -------- | ---------------------------- |
-| R02-T001 | E05  | Completar CRUD y búsqueda de Customers con contacto y preferencias                        | V0.1     | FR customer suite            |
-| R02-T002 | E06  | Modelar Bicycle con propietario, serial, atributos y custom fields                        | R02-T001 | Domain + migration tests     |
-| R02-T003 | E06  | Implementar Bicycle Passport e historial técnico                                          | R02-T002 | Passport E2E                 |
-| R02-T004 | E07  | Implementar ServiceOrder aggregate y state machine canónica                               | R02-T002 | State property tests         |
-| R02-T005 | E07  | Implementar intake rápido con problema reportado y prioridad                              | R02-T004 | Reception E2E                |
-| R02-T006 | E08  | Integrar fotografías de recepción offline first                                           | R02-T005 | Offline attachment test      |
-| R02-T007 | E07  | Implementar inspection y diagnosis                                                        | R02-T004 | Workflow tests               |
-| R02-T008 | E07  | Implementar estimate con mano de obra, partes y totales                                   | R02-T007 | Calculation/property tests   |
-| R02-T009 | E07  | Implementar authorization auditada con approve/reject                                     | R02-T008 | Auth + audit E2E             |
-| R02-T010 | E07  | Implementar task list de reparación y asignación de mecánico                              | R02-T009 | Workshop flow                |
-| R02-T011 | E07  | Implementar estados WAITING_FOR_PARTS, ON_HOLD, REWORK y CANCELLED                        | R02-T004 | State machine negative tests |
-| R02-T012 | E07  | Implementar Quality Control checklist y pass/fail                                         | R02-T010 | QC E2E                       |
-| R02-T013 | E07  | Implementar timeline append only de eventos relevantes                                    | R02-T004 | Audit invariant              |
-| R02-T014 | E20  | Implementar Reception fast path con objetivo de menos de 60s para cliente/bici existentes | R02-T005 | Usability timing             |
-| R02-T015 | E20  | Implementar Workshop Mode táctil con targets 56x56 en acciones principales                | R02-T010 | Tablet a11y pass             |
-| R02-T016 | E20  | Implementar Kanban de órdenes por estado                                                  | R02-T004 | UI integration               |
-| R02-T017 | E03  | Definir merge policies de Customer, Bicycle y ServiceOrder                                | R02-T013 | Conflict suite               |
-| R02-T018 | E03  | Probar ServiceOrder con dos dispositivos offline y reconexión                             | R02-T017 | Multi-device convergence     |
-| R02-T019 | E19  | Generar comprobante/orden imprimible básico                                               | R02-T008 | Print visual test            |
-| R02-T020 | E19  | Generar QR interno de orden y bicicleta                                                   | R02-T003 | QR scan test                 |
-| R02-T021 | E21  | Aplicar audit logging a transiciones administrativas                                      | R02-T004 | Audit security test          |
-| R02-T022 | E22  | Crear golden journey recepción→diagnóstico→autorización→reparación→QC→entrega             | R02-T012 | Playwright online/offline    |
-| R02-T023 | E22  | Ejecutar UAT workshop core con fixture demo-workshop                                      | R02-T022 | UAT evidence                 |
-| R02-T024 | E28 | Modelar perfiles de personal separados de IAM, scopes y desactivación histórica | R01-T029,R02-T010 | FR-STF-001/003/005; negative auth + history tests |
-| R02-T025 | E28 | Implementar disponibilidad, excepciones y carga con estimaciones explícitas | R02-T024 | FR-STF-002/004; timezone, inactive staff and workload fixtures |
-| R02-T026 | E27 | Implementar citas y ocupación atómica de recursos con cancelación/override auditado | R02-T025 | FR-SCH-001/002/003; concurrent overlap, DST, idempotency tests |
-| R02-T027 | E03 | Diseñar/admitir agenda offline provisional y reconciliación sin doble reserva | R02-T026,R02-T017 | FR-SCH-004; ADR, migration/reload/two-device conflict evidence |
-| R02-T028 | E27 | Vistas accesibles de agenda/lista y enlace de cita a orden sin duplicados | R02-T027,R02-T005 | FR-SCH-005/006; keyboard, scope and appointment-order E2E |
-| R02-T029 | E22 | Calificar agenda/personal dentro del golden journey de taller | R02-T028,R02-T023 | Workshop-only FR-SCH/FR-STF; offline, privacy, accessibility and recovery proof |
+| ID       | Epic | Tarea                                                                                     | Depends           | Evidence mínima                                                                 |
+| -------- | ---- | ----------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
+| R02-T001 | E05  | Completar CRUD y búsqueda de Customers con contacto y preferencias                        | V0.1              | FR customer suite                                                               |
+| R02-T002 | E06  | Modelar Bicycle con propietario, serial, atributos y custom fields                        | R02-T001          | Domain + migration tests                                                        |
+| R02-T003 | E06  | Implementar Bicycle Passport e historial técnico                                          | R02-T002          | Passport E2E                                                                    |
+| R02-T004 | E07  | Implementar ServiceOrder aggregate y state machine canónica                               | R02-T002          | State property tests                                                            |
+| R02-T005 | E07  | Implementar intake rápido con problema reportado y prioridad                              | R02-T004          | Reception E2E                                                                   |
+| R02-T006 | E08  | Integrar fotografías de recepción offline first                                           | R02-T005          | Offline attachment test                                                         |
+| R02-T007 | E07  | Implementar inspection y diagnosis                                                        | R02-T004          | Workflow tests                                                                  |
+| R02-T008 | E07  | Implementar estimate con mano de obra, partes y totales                                   | R02-T007          | Calculation/property tests                                                      |
+| R02-T009 | E07  | Implementar authorization auditada con approve/reject                                     | R02-T008          | Auth + audit E2E                                                                |
+| R02-T010 | E07  | Implementar task list de reparación y asignación de mecánico                              | R02-T009          | Workshop flow                                                                   |
+| R02-T011 | E07  | Implementar estados WAITING_FOR_PARTS, ON_HOLD, REWORK y CANCELLED                        | R02-T004          | State machine negative tests                                                    |
+| R02-T012 | E07  | Implementar Quality Control checklist y pass/fail                                         | R02-T010          | QC E2E                                                                          |
+| R02-T013 | E07  | Implementar timeline append only de eventos relevantes                                    | R02-T004          | Audit invariant                                                                 |
+| R02-T014 | E20  | Implementar Reception fast path con objetivo de menos de 60s para cliente/bici existentes | R02-T005          | Usability timing                                                                |
+| R02-T015 | E20  | Implementar Workshop Mode táctil con targets 56x56 en acciones principales                | R02-T010          | Tablet a11y pass                                                                |
+| R02-T016 | E20  | Implementar Kanban de órdenes por estado                                                  | R02-T004          | UI integration                                                                  |
+| R02-T017 | E03  | Definir merge policies de Customer, Bicycle y ServiceOrder                                | R02-T013          | Conflict suite                                                                  |
+| R02-T018 | E03  | Probar ServiceOrder con dos dispositivos offline y reconexión                             | R02-T017          | Multi-device convergence                                                        |
+| R02-T019 | E19  | Generar comprobante/orden imprimible básico                                               | R02-T008          | Print visual test                                                               |
+| R02-T020 | E19  | Generar QR interno de orden y bicicleta                                                   | R02-T003          | QR scan test                                                                    |
+| R02-T021 | E21  | Aplicar audit logging a transiciones administrativas                                      | R02-T004          | Audit security test                                                             |
+| R02-T022 | E22  | Crear golden journey recepción→diagnóstico→autorización→reparación→QC→entrega             | R02-T012          | Playwright online/offline                                                       |
+| R02-T023 | E22  | Ejecutar UAT workshop core con fixture demo-workshop                                      | R02-T022          | UAT evidence                                                                    |
+| R02-T024 | E28  | Modelar perfiles de personal separados de IAM, scopes y desactivación histórica           | R01-T029,R02-T010 | FR-STF-001/003/005; negative auth + history tests                               |
+| R02-T025 | E28  | Implementar disponibilidad, excepciones y carga con estimaciones explícitas               | R02-T024          | FR-STF-002/004; timezone, inactive staff and workload fixtures                  |
+| R02-T026 | E27  | Implementar citas y ocupación atómica de recursos con cancelación/override auditado       | R02-T025          | FR-SCH-001/002/003; concurrent overlap, DST, idempotency tests                  |
+| R02-T027 | E03  | Diseñar/admitir agenda offline provisional y reconciliación sin doble reserva             | R02-T026,R02-T017 | FR-SCH-004; ADR, migration/reload/two-device conflict evidence                  |
+| R02-T028 | E27  | Vistas accesibles de agenda/lista y enlace de cita a orden sin duplicados                 | R02-T027,R02-T005 | FR-SCH-005/006; keyboard, scope and appointment-order E2E                       |
+| R02-T029 | E22  | Calificar agenda/personal dentro del golden journey de taller                             | R02-T028,R02-T023 | Workshop-only FR-SCH/FR-STF; offline, privacy, accessibility and recovery proof |
 
 The six additive tasks above are planned and extend V0.2 acceptance; they do not
 advance the active release or declare V0.1 ready. V0.2 qualification now also

@@ -2,7 +2,6 @@
 
 > Additive coverage update: [2026-11-02 product-description supplement](2026-11-02-product-description-supplement.md) defines agenda, staff, metrics, document and business-profile acceptance. Existing IDs and accepted ADR precedence remain intact.
 
-
 ## Objetivo
 
 Convertir la visión aprobada en requisitos verificables y trazables antes de ADRs, threat modeling, UX, repositorio y QA.
