@@ -1,7 +1,26 @@
 schema: 1
 
+current_checkpoint: documentation_reconciliation_20261101
+documentation_reconciliation_20261101:
+  status: partial
+  scope: current_navigation_and_bounded_traceability_not_release_acceptance
+  reconstruction: second_environment_replacement_Nov2_original_bytes_unavailable_fresh_evidence_required
+  accepted_baseline: cdb44aac572df65489fb95a15c0a813cd5445d95
+  accepted_tree: abff5e9e9bd75fe17e5ece00327c63ba0a9485c8
+  retained_receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/77
+  retained_main_ci: 41225378078
+  evidence_provenance: prior_independent_acceptance_record_not_artifacts_redownloaded
+  new_source_qualification: pending_exact_candidate_and_postmerge_evidence
+  physical_T1_T8: pending_both_devices
+  R01_T035: blocked_physical_storage_and_device_evidence
+  historical_cleanup_41011497919: UNKNOWN
+  ownership_40927223929: spent_no_replay
+  pages_source: 3c6513d685fe659816bd3ddb47dab91003d3a787
+  evidence: docs/10-spec-development/2026-11-01-documentation-reconciliation.md
+
 micro_owned_cleanup_20261030:
-  status: PR76_first_hosted_micro_failed_entrypoint_import_corrective_validation_pending
+  superseded_source_receipt: documentation_reconciliation_20261101
+  historical_status: PR76_first_hosted_micro_failed_entrypoint_import_corrective_validation_pending
   first_candidate_head: eb2baffb94658d07845b817b27d7ea5cee4f04fc
   first_candidate_ci: 41018864754
   first_candidate_micro: 41018864858
@@ -2014,14 +2033,17 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
-branch: codex/quote-service-clean-integration
+active_plan: docs/superpowers/plans/2026-11-01-documentation-reconciliation.md
+historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
+historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
+last_checkpoint: documentation_reconciliation_20261101
+historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
 
 locally_verified_tasks:
   - R01-T001
+  - R01-T002
   - R01-T003
   - R01-T004
   - R01-T005
@@ -2066,7 +2088,9 @@ known_environment_constraints:
   - native_windows_postgresql_listening_on_5433
   - qualification_database_mapped_to_host_port_5434
 
+# Historical bootstrap evidence; current source receipt is linked above.
 verification:
+  historical_scope: bootstrap_not_current_candidate
   python_tests: 99_passed_0_skipped_with_local_postgresql_18_4_ocwp_test_database_url
   postgresql_integration: passed_local_docker_postgres_18_4_alembic_0001_to_head_empty_database
   runtime_http_smoke: passed_real_uvicorn_sqlite_surrogate_with_persisted_login_and_readiness
@@ -2083,7 +2107,7 @@ verification:
   pnpm_frozen_install: passed_from_committed_pnpm_lock_yaml
   uv_frozen_install: passed_from_committed_uv_lock
   browser_e2e: passed_both_local_and_hosted_production_pwa_preview_service_worker_offline_reload_reconnect_and_two_browser_convergence_with_axe_zero_critical_serious
-  indexeddb_device_qualification: blocked_pending_100k_benchmark_and_android_windows_physical_devices
+  indexeddb_device_qualification: historical_pending_at_bootstrap_see_blocked_tasks_for_current_scope
 
 backup_fallback_drill_2026_08_31:
   result: pass
@@ -2235,21 +2259,23 @@ verification_policy:
 v02_plan:
   document: docs/superpowers/plans/2026-08-31-v0.2-workshop-core.md
   scope: bicycles_basic_plus_service_orders_state_machine_tasks_timeline
-  status: in_execution
+  status: historical_increment_completed_not_release_qualification
+  identifier_scope: plan_local_canonical_completion_not_implied
   completed_tasks:
-    R02-T001: bicycles_domain_and_repository_pr_8
-    R02-T002: order_state_machine_and_timeline_events_pr_9
-    R02-T003: migration_0005_workshop_core_tables_pr_10
-    R02-T004: sync_fanout_bicycles_and_service_orders_pr_11
-    R02-T005: rest_api_and_regenerated_contracts_pr_12
-    R02-T006: change_feed_coverage_and_scope_isolation_pr_13
-    R02-T007: dexie_schema_v3_and_local_repositories_pr_15
-    R02-T008: order_intake_ui_pr_17
-    R02-T009: order_board_with_state_actions_pr_17
-    R02-T010: offline_order_lifecycle_e2e_pr_17
+    W02-I1-T001: bicycles_domain_and_repository_pr_8
+    W02-I1-T002: order_state_machine_and_timeline_events_pr_9
+    W02-I1-T003: migration_0005_workshop_core_tables_pr_10
+    W02-I1-T004: sync_fanout_bicycles_and_service_orders_pr_11
+    W02-I1-T005: rest_api_and_regenerated_contracts_pr_12
+    W02-I1-T006: change_feed_coverage_and_scope_isolation_pr_13
+    W02-I1-T007: dexie_schema_v3_and_local_repositories_pr_15
+    W02-I1-T008: order_intake_ui_pr_17
+    W02-I1-T009: order_board_with_state_actions_pr_17
+    W02-I1-T010: offline_order_lifecycle_e2e_pr_17
   adr_notes:
     invalid_order_transition: permanent_sync_conflict_not_retriable_surfaces_in_conflict_center
-  next: v0.2_increment_1_complete_plan_v0.2_budgets_inventory_follow_up
+  historical_next: v0.2_increment_1_complete_plan_v0.2_budgets_inventory_follow_up
+  canonical_mapping: docs/10-spec-development/traceability.csv
   note: V0.1 physical gates (R01-T035) run in parallel as manual work per the Tier 1 protocol; V0.2 implementation must not weaken any V0.1 gate.
 
 v02_increment_1_evidence:
@@ -2262,7 +2288,8 @@ v02_increment_1_evidence:
 tier1_protocol:
   document: docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md
   results_template: docs/11-device-qualification/2026-10-31-safe-tier1-results.md
-  status: safe_documentation_prepared_hosted_validation_pending
+  status: documentation_qualified_PR77_physical_execution_pending
+  source_receipt: documentation_reconciliation_20261101
   physical_execution: not_performed
   T1_T8: pending_on_both_physical_devices
   R01_T035: open_requires_separate_100k_and_device_evidence
@@ -2274,10 +2301,10 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - preserve PR58 source-bound qualification and independently review the final integration candidate before any separately authorized merge
+  - preserve accepted PR77 baseline and independently qualify each changed candidate before authorized integration
   - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
   - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
-  - complete quote full-history pre-reopen validation and installation inventory before activation
+  - preserve PR59 source-qualified full-history validation and complete actual-installation inventory and recovery acceptance before activation
   - obtain a separately reviewed authorized capacity and latency plan without repeating consumed PR51 or PR56 trials
   - keep quote API UI offline drafts and operator adoption closed until their own ingress authority recovery and acceptance gates pass
   - retain active V0.1 partial status until physical and operational acceptance is evidenced
