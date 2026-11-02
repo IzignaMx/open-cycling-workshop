@@ -65,6 +65,7 @@ try {
     'tests/access-kernel/push-runtime.test.mjs',
     'tests/runtime/controller.test.mjs',
     'tests/runtime/capture-feedback.test.mjs',
+    'tests/runtime/capture-draft-receipts.test.mjs',
     'tests/runtime/order-transition-feedback.test.mjs',
     'tests/runtime/transition-protection.test.mjs',
     'tests/runtime/account-access.test.mjs',

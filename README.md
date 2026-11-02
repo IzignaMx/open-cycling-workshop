@@ -12,9 +12,9 @@ monolith, explicit permissions and vendor-neutral infrastructure.
 
 > **Development candidate — not a production release.** Automated source-bound
 > qualification exists; physical Windows/Android acceptance, manual reviews and
-> real installation gates remain open. GitHub Pages presentation sources are
-> prepared in [`docs/site`](docs/site); publication is separately gated. There is
-> no live workshop deployment implied by this repository or its screenshots.
+> real installation gates remain open. The static GitHub Pages presentation was published from
+> source `3c6513d`; it is not an operational workshop deployment. Later repository
+> changes do not imply a redeployment. See the [current checkpoint](docs/10-spec-development/2026-11-01-documentation-reconciliation.md).
 
 ## See the real application
 
@@ -24,8 +24,8 @@ monolith, explicit permissions and vendor-neutral infrastructure.
 Chromium on **2026-10-27**, source
 [`a960bdd`](https://github.com/IzignaMx/open-cycling-workshop/tree/a960bddb94189c6c74c7f3d0a72472636c3caced),
 [CI run 40571345621](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/40571345621).
-These captures match the application source at this documentation increment;
-later runtime changes must refresh or label them historical. They do not prove
+**Historical captures:** later application changes are not depicted here.
+These images remain evidence only for their named source, not the current runtime. They do not prove
 physical-device acceptance or production readiness. Original PNGs, dimensions,
 fixture/test identity and SHA-256 are recorded in the
 [capture manifest](docs/site/screenshots.json).

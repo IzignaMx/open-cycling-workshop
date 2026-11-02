@@ -1,6 +1,38 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-01 · Borradores recientes y recibos de capturas anteriores
+
+- [x] Proteger las ediciones de formularios montados frente a un recibo exitoso
+      anterior; RED/GREEN fresco y revisión independiente. Véase el
+      [registro de alcance y evidencia](docs/10-spec-development/2026-11-01-capture-draft-receipts.md).
+- [ ] Calificar el candidato exacto mediante controles hosted y navegador PWA;
+      cuatro casos recopilados localmente no equivalen a ejecución.
+- [ ] Verificar fresh main tras la integración condicionada a todos los gates.
+- Segunda reconstrucción del mismo alcance el 2 de noviembre tras pérdida del
+  candidato local; no se heredan sus hashes ni resultados. No hay garantía de
+  borradores durables al recargar, navegar o desmontar por reconexión.
+- Sin despliegue, cambios de permisos ni pruebas físicas. T1–T8/R01-T035,
+  recuperación/capacidad y cleanup histórico UNKNOWN permanecen pendientes.
+
+## 2026-11-02 · Reconstructed current checkpoint; physical gates remain open
+
+- [x] Reconcile retained PR77 candidate and fresh-main acceptance for `cdb44aac`:
+      [source-bound record](docs/10-spec-development/2026-11-01-documentation-reconciliation.md). This records prior independent acceptance,
+      not new artifact validation or qualification of subsequent edits.
+- [ ] Qualify the reconstructed documentation/capture candidate and any later main.
+      Second environment replacement lost the November1 candidate and logs;
+      no byte identity or prior local-pass inheritance is claimed.
+- [ ] T1–T8 on both physical devices and R01-T035 remain pending/blocked.
+      Keep installation, storage, recovery, accessibility and capacity gates separate.
+- PR76 corrective source has later accepted baseline evidence; earlier failures
+  remain below. Historical cleanup41011497919 remains UNKNOWN. Ownership
+  measurement40927223929 stays spent. Pages source3c6513d is not redeployed.
+
 ## 2026-10-31 · Protocolo físico seguro, ejecución pendiente
+
+Historical checkpoint — superseded for source qualification by the current
+record above; physical execution remains pending. Unchecked publication items
+below preserve the original checkpoint, not a request to replay its workflows.
 
 - [ ] Ejecutar únicamente el [protocolo seguro](docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md)
       cuando sus precondiciones y autorizaciones del operador estén satisfechas.
@@ -18,6 +50,9 @@
   no se presenta como el commit anterior. Véase el [plan](docs/superpowers/plans/2026-10-31-safe-physical-acceptance.md).
 
 ## 2026-10-30 · Microfixture cleanup blocker after PR75
+
+Historical checkpoint — superseded for source qualification by the current
+PR77 baseline receipt above. Failed runs and historical UNKNOWN are unchanged.
 
 - PR75 merged as `7c69071a`, tree `eb7e7d01`, after candidate CI41007988890
   passed Python5,499/58 expected skips, core1,021, aggregate27/27 and direct101/
@@ -55,6 +90,10 @@
   resources were historically cleaned by a later source correction.
 
 ## 2026-10-30 · Transition visit protection (local, hosted pending)
+
+Historical checkpoint — superseded for source qualification by the accepted
+PR75 candidate receipt above and later PR77 baseline. Preserve original local
+failures and limited browser-proof boundaries below.
 
 - [x] Complete independent final review of the [transition-only design](docs/superpowers/specs/2026-10-30-transition-visit-protection-design.md)
       and [TDD plan](docs/superpowers/plans/2026-10-30-transition-visit-protection.md).
