@@ -1,6 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-11-02 · Capture visit continuity: new local increment, not published
+## 2026-11-02 · Product-description planning coverage
+
+- [ ] Qualify this documentation/test candidate separately; no runtime module
+      completion follows from a complete planning matrix.
+- [ ] Continue existing source integrity work and separately record physical
+      T1–T8/R01-T035, installation/recovery/accessibility/capacity evidence.
+- The [coverage and sequencing record](docs/10-spec-development/2026-11-02-product-description-alignment.md) identifies planned
+  agenda/staff tasks and concrete metric/document/profile acceptance.
+  PR79 remains separate; no deployment, financial sync replay or new grants.
+
+## 2026-11-02 · Capture visit continuity: historical local checkpoint
+
+The source-authored pending items below are superseded for candidate publication
+and merge by the [PR79 receipt](https://github.com/IzignaMx/open-cycling-workshop/pull/79).
+Merged main is `7cf38e17e1981607287b0d5a41abedeead3bcf5e`; fresh-main qualification
+is still pending separately. Original local results remain historical, not new
+archive verification or requests to replay accepted candidate workflows.
 
 - [x] Reconcile PR78 fresh-main source acceptance for `b88c4eee` using the
       coordinator's retained independent acceptance receipt, not new archive review.

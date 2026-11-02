@@ -2,6 +2,10 @@ schema: 1
 
 current_checkpoint: capture_visit_continuity_20261102
 capture_visit_continuity_20261102:
+  source_authored_pending_fields: historical_candidate_fields_superseded_by_PR79_receipt
+  current_source_receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/79
+  merged_main: 7cf38e17e1981607287b0d5a41abedeead3bcf5e
+  fresh_main: pending_separate_exact_source_qualification
   status: implemented_pending_evidence
   frontend_local: 1119_passed_zero_skips
   python_local: 4946_passed_671_skipped_12_warnings
@@ -36,6 +40,23 @@ pr78_source_acceptance_20261102:
   attempts: all_accepted_attempt1
   scope: prior_mounted_capture_and_documentation_source_not_new_visit_package
   physical_release_installation_and_capacity: not_qualified
+
+product_description_alignment_20261102:
+  status: locally_verified_planning_candidate
+  scope: planning_coverage_not_runtime_or_release_completion
+  baseline_main: 7cf38e17e1981607287b0d5a41abedeead3bcf5e
+  record: docs/10-spec-development/2026-11-02-product-description-alignment.md
+  matrix: docs/10-spec-development/product-description-coverage.json
+  claims: 20
+  added_requirements: 24
+  added_tasks: R02-T024_through_R02-T029
+  runtime_implementation: unchanged
+  PR79: merged_candidate_qualified_fresh_main_pending
+  R01_T035: blocked
+  historical_cleanup_41011497919: UNKNOWN
+  measurement_40927223929: SPENT_no_replay
+  evidence: repository_144_passed_including_5_new_contracts_reconciliation_review_accepted
+  publication: pending_separate_authorization_and_hosted_qualification
 
 documentation_reconciliation_20261101:
   historical_checkpoint: source_authored_pending_fields_superseded_by_PR78_receipt

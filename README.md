@@ -38,6 +38,13 @@ fixture/test identity and SHA-256 are recorded in the
 Four visual themes share the same operational rules. Browser viewport evidence
 is not a physical tablet or phone qualification.
 
+## Product scope and development coverage
+
+The repository description states the full product destination, not current
+feature availability. See the [20-claim coverage matrix and phased plan](docs/10-spec-development/2026-11-02-product-description-alignment.md)
+for requirements, acceptance criteria and remaining work, including agenda,
+staff operations, retail-only profiles and operational metrics.
+
 ## What is available — and what is not
 
 | Area       | Current implemented source                                                                    | Important boundary                                                                                                    |

@@ -57,11 +57,11 @@ every browser's local journal. Never discard local data as a repair shortcut.
 flowchart LR
     O[Official reviewed module] -->|Explicit build-time composition| CORE[Core application]
     X[External isolated connector\nFuture service identity] -.->|Supported scoped API only| CORE
-    M[Data-only manifest\nPlanned M0 validation] -.-> REVIEW[Compatibility review\nNot authorization or install]
+    M[Data-only manifest\nImplemented M0 validation] -.-> REVIEW[Compatibility review\nNot authorization or install]
 ```
 
-Solid official composition exists as source imports. Dashed connector/manifest
-paths are **planned contracts**, not a runtime SDK. Official modules are trusted
+Solid official composition exists as source imports. The M0 descriptor is implemented and historically qualified as inert data;
+dashed connector paths remain **planned contracts**, not a runtime SDK. Official modules are trusted
 reviewed code; they are not sandboxed from Core. External integrations must stay
 in separate processes, use supported scoped APIs and never receive arbitrary
 in-process execution or Core database access. See the
@@ -77,3 +77,10 @@ in-process execution or Core database access. See the
 
 Core remains AGPL-3.0-only and vendor-neutral; no mandatory WhatsApp, payment,
 AI or proprietary cloud service is introduced by this architecture.
+
+## Product scope coverage
+
+See the [description-to-plan matrix](docs/10-spec-development/2026-11-02-product-description-alignment.md) for all business domains
+and additive agenda/staff requirements. Source composition is partial; a planned
+module or descriptor is not an installed feature. Scheduling offline admission
+requires a separate ADR before widening any entity/schema/sync boundary.
