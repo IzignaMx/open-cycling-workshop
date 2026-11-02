@@ -39,6 +39,7 @@ const empty = () => ({
 })
 function fixture() {
   const calls = [],
+    localWrites = [],
     values = new Map()
   let checkpoint,
     current = { ticket: {}, scope, source: {}, isCurrent: () => true },
@@ -91,11 +92,13 @@ function fixture() {
     storage,
     now: () => 1,
     current: () => current,
+    onLocalAdmissionComplete: (source) => localWrites.push(source),
     onChange: () => notify(),
   })
   return {
     adapter,
     calls,
+    localWrites,
     storage,
     values,
     setCurrent: (v) => (current = v),
@@ -602,3 +605,88 @@ test('failed synchronous hint removal never enables old restored content', async
   assert.equal(f.adapter.canSubmit('customer'), false)
   assert.match(f.adapter.getNotice(), /podrían permanecer/)
 })
+
+test('local-admission activity waits for completion with its exact current source', async () => {
+  const f = fixture()
+  await f.adapter.ready(true)
+  const source = f.getCurrent().source
+  assert.equal(f.localWrites.length, 0)
+  let release, entered
+  const gate = new Promise((resolve) => {
+      release = resolve
+    }),
+    started = new Promise((resolve) => {
+      entered = resolve
+    })
+  const original = f.kernel.checkpointCapture
+  f.kernel.checkpointCapture = async (...args) => {
+    if (args[1].kind === 'save') {
+      entered()
+      await gate
+    }
+    return original(...args)
+  }
+  f.adapter.edit('customer', projection)
+  await started
+  assert.equal(f.localWrites.length, 0, 'request start is not transaction completion')
+  release()
+  const attempt = await f.adapter.protect('customer')
+  await f.adapter.settle(attempt, 'saved', null)
+  assert.deepEqual(f.localWrites, [source, source, source])
+})
+for (const edge of [
+  'thrown',
+  'replaced before ack',
+  'replaced during publication',
+  'refused publication replaced',
+])
+  test(`local-write completion cannot notify branding when ${edge}`, async () => {
+    const f = fixture()
+    await f.adapter.ready(true)
+    if (edge === 'thrown')
+      f.kernel.checkpointCapture = async () => {
+        throw Error('unavailable')
+      }
+    if (edge === 'refused publication replaced') {
+      f.fail('oversize')
+      f.setNotify(() => {
+        if (f.adapter.snapshot().customer.message?.startsWith('El borrador supera'))
+          f.setCurrent({ ...f.getCurrent(), source: {} })
+      })
+    }
+    if (edge === 'replaced before ack') {
+      const original = f.kernel.checkpointCapture
+      f.kernel.checkpointCapture = async (...args) => {
+        const result = await original(...args)
+        f.setCurrent({ ...f.getCurrent(), source: {} })
+        return result
+      }
+    }
+    if (edge === 'replaced during publication')
+      f.setNotify(() => {
+        if (f.adapter.snapshot().customer.message?.startsWith('Borrador guardado'))
+          f.setCurrent({ ...f.getCurrent(), source: {} })
+      })
+    f.adapter.edit('customer', projection)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.deepEqual(f.localWrites, [])
+  })
+
+for (const operation of ['save', 'protect', 'settle'])
+  test(`resolved refused ${operation} reports local admission without a persistence claim`, async () => {
+    const f = fixture()
+    await f.adapter.ready(true)
+    let attempt
+    if (operation === 'settle') attempt = await f.adapter.protect('customer')
+    f.localWrites.length = 0
+    const source = f.getCurrent().source
+    f.fail('oversize')
+    if (operation === 'save') {
+      f.adapter.edit('customer', projection)
+      await new Promise((resolve) => setImmediate(resolve))
+    } else if (operation === 'protect') assert.equal(await f.adapter.protect('customer'), null)
+    else assert.equal(await f.adapter.settle(attempt, 'saved', null), false)
+    assert.deepEqual(f.localWrites, [source])
+    assert.equal(f.adapter.snapshot().customer.blocked, true)
+    assert.doesNotMatch(f.adapter.snapshot().customer.message, /^Borrador guardado/)
+  })

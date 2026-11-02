@@ -1,6 +1,6 @@
 # Same-session capture reload recovery · 2026-11-02
 
-Status: **Locally verified candidate; publication authorization and hosted qualification pending**.
+Status: **Locally verified corrective candidate; PR81 is draft and fresh hosted qualification remains pending**.
 Base `02ec2f059e610768cb58ce20812fed33999bfa7a`. V0.1 remains partial.
 The accepted [design](../superpowers/specs/2026-11-02-capture-reload-recovery-design.md)
 and [implementation plan](../superpowers/plans/2026-11-02-capture-reload-recovery.md)
@@ -223,3 +223,66 @@ package: **39 total files**. No production behavior, dependency, workflow, timeo
 retry policy or security control is changed by this repair. Independent diff review
 accepted this bounded correction. Complete fresh exact-head CI and native evidence
 remain mandatory before ready/merge, followed by fresh-main validation.
+
+## Second hosted attempt and bounded branding correction — 10:39 UTC
+
+Head `11625b76746b871203b64f76e9291e989c721400`, tree
+`1d29be45a663fc76551a6281ca5d9659d180bafb`, ran CI41423509534. The isolated kernel
+now passed14/14. Fresh independently checked Python again passed5,567 plus58 exact
+expected skips; companions passed separately. Both direct and aggregate browser
+reports show **116 passes, five failures, zero flaky/skipped cases**, with the same
+five failures on both attempts. The aggregate remains26/27; this head is not accepted.
+The supported direct archive was within the transfer limit and its full assertions
+were inspected, unlike the oversized first report.
+
+Four new cases incorrectly used volatile `data-dirty=true` as a proxy for durable
+PROTECTED state after reload. The approved policy requires private fields to be
+absent: the empty volatile view is not dirty, while the independent recovery owner
+still blocks dispatch and voluntary departure. Six independent actual-controller
+cases prove this separation. The native helper now requires dirty=false, retains
+protected/disabled/blank/no-replay checks and adds a genuine dismissed logout
+confirmation with unchanged checkpoint, content and immutable journal. Production
+was not changed to satisfy the mistaken dirty assertion.
+
+The fifth failure was real loss of the verified offline branding display, not a
+text mismatch. Two admitted capture writes could invalidate both the original
+and single trailing cached-image read; after activity stopped, no further read
+was scheduled. Deterministic actual-controller REDs reproduced this with both
+edit-plus-submit and two autosaves without submission. The correction adds an
+explicit, coalesced offline-only activity notification after normally completed
+current-source checkpoint calls and eligible capture completion. A refused write can
+also advance the observation fence; the private completion marker does not claim
+persistence, and refusal feedback remains unchanged. Preflight failures and caught
+throws never emit this event. One owed read survives
+an already-trailing flight; null results and publications never generate retries.
+Online eligibility is rechecked when draining, so edits do not initiate network
+fetches. Existing clear/generation cancellation and all cache, clock, lease and
+kernel authority fences are unchanged.
+
+Independent real-controller regressions pass, including old receipts after a new
+login; event scheduling tests cover coalescing, cancellation, no-null-loop and
+online transitions. Disabling the activity signal in an isolated copied-source
+mutant kills both real-controller regressions. Fresh full frontend core passes
+**1,227/1,227**, zero failures/skips/cancellations; normal/offline types, PWA build,
+product lint and formatting pass. These local results do not replace a new native
+run. The package is now **41 files**: the two additional paths are the existing
+branding display controller and its maintained tests. Full exact-head CI and
+independent artifact review remain required before integration.
+
+The final edge review also reproduced two oversized refused saves invalidating both
+image reads without adding private content or journal entries. The bounded completion
+signal handles those resolved refusals after outcome publication, rechecking the exact
+active source; reentrant publication and old receipts cannot schedule into a new login.
+The marker is ephemeral internal metadata, not a stored field or authority grant.
+Independent controller4/4 and adapter39/39 checks pass, and restoring ACK-only event
+emission in a copied-source mutant makes the refused-write regression fail again.
+
+Final full-source repeat after the refused-write correction: **1,232/1,232 passed**,
+zero failures, skips or cancellations (`core-admission-final.log`). Normal/offline
+types, PWA build, product lint and formatting were repeated successfully on this
+source. The earlier1,227 count is historical; fresh native CI remains pending.
+
+Current publication authority supersedes the historical08:12 pending checkpoint:
+the user authorized publication on2026-11-02 at08:21, followed by ready/merge only
+after complete validation and review, then fresh-main verification. Scoped CI
+corrections remain in that sequence; neither failed run permits integration.

@@ -202,3 +202,21 @@ Final source review and local evidence are reconciled in the scoped evidence rec
 Ten native journeys are authored/collected and statically reviewed, including keyboard
 submission and axe assertions, but native execution remains zero. The unchecked
 native/hosted gates above are intentional. Source scope34files; no publication authority.
+
+### Second native qualification correction — 2026-11-02 10:39 UTC
+
+- Preserve CI41423509534 as failed: kernel14/14, Python5567+58, direct/aggregate
+  browser116/121 with the same five nonflaky failures. No passing-head claim.
+- Correct the protected helper's volatile-dirty proxy; add native canceled-departure
+  proof without changing the approved content-free PROTECTED production behavior.
+- Independently reproduce the offline branding two-flight loss with real autosaves
+  and submit/settle; implement the reviewed offline-only coalesced activity signal.
+  Preserve every cache/clock/owner fence and exact-source late-callback checks.
+- Fresh local frontend1227/1227 and static/build checks pass; copied-source signal
+  mutant is detected. Package41files. Fresh native/hosted qualification still pending.
+
+Final refused-activity edge: two actual oversized refused saves reproduced the same
+read-loss gap. Normally resolved current-source checkpoint calls now signal completed
+activity after outcome publication without claiming persistence; preflight/throws/late
+sources do not. Independent controller4/4 and adapter39/39 pass; ACK-only mutant is
+killed. Fresh full frontend1232/1232 and repeated types/build/lint/format pass.

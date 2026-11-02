@@ -234,6 +234,10 @@ export class WorkshopController {
             source.isCurrent(source.identity),
         }
       },
+      onLocalAdmissionComplete: (source) => {
+        if (source === this.#captureSource && source === this.#active)
+          this.branding.refreshOfflineAfterLocalActivity()
+      },
       onChange: () => {
         if (!this.#disposed) this.publish({})
       },
@@ -1638,13 +1642,23 @@ export class WorkshopController {
       feedback = captureFeedback({ kind: 'rejected', error })
     }
     const finished = this.#captureVisit.finish(attempt.token, feedback)
+    const completionSource = this.#captureSource
     if (finished && dispatched && protection && feedback.status !== 'unknown')
       await this.#captureRecovery.settle(
         protection,
         feedback.status,
         this.#captureVisit.projection('customer'),
       )
-    if (finished) this.publish({})
+    if (finished) {
+      this.publish({})
+      if (
+        protection &&
+        completionSource &&
+        this.#captureSource === completionSource &&
+        this.#active === completionSource
+      )
+        this.branding.refreshOfflineAfterLocalActivity()
+    }
   }
   async submitCaptureOrder(view: object): Promise<void> {
     const source = this.captureSource(view)
@@ -1696,13 +1710,23 @@ export class WorkshopController {
       feedback = captureFeedback({ kind: 'rejected', error })
     }
     const finished = this.#captureVisit.finish(attempt.token, feedback)
+    const completionSource = this.#captureSource
     if (finished && dispatched && protection && feedback.status !== 'unknown')
       await this.#captureRecovery.settle(
         protection,
         feedback.status,
         this.#captureVisit.projection('order'),
       )
-    if (finished) this.publish({})
+    if (finished) {
+      this.publish({})
+      if (
+        protection &&
+        completionSource &&
+        this.#captureSource === completionSource &&
+        this.#active === completionSource
+      )
+        this.branding.refreshOfflineAfterLocalActivity()
+    }
   }
   async createCustomer(input: {
     displayName: string

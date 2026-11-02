@@ -3444,3 +3444,132 @@ test('transition visit logout followed by retained metadata verification does no
     view: 'updated',
   })
 })
+
+for (const activity of ['submit', 'edit-only', 'refused'])
+  test(`offline branding remains available when ${activity} capture writes advance both bounded logo reads`, async (t) => {
+    const { withLogo } = await import('../branding/fixture.mjs')
+    const f = setup(t, {
+      server: brandedApi(['branding.read'], (url) =>
+        response(url, withLogo({ display_name: 'Shared workshop' })),
+      ),
+    })
+    f.runtime.scheduleSync = () => {}
+    await login(f.runtime)
+    await until(() => f.runtime.branding.getSnapshot().profile !== null, 'initial brand')
+    const snapshots = await f.database.brandingSnapshots.toArray()
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    let releaseFirst,
+      releaseSecond,
+      firstEntered,
+      secondEntered,
+      calls = 0
+    const firstGate = new Promise((resolve) => {
+        releaseFirst = resolve
+      }),
+      secondGate = new Promise((resolve) => {
+        releaseSecond = resolve
+      })
+    const firstStarted = new Promise((resolve) => {
+        firstEntered = resolve
+      }),
+      secondStarted = new Promise((resolve) => {
+        secondEntered = resolve
+      })
+    t.after(() => {
+      releaseFirst()
+      releaseSecond()
+    })
+    t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (isLogoDigest(args)) {
+        calls++
+        if (calls === 1) {
+          firstEntered()
+          await firstGate
+        }
+        if (calls === 2) {
+          secondEntered()
+          await secondGate
+        }
+      }
+      return digest(...args)
+    })
+    f.env.online = false
+    await f.runtime.offline()
+    await firstStarted
+    f.env.now = NOW + 10
+    const view = f.runtime.getSnapshot().capture.viewToken
+    const persistenceMessage = activity === 'refused' ? 'El borrador supera' : 'Borrador guardado'
+    f.runtime.editCaptureCustomer(
+      view,
+      'displayName',
+      activity === 'refused' ? 'x'.repeat(65537) : 'Captured during cache admission',
+    )
+    await until(
+      () =>
+        f.runtime.getSnapshot().capture.customer.recoveryMessage?.startsWith(persistenceMessage),
+      'autosave acknowledged',
+    )
+    releaseFirst()
+    await secondStarted
+    f.env.now = NOW + 20
+    if (activity === 'submit') await f.runtime.submitCaptureCustomer(view)
+    else {
+      f.runtime.editCaptureCustomer(view, 'phone', '222')
+      await until(
+        () =>
+          f.runtime.getSnapshot().capture.customer.recoveryMessage?.startsWith(persistenceMessage),
+        'second autosave acknowledged',
+      )
+    }
+    releaseSecond()
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'final cache read')
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    if (activity === 'refused') {
+      assert.equal(f.runtime.getSnapshot().capture.customer.blocked, true)
+      assert.equal(await f.database.captureDraftContents.count(), 0)
+    }
+    assert.equal(
+      (await f.database.operationJournal.toArray()).length,
+      activity === 'submit' ? 1 : 0,
+    )
+    assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+    assert.equal(f.runtime.branding.getSnapshot().cached, true)
+    assert.deepEqual(await f.database.brandingSnapshots.toArray(), snapshots)
+  })
+
+test('late old capture receipt cannot request offline branding in a new login', async (t) => {
+  const f = setup(t, { server: brandedApi(['branding.read']) })
+  f.runtime.scheduleSync = () => {}
+  await login(f.runtime)
+  let release, entered
+  const gate = new Promise((resolve) => {
+      release = resolve
+    }),
+    started = new Promise((resolve) => {
+      entered = resolve
+    })
+  t.after(() => release())
+  const original = f.runtime.repositories.createCustomer.bind(f.runtime.repositories)
+  f.runtime.repositories.createCustomer = async (...args) => {
+    const result = await original(...args)
+    entered()
+    await gate
+    return result
+  }
+  const view = f.runtime.getSnapshot().capture.viewToken
+  f.runtime.editCaptureCustomer(view, 'displayName', 'Old captured customer')
+  const submitting = f.runtime.submitCaptureCustomer(view)
+  await started
+  await f.runtime.logout()
+  await login(f.runtime, 'B')
+  let requests = 0
+  const refresh = f.runtime.branding.refreshOfflineAfterLocalActivity.bind(f.runtime.branding)
+  f.runtime.branding.refreshOfflineAfterLocalActivity = () => {
+    requests++
+    refresh()
+  }
+  release()
+  await submitting
+  assert.equal(requests, 0)
+  assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
+})

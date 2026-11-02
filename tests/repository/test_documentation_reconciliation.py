@@ -140,12 +140,13 @@ def test_capture_requirement_rows_retain_unique_partial_canonical_mappings() -> 
         assert selected[0]["evidence"] == BASE + "2026-11-02-capture-reload-recovery.md"
 
 
-def test_current_reload_checkpoint_does_not_claim_global_recovery_or_authority() -> None:
+def test_current_reload_checkpoint_separates_authorized_publication_from_acceptance() -> None:
     state = read(BASE + "execution-state.yaml")
     assert "current_checkpoint: capture_reload_recovery_20261102" in state
     block = state.split("capture_reload_recovery_20261102:\n", 1)[1].split("\n\n", 1)[0]
     assert "status: in_progress" in block or "status: implemented_pending_evidence" in block
-    assert "publication: not_authorized_for_this_package" in block
+    assert "publication: authorized_draft_PR81_published_corrective_CI_pending" in block
+    assert "integration: only_after_full_pass_and_review_then_fresh_main" in block
     record = read(BASE + "2026-11-02-capture-reload-recovery.md")
     for token in (
         "24 hours",

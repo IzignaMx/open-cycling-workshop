@@ -164,7 +164,8 @@ async function prepare(page: Page, channel: Channel, customerId: string) {
 async function restoredProtection(page: Page, channel: Channel) {
   await expect(form(page, channel).getByText(PROTECTED, { exact: true })).toBeVisible()
   await expect(submit(page, channel)).toBeDisabled()
-  await expect(form(page, channel)).toHaveAttribute('data-dirty', 'true')
+  // Reload restores a content-free recovery guard, not a volatile dirty draft.
+  await expect(form(page, channel)).toHaveAttribute('data-dirty', 'false')
   await expect
     .poll(async () => (await recovery(page)).checkpoint?.[channel].state)
     .toBe('PROTECTED')
@@ -177,6 +178,26 @@ async function restoredProtection(page: Page, channel: Channel) {
       'Condición al recibir': '',
       Accesorios: '',
     })
+  const protectedBefore = await recovery(page)
+  const journalBefore = (await kernelSnapshot(page)).journal
+  // Empty fields must not bypass voluntary-leave protection: the durable owner,
+  // independently of DOM dirty state, still requires an informed confirmation.
+  const confirmation = page.waitForEvent('dialog').then(async (dialog) => {
+    const observed = { type: dialog.type(), message: dialog.message() }
+    await dialog.dismiss()
+    return observed
+  })
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  expect(await confirmation).toEqual({
+    type: 'confirm',
+    message:
+      '¿Continuar y descartar los formularios sin enviar o sin confirmar? El trabajo local ya guardado se conserva. Esta acción no confirma ni revierte los envíos pendientes; no los repitas.',
+  })
+  await expect(page.locator('.workshop-shell')).toBeVisible()
+  await expect(form(page, channel).getByText(PROTECTED, { exact: true })).toBeVisible()
+  await expect(submit(page, channel)).toBeDisabled()
+  expect(await recovery(page)).toEqual(protectedBefore)
+  expect((await kernelSnapshot(page)).journal).toEqual(journalBefore)
 }
 async function attemptAgain(page: Page, channel: Channel, customerId: string) {
   const target = form(page, channel)

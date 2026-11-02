@@ -14,8 +14,10 @@
       Prehydration logout privacy regression is independently corrected as well.
 - [x] Implement and locally verify exact-session restore, pre-dispatch protection, clock,
       cleanup failure, v7→v8 preservation and old-writer behavior.
-- [ ] Execute native browser/source-bound qualification and obtain separate new
-      publication/integration authorization. Policy approval is not deployment authority.
+- [x] Record the separate08:21 publication sequence approval; PR81 is draft.
+      Scoped corrections do not waive complete validation and independent review.
+- [ ] Pass fresh exact-head native/hosted qualification before ready/merge, then
+      verify fresh main. Policy/publication approval is not deployment authority.
 - PR79/80 prior fresh-main receipts are reconciled in the new record. Earlier
   pending wording below remains historical; no workflow replay is requested.
 - Full crash/device loss, physical T1–T8/R01-T035, capacity and global OFF-007

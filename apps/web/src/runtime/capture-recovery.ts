@@ -35,12 +35,15 @@ export interface RecoveryAttempt {
   readonly scope: CaptureVisitScope
   readonly token: object
 }
+// Private completion evidence, never a persistence receipt or durable metadata.
+type CompletedCheckpointResult = CaptureCheckpointResult & { admissionCompleted?: true }
 interface Options {
   kernel: Pick<AccessKernel, 'checkpointCapture'>
   db: KernelDatabase
   storage: SessionStorageLike
   now: () => number
   current: () => RecoveryContext | null
+  onLocalAdmissionComplete?: (source: object) => void
   onChange: () => void
 }
 const hintKey = 'ocwp.capture-checkpoint.v1',
@@ -143,6 +146,13 @@ export class CaptureRecovery {
     const f = this.forms[channel]
     return this.active && !this.closed && !f.presentation.blocked && !f.reserving && !f.attempt
   }
+  private localAdmissionCompleted(
+    context: RecoveryContext,
+    result: CompletedCheckpointResult,
+  ): void {
+    if (result.admissionCompleted && this.active && this.valid(context))
+      this.options.onLocalAdmissionComplete?.(context.source)
+  }
   private notify(): void {
     this.options.onChange()
   }
@@ -155,10 +165,13 @@ export class CaptureRecovery {
   private async command(
     c: RecoveryContext,
     command: CaptureCheckpointCommand,
-  ): Promise<CaptureCheckpointResult> {
+  ): Promise<CompletedCheckpointResult> {
     if (!this.valid(c)) return { kind: 'refused', reason: 'unavailable' }
     try {
-      return await this.options.kernel.checkpointCapture(c.ticket, command, () => this.valid(c))
+      const result = await this.options.kernel.checkpointCapture(c.ticket, command, () =>
+        this.valid(c),
+      )
+      return { ...result, admissionCompleted: true }
     } catch {
       return { kind: 'refused', reason: 'unavailable' }
     }
@@ -357,6 +370,7 @@ export class CaptureRecovery {
             : messages.failed,
         )
         f.queued = null
+        this.localAdmissionCompleted(c, result)
         return
       }
       this.accept(result.checkpoint, channel)
@@ -366,6 +380,7 @@ export class CaptureRecovery {
         message: f.queued ? messages.persisting : messages.saved,
       }
       this.notify()
+      this.localAdmissionCompleted(c, result)
     }
   }
   async protect(channel: Channel): Promise<RecoveryAttempt | null> {
@@ -410,12 +425,14 @@ export class CaptureRecovery {
     if (life !== this.lifetime) return null
     if (result.kind !== 'ack' || !this.valid(c) || !this.active) {
       this.fail(channel)
+      this.localAdmissionCompleted(c, result)
       return null
     }
     this.accept(result.checkpoint, channel)
     f.attempt = attempt
     f.presentation = { blocked: true, busy: false, message: messages.protected }
     this.notify()
+    this.localAdmissionCompleted(c, result)
     return this.valid(c) && this.active && f.attempt === attempt ? attempt : null
   }
   async settle(
@@ -455,6 +472,7 @@ export class CaptureRecovery {
         attempt.channel,
         outcome === 'saved' ? messages.savedFailure : messages.notSavedFailure,
       )
+      this.localAdmissionCompleted(c, result)
       return false
     }
     this.accept(result.checkpoint, attempt.channel)
@@ -465,6 +483,7 @@ export class CaptureRecovery {
       f.presentation = { blocked: false, busy: true, message: messages.persisting }
     this.notify()
     if (f.edit !== edit && f.latest) this.edit(attempt.channel, f.latest)
+    this.localAdmissionCompleted(c, result)
     return true
   }
   suspend(): void {

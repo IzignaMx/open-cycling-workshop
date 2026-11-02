@@ -510,3 +510,22 @@ payload is never loaded from this path. Lookup or hint failure produces the glob
 cleanup warning; if no generation can be discovered and retained, only the existing
 TTL cleanup fallback is promised, not unexpired retry or successful deletion. This
 path cannot restore hints, authorize reads or reopen capture.
+
+## Bounded offline branding continuity correction — 2026-11-02
+
+Native qualification exposed interaction between admitted checkpoint writes and the
+existing strict cached-image entry-time fence: two finite local writes can invalidate
+both original and trailing reads. Do not weaken those authority/clock fences. Signal
+normally completed current-source save/protect/settle calls and eligible capture
+completion explicitly to the branding display owner. Resolved refused writes may
+also advance the observation fence: an ephemeral internal completion marker allows
+that event without claiming persistence or changing refusal feedback. Emit only after
+outcome publication and a fresh active/exact-source check; caught throws and preflight
+failures do not emit. Only offline contexts
+without a verified displayed profile are eligible. Coalesce at most one owed read per
+flight, including a trailing flight, and recheck offline/current binding/generation
+when draining. Clear/logout/takeover invalidate owed work. A null result, publication
+or thrown/preflight-failed/late completion must not manufacture an activity event. Online typing
+must not add transport reads. This is finite-activity convergence, not timer polling,
+unbounded failure retry or broader cache authority. Preserve actual edit-only and
+edit-plus-submit RED/GREEN evidence plus cancellation/coalescing/mutation checks.
