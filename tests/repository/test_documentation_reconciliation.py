@@ -182,9 +182,9 @@ def test_quote_v8_reservation_is_explicitly_nonbinding_not_quote_activation() ->
     assert "does not implement quote storage" in text
 
 
-def test_current_m1_checkpoint_is_partial_and_has_separate_publication_authority() -> None:
+def test_historical_m1_checkpoint_is_partial_and_has_separate_publication_authority() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: official_module_reference_20261102" in state
+    assert "historical_pending_fields: superseded_by_pr82_source_acceptance_20261102" in state
     block = state.split("official_module_reference_20261102:\n", 1)[1].split("\n\n", 1)[0]
     assert "publication: separately_authorized_PR82_draft_corrective_CI_pending" in block
     assert "canonical_SDK_tasks: prerequisite_only_not_complete" in block
@@ -237,3 +237,59 @@ def test_m1_static_offline_metadata_does_not_grant_operational_offline_support()
         assert len(selected) == 1
         assert selected[0]["status"] == "partial"
         assert selected[0]["evidence"] == BASE + "2026-11-02-official-module-reference.md"
+
+
+def test_m2_local_laboratory_does_not_claim_runtime_or_production_admission() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "m2_synthetic_laboratory_20261102:" in state
+    block = state.split("m2_synthetic_laboratory_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: partial_local_functional_only",
+        "publication: not_authorized",
+        "runtime: blocked_no_Docker_or_PostgreSQL",
+        "production_access: none",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-02-m2-synthetic-laboratory.md")
+    for token in (
+        "SQLite",
+        "ASGI",
+        "not PostgreSQL",
+        "not a separate-process",
+        "R01-T035",
+        "UNKNOWN",
+        "SPENT",
+        "41463493290",
+        "27/27",
+        "e9c11ad11a564c80add99f4dc901ffe2d583c8e6",
+        "SEC-002",
+        "FR-PLG-008",
+    ):
+        assert token in record
+
+
+def test_m2_hosted_preparation_keeps_execution_and_physical_gates_open() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: m2_hosted_preparation_20261102" in state
+    block = state.split("m2_hosted_preparation_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: local_preparation_runtime_unqualified",
+        "production_changes: none",
+        "actual_PostgreSQL_TLS_process_execution: not_performed",
+        "publication_and_execution: require_separate_explicit_approval",
+        "V01_physical_and_release_gates: unchanged_partial",
+        "build_disk_peak: inherited_runner_capacity_not_separate_hard_quota",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-02-m2-hosted-preparation.md")
+    for token in (
+        "SPENT",
+        "UNKNOWN",
+        "T1\u2013T8",
+        "not a hard quota",
+        "not secure erasure",
+        "same-repository PR",
+        "database_cleanup_complete",
+        "15-minute",
+    ):
+        assert token in record

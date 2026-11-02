@@ -1,7 +1,57 @@
 schema: 1
 
-current_checkpoint: official_module_reference_20261102
+current_checkpoint: m2_hosted_preparation_20261102
+m2_hosted_preparation_20261102:
+  status: local_preparation_runtime_unqualified
+  prior_local_source: e4c5a2b8385dbcdfb71aabeac5351aeccb1e08f5
+  baseline_main: e9c11ad11a564c80add99f4dc901ffe2d583c8e6
+  authority: user_20261102_1851_prepare_harness_and_workflow_only
+  evidence: docs/10-spec-development/2026-11-02-m2-hosted-preparation.md
+  production_changes: none
+  actual_PostgreSQL_TLS_process_execution: not_performed
+  publication_and_execution: require_separate_explicit_approval
+  proposed_trigger: same_repository_public_PR_or_manual_main
+  proposed_job_minutes: 30
+  proposed_evidence_bytes: 1048576
+  proposed_retention_days: 1
+  build_disk_peak: inherited_runner_capacity_not_separate_hard_quota
+  V01_physical_and_release_gates: unchanged_partial
+
+m2_synthetic_laboratory_20261102:
+  status: partial_local_functional_only
+  baseline_main: e9c11ad11a564c80add99f4dc901ffe2d583c8e6
+  evidence: docs/10-spec-development/2026-11-02-m2-synthetic-laboratory.md
+  scope: test_only_synthetic_machine_authority_ASGI_SQLite_no_production_import
+  authority: user_20261102_1607_local_laboratory_including_ephemeral_credentials
+  local_review: independent_corrected_local_slice_accepted_not_runtime_qualification
+  local_lab: 102_passed
+  local_python: 5060_passed671_environment_skips12_warnings
+  local_repository: 151_passed
+  local_frontend: 1237_passed
+  runtime: blocked_no_Docker_or_PostgreSQL
+  production_access: none
+  publication: not_authorized
+  canonical_SDK_tasks: prerequisite_only_not_complete
+  V01_physical_and_release_gates: unchanged_partial
+
+pr82_source_acceptance_20261102:
+  source_status: verified
+  merged_main: e9c11ad11a564c80add99f4dc901ffe2d583c8e6
+  merged_tree: 4d717b1df18b0c96405ce1d26b1a6bf9b5c78049
+  fresh_main_ci: 41463493290
+  aggregate: 27_of_27
+  python: 5570_passed58_expected_skips
+  frontend: 1237_passed
+  browser: direct126_aggregate126_retry0_repeats20_9_5_10_kernel14
+  runtime: 41463493633
+  security: 41463493725
+  micro: 41463493203
+  final_receipt: Library_v2_libfile_d5fa10304a5c81918563d2f2c92eda2f
+  provenance: retained_independent_receipt_not_new_archive_download
+  scope: M1_host_metadata_only_not_connector_or_full_SDK
+
 official_module_reference_20261102:
+  historical_pending_fields: superseded_by_pr82_source_acceptance_20261102
   status: implemented_pending_evidence
   baseline_main: aa432060aedd170e6d52bb93004fbc79f33953bb
   prior_source_receipt: pr81_source_acceptance_20261102

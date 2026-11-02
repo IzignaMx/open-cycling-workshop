@@ -1,0 +1,132 @@
+name: M2 synthetic laboratory
+
+# Preparation only until the maintainer approves publication and execution.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tests/labs/m2/**'
+      - 'scripts/ci/m2_lab_*.py'
+      - 'tests/operations/test_m2_*.py'
+      - 'tests/repository/test_m2_hosted_workflow.py'
+      - '.github/workflows/m2-laboratory.yml'
+      - 'infra/docker/platform.local.Dockerfile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-laboratory:
+    if: >-
+      github.event.repository.private == false &&
+      ((github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        timeout-minutes: 1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prepare exact locked synthetic image
+        id: prepare
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Checkpoints, not a peak disk quota: build/pull cache overhead shares
+          # standard runner capacity and the preparation step's nine-minute limit.
+          check_disk() {
+            free_bytes="$(df --output=avail -B1 "$RUNNER_TEMP" | tail -n 1 | tr -d ' ')"
+            [[ "$free_bytes" =~ ^[0-9]+$ ]]
+            test "$free_bytes" -ge 4294967296
+          }
+          check_disk
+          command -v python
+          command -v openssl
+          command -v docker
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          tree="$(git rev-parse HEAD^{tree})"
+          context="$(mktemp -d "$RUNNER_TEMP/m2-source.XXXXXX")"
+          git archive HEAD | tar -x -C "$context"
+          docker build --pull --target build \
+            --iidfile "$RUNNER_TEMP/m2-base.id" \
+            -f "$context/infra/docker/platform.local.Dockerfile" "$context"
+          base="$(docker image inspect --format '{{.Id}}' "$(cat "$RUNNER_TEMP/m2-base.id")")"
+          [[ "$base" =~ ^sha256:[a-f0-9]{64}$ ]]
+          # Existing build stage pins Python 3.13.14 and uv 0.11.15.
+          # No keys, certificates or credentials are created in either build.
+          printf 'FROM %s\n' "$base" > "$RUNNER_TEMP/m2-lab.Dockerfile"
+          cat >> "$RUNNER_TEMP/m2-lab.Dockerfile" <<'DOCKERFILE'
+          COPY tests /app/tests
+          COPY scripts /app/scripts
+          RUN uv sync --locked --all-packages --group dev
+          ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+          DOCKERFILE
+          docker build --iidfile "$RUNNER_TEMP/m2-lab.id" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.tree=$tree" \
+            -f "$RUNNER_TEMP/m2-lab.Dockerfile" "$context"
+          image="$(docker image inspect --format '{{.Id}}' "$(cat "$RUNNER_TEMP/m2-lab.id")")"
+          docker pull postgres:18.4-trixie
+          pg_image="$(docker image inspect --format '{{.Id}}' postgres:18.4-trixie)"
+          [[ "$image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$pg_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          image_bytes="$(docker image inspect --format '{{.Size}}' "$image")"
+          pg_bytes="$(docker image inspect --format '{{.Size}}' "$pg_image")"
+          [[ "$image_bytes" =~ ^[0-9]{1,12}$ ]]
+          [[ "$pg_bytes" =~ ^[0-9]{1,12}$ ]]
+          test "$((image_bytes + pg_bytes))" -le 4294967296
+          check_disk
+          printf 'image_id=%s\npg_image_id=%s\ntree=%s\n' "$image" "$pg_image" "$tree" >> "$GITHUB_OUTPUT"
+      - name: Run bounded synthetic laboratory
+        timeout-minutes: 15
+        env:
+          IMAGE_ID: ${{ steps.prepare.outputs.image_id }}
+          PG_IMAGE_ID: ${{ steps.prepare.outputs.pg_image_id }}
+          SOURCE_TREE: ${{ steps.prepare.outputs.tree }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 880s python scripts/ci/m2_lab_hosted.py run \
+            --image "$IMAGE_ID" --pg-image "$PG_IMAGE_ID" \
+            --commit "$GITHUB_SHA" --tree "$SOURCE_TREE" \
+            --owned "$RUNNER_TEMP/m2-owned.json" --evidence artifacts/m2-hosted/result.json
+      - name: Independent cleanup
+        if: ${{ always() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 110s python scripts/ci/m2_lab_hosted.py cleanup \
+            --owned "$RUNNER_TEMP/m2-owned.json" --evidence artifacts/m2-hosted/cleanup.json
+      - name: Validate bounded sanitized evidence
+        if: ${{ always() }}
+        id: evidence
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/ci/m2_lab_hosted.py evidence --directory artifacts/m2-hosted
+          # Defense in depth: controller validates fixed leaves and content; cap 1 MiB.
+          bytes="$(wc -c < artifacts/m2-hosted/result.json)"
+          cleanup_bytes="$(wc -c < artifacts/m2-hosted/cleanup.json)"
+          test "$((bytes + cleanup_bytes))" -le 1048576
+      - name: Retain only validated evidence
+        if: ${{ always() && steps.evidence.outcome == 'success' }}
+        timeout-minutes: 1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: m2-synthetic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/m2-hosted/result.json
+            artifacts/m2-hosted/cleanup.json
+          retention-days: 1
+          if-no-files-found: error
+          include-hidden-files: false
