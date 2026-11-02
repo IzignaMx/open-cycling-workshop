@@ -1,7 +1,45 @@
 schema: 1
 
-current_checkpoint: documentation_reconciliation_20261101
+current_checkpoint: capture_visit_continuity_20261102
+capture_visit_continuity_20261102:
+  status: implemented_pending_evidence
+  frontend_local: 1119_passed_zero_skips
+  python_local: 4946_passed_671_skipped_12_warnings
+  independent_local_review: accepted_60_integration_38_owner
+  browser_local: six_collected_zero_executed
+  baseline_main: b88c4eee78d0603bb47368bcec83cd9567eac495
+  prior_source_receipt: pr78_source_acceptance_20261102
+  scope: volatile_same_scope_controller_visit_only_not_durable_draft_recovery
+  design: docs/superpowers/specs/2026-11-02-capture-visit-continuity-design.md
+  plan: docs/superpowers/plans/2026-11-02-capture-visit-continuity.md
+  evidence: docs/10-spec-development/2026-11-02-capture-visit-continuity.md
+  browser: pending_actual_execution
+  publication: not_authorized_for_this_package
+  integration: pending_separate_authorization_and_exact_source_evidence
+  physical_full_reload_capacity_and_recovery: open
+
+pr78_source_acceptance_20261102:
+  source_status: verified
+  merged_main: b88c4eee78d0603bb47368bcec83cd9567eac495
+  receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/78
+  provenance: coordinator_prior_independent_acceptance_summary_not_archives_redownloaded
+  fresh_main_ci: 41372646038
+  aggregate_artifact: 13110609454
+  aggregate: 27_of_27
+  python: 5556_passed58_expected_skips
+  frontend: 1050_passed_API1
+  browser: direct105_aggregate105_repeats20_9_5_10_kernel14
+  runtime: 41372645960
+  security: 41372646069
+  micro: 41372645988
+  preview: 41372645954
+  attempts: all_accepted_attempt1
+  scope: prior_mounted_capture_and_documentation_source_not_new_visit_package
+  physical_release_installation_and_capacity: not_qualified
+
 documentation_reconciliation_20261101:
+  historical_checkpoint: source_authored_pending_fields_superseded_by_PR78_receipt
+  current_source_receipt: pr78_source_acceptance_20261102
   status: partial
   scope: current_navigation_and_bounded_traceability_not_release_acceptance
   reconstruction: second_environment_replacement_Nov2_original_bytes_unavailable_fresh_evidence_required
@@ -19,6 +57,8 @@ documentation_reconciliation_20261101:
   evidence: docs/10-spec-development/2026-11-01-documentation-reconciliation.md
 
 capture_draft_receipts_20261101:
+  historical_checkpoint: source_authored_pending_fields_superseded_by_PR78_receipt
+  current_source_receipt: pr78_source_acceptance_20261102
   status: implemented_pending_evidence
   baseline_main: cdb44aac572df65489fb95a15c0a813cd5445d95
   reconstruction: second_executor_replacement_Nov2_fresh_evidence_only_no_lost_byte_identity
@@ -2051,11 +2091,11 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/superpowers/plans/2026-11-01-capture-draft-receipts.md
+active_plan: docs/superpowers/plans/2026-11-02-capture-visit-continuity.md
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: documentation_reconciliation_20261101
+last_checkpoint: capture_visit_continuity_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
 
@@ -2319,7 +2359,7 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - preserve accepted PR77 baseline and independently qualify each changed candidate before authorized integration
+  - preserve accepted PR78 baseline and qualify the new capture-visit source only with separately authorized publication and integration
   - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
   - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
   - preserve PR59 source-qualified full-history validation and complete actual-installation inventory and recovery acceptance before activation

@@ -1,104 +1,30 @@
-import {
-  captureFeedback,
-  CaptureSubmissionGate,
-  type CaptureFeedback,
-} from '../capture-feedback.js'
-import { captureValidation, type CaptureSubmissionResult } from '../../runtime/capture-outcome.js'
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-
-import { hasOrderDraft } from '../draft-state.js'
+import { type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@ocwp/ui'
-import { normalizeOrderIntake } from './order-model.js'
+import type { OrderDraftState } from '../draft-state.js'
+import type { CaptureFormSnapshot } from '../../runtime/capture-visit.js'
 
 export interface OrderQuickIntakeProps {
+  capture: CaptureFormSnapshot<OrderDraftState>
+  onEdit<K extends keyof OrderDraftState>(field: K, value: OrderDraftState[K]): void
+  onSubmit(): Promise<void>
   customers: readonly { customer_id: string; display_name: string }[]
-  onCreateOrder(input: {
-    customerId: string
-    reportedProblem: string
-    intakeCondition: string | null
-    accessories: string | null
-    priority: string
-    brand: string | null
-    model: string | null
-  }): Promise<CaptureSubmissionResult>
 }
 
-export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeProps) {
-  const [customerId, setCustomerId] = useState('')
-  const [retainedSelection, setRetainedSelection] = useState({ customerId: '', priority: 'normal' })
-  const [reportedProblem, setReportedProblem] = useState('')
-  const [intakeCondition, setIntakeCondition] = useState('')
-  const [accessories, setAccessories] = useState('')
-  const [priority, setPriority] = useState('normal')
-  const [withBicycle, setWithBicycle] = useState(false)
-  const [brand, setBrand] = useState('')
-  const [model, setModel] = useState('')
-  const draftRevision = useRef<object>({})
-  const gate = useRef(new CaptureSubmissionGate())
-  const [blocked, setBlocked] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  function markEdited() {
-    // An interaction (including ABA or same-value edits) belongs to a newer draft.
-    draftRevision.current = {}
-  }
-
-  function finish(feedback: CaptureFeedback) {
-    gate.current.finish(feedback)
-    setBlocked(gate.current.blocked)
-    setMessage(feedback.message)
-  }
-
+export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: OrderQuickIntakeProps) {
+  const { busy, blocked, message } = capture
+  const {
+    customerId,
+    reportedProblem,
+    intakeCondition,
+    accessories,
+    priority,
+    withBicycle,
+    brand,
+    model,
+  } = capture.draft
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!gate.current.begin()) return
-    const submittedRevision = draftRevision.current
-    setBusy(true)
-    setMessage(null)
-    try {
-      let normalized
-      try {
-        normalized = normalizeOrderIntake({
-          customerId,
-          reportedProblem,
-          intakeCondition,
-          accessories,
-          priority,
-          brand: withBicycle ? brand : null,
-          model: withBicycle ? model : null,
-        })
-      } catch (error) {
-        const validation = captureValidation(error)
-        if (!validation) throw error
-        finish(captureFeedback({ kind: 'resolved', value: validation }))
-        return
-      }
-      const result = await onCreateOrder(normalized)
-      const feedback = captureFeedback({ kind: 'resolved', value: result })
-      finish(feedback)
-      if (feedback.status !== 'saved') return
-      if (draftRevision.current !== submittedRevision) {
-        setMessage(
-          'El envío anterior se guardó localmente. El formulario actual sigue sin guardar.',
-        )
-        return
-      }
-      // Customer and priority intentionally remain selected after a successful local save.
-      // They become clean defaults only here; a refused/failed save keeps the draft dirty.
-      setRetainedSelection({ customerId, priority })
-      setReportedProblem('')
-      setIntakeCondition('')
-      setAccessories('')
-      setWithBicycle(false)
-      setBrand('')
-      setModel('')
-      setMessage('Orden guardada localmente')
-    } catch (error) {
-      finish(captureFeedback({ kind: 'rejected', error }))
-    } finally {
-      setBusy(false)
-    }
+    await onSubmit()
   }
 
   const inputClass =
@@ -109,23 +35,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
       onSubmit={submit}
       className="grid gap-4"
       aria-describedby="order-intake-status"
-      data-dirty={
-        blocked ||
-        busy ||
-        hasOrderDraft(
-          {
-            customerId,
-            priority,
-            reportedProblem,
-            intakeCondition,
-            accessories,
-            withBicycle,
-            brand,
-            model,
-          },
-          retainedSelection,
-        )
-      }
+      data-dirty={capture.dirty}
     >
       <label className="grid gap-1">
         <span className="font-medium">Cliente</span>
@@ -133,8 +43,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           required
           value={customerId}
           onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-            markEdited()
-            setCustomerId(event.currentTarget.value)
+            onEdit('customerId', event.currentTarget.value)
           }}
           className={inputClass}
         >
@@ -158,8 +67,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           rows={2}
           value={reportedProblem}
           onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
-            markEdited()
-            setReportedProblem(event.currentTarget.value)
+            onEdit('reportedProblem', event.currentTarget.value)
           }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3 py-2"
         />
@@ -169,8 +77,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <input
           value={intakeCondition}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setIntakeCondition(event.currentTarget.value)
+            onEdit('intakeCondition', event.currentTarget.value)
           }}
           className={inputClass}
         />
@@ -180,8 +87,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <input
           value={accessories}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setAccessories(event.currentTarget.value)
+            onEdit('accessories', event.currentTarget.value)
           }}
           className={inputClass}
         />
@@ -191,8 +97,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
         <select
           value={priority}
           onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-            markEdited()
-            setPriority(event.currentTarget.value)
+            onEdit('priority', event.currentTarget.value)
           }}
           className={inputClass}
         >
@@ -207,8 +112,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
           type="checkbox"
           checked={withBicycle}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setWithBicycle(event.currentTarget.checked)
+            onEdit('withBicycle', event.currentTarget.checked)
           }}
           className="size-5"
         />
@@ -222,8 +126,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
               required
               value={brand}
               onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                markEdited()
-                setBrand(event.currentTarget.value)
+                onEdit('brand', event.currentTarget.value)
               }}
               className={inputClass}
             />
@@ -233,8 +136,7 @@ export function OrderQuickIntake({ customers, onCreateOrder }: OrderQuickIntakeP
             <input
               value={model}
               onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                markEdited()
-                setModel(event.currentTarget.value)
+                onEdit('model', event.currentTarget.value)
               }}
               className={inputClass}
             />

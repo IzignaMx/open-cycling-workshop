@@ -1,6 +1,26 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-02 · Capture visit continuity: new local increment, not published
+
+- [x] Reconcile PR78 fresh-main source acceptance for `b88c4eee` using the
+      coordinator's retained independent acceptance receipt, not new archive review.
+      See [current scope and provenance](docs/10-spec-development/2026-11-02-capture-visit-continuity.md).
+- [x] Implement the separately reviewed volatile same-scope capture visit;
+      1,119 frontend and 4,946 Python tests passed locally (671 Python skips).
+      Independent bounded source review accepted.
+- [ ] Execute native browser and exact-source hosted/fresh-main qualification;
+      six browser cases collected locally are not executed proof.
+- [ ] Obtain explicit authorization before publishing or integrating this new package.
+      Prior PR78 authorization does not carry forward.
+- Full reload/crash drafts, durable intent/batch correlation, physical T1–T8 and
+  R01-T035, installation/recovery/capacity stay separate. Historical cleanup UNKNOWN,
+  spent ownership40927223929 and Pages source3c6513d are unchanged.
+
 ## 2026-11-01 · Borradores recientes y recibos de capturas anteriores
+
+Historical source-authored checkpoint: pending hosted/main items below are
+superseded by the PR78 receipt above, not requests to replay prior workflows.
+Their original local limitations and failure history remain unchanged.
 
 - [x] Proteger las ediciones de formularios montados frente a un recibo exitoso
       anterior; RED/GREEN fresco y revisión independiente. Véase el
@@ -15,6 +35,10 @@
   recuperación/capacidad y cleanup histórico UNKNOWN permanecen pendientes.
 
 ## 2026-11-02 · Reconstructed current checkpoint; physical gates remain open
+
+Historical source-authored checkpoint: pending hosted/main items below are
+superseded by the PR78 receipt above, not requests to replay prior workflows.
+Their original local limitations and failure history remain unchanged.
 
 - [x] Reconcile retained PR77 candidate and fresh-main acceptance for `cdb44aac`:
       [source-bound record](docs/10-spec-development/2026-11-01-documentation-reconciliation.md). This records prior independent acceptance,

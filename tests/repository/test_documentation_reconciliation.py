@@ -17,9 +17,10 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_current_checkpoint_preserves_source_and_unqualified_gates() -> None:
+def test_historical_checkpoint_preserves_source_and_unqualified_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: documentation_reconciliation_20261101" in state
+    assert "\ndocumentation_reconciliation_20261101:\n" in state
+    assert "  accepted_baseline: cdb44aac572df65489fb95a15c0a813cd5445d95" in state
     assert f"  evidence: {RECORD}" in state
     record = read(RECORD)
     for token in (
@@ -101,3 +102,39 @@ def test_license_task_has_actual_repository_evidence() -> None:
     )[0]
     assert "  - R01-T002\n" in block
     assert "R01-T002" in read(RECORD)
+
+
+def test_current_capture_visit_checkpoint_preserves_authority_and_pending_proof() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_visit_continuity_20261102" in state
+    block = state.split("capture_visit_continuity_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    assert "status: planned" in block or "status: implemented_pending_evidence" in block
+    assert "publication: not_authorized_for_this_package" in block
+    assert "browser: pending_actual_execution" in block
+    record = read(BASE + "2026-11-02-capture-visit-continuity.md")
+    for token in ("b88c4eee78d0603bb47368bcec83cd9567eac495", "41372646038", "13110609454"):
+        assert token in record
+    for token in ("UNKNOWN", "40927223929", "R01-T035", "full reload", "not redownloaded"):
+        assert token in record
+
+
+def test_pr78_source_receipt_supersedes_not_deletes_pending_history() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "pr78_source_acceptance_20261102:" in state
+    assert "  source_status: verified" in state
+    assert "  prior_source_receipt: pr78_source_acceptance_20261102" in state
+    assert "  new_source_hosted: pending_exact_candidate_and_fresh_main" in state
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    assert "2026-11-02-capture-visit-continuity.md" in checklist
+    assert "PR78" in checklist.split("## 2026-11-01", 1)[0]
+
+
+def test_capture_requirement_rows_retain_unique_partial_canonical_mappings() -> None:
+    with (ROOT / BASE / "traceability.csv").open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    for requirement, task in (("FR-CUS-001", "R01-T030"), ("FR-SVC-001", "R02-T005")):
+        selected = [r for r in rows if (r["requirement_id"], r["task_id"]) == (requirement, task)]
+        assert len(selected) == 1
+        assert selected[0]["status"] == "partial"
+        assert selected[0]["test_id"] == "apps/web/e2e/capture-visit-continuity.spec.ts"
+        assert selected[0]["evidence"] == BASE + "2026-11-02-capture-visit-continuity.md"
