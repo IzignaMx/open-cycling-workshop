@@ -34,7 +34,7 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
     <form
       onSubmit={submit}
       className="grid gap-4"
-      aria-describedby="order-intake-status"
+      aria-describedby="order-intake-status order-recovery-status"
       data-dirty={capture.dirty}
     >
       <label className="grid gap-1">
@@ -148,6 +148,9 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
       </Button>
       <p id="order-intake-status" role="status" aria-live="polite" className="min-h-6 text-sm">
         {message}
+      </p>
+      <p id="order-recovery-status" role="status">
+        {capture.recoveryMessage}
       </p>
     </form>
   )

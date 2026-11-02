@@ -104,9 +104,9 @@ def test_license_task_has_actual_repository_evidence() -> None:
     assert "R01-T002" in read(RECORD)
 
 
-def test_current_capture_visit_checkpoint_preserves_authority_and_pending_proof() -> None:
+def test_historical_capture_visit_checkpoint_preserves_authority_and_pending_proof() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_visit_continuity_20261102" in state
+    assert "\ncapture_visit_continuity_20261102:\n" in state
     block = state.split("capture_visit_continuity_20261102:\n", 1)[1].split("\n\n", 1)[0]
     assert "status: planned" in block or "status: implemented_pending_evidence" in block
     assert "publication: not_authorized_for_this_package" in block
@@ -136,5 +136,46 @@ def test_capture_requirement_rows_retain_unique_partial_canonical_mappings() -> 
         selected = [r for r in rows if (r["requirement_id"], r["task_id"]) == (requirement, task)]
         assert len(selected) == 1
         assert selected[0]["status"] == "partial"
-        assert selected[0]["test_id"] == "apps/web/e2e/capture-visit-continuity.spec.ts"
-        assert selected[0]["evidence"] == BASE + "2026-11-02-capture-visit-continuity.md"
+        assert selected[0]["test_id"] == "apps/web/e2e/capture-reload-recovery.spec.ts"
+        assert selected[0]["evidence"] == BASE + "2026-11-02-capture-reload-recovery.md"
+
+
+def test_current_reload_checkpoint_does_not_claim_global_recovery_or_authority() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_reload_recovery_20261102" in state
+    block = state.split("capture_reload_recovery_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    assert "status: in_progress" in block or "status: implemented_pending_evidence" in block
+    assert "publication: not_authorized_for_this_package" in block
+    record = read(BASE + "2026-11-02-capture-reload-recovery.md")
+    for token in (
+        "24 hours",
+        "first successful persistence",
+        "not sliding",
+        "PROTECTED",
+        "not redownloaded",
+        "07:25",
+        "full crash",
+        "40927223929",
+        "UNKNOWN",
+    ):
+        assert token in record
+    assert "OFF-007" in record and "partial" in record
+
+
+def test_pr79_pr80_acceptance_is_separate_from_new_reload_source() -> None:
+    state = read(BASE + "execution-state.yaml")
+    for receipt in ("pr79_source_acceptance_20261102", "pr80_source_acceptance_20261102"):
+        assert receipt + ":" in state
+    record = read(BASE + "2026-11-02-capture-reload-recovery.md")
+    for token in ("41391295843", "41399878499", "02ec2f059e610768cb58ce20812fed33999bfa7a"):
+        assert token in record
+    assert "historical_pending_fields" in state
+    assert "fresh_main: pending_separate_exact_source_qualification" in state
+
+
+def test_quote_v8_reservation_is_explicitly_nonbinding_not_quote_activation() -> None:
+    text = read("docs/superpowers/plans/2026-09-01-v0.2-increment-2-budgets-inventory.md")
+    assert "future quotes reserve SQL `0012` / local `8`" in text
+    assert "Nonbinding historical local-v8 reservation" in text
+    assert "capture-reload-recovery" in text
+    assert "does not implement quote storage" in text

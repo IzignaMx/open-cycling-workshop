@@ -63,6 +63,11 @@ export function App({ runtime }: { runtime: WorkshopController }) {
       document.removeEventListener('visibilitychange', check)
     }
   }, [runtime])
+  const recoveryNotice = state.captureRecoveryNotice ? (
+    <p role="status" className="workshop-notice" id="capture-recovery-notice">
+      {state.captureRecoveryNotice}
+    </p>
+  ) : null
   const legacy = state.legacyPresent ? (
     <p role="status" className="workshop-notice">
       Hay datos de una versión anterior en este dispositivo. Se conservan por separado; no se han
@@ -102,6 +107,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </Button>
           </div>
           {legacy}
+          {recoveryNotice}
           <InventoryPanel controller={inventory} />
           <AdministrationPanel
             branding={brandingEditor}
@@ -152,6 +158,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             </>
           )}
           {legacy}
+          {recoveryNotice}
           <InventoryPanel controller={inventory} />
           <AdministrationPanel
             branding={brandingEditor}
@@ -203,6 +210,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
           </p>
         ) : null}
         {legacy}
+        {recoveryNotice}
         <dl className="workshop-metrics" aria-label="Resumen local del taller">
           <div>
             <dt>Órdenes activas en esta página</dt>

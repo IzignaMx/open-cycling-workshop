@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { mount } from './capture-component-host.mjs'
-import { setup, login } from './runtime-fixture.mjs'
+import { setup, login, until } from './runtime-fixture.mjs'
 
 async function fixture(kind, t) {
   const { runtime } = setup(t)
@@ -74,7 +74,13 @@ for (const kind of ['customer', 'order']) {
     test(`${kind}: delayed saved receipt preserves newer ${label} edit and entire current draft`, async (t) => {
       const f = await fixture(kind, t)
       const completion = f.form.submitTwiceBeforeRender()
-      assert.equal(f.calls.length, 1, 'busy reentry is refused synchronously')
+      assert.equal(
+        f.form.disabled(),
+        true,
+        'busy guard closes synchronously before durable protection',
+      )
+      await until(() => f.calls.length === 1, 'protected repository invocation')
+      assert.equal(f.calls.length, 1, 'same-render reentry admits one invocation')
       const value =
         label === 'Agregar bicicleta'
           ? false
@@ -84,6 +90,7 @@ for (const kind of ['customer', 'order']) {
               ? 'urgent'
               : 'newer'
       f.form.edit(label, value)
+      await until(() => f.calls.length === 1, 'protected repository invocation')
       f.resolveResult({ status: 'saved' })
       await completion
       assert.equal(f.form.value(label), value)
@@ -107,6 +114,7 @@ for (const kind of ['customer', 'order']) {
       const completion = f.form.submit()
       if (mode === 'ABA') f.form.edit(label, 'intermediate')
       f.form.edit(label, f.fields[label])
+      await until(() => f.calls.length === 1, 'protected repository invocation')
       f.resolveResult({ status: 'saved' })
       await completion
       assert.equal(f.form.value(label), f.fields[label])
@@ -116,6 +124,7 @@ for (const kind of ['customer', 'order']) {
   test(`${kind}: unchanged submitted draft resets on saved`, async (t) => {
     const f = await fixture(kind, t),
       completion = f.form.submit()
+    await until(() => f.calls.length === 1, 'protected repository invocation')
     f.resolveResult({ status: 'saved' })
     await completion
     assert.equal(f.form.dirty(), false)
@@ -131,6 +140,7 @@ for (const kind of ['customer', 'order']) {
         label = kind === 'customer' ? 'Nombre' : 'Problema reportado',
         completion = f.form.submit()
       f.form.edit(label, 'newer')
+      await until(() => f.calls.length === 1, 'protected repository invocation')
       if (outcome === 'unknown') f.rejectResult(new Error('private-canary'))
       else f.resolveResult({ status: 'not_saved', reason: 'quota' })
       await completion
@@ -150,6 +160,7 @@ for (const kind of ['customer', 'order']) {
       label = kind === 'customer' ? 'Nombre' : 'Problema reportado'
     const completion = f.form.submit()
     f.form.edit(label, 'New draft')
+    await until(() => f.calls.length === 1, 'protected repository invocation')
     f.resolveResult({ status: 'saved' })
     await completion
     assert.equal(
@@ -164,6 +175,7 @@ for (const kind of ['customer', 'order']) {
   test(`${kind}: unknown remains dirty and blocked after every field is cleared`, async (t) => {
     const f = await fixture(kind, t),
       completion = f.form.submit()
+    await until(() => f.calls.length === 1, 'protected repository invocation')
     f.rejectResult(new Error('unknown'))
     await completion
     for (const label of Object.keys(f.fields)) {
@@ -219,6 +231,7 @@ for (const kind of ['customer', 'order']) {
     }
     if (kind === 'order') f.form.edit('Agregar bicicleta', false)
     assert.equal(f.form.dirty(), true, 'pending submission still guards navigation')
+    await until(() => f.calls.length === 1, 'protected repository invocation')
     f.resolveResult({ status: 'saved' })
     await completion
     assert.equal(f.form.dirty(), false, 'edit revision is not a historical dirty latch')

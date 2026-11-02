@@ -1,3 +1,4 @@
+import { CaptureRecovery, type RecoveryAttempt } from './capture-recovery.js'
 import { CaptureVisit, type CaptureVisitSnapshot, type CaptureVisitScope } from './capture-visit.js'
 import { captureFeedback } from '../features/capture-feedback.js'
 import { captureValidation } from './capture-outcome.js'
@@ -77,11 +78,13 @@ export interface WorkshopSnapshot {
   timelineMessage: string | null
   identityKey: string
   capture: CaptureVisitSnapshot | null
+  captureRecoveryNotice: string | null
   transitionProtection: TransitionProtectionSnapshot
 }
 const empty = (): WorkshopSnapshot => ({
   phase: 'locked',
   capture: null,
+  captureRecoveryNotice: null,
   user: null,
   context: null,
   selectedLocationId: null,
@@ -158,6 +161,8 @@ export class WorkshopController {
   #sequence = 0
   readonly #captureVisit = new CaptureVisit()
   #captureSource: BaselineSession | null = null
+  readonly #captureRecovery: CaptureRecovery
+  #captureEnrollmentBinding: string | null = null
   readonly #transitionProtection = new TransitionProtection()
   #active: BaselineSession | null = null
   #working: BaselineSession | null = null
@@ -209,6 +214,28 @@ export class WorkshopController {
         this.#sessionGeneration++
         this.connectedReads?.clear()
         options.storage.removeItem(key)
+      },
+    })
+    this.#captureRecovery = new CaptureRecovery({
+      kernel: this.kernel,
+      db: this.database,
+      storage: options.storage,
+      now: this.#now,
+      current: () => {
+        const source = this.#captureSource
+        if (!source || this.#active !== source || !source.isCurrent(source.identity)) return null
+        return {
+          ticket: source.ticket,
+          scope: this.captureScope(source),
+          source,
+          isCurrent: () =>
+            this.#captureSource === source &&
+            this.#active === source &&
+            source.isCurrent(source.identity),
+        }
+      },
+      onChange: () => {
+        if (!this.#disposed) this.publish({})
       },
     })
     this.repositories = new WorkshopRepositories(this.kernel, this.#now)
@@ -541,6 +568,8 @@ export class WorkshopController {
         )
           return
         // A changed authority cannot carry an older durable offline admission.
+        this.maskCapture()
+        this.#captureRecovery.close()
         this.sessionStore.clear()
         this.sessionStore.setToken(saved.token)
         this.sessionStore.setUser(user)
@@ -643,7 +672,11 @@ export class WorkshopController {
     return this.#preferences
   }
   private publish(patch: Partial<WorkshopSnapshot>) {
-    const next = { ...this.#snapshot, ...patch }
+    const next = {
+      ...this.#snapshot,
+      ...patch,
+      captureRecoveryNotice: this.#captureRecovery.getNotice(),
+    }
     const source = this.#captureSource
     if (
       next.phase !== 'ready' ||
@@ -653,15 +686,37 @@ export class WorkshopController {
     ) {
       this.#captureVisit.suspendView()
       next.capture = null
-    } else next.capture = this.#captureVisit.getSnapshot()
+    } else {
+      const capture = this.#captureVisit.getSnapshot()
+      const recovery = this.#captureRecovery.snapshot()
+      next.capture = capture
+        ? Object.freeze({
+            ...capture,
+            customer: Object.freeze({
+              ...capture.customer,
+              blocked: capture.customer.blocked || recovery.customer.blocked,
+              recoveryMessage: recovery.customer.message,
+            }),
+            order: Object.freeze({
+              ...capture.order,
+              blocked: capture.order.blocked || recovery.order.blocked,
+              recoveryMessage: recovery.order.message,
+            }),
+          })
+        : null
+    }
     this.#snapshot = Object.freeze(next)
     this.branding.reconcile()
     for (const listener of this.#listeners) listener()
   }
-  private cancel() {
+  private maskCapture(): void {
     this.#captureVisit.suspendView()
     this.#captureSource = null
     this.#snapshot = Object.freeze({ ...this.#snapshot, capture: null })
+  }
+  private cancel() {
+    this.maskCapture()
+    this.#captureRecovery.suspend()
     this.branding.clear()
     this.invalidateAccount()
     this.#locationPage++
@@ -752,6 +807,7 @@ export class WorkshopController {
   async start(): Promise<void> {
     if (this.#started) return
     this.#started = true
+    await this.#captureRecovery.cleanup()
     this.#observer = liveQuery(() => this.database.deviceControl.get('device')).subscribe({
       next: (control) => {
         const session = this.#active
@@ -877,6 +933,11 @@ export class WorkshopController {
     return source
   }
   async login(input: LoginRequestPayload): Promise<void> {
+    const previousBinding = this.sessionStore.getSnapshot()?.bindingId
+    this.maskCapture()
+    this.#captureRecovery.close()
+    this.#captureRecovery.startVisit()
+    this.#captureEnrollmentBinding = null
     this.#captureVisit.startVisit()
     this.#transitionProtection.startVisit()
     const previous = this.#active ?? this.#working
@@ -893,6 +954,8 @@ export class WorkshopController {
       if (!current()) return
       this.sessionStore.setToken(token)
       const saved = this.sessionStore.getSnapshot()!
+      if (saved.bindingId && saved.bindingId !== previousBinding)
+        this.#captureEnrollmentBinding = saved.bindingId
       const user = await this.#http.me({
         token,
         isCurrent: () => this.exactSession(sequence, saved),
@@ -912,6 +975,8 @@ export class WorkshopController {
       await this.verifyStored(this.sessionStore.getSnapshot()!, user.location_id ?? undefined)
     } catch (error) {
       if (current()) {
+        this.maskCapture()
+        this.#captureRecovery.close()
         this.sessionStore.clear()
         this.publish({
           phase: 'locked',
@@ -1131,11 +1196,18 @@ export class WorkshopController {
     }
     if (!current()) return
     const connected = online && this.#verifiedOnline
-    this.#brandingAdmissionRefresh = connected ? source : null
     this.observeTransitionScope(source)
     this.#captureVisit.observeScope(this.captureScope(source))
-    this.#captureVisit.activateView()
     this.#captureSource = source
+    const hydration = this.#captureVisit.hydrationToken()
+    const recovered = await this.#captureRecovery.ready(
+      this.#captureEnrollmentBinding === source.identity.sessionHandle,
+    )
+    if (!current() || this.#captureSource !== source) return
+    this.#captureEnrollmentBinding = null
+    this.#captureVisit.hydrate(recovered, hydration)
+    this.#captureVisit.activateView()
+    this.#brandingAdmissionRefresh = connected ? source : null
     this.publish({
       phase: 'ready',
       user,
@@ -1321,11 +1393,14 @@ export class WorkshopController {
   async changeWorkshop() {
     const saved = this.sessionStore.getSnapshot()
     if (saved?.user?.location_id === null) {
+      this.maskCapture()
+      const retirement = this.#captureRecovery.retireVisit()
       this.#captureVisit.endVisit()
       this.#transitionProtection.endVisit()
       const source = this.#active
       const sequence = this.blank('selector')
       if (source) await this.kernel.lockContext(source.ticket).catch(() => undefined)
+      await retirement
       if (sequence !== this.#sequence) return
       this.publish({ user: saved.user, message: 'Selecciona un taller.' })
       await this.loadLocations()
@@ -1377,6 +1452,8 @@ export class WorkshopController {
     else this.publish({ message: 'Conéctate para verificar la sesión y reintentar.' })
   }
   async logout() {
+    this.maskCapture()
+    this.#captureRecovery.close()
     this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     const source = this.#active ?? this.#working
@@ -1496,7 +1573,7 @@ export class WorkshopController {
     })
   }
   hasUnsentCaptures(): boolean {
-    return this.#captureVisit.hasUnsent()
+    return this.#captureVisit.hasUnsent() || this.#captureRecovery.hasUnsent()
   }
   private captureSource(view: object): BaselineSession | null {
     const source = this.#captureSource
@@ -1513,32 +1590,40 @@ export class WorkshopController {
     field: K,
     value: CustomerDraftState[K],
   ): void {
-    if (this.captureSource(view) && this.#captureVisit.editCustomer(view, field, value))
+    if (this.captureSource(view) && this.#captureVisit.editCustomer(view, field, value)) {
+      this.#captureRecovery.edit('customer', this.#captureVisit.projection('customer'))
       this.publish({})
+    }
   }
   editCaptureOrder<K extends keyof OrderDraftState>(
     view: object,
     field: K,
     value: OrderDraftState[K],
   ): void {
-    if (this.captureSource(view) && this.#captureVisit.editOrder(view, field, value))
+    if (this.captureSource(view) && this.#captureVisit.editOrder(view, field, value)) {
+      this.#captureRecovery.edit('order', this.#captureVisit.projection('order'))
       this.publish({})
+    }
   }
   async submitCaptureCustomer(view: object): Promise<void> {
     const source = this.captureSource(view)
-    if (!source) return
+    if (!source || !this.#captureRecovery.canSubmit('customer')) return
     const attempt = this.#captureVisit.begin(view, 'customer')
     if (!attempt) return
     this.publish({})
     let feedback
+    let protection: RecoveryAttempt | null = null
+    let dispatched = false
     try {
       // Subscribers may synchronously replace authority while observing busy.
-      if (this.captureSource(view) !== source) {
+      protection = await this.#captureRecovery.protect('customer')
+      if (!protection || this.captureSource(view) !== source) {
         feedback = captureFeedback({
           kind: 'resolved',
           value: { status: 'not_saved', reason: 'write_failure' },
         })
       } else {
+        dispatched = true
         const { displayName, email, phone } = attempt.input
         feedback = captureFeedback({
           kind: 'resolved',
@@ -1552,17 +1637,27 @@ export class WorkshopController {
     } catch (error) {
       feedback = captureFeedback({ kind: 'rejected', error })
     }
-    if (this.#captureVisit.finish(attempt.token, feedback)) this.publish({})
+    const finished = this.#captureVisit.finish(attempt.token, feedback)
+    if (finished && dispatched && protection && feedback.status !== 'unknown')
+      await this.#captureRecovery.settle(
+        protection,
+        feedback.status,
+        this.#captureVisit.projection('customer'),
+      )
+    if (finished) this.publish({})
   }
   async submitCaptureOrder(view: object): Promise<void> {
     const source = this.captureSource(view)
-    if (!source) return
+    if (!source || !this.#captureRecovery.canSubmit('order')) return
     const attempt = this.#captureVisit.begin(view, 'order')
     if (!attempt) return
     this.publish({})
     let feedback
+    let protection: RecoveryAttempt | null = null
+    let dispatched = false
     try {
-      if (this.captureSource(view) !== source) {
+      protection = await this.#captureRecovery.protect('order')
+      if (!protection || this.captureSource(view) !== source) {
         feedback = captureFeedback({
           kind: 'resolved',
           value: { status: 'not_saved', reason: 'write_failure' },
@@ -1586,14 +1681,28 @@ export class WorkshopController {
             )
           )
             this.publish({})
+          if (protection)
+            await this.#captureRecovery.settle(
+              protection,
+              'not_saved',
+              this.#captureVisit.projection('order'),
+            )
           return
         }
+        dispatched = true
         feedback = captureFeedback({ kind: 'resolved', value: await this.createOrder(normalized) })
       }
     } catch (error) {
       feedback = captureFeedback({ kind: 'rejected', error })
     }
-    if (this.#captureVisit.finish(attempt.token, feedback)) this.publish({})
+    const finished = this.#captureVisit.finish(attempt.token, feedback)
+    if (finished && dispatched && protection && feedback.status !== 'unknown')
+      await this.#captureRecovery.settle(
+        protection,
+        feedback.status,
+        this.#captureVisit.projection('order'),
+      )
+    if (finished) this.publish({})
   }
   async createCustomer(input: {
     displayName: string
@@ -1847,6 +1956,7 @@ export class WorkshopController {
     }
   }
   dispose() {
+    this.#captureRecovery.dispose()
     this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     this.#disposed = true

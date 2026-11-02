@@ -16,6 +16,7 @@ declare module 'dexie' {
   }
 
   export interface WhereClause<T> {
+    above(value: unknown): Collection<T>
     equals(value: unknown): Collection<T>
     between(
       lower: unknown,
@@ -26,6 +27,7 @@ declare module 'dexie' {
   }
 
   export interface Table<T, K = unknown> {
+    toCollection(): Collection<T>
     get(key: K): Promise<T | undefined>
     add(value: T): Promise<K>
     count(): Promise<number>

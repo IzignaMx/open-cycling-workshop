@@ -1,4 +1,11 @@
+import { writerEpoch, newCaptureWriter } from './capture-checkpoint.js'
+import { applyCaptureCheckpoint } from './capture-checkpoint-store.js'
+import type {
+  CaptureCheckpointCommand,
+  CaptureCheckpointResult,
+} from './capture-checkpoint-types.js'
 import type Dexie from 'dexie'
+import type { Table } from 'dexie'
 import { IncrementalTransactions } from './incremental-store.js'
 import type { IncrementalRequest } from './incremental-state.js'
 import {
@@ -304,6 +311,75 @@ export class AccessKernel {
         return admission
       },
       current,
+    )
+  }
+
+  /** Draft metadata CAS shares the existing admitted owner transaction; it grants no command authority. */
+  async checkpointCapture(
+    ticket: ContextTicket,
+    command: CaptureCheckpointCommand,
+    current: () => boolean = () => true,
+  ): Promise<CaptureCheckpointResult> {
+    ticket = structuredClone(ticket)
+    command = structuredClone(command)
+    const candidate = {
+      ...command.scope,
+      capabilities: [...new Set(command.scope.capabilities)].sort(),
+    }
+    const hash = async (value: unknown): Promise<string> => {
+      const bytes = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(canonicalJson(value)),
+      )
+      return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+    }
+    const bindingKey = await hash([candidate.apiRealm, candidate.sessionBindingId])
+    const scopeKey = await hash(candidate)
+    return this.run(
+      ticket,
+      false,
+      async ({ context, partition }) => {
+        const admission = validateAdmission(partition.sessionAdmission, partition, context)
+        if (canonicalJson(admission.owner) !== canonicalJson(ticket))
+          throw new Error('Capture admission fenced')
+        const actual = {
+          ...context.principal,
+          selectedLocationId: context.selectedLocationId,
+          datasetIncarnation: context.datasetIncarnation,
+          authorizationEpoch: context.authorizationEpoch,
+          policyRevision: context.policyRevision,
+          capabilities: [...new Set(context.capabilities)].sort(),
+          sessionBindingId: admission.sessionBindingId,
+        }
+        if (canonicalJson(actual) !== canonicalJson(candidate))
+          throw new Error('Capture scope fenced')
+        if ('channel' in command) {
+          requireCapability(
+            context,
+            command.channel === 'customer' ? 'customers.write' : 'orders.write',
+          )
+          if (command.channel === 'order') requireCapability(context, 'customers.read')
+        }
+        const result = await applyCaptureCheckpoint(
+          this.db,
+          command,
+          bindingKey,
+          scopeKey,
+          this.dependencies.now(),
+        )
+        if (result.kind === 'loaded') {
+          if (!context.capabilities.includes('customers.write')) delete result.contents.customer
+          if (
+            !context.capabilities.includes('orders.write') ||
+            !context.capabilities.includes('customers.read')
+          )
+            delete result.contents.order
+        }
+        return result
+      },
+      current,
+      undefined,
+      [this.db.captureCheckpoints, this.db.captureDraftContents],
     )
   }
 
@@ -634,6 +710,7 @@ export class AccessKernel {
     action: (authorized: Authorized) => Promise<T>,
     current: () => boolean = () => true,
     aborted?: (error: unknown) => T,
+    extraTables: Table<unknown>[] = [],
   ): Promise<T> {
     if (!current() || !this.live(ticket))
       throw new Error('Session fenced: no matching verified session in this kernel instance')
@@ -647,7 +724,7 @@ export class AccessKernel {
       if (event.target === native) sawComplete = true
     }
     const execute = () =>
-      this.db.transaction('rw', this.tables(), async (transaction) => {
+      this.db.transaction('rw', [...this.tables(), ...extraTables], async (transaction) => {
         if (aborted) {
           if (!transaction || transaction.db !== this.db || transaction.parent)
             throw new Error('Capture requires an owned top-level transaction')
@@ -850,6 +927,9 @@ export class AccessKernel {
     }
     if (!Number.isSafeInteger(control.localSequence + 1))
       throw new Error('Local sequence exhausted')
+    // Only a genuinely new append covers the sequence. An exact-ID no-op above
+    // must never repair a gap left by a writer that did not participate.
+    const epoch = writerEpoch(control) ?? crypto.randomUUID()
     const operation: OwnedOperation = {
       mutationId: command.envelope.mutation_id,
       principalKey: ticket.principalKey,
@@ -888,6 +968,7 @@ export class AccessKernel {
     for (const details of command.localEvents)
       await this.event(operation.mutationId, 'local', null, details)
     control.localSequence = operation.localSequence
+    control.captureWriter = newCaptureWriter(control, epoch)
     await this.db.deviceControl.put(control)
     return operation.mutationId
   }

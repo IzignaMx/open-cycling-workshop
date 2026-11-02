@@ -1,3 +1,5 @@
+import type { Channel, ContentProjection } from '../access-kernel/capture-checkpoint-types.js'
+import { frozenCopy, validProjection } from '../access-kernel/capture-checkpoint.js'
 import type { CaptureFeedback } from '../features/capture-feedback.js'
 import {
   hasCustomerDraft,
@@ -19,6 +21,7 @@ export interface CaptureFormSnapshot<D> {
   readonly busy: boolean
   readonly blocked: boolean
   readonly message: string | null
+  readonly recoveryMessage?: string | null
   readonly dirty: boolean
 }
 export interface CaptureVisitSnapshot {
@@ -31,6 +34,7 @@ interface Pending<D> extends CaptureAttempt<D> {
   revision: object
 }
 interface FormState<D> {
+  activity: object
   draft: D
   revision: object
   pending: Pending<D> | null
@@ -49,6 +53,7 @@ const emptyOrder = (): OrderDraftState => ({
   model: '',
 })
 const form = <D>(draft: D): FormState<D> => ({
+  activity: {},
   draft,
   revision: {},
   pending: null,
@@ -77,6 +82,14 @@ function scopeKey(scope: CaptureVisitScope): string {
 
 /** One volatile visit, never execution authority or durable recovery. */
 export class CaptureVisit {
+  private hydrationTokens = new WeakMap<
+    object,
+    {
+      scope: string | null
+      customer: { state: object; revision: object; activity: object }
+      order: { state: object; revision: object; activity: object }
+    }
+  >()
   private customer = form(emptyCustomer())
   private order = form(emptyOrder())
   private retained = emptySelection()
@@ -86,6 +99,69 @@ export class CaptureVisit {
   private denied = false
   private notice: string | null = null
 
+  projection(channel: 'customer'): Extract<ContentProjection, { channel: 'customer' }>
+  projection(channel: 'order'): Extract<ContentProjection, { channel: 'order' }>
+  projection(channel: Channel): ContentProjection
+  projection(channel: Channel): ContentProjection {
+    return frozenCopy(
+      channel === 'customer'
+        ? { channel, draft: this.customer.draft }
+        : { channel, draft: this.order.draft, retainedSelection: this.retained },
+    )
+  }
+  hydrationToken(): object {
+    const token = Object.freeze({})
+    this.hydrationTokens.set(token, {
+      scope: this.scope,
+      customer: {
+        state: this.customer,
+        revision: this.customer.revision,
+        activity: this.customer.activity,
+      },
+      order: { state: this.order, revision: this.order.revision, activity: this.order.activity },
+    })
+    return token
+  }
+  hydrate(projections: Partial<Record<Channel, ContentProjection>>, token: object): boolean {
+    const expected = this.hydrationTokens.get(token)
+    if (
+      !expected ||
+      this.closed ||
+      this.denied ||
+      this.scope === null ||
+      expected.scope !== this.scope
+    )
+      return false
+    const channels = Object.keys(projections)
+    if (
+      !channels.length ||
+      channels.some((channel) => channel !== 'customer' && channel !== 'order')
+    )
+      return false
+    for (const channel of channels as Channel[]) {
+      const content = projections[channel],
+        state = this[channel],
+        prior = expected[channel]
+      if (
+        !validProjection(content) ||
+        content.channel !== channel ||
+        state !== prior.state ||
+        state.revision !== prior.revision ||
+        state.activity !== prior.activity ||
+        state.pending ||
+        state.blocked
+      )
+        return false
+    }
+    this.hydrationTokens.delete(token)
+    if (projections.customer?.channel === 'customer')
+      this.customer = form({ ...projections.customer.draft })
+    if (projections.order?.channel === 'order') {
+      this.order = form({ ...projections.order.draft })
+      this.retained = { ...projections.order.retainedSelection }
+    }
+    return true
+  }
   private clearValues(): void {
     this.customer = form(emptyCustomer())
     this.order = form(emptyOrder())
@@ -176,6 +252,7 @@ export class CaptureVisit {
   }
   private beginForm<D extends object>(state: FormState<D>): CaptureAttempt<D> | null {
     if (state.pending || state.blocked) return null
+    state.activity = {}
     const attempt = {
       token: Object.freeze({}),
       input: Object.freeze({ ...state.draft }),

@@ -9,11 +9,14 @@ function request(r) {
     r.onerror = () => reject(r.error)
   })
 }
-test('additive native60→70 preserves every v6 store exactly and closes the old tab', async () => {
+test('additive native60→80 preserves every v6 store exactly and closes the old tab', async () => {
   const name = 'branding-upgrade-' + crypto.randomUUID(),
     template = createKernelDatabase(name)
   const schemas = template.tables
-    .filter((table) => table.name !== 'brandingSnapshots')
+    .filter(
+      (table) =>
+        !['brandingSnapshots', 'captureCheckpoints', 'captureDraftContents'].includes(table.name),
+    )
     .map((table) => ({ name: table.name, schema: table.schema }))
   const open = indexedDB.open(name, 60)
   open.onupgradeneeded = () => {
@@ -55,9 +58,9 @@ test('additive native60→70 preserves every v6 store exactly and closes the old
   }
   try {
     await template.open()
-    assert.equal(template.backendDB().version, 70)
+    assert.equal(template.backendDB().version, 80)
     assert.equal(closed, true)
-    assert.equal(template.tables.length, 17)
+    assert.equal(template.tables.length, 19)
     assert.equal(await template.brandingSnapshots.count(), 0)
     for (const { name } of schemas)
       assert.deepEqual(await template.table(name).toArray(), [originals.get(name)], name)

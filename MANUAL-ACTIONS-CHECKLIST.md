@@ -1,6 +1,31 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-02 · Same-session capture reload: locally verified, hosted evidence pending
+
+- [x] Record explicit user policy approval at07:25: shared IndexedDB, absolute
+      24-hour draft-PII TTL, logout purge and expired cleanup on app open.
+      [Scope, receipt provenance and limits](docs/10-spec-development/2026-11-02-capture-reload-recovery.md).
+- [x] Independently accept the bounded design/plan at07:37, not implementation proof.
+- [x] Record explicit07:54 approval for atomic shared writer version/sequence
+      enforcement and mixed-version tests; this is not publication authority.
+- [x] Resolve reproduced old-v7/new-v8 duplicate-creation path after explicit
+      shared-commit protocol approval and independent expanded design review.
+      Actual old-runtime probes and two killed guard mutants verify the correction.
+      Prehydration logout privacy regression is independently corrected as well.
+- [x] Implement and locally verify exact-session restore, pre-dispatch protection, clock,
+      cleanup failure, v7→v8 preservation and old-writer behavior.
+- [ ] Execute native browser/source-bound qualification and obtain separate new
+      publication/integration authorization. Policy approval is not deployment authority.
+- PR79/80 prior fresh-main receipts are reconciled in the new record. Earlier
+  pending wording below remains historical; no workflow replay is requested.
+- Full crash/device loss, physical T1–T8/R01-T035, capacity and global OFF-007
+  completion remain open. Historical cleanup41011497919 is UNKNOWN;
+  ownership40927223929 remains SPENT and Pages source3c6513d unchanged.
+
 ## 2026-11-02 · Product-description planning coverage
+
+Historical source-authored pending fields are superseded by the PR80 fresh-main
+receipt above; planning coverage remains distinct from runtime qualification.
 
 - [ ] Qualify this documentation/test candidate separately; no runtime module
       completion follows from a complete planning matrix.
@@ -14,8 +39,8 @@
 
 The source-authored pending items below are superseded for candidate publication
 and merge by the [PR79 receipt](https://github.com/IzignaMx/open-cycling-workshop/pull/79).
-Merged main is `7cf38e17e1981607287b0d5a41abedeead3bcf5e`; fresh-main qualification
-is still pending separately. Original local results remain historical, not new
+Merged main is `7cf38e17e1981607287b0d5a41abedeead3bcf5e`; the historical fresh-main
+pending checkpoint is superseded by the PR79 fresh-main receipt above. Original local results remain historical, not new
 archive verification or requests to replay accepted candidate workflows.
 
 - [x] Reconcile PR78 fresh-main source acceptance for `b88c4eee` using the

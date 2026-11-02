@@ -14,6 +14,14 @@ import {
   setup,
   login,
 } from './runtime-fixture.mjs'
+// Logo barriers must not intercept unrelated capture-checkpoint SHA-256 work.
+function isLogoDigest(args) {
+  const value = args[1]
+  const bytes = ArrayBuffer.isView(value)
+    ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+    : new Uint8Array(value)
+  return [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)
+}
 test('production composition requires real parsed pages, isolated DB and offline same-session reload', async (t) => {
   const first = setup(t)
   await first.runtime.start()
@@ -1296,9 +1304,12 @@ test('disconnect during preference copy retains offline admission and probes wit
   await second.runtime.offline()
   assert.equal(second.runtime.getSnapshot().sync, 'offline')
   release()
-  await settleProbe()
-  t.mock.timers.tick(0)
-  await settleProbe()
+  // Recovery adds admitted asynchronous storage work after preference copying.
+  // Wait for the actual publication without advancing the next network probe.
+  for (let i = 0; i < 200 && second.runtime.getSnapshot().phase !== 'ready'; i++) {
+    await settleProbe()
+    t.mock.timers.tick(0)
+  }
   assert.equal(second.runtime.getSnapshot().phase, 'ready')
   assert.equal(second.runtime.getSnapshot().sync, 'offline')
   assert.deepEqual(calls, ['/api/v1/auth/me', '/api/v1/auth/context'])
@@ -1346,7 +1357,7 @@ test('organization-wide account retains concrete workshop through automatic reva
   const second = setup(t, { name: first.name, storage: first.storage, server, online: false })
   await second.runtime.start()
   t.mock.timers.tick(2000)
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 200; i++) {
     await settleProbe()
     t.mock.timers.tick(0)
     if (second.runtime.getSnapshot().sync === 'synced') break
@@ -1699,6 +1710,7 @@ test('queued offline read recovers after a customer commit advances ownership du
   })
   t.mock.method(performance, 'now', () => elapsed)
   t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (!isLogoDigest(args)) return digest(...args)
     if (++calls === 1) {
       entered()
       await gate
@@ -1743,6 +1755,7 @@ for (const edge of ['rollback', 'expiry', 'takeover', 'future snapshot']) {
     })
     t.mock.method(performance, 'now', () => elapsed)
     t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (!isLogoDigest(args)) return digest(...args)
       if (++calls === 1) {
         entered()
         await gate
@@ -1872,6 +1885,7 @@ for (const edge of ['advance', 'rollback', 'expiry', 'takeover', 'logout', 'futu
     t.after(() => release())
     t.mock.method(performance, 'now', () => elapsed)
     t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (!isLogoDigest(args)) return digest(...args)
       if (++calls === 1) {
         entered()
         await gate
@@ -2183,6 +2197,7 @@ test('connected reload readmits shared branding while v1 personal records surviv
     }
   })
   t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (!isLogoDigest(args)) return digest(...args)
     if (writing && !held) {
       held = true
       entered()

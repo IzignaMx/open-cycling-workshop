@@ -46,7 +46,13 @@ export interface ContextTicket extends VerificationAttempt {
   partitionId: string
   authorizationEpoch: string
 }
+export interface CaptureWriter {
+  format: 1
+  epoch: string
+  coveredSequence: number
+}
 export interface DeviceControl {
+  captureWriter?: CaptureWriter
   key: 'device'
   generation: number
   tabAttemptId: string | null
