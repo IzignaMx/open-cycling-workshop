@@ -1,7 +1,45 @@
 schema: 1
 
-current_checkpoint: capture_reload_recovery_20261102
+current_checkpoint: official_module_reference_20261102
+official_module_reference_20261102:
+  status: implemented_pending_evidence
+  baseline_main: aa432060aedd170e6d52bb93004fbc79f33953bb
+  prior_source_receipt: pr81_source_acceptance_20261102
+  evidence: docs/10-spec-development/2026-11-02-official-module-reference.md
+  design: docs/superpowers/specs/2026-11-02-official-module-reference-design.md
+  plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
+  scope: host_only_static_public_metadata_no_data_loader_storage_auth_network_SDK
+  canonical_SDK_tasks: prerequisite_only_not_complete
+  runtime_browser_qualification: five_authored_collected_zero_local_execution
+  frontend_local: first1236_pass1_fail_then1237_pass_zero_skips
+  retained_frontend_failure: unchanged_sync_timing_assertion_cause_unresolved_not_fixed
+  focused_local: five_passed_real_React_and_source_contracts
+  python_local: 4957_passed671_environment_skips12_warnings_not_hosted_proof
+  repository_local: 150_passed_after_reconciliation
+  source_review: accepted_bounded_scope_native_evidence_pending
+  publication: not_authorized_for_this_package
+  V01_physical_and_release_gates: unchanged_partial
+
+pr81_source_acceptance_20261102:
+  source_status: verified
+  merged_main: aa432060aedd170e6d52bb93004fbc79f33953bb
+  merged_tree: 2abcc81c056d658f03dad56455ce7b0ce33911a1
+  fresh_main_ci: 41439571738
+  aggregate: 27_of_27
+  python: 5567_passed58_expected_skips
+  frontend: 1232_passed
+  browser: direct121_aggregate121_retry0_repeats20_9_5_10_kernel14
+  runtime: 41439571752
+  security: 41439571856
+  micro: 41439571725
+  final_receipt: Library_v2_libfile_84d64ec919e08191bc56f9170456edde
+  final_review_sha256: c071e70c0fa77f8890c56b676ff89d1d40db1193d2241eb9e01b4aa83b192fd4
+  provenance: coordinator_retained_independent_Library_receipt_not_new_archive_download
+  PR_body: stale_final_update_failed_not_final_acceptance_source
+  scope: prior_capture_reload_source_not_M1_or_full_recovery_qualification
+
 capture_reload_recovery_20261102:
+  historical_pending_fields: superseded_by_pr81_source_acceptance_20261102
   status: implemented_pending_evidence
   baseline_main: 02ec2f059e610768cb58ce20812fed33999bfa7a
   prior_source_receipt: pr80_source_acceptance_20261102
@@ -2165,12 +2203,13 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/superpowers/plans/2026-11-02-capture-reload-recovery.md
+active_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
+previous_capture_reload_plan: docs/superpowers/plans/2026-11-02-capture-reload-recovery.md
 previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-continuity.md
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: capture_reload_recovery_20261102
+last_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
 
@@ -2434,7 +2473,7 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - preserve accepted PR79 and PR80 receipts and qualify the bounded capture-reload source without inheriting publication authority
+  - preserve accepted PR81 final Library v2 receipt and qualify the bounded host-only M1 reference without inheriting publication authority
   - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
   - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
   - preserve PR59 source-qualified full-history validation and complete actual-installation inventory and recovery acceptance before activation

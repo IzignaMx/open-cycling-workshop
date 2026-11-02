@@ -1,6 +1,26 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-11-02 · Same-session capture reload: locally verified, hosted evidence pending
+## 2026-11-02 · M1 host-only reference: implemented; hosted qualification pending
+
+- [x] Reconcile accepted PR81 main `aa432060` from the retained final Library v2
+      receipt, not the stale PR body whose final update failed. See
+      [source and scope record](docs/10-spec-development/2026-11-02-official-module-reference.md).
+- [x] Implement and independently review the bounded static reference; focused5 pass.
+      Frontend attempts1236+1 failure then1237 pass are both retained; the unchanged
+      timing assertion failure is unexplained, not declared fixed.
+- [ ] Qualify the static official metadata reference, omission/error isolation,
+      capture preservation, accessibility and actual host composition.
+- [ ] Obtain separate publication/integration authorization and exact-source evidence.
+- M0 remains qualified data-only source; M1 is a prerequisite, not an SDK, loader,
+  installer, connector identity, permission grant or offline operational feature.
+  V0.1 remains partial. Physical R01-T035/T1–T8, full crash/capacity/installation,
+  historical UNKNOWN cleanup and SPENT40927223929 remain unchanged; no Pages deploy.
+
+## 2026-11-02 · Same-session capture reload: historical source checkpoint
+
+The pending/draft wording below predates accepted PR81 fresh main and is superseded
+by the final Library v2 receipt above. Earlier failed CI evidence remains unchanged;
+the stale PR body is not final acceptance proof or a request to replay workflows.
 
 - [x] Record explicit user policy approval at07:25: shared IndexedDB, absolute
       24-hour draft-PII TTL, logout purge and expired cleanup on app open.

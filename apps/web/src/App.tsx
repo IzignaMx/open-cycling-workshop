@@ -1,3 +1,6 @@
+import { ModuleInformation } from './features/module-information/ModuleInformation.js'
+import { officialModuleReference } from './features/module-information/reference.js'
+import './features/module-information/module-information.css'
 import { InventoryController } from './features/inventory/controller.js'
 import { InventoryPanel } from './features/inventory/InventoryPanel.js'
 import { BrandingEditorController } from './features/branding/controller.js'
@@ -338,6 +341,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             )}
           </section>
         </section>
+        <ModuleInformation reference={officialModuleReference} />
         <section id="workshop-issues" aria-label="Incidencias de sincronización">
           <ConflictCenter
             issues={state.issues}

@@ -140,9 +140,9 @@ def test_capture_requirement_rows_retain_unique_partial_canonical_mappings() -> 
         assert selected[0]["evidence"] == BASE + "2026-11-02-capture-reload-recovery.md"
 
 
-def test_current_reload_checkpoint_separates_authorized_publication_from_acceptance() -> None:
+def test_historical_reload_checkpoint_separates_publication_from_acceptance() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_reload_recovery_20261102" in state
+    assert "\ncapture_reload_recovery_20261102:\n" in state
     block = state.split("capture_reload_recovery_20261102:\n", 1)[1].split("\n\n", 1)[0]
     assert "status: in_progress" in block or "status: implemented_pending_evidence" in block
     assert "publication: authorized_draft_PR81_published_corrective_CI_pending" in block
@@ -180,3 +180,60 @@ def test_quote_v8_reservation_is_explicitly_nonbinding_not_quote_activation() ->
     assert "Nonbinding historical local-v8 reservation" in text
     assert "capture-reload-recovery" in text
     assert "does not implement quote storage" in text
+
+
+def test_current_m1_checkpoint_is_partial_and_has_no_inherited_publication() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: official_module_reference_20261102" in state
+    block = state.split("official_module_reference_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    assert "publication: not_authorized_for_this_package" in block
+    assert "canonical_SDK_tasks: prerequisite_only_not_complete" in block
+    record = read(BASE + "2026-11-02-official-module-reference.md")
+    for token in (
+        "FR-PLG-003",
+        "FR-PLG-005",
+        "FR-PLG-008",
+        "FR-PLG-009",
+        "R09-T020",
+        "R10-T014",
+        "R01-T035",
+        "UNKNOWN",
+        "40927223929",
+        "not a plugin runtime",
+    ):
+        assert token in record
+
+
+def test_pr81_final_receipt_does_not_rewrite_failed_history() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "pr81_source_acceptance_20261102:" in state
+    assert "prior_failed_ci: [41413376026, 41423509534]" in state
+    record = read(BASE + "2026-11-02-official-module-reference.md")
+    for token in (
+        "41439571738",
+        "aa432060aedd170e6d52bb93004fbc79f33953bb",
+        "libfile_84d64ec919e08191bc56f9170456edde",
+        "stale PR body",
+        "not redownloaded",
+    ):
+        assert token in record
+
+
+def test_m1_static_offline_metadata_does_not_grant_operational_offline_support() -> None:
+    strategy = read("docs/08-open-source/2026-10-27-compatible-modules.md")
+    assert "M1 host-only metadata clarification" in strategy
+    assert "not operational offline support" in strategy
+    assert "M0 is already source-qualified" in strategy
+    with (ROOT / BASE / "traceability.csv").open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    for requirement, task in (
+        ("FR-PLG-003", "R09-T020"),
+        ("FR-PLG-005", "R09-T020"),
+        ("FR-PLG-008", "R09-T020"),
+        ("FR-PLG-009", "R09-T020"),
+        ("FR-PLG-009", "R10-T014"),
+    ):
+        selected = [r for r in rows if (r["requirement_id"], r["task_id"]) == (requirement, task)]
+        assert len(selected) == 1
+        assert selected[0]["status"] == "partial"
+        assert selected[0]["evidence"] == BASE + "2026-11-02-official-module-reference.md"

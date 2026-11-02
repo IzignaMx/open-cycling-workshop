@@ -8,6 +8,12 @@ declare namespace JSX {
 }
 
 declare module 'react' {
+  export class Component<P, S> {
+    constructor(props: P)
+    readonly props: Readonly<P>
+    state: Readonly<S>
+    render(): ReactNode
+  }
   export type ReactNode = any
   export type CSSProperties = Record<string, string | number | undefined>
   export function useSyncExternalStore<T>(
