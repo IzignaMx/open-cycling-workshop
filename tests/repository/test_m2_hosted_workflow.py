@@ -42,14 +42,14 @@ def check_source(doc: str) -> None:
     assert 'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"' in doc
     assert 'tree="$(git rev-parse HEAD^{tree})"' in doc
     assert 'git archive HEAD | tar -x -C "$context"' in doc
-    assert "docker build --pull --target build" in doc
+    assert "docker build --pull --target m2-laboratory" in doc
     assert "infra/docker/platform.local.Dockerfile" in doc
     assert "RUN uv sync --locked --all-packages --group dev" in doc
     assert "COPY tests /app/tests" in doc and "COPY scripts /app/scripts" in doc
     assert "org.opencontainers.image.revision=$GITHUB_SHA" in doc
     assert "org.opencontainers.image.tree=$tree" in doc
     assert "docker pull postgres:18.4-trixie" in doc
-    assert doc.count("docker image inspect --format '{{.Id}}'") == 3
+    assert doc.count("docker image inspect --format '{{.Id}}'") == 2
     assert "command -v openssl" in doc
     actions = re.findall(r"uses: ([^\n]+)", doc)
     assert len(actions) == 2
@@ -108,7 +108,11 @@ def test_runtime_cleanup_and_upload_are_separately_bounded() -> None:
             check_admission,
         ),
         ("persist-credentials: false", "persist-credentials: true", check_source),
-        ("docker build --pull --target build", "docker build --target build", check_source),
+        (
+            "docker build --pull --target m2-laboratory",
+            "docker build --target m2-laboratory",
+            check_source,
+        ),
         ("timeout-minutes: 15", "timeout-minutes: 60", check_bounds),
         ("if: ${{ always() }}", "if: ${{ success() }}", check_bounds),
         ("retention-days: 1", "retention-days: 90", check_bounds),
@@ -136,3 +140,27 @@ def test_preparation_storage_checkpoints_and_final_image_limit():
     assert 'test "$((image_bytes + pg_bytes))" -le 4294967296' in doc
     assert doc.count("docker image inspect --format '{{.Size}}'") == 2
     assert "not a peak disk quota" in doc
+
+
+def test_generated_lab_dockerfile_uses_prior_stage_not_bare_image_id() -> None:
+    doc = workflow()
+    assert 'cat "$context/infra/docker/platform.local.Dockerfile"' in doc
+    assert "FROM build AS m2-laboratory" in doc
+    assert "docker build --pull --target m2-laboratory" in doc
+    assert "printf 'FROM %s" not in doc
+    original = (ROOT / "infra/docker/platform.local.Dockerfile").read_text()
+    extension = doc.split("<<'DOCKERFILE'\n", 1)[1].split("          DOCKERFILE", 1)[0]
+    generated = original + "\n" + "\n".join(line[10:] for line in extension.splitlines())
+    # Real generated recipe, not a live Docker/build execution: stage reference
+    # must resolve to the already pinned build stage, never docker.io/sha256.
+    stages = set()
+    for line in generated.splitlines():
+        if not line.startswith("FROM "):
+            continue
+        words = line.split()
+        if words[1] == "build":
+            assert "build" in stages
+        assert not words[1].startswith("sha256:")
+        if len(words) == 4 and words[2].upper() == "AS":
+            stages.add(words[3])
+    assert "m2-laboratory" in stages

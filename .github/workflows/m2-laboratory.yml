@@ -55,21 +55,17 @@ jobs:
           tree="$(git rev-parse HEAD^{tree})"
           context="$(mktemp -d "$RUNNER_TEMP/m2-source.XXXXXX")"
           git archive HEAD | tar -x -C "$context"
-          docker build --pull --target build \
-            --iidfile "$RUNNER_TEMP/m2-base.id" \
-            -f "$context/infra/docker/platform.local.Dockerfile" "$context"
-          base="$(docker image inspect --format '{{.Id}}' "$(cat "$RUNNER_TEMP/m2-base.id")")"
-          [[ "$base" =~ ^sha256:[a-f0-9]{64}$ ]]
-          # Existing build stage pins Python 3.13.14 and uv 0.11.15.
-          # No keys, certificates or credentials are created in either build.
-          printf 'FROM %s\n' "$base" > "$RUNNER_TEMP/m2-lab.Dockerfile"
+          # Reuse the pinned build stage in the same Dockerfile. Bare image IDs
+          # in FROM can be interpreted as registry names by BuildKit.
+          cat "$context/infra/docker/platform.local.Dockerfile" > "$RUNNER_TEMP/m2-lab.Dockerfile"
           cat >> "$RUNNER_TEMP/m2-lab.Dockerfile" <<'DOCKERFILE'
+          FROM build AS m2-laboratory
           COPY tests /app/tests
           COPY scripts /app/scripts
           RUN uv sync --locked --all-packages --group dev
           ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
           DOCKERFILE
-          docker build --iidfile "$RUNNER_TEMP/m2-lab.id" \
+          docker build --pull --target m2-laboratory --iidfile "$RUNNER_TEMP/m2-lab.id" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.tree=$tree" \
             -f "$RUNNER_TEMP/m2-lab.Dockerfile" "$context"
