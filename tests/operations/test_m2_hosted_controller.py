@@ -2,6 +2,10 @@
 
 import importlib
 import importlib.util
+import runpy
+import sys
+from dataclasses import asdict
+from pathlib import Path
 
 import pytest
 
@@ -188,3 +192,77 @@ def test_evidence_success_requires_full_identity_matching_and_all_checks(tmp_pat
     m.write_json(tmp_path / "cleanup.json", cleanup)
     with pytest.raises(m.LabFailure):
         m.check_evidence(tmp_path)
+
+
+@pytest.mark.parametrize("known", [True, False])
+def test_script_entry_preserves_closed_imported_failures(tmp_path, monkeypatch, capsys, known):
+    """Execute the actual script entry with both resource-producing paths replaced."""
+    m = module()
+    runtime = importlib.import_module("scripts.ci.m2_lab_runtime")
+    cleanup = importlib.import_module("scripts.ci.m2_lab_cleanup")
+    calls = []
+
+    def fake_runtime(p, owned, evidence):
+        calls.append("runtime")
+        m.write_json(
+            owned,
+            {
+                "schema": 1,
+                "plan": asdict(p),
+                "root_identity": None,
+                "directories": {},
+                "containers": dict.fromkeys(m.ROLES),
+            },
+        )
+        if known:
+            raise m.LabFailure("source")
+        raise RuntimeError("synthetic-private-error-canary")
+
+    def fake_cleanup(p, manifest):
+        calls.append("cleanup")
+        if known:
+            raise m.LabFailure("ownership")
+        raise RuntimeError("synthetic-private-error-canary")
+
+    monkeypatch.setattr(runtime, "run", fake_runtime)
+    monkeypatch.setattr(cleanup, "cleanup", fake_cleanup)
+    output = tmp_path / "evidence" / "result.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(Path(m.__file__)),
+            "run",
+            "--image",
+            "sha256:" + "d" * 64,
+            "--pg-image",
+            "sha256:" + "e" * 64,
+            "--commit",
+            "b" * 40,
+            "--tree",
+            "c" * 40,
+            "--owned",
+            str(tmp_path / "owned.json"),
+            "--evidence",
+            str(output),
+        ],
+    )
+    with pytest.raises(SystemExit) as stopped:
+        runpy.run_path(str(Path(m.__file__)), run_name="__main__")
+    assert stopped.value.code == 1
+    assert calls == ["runtime", "cleanup"]
+    result = m.read_json(output)
+    cleaned = m.read_json(output.with_name("cleanup.json"))
+    assert result["reason"] == ("source" if known else "runtime")
+    assert cleaned["reason"] == ("ownership" if known else "cleanup")
+    assert result["status"] == cleaned["status"] == "failed"
+    assert not cleaned["containers_absent"] and not cleaned["root_removed"]
+    captured = capsys.readouterr()
+    leaked = "synthetic-private-error-canary" in (
+        captured.out
+        + captured.err
+        + output.read_text()
+        + output.with_name("cleanup.json").read_text()
+    )
+    assert not leaked
+    assert m.check_evidence(output.parent) > 0

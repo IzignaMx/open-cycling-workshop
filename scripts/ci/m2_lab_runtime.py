@@ -248,16 +248,18 @@ def run(
         verify_containment(plan, role, row, db_id)
         return row
 
+    phase = "source"
     previous_umask = os.umask(0o077)
     try:
         if plan.uid != os.getuid() or plan.gid != os.getgid():
             raise LabFailure("identity")
         if (
-            command(["git", "rev-parse", "HEAD"]) != plan.commit
-            or command(["git", "rev-parse", "HEAD^{tree}"]) != plan.tree
-            or command(["git", "status", "--porcelain"])
+            command(["git", "--no-optional-locks", "rev-parse", "HEAD"]) != plan.commit
+            or command(["git", "--no-optional-locks", "rev-parse", "HEAD^{tree}"]) != plan.tree
+            or command(["git", "--no-optional-locks", "status", "--porcelain"])
         ):
             raise LabFailure("source")
+        phase = "identity"
         for image in (plan.image, plan.pg_image):
             row = parse_json(
                 command(["docker", "image", "inspect", "--format", "{{json .}}", image])
@@ -271,6 +273,7 @@ def run(
                     or labels.get("org.opencontainers.image.tree") != plan.tree
                 ):
                     raise LabFailure("source")
+        phase = "ownership"
         manifest: dict[str, Any] = {
             "schema": 1,
             "plan": asdict(plan),
@@ -286,9 +289,12 @@ def run(
             (plan.root / name).mkdir(mode=0o700)
             manifest["directories"][name] = _identity(plan.root / name)
             _save_owned(owned, manifest)
+        phase = "private_input"
         _private_inputs(plan, command)
 
         def create(role: str, db_id: str = "") -> str:
+            nonlocal phase
+            phase = "containment"
             found = command(
                 [
                     "docker",
@@ -335,6 +341,7 @@ def run(
             check_deadline()
             time.sleep(min(0.5, max(0, until - time.monotonic())))
         api = create("api", db)
+        phase = "runtime"
         command(["docker", "start", api], timeout=10)
         until = min(deadline, time.monotonic() + 120)
         while True:
@@ -368,6 +375,7 @@ def run(
         if namespaces[0] != namespaces[1]:
             raise LabFailure("containment")
         connector = create("connector")
+        phase = "runtime"
         raw = command(["docker", "start", "--attach", connector], timeout=120)
         result = parse_json(raw)
         if (
@@ -420,6 +428,7 @@ def run(
     except LabFailure:
         raise
     except Exception:
-        raise LabFailure("runtime") from None
+        # Closed phase only: never expose subprocess text or private paths.
+        raise LabFailure(phase) from None
     finally:
         os.umask(previous_umask)

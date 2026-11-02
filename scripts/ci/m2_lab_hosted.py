@@ -601,4 +601,9 @@ def main(arguments: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Runtime and cleanup import this canonical module. Use its exception class
+    # at the script boundary too, preserving closed reason codes without exposing
+    # arbitrary exception text from a second __main__ module instance.
+    from scripts.ci.m2_lab_hosted import main as canonical_main
+
+    raise SystemExit(canonical_main())

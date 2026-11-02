@@ -317,3 +317,100 @@ def test_ready_poll_cannot_outlive_global_runtime_deadline(tmp_path, monkeypatch
         runtime.run(plan, owned, evidence, execute=pending)
     assert error.value.reason == "deadline"
     assert sleeps == [True]
+
+
+def test_source_status_does_not_refresh_large_disposable_git_index(tmp_path, monkeypatch):
+    """Only public Git fixture commands execute; Docker/OpenSSL remain fake."""
+    import hashlib
+    import subprocess
+    from dataclasses import replace
+
+    runtime, plan, owned, evidence, _execute = setup(tmp_path, monkeypatch)
+    fixture = tmp_path / "public-git"
+    fixture.mkdir()
+
+    def git(*args):
+        return subprocess.run(
+            ["git", *args], cwd=fixture, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    git("init", "-q")
+    git("config", "core.fsmonitor", "false")
+    for number in range(700):
+        (fixture / f"public-{number:04d}.txt").write_text(f"Public synthetic fixture {number}\n")
+    git("add", ".")
+    git(
+        "-c",
+        "user.name=Public Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-qm",
+        "public fixture",
+    )
+    plan = replace(plan, commit=git("rev-parse", "HEAD"), tree=git("rev-parse", "HEAD^{tree}"))
+    execute = FakeExecutor(plan, owned, runtime)
+    index = fixture / ".git/index"
+    before = hashlib.sha256(index.read_bytes()).hexdigest()
+    assert index.stat().st_size > 16384
+    for path in fixture.glob("public-*.txt"):
+        info = path.stat()
+        os.utime(path, ns=(info.st_atime_ns, info.st_mtime_ns + 2_000_000_000))
+    monkeypatch.chdir(fixture)
+    actual_git_calls = []
+
+    def execute_public_git_only(args, *, timeout=5):
+        if args[0] == "git":
+            actual_git_calls.append(args)
+            return runtime.bounded_command(args, timeout=timeout)
+        return execute(args, timeout=timeout)
+
+    assert all(runtime.run(plan, owned, evidence, execute=execute_public_git_only).values())
+    assert len(actual_git_calls) == 3
+    assert all(args[1] == "--no-optional-locks" for args in actual_git_calls)
+    assert hashlib.sha256(index.read_bytes()).hexdigest() == before
+    assert not (fixture / ".git/index.lock").exists()
+
+
+@pytest.mark.parametrize(
+    "stage,expected",
+    [
+        ("source", "source"),
+        ("image", "identity"),
+        ("ownership", "ownership"),
+        ("private", "private_input"),
+        ("container", "containment"),
+        ("serving", "runtime"),
+    ],
+)
+def test_unexpected_execution_failure_has_closed_stage_reason(
+    tmp_path, monkeypatch, stage, expected
+):
+    runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
+    original_save = runtime._save_owned
+
+    def save(*args, **kwargs):
+        if stage == "ownership":
+            raise OSError("DO-NOT-EXPOSE-PRIVATE-DIAGNOSTIC")
+        return original_save(*args, **kwargs)
+
+    monkeypatch.setattr(runtime, "_save_owned", save)
+
+    def fail_at_stage(args, *, timeout=5):
+        trigger = (
+            (stage == "source" and args[0] == "git")
+            or (stage == "image" and args[:3] == ["docker", "image", "inspect"])
+            or (stage == "private" and args[0] == "openssl")
+            or (stage == "container" and args[:2] == ["docker", "create"])
+            or (stage == "serving" and args[:2] == ["docker", "start"] and "--attach" in args)
+        )
+        if trigger:
+            raise OSError("DO-NOT-EXPOSE-PRIVATE-DIAGNOSTIC")
+        return execute(args, timeout=timeout)
+
+    with pytest.raises(hosted.LabFailure) as error:
+        runtime.run(plan, owned, evidence, execute=fail_at_stage)
+    assert error.value.reason == expected
+    assert str(error.value) == expected
+    assert "PRIVATE-DIAGNOSTIC" not in str(error.value)
+    assert not evidence.exists()
