@@ -6,6 +6,8 @@ Licencia normativa: `AGPL-3.0-only`
 
 > Este documento no vuelve a diseñar el producto. Consolida las decisiones ya aprobadas en un sistema de ejecución determinista para humanos y agentes de IA. Define qué documentos son normativos, cómo seleccionar y descomponer trabajo, qué puede decidirse autónomamente, cómo verificar cada cambio y bajo qué condiciones una release puede avanzar.
 
+> Additive planning amendment (2026-11-02): [product-description coverage](2026-11-02-product-description-alignment.md) and [requirements supplement](../01-functional-requirements/2026-11-02-product-description-supplement.md). Original IDs are preserved; six new V0.2 tasks make agenda/staff requirements executable. This is planning coverage, not release qualification.
+
 ## 1. Objetivo
 
 La Fase 10 transforma la documentación acumulada en una especificación de desarrollo ejecutable. Sus objetivos son:
@@ -182,6 +184,7 @@ V1 incluye:
 - Customers
 - Bicycles / Bicycle Passport
 - Workshop / Service Orders
+- Agenda / Scheduling baseline and staff availability/workload (not payroll)
 - Catalog / Inventory
 - Purchasing
 - POS / Payments
@@ -290,6 +293,8 @@ Servidor remoto para multisucursal, acceso remoto, portal público y servicios a
 | E24  | Data Portability & Migration       | imports, exports, migration tooling y reconciliation           |
 | E25  | Commercial Implementation          | discovery, demo, templates, supportability y pilot             |
 | E26  | Release & Continuous Improvement   | qualification, release, governance y post release              |
+| E27 | Scheduling | citas, recursos, disponibilidad y conflictos explícitos |
+| E28 | Staff Operations | perfiles, asignación, disponibilidad y carga sin nómina |
 
 ## 14. Dependency Map
 
@@ -316,6 +321,7 @@ E07 Workshop                    │
   ├────────→ E11 POS/Payments
   ├────────→ E12 Communications ─→ E13 Portal
   ├────────→ E14 Knowledge
+  ├────────→ E28 Staff Operations ─→ E27 Scheduling
   └────────→ E15 Automation
 
 Cross-cutting:
@@ -337,7 +343,7 @@ E26 Release/Continuous Improvement
 | Release | Nombre                 | Resultado demostrable                                                  | Tareas maestras |
 | ------- | ---------------------- | ---------------------------------------------------------------------- | --------------: |
 | V0.1    | Foundations            | primer vertical slice Customer sincronizable y plataforma reproducible |              36 |
-| V0.2    | Workshop Core          | ciclo completo de taller online/offline                                |              23 |
+| V0.2    | Workshop Core          | ciclo completo de taller online/offline                                |              29 |
 | V0.3    | Inventory & Purchasing | inventario ledger y purchasing                                         |              17 |
 | V0.4    | POS & Payments         | venta, cobro e inventario transaccional                                |              14 |
 | V0.5    | Communications         | communication hub baseline                                             |              11 |
@@ -1017,6 +1023,21 @@ Las tareas siguientes representan el orden inicial de implementación. El agente
 | R02-T021 | E21  | Aplicar audit logging a transiciones administrativas                                      | R02-T004 | Audit security test          |
 | R02-T022 | E22  | Crear golden journey recepción→diagnóstico→autorización→reparación→QC→entrega             | R02-T012 | Playwright online/offline    |
 | R02-T023 | E22  | Ejecutar UAT workshop core con fixture demo-workshop                                      | R02-T022 | UAT evidence                 |
+| R02-T024 | E28 | Modelar perfiles de personal separados de IAM, scopes y desactivación histórica | R01-T029,R02-T010 | FR-STF-001/003/005; negative auth + history tests |
+| R02-T025 | E28 | Implementar disponibilidad, excepciones y carga con estimaciones explícitas | R02-T024 | FR-STF-002/004; timezone, inactive staff and workload fixtures |
+| R02-T026 | E27 | Implementar citas y ocupación atómica de recursos con cancelación/override auditado | R02-T025 | FR-SCH-001/002/003; concurrent overlap, DST, idempotency tests |
+| R02-T027 | E03 | Diseñar/admitir agenda offline provisional y reconciliación sin doble reserva | R02-T026,R02-T017 | FR-SCH-004; ADR, migration/reload/two-device conflict evidence |
+| R02-T028 | E27 | Vistas accesibles de agenda/lista y enlace de cita a orden sin duplicados | R02-T027,R02-T005 | FR-SCH-005/006; keyboard, scope and appointment-order E2E |
+| R02-T029 | E22 | Calificar agenda/personal dentro del golden journey de taller | R02-T028,R02-T023 | Workshop-only FR-SCH/FR-STF; offline, privacy, accessibility and recovery proof |
+
+The six additive tasks above are planned and extend V0.2 acceptance; they do not
+advance the active release or declare V0.1 ready. V0.2 qualification now also
+requires R02-T029. Conditional reminders in R02-T028 stay unavailable until
+R05 consent/provider gates; core appointments do not depend on sending messages.
+This avoids a V0.2→V0.5→V0.2 dependency cycle.
+R02-T029 proves the workshop scheduling/staff subset only; it does not close
+FR-BIZ-003. Retail-only and combined-commerce journeys require V0.4 POS and
+remain R09-T028/R10-T004 profile acceptance, avoiding a V0.2→V0.4 cycle.
 
 ### V0.3 · Inventory & Purchasing
 
@@ -1186,6 +1207,20 @@ Las tareas siguientes representan el orden inicial de implementación. El agente
 | R10-T023 | E26  | Tag v1.0.0, firmar provenance y publicar artefactos reproducibles              | R10-T022 | Release artifacts        |
 | R10-T024 | E26  | Publicar documentación V1, upgrade guide, security notice y support matrix     | R10-T023 | Docs validation          |
 | R10-T025 | E26  | Abrir Continuous Improvement Track V1.x con backlog basado en evidencia        | R10-T024 | Post release state       |
+
+### Additive acceptance refinements · 2026-11-02
+
+- R02-T019 / R04-T010 / R06-T007 / R09-T022 also satisfy FR-DOC-001–005:
+  immutable document revision, visibility, accessible branding and export/retention.
+- R09-T023 also satisfies FR-MET-001–005: versioned formulas, pinned ledger
+  fixtures, scope-safe exports and offline freshness; a chart is not a correctness proof.
+- R04-T001 and R09-T022 / R09-T028 / R10-T004 include FR-BIZ-001–003:
+  retail-only sale without bicycle/order, optional workshop/POS, no toggle grants,
+  data preservation and profile-specific qualification.
+- These are additional acceptance requirements for existing tasks, not new IDs
+  pretending to be already implemented subtasks. Original task identities and
+  historical evidence remain intact. See the linked coverage matrix for sources,
+  dependencies, phase order and exact acceptance scenarios.
 
 ## 60. Task Splitting Rule
 

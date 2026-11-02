@@ -1,0 +1,662 @@
+{
+  "schema": 1,
+  "coverage_kind": "planning_not_product_completion",
+  "source_commit": "7cf38e17e1981607287b0d5a41abedeead3bcf5e",
+  "description": "Plataforma open source, offline first, modular y white label para administrar talleres, tiendas y negocios relacionados con el ciclismo, cubriendo clientes, bicicletas, órdenes de servicio, mecánica, inventario, ventas, compras, comunicación, documentación, agenda, personal, métricas y automatizaciones desde una interfaz accesible y multiplataforma",
+  "description_source": "https://api.github.com/repos/IzignaMx/open-cycling-workshop",
+  "description_verified_at": "2026-11-02T03:08:33Z",
+  "supplement": "docs/01-functional-requirements/2026-11-02-product-description-supplement.md",
+  "added_tasks": {
+    "R02-T024": ["R01-T029", "R02-T010"],
+    "R02-T025": ["R02-T024"],
+    "R02-T026": ["R02-T025"],
+    "R02-T027": ["R02-T026", "R02-T017"],
+    "R02-T028": ["R02-T027", "R02-T005"],
+    "R02-T029": ["R02-T028", "R02-T023"]
+  },
+  "claims": [
+    {
+      "id": "open_source",
+      "phrase": "open source",
+      "requirements": [
+        "docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md#ADR-016",
+        "docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md#DCO"
+      ],
+      "tasks": ["R01-T002", "R01-T003", "R01-T004", "R09-T025", "R09-T030"],
+      "stage": "V0.1 foundations; V0.9/V1 release governance",
+      "product_status": "partial",
+      "evidence_paths": ["LICENSE", "REUSE.toml", "CONTRIBUTING.md", "GOVERNANCE.md"],
+      "acceptance": [
+        "Release archive includes AGPL-3.0-only corresponding source and notices for its exact binary revision.",
+        "DCO, dependency license inventory, SBOM/provenance and source-link checks pass; no mandatory proprietary startup dependency."
+      ],
+      "remaining": "License files exist; full release/distribution governance and dependency evidence remain source-specific gates."
+    },
+    {
+      "id": "offline_first",
+      "phrase": "offline first",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-011",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-012",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-013",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-014",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#AC-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#AC-002"
+      ],
+      "tasks": [
+        "R01-T017",
+        "R01-T020",
+        "R01-T021",
+        "R01-T035",
+        "R01-T036",
+        "R02-T018",
+        "R03-T015",
+        "R04-T011"
+      ],
+      "stage": "Every vertical slice, V0.1 through V1",
+      "product_status": "partial",
+      "evidence_paths": [
+        "apps/web/src/access-kernel",
+        "apps/web/src/sync",
+        "docs/10-spec-development/execution-state.yaml",
+        "docs/02-technical-architecture/2026-10-15-quote-persistence-and-online-command-boundary.md"
+      ],
+      "acceptance": [
+        "Admitted customer/bicycle/order mutations survive supported reload, reconnect and two-client convergence without duplicates or cursor-scope escape.",
+        "Each domain declares offline read/write/admission/conflict/recovery policy; financial or external actions unavailable offline are explicit and never silently replayed.",
+        "Physical quota/eviction/restore/100k/device gates have their own exact evidence, not inferred from browser tests."
+      ],
+      "remaining": "Current operational sync is bounded; inventory/admin online-only, quotes initial online command ADR, durable unsent drafts and physical acceptance remain incomplete."
+    },
+    {
+      "id": "modular",
+      "phrase": "modular",
+      "requirements": [
+        "docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md#ADR-001",
+        "docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md#ADR-015",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-PLG-009"
+      ],
+      "tasks": ["R09-T020", "R09-T021", "R10-T014"],
+      "stage": "M0 data descriptor; M1 official reference; M2–M4 external boundary/qualification",
+      "product_status": "partial",
+      "evidence_paths": [
+        "ARCHITECTURE.md",
+        "packages/plugin-sdk",
+        "scripts/plugins/validate_manifest.py",
+        "docs/08-open-source/2026-10-27-module-descriptor-m0.md"
+      ],
+      "acceptance": [
+        "Reject malformed/incompatible descriptors without installing code, widening grants or joining sync.",
+        "Reference module disable/error leaves capture intact; external connector requires revocable identity, isolation, lifecycle and source-bound compatibility evidence."
+      ],
+      "remaining": "M0 descriptor verified historically; runtime SDK, installer, external connector identity and public delivery are not implemented."
+    },
+    {
+      "id": "white_label",
+      "phrase": "white label",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-WL-006",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-003"
+      ],
+      "tasks": ["R01-T012", "R09-T022"],
+      "stage": "App branding prerequisite, then portal/print/messages V0.9",
+      "product_status": "partial",
+      "evidence_paths": [
+        "apps/web/src/features/branding",
+        "services/platform/src/cycling_workshop/branding",
+        "docs/02-technical-architecture/2026-10-14-shared-workshop-branding.md"
+      ],
+      "acceptance": [
+        "Import/export BrandProfile round-trips safe configuration without code changes or permissions; invalid colors/assets receive accessible fallback.",
+        "App, portal, versioned print and communication templates share selected brand while preserving AGPL notices and isolation across locations."
+      ],
+      "remaining": "Four themes and shared branding are not full white label: downstream outputs, domain configuration, profile import/export and all-surface regression remain."
+    },
+    {
+      "id": "business_profiles",
+      "phrase": "talleres, tiendas y negocios relacionados con el ciclismo",
+      "requirements": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
+      ],
+      "tasks": ["R02-T023", "R04-T001", "R09-T022", "R09-T028", "R10-T004"],
+      "stage": "Workshop V0.2; retail/combined V0.4; full profile qualification V0.9/V1",
+      "product_status": "planned",
+      "evidence_paths": [
+        "README.md",
+        "docs/09-commercial/open-cycling-workshop-platform-phase-9-commercial-implementation-playbook-v0.1.md"
+      ],
+      "acceptance": [
+        "Retail-only fixture completes product sale without a bicycle or service order; workshop fixture operates without mandatory POS.",
+        "Profile switch never deletes records/pending work or grants capabilities; unsupported specialty modules stay visibly unavailable."
+      ],
+      "remaining": "Full supported-profile journeys not qualified; fleet/rental/ecommerce and fiscal/HR systems remain post-V1 optional scope."
+    },
+    {
+      "id": "customers",
+      "phrase": "clientes",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-CUS-010"
+      ],
+      "tasks": ["R01-T030", "R02-T001"],
+      "stage": "V0.1 slice → V0.2 full requirements",
+      "product_status": "partial",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/customers",
+        "apps/web/src/features/customers"
+      ],
+      "acceptance": [
+        "Create/search/edit minimal and multi-contact customers with per-purpose consent and audited duplicate merge.",
+        "Wrong-scope requests and export/anonymization cannot expose historical unrelated ownership data; offline duplicates converge or remain explicit conflicts."
+      ],
+      "remaining": "Current capture/search/sync does not complete all consent, merge, history, export and privacy lifecycle requirements."
+    },
+    {
+      "id": "bicycles",
+      "phrase": "bicicletas",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-BIK-010"
+      ],
+      "tasks": ["R02-T002", "R02-T003", "R02-T020"],
+      "stage": "V0.2",
+      "product_status": "partial",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/bicycles",
+        "apps/web/src/features/bicycles"
+      ],
+      "acceptance": [
+        "Bicycle can exist without order/serial/catalog match; passport includes component/service revisions and export.",
+        "Owner transfer retains audit without leaking former owner PII; QR has no PII and requires authorization."
+      ],
+      "remaining": "Passport, component/custom fields, transfer and export coverage remains beyond present basic model."
+    },
+    {
+      "id": "service_orders",
+      "phrase": "órdenes de servicio",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-011",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-012",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-013",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-014",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-015",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-016",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-017",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-018"
+      ],
+      "tasks": [
+        "R02-T004",
+        "R02-T005",
+        "R02-T007",
+        "R02-T008",
+        "R02-T009",
+        "R02-T011",
+        "R02-T013",
+        "R02-T022"
+      ],
+      "stage": "V0.2 with admitted quote prerequisites",
+      "product_status": "partial",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/service_orders",
+        "services/platform/src/cycling_workshop/quotes",
+        "apps/web/src/features/orders"
+      ],
+      "acceptance": [
+        "Reception→diagnosis→versioned authorization→repair→QC→handover preserves timeline and rejects invalid transitions.",
+        "Quote decisions bind exact revision/line coverage and current authority; retry or missing ACK cannot duplicate effects or authorize extra work."
+      ],
+      "remaining": "Current intake/board/state machine plus quote internals do not equal mounted quote API/UI or complete repair journey."
+    },
+    {
+      "id": "mechanics",
+      "phrase": "mecánica",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-SVC-013",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-007"
+      ],
+      "tasks": [
+        "R02-T010",
+        "R02-T012",
+        "R02-T015",
+        "R07-T001",
+        "R07-T003",
+        "R07-T005",
+        "R07-T006",
+        "R07-T007",
+        "R07-T008",
+        "R07-T009"
+      ],
+      "stage": "V0.2 repair/QC; V0.7 knowledge",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/identity/roles.py",
+        "services/platform/src/cycling_workshop/service_orders/domain.py"
+      ],
+      "acceptance": [
+        "Assign active mechanic, perform versioned tasks/checklists and reject READY when required QC failed.",
+        "Torque/procedure records expose manufacturer/workshop/community provenance, revision and stale/unofficial warnings; offline lookup preserves attribution/license."
+      ],
+      "remaining": "Mechanic role is not workload/task execution or technical knowledge module; no inference of safe repair instructions from empty catalog."
+    },
+    {
+      "id": "inventory",
+      "phrase": "inventario",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-011",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-012"
+      ],
+      "tasks": [
+        "R03-T001",
+        "R03-T002",
+        "R03-T003",
+        "R03-T004",
+        "R03-T005",
+        "R03-T006",
+        "R03-T011",
+        "R03-T012",
+        "R03-T015",
+        "R03-T016",
+        "R03-T017"
+      ],
+      "stage": "V0.3",
+      "product_status": "partial",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/inventory",
+        "apps/web/src/features/inventory"
+      ],
+      "acceptance": [
+        "All named movement kinds reconcile stock projection to append-only ledger; adjustments/returns are compensating.",
+        "Concurrent last-unit sale/reservation and two-device offline intents produce explicit policy results without stock or tenant leakage."
+      ],
+      "remaining": "Existing ledger/reserve/consume and online reads do not implement every movement, offline stock, inventory command UI or capacity qualification."
+    },
+    {
+      "id": "sales",
+      "phrase": "ventas",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-POS-009"
+      ],
+      "tasks": [
+        "R04-T001",
+        "R04-T002",
+        "R04-T003",
+        "R04-T004",
+        "R04-T005",
+        "R04-T006",
+        "R04-T007",
+        "R04-T009",
+        "R04-T010",
+        "R04-T011",
+        "R04-T012",
+        "R04-T014"
+      ],
+      "stage": "V0.4",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/app.py",
+        "docs/10-spec-development/open-cycling-workshop-platform-phase-10-spec-development-master-execution-system-v0.1.md"
+      ],
+      "acceptance": [
+        "Independent/service sale with partial/multi-method receipts, tax/discount and return reconciles exact inventory and payment ledgers.",
+        "Duplicate command or crash after effect does not double-account; offline provider-dependent capture is unavailable, local cash record explicitly pending reconciliation."
+      ],
+      "remaining": "No mounted POS/payment/cash module; quote arithmetic is not sales or financial settlement."
+    },
+    {
+      "id": "purchases",
+      "phrase": "compras",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-011",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-012"
+      ],
+      "tasks": ["R03-T007", "R03-T008", "R03-T009", "R03-T010"],
+      "stage": "V0.3",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/app.py",
+        "services/platform/src/cycling_workshop/inventory"
+      ],
+      "acceptance": [
+        "Supplier PO admits partial/full receipts with exact ordered/received balance, cost snapshots and atomic ledger effects.",
+        "Duplicate receipt, cancellation and concurrent receipt cannot add stock twice; returns preserve history and scoped supplier access."
+      ],
+      "remaining": "Supplier/PO/receiving workflow absent; ledger infrastructure alone is not purchasing."
+    },
+    {
+      "id": "communication",
+      "phrase": "comunicación",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-COM-010"
+      ],
+      "tasks": [
+        "R05-T001",
+        "R05-T002",
+        "R05-T003",
+        "R05-T004",
+        "R05-T005",
+        "R05-T006",
+        "R05-T007",
+        "R05-T008",
+        "R05-T009",
+        "R05-T010",
+        "R05-T011"
+      ],
+      "stage": "V0.5; portal V0.6",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/events",
+        "services/platform/src/cycling_workshop/jobs",
+        "services/platform/src/cycling_workshop/worker.py"
+      ],
+      "acceptance": [
+        "Consent checked when queuing and again before actual send; revocation prevents delayed marketing while safe operational policy remains explicit.",
+        "Duplicate/manual-plus-automatic messages dedupe per intent; outages retain visible status and do not revert valid local order; never report delivered without provider evidence."
+      ],
+      "remaining": "Outbox/worker primitives have no registered business communication handlers; provider/consent/templates/portal still pending."
+    },
+    {
+      "id": "documentation",
+      "phrase": "documentación",
+      "requirements": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-003",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-004",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-DOC-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-KNW-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#NFR-014"
+      ],
+      "tasks": [
+        "R02-T019",
+        "R02-T020",
+        "R04-T010",
+        "R06-T007",
+        "R06-T008",
+        "R07-T001",
+        "R09-T022",
+        "R09-T027"
+      ],
+      "stage": "Repository docs now; business outputs V0.2–V0.9",
+      "product_status": "partial",
+      "evidence_paths": ["docs", "docs/site", "services/platform/src/cycling_workshop/blobs"],
+      "acceptance": [
+        "Print/portal/message outputs bind source revision and filter internal notes/photos; changing brand or price never rewrites an issued artifact.",
+        "Offline templates, export/retention and multi-page/monochrome/long-text snapshots preserve fidelity; operator docs cover install/restore/handover with proven commands."
+      ],
+      "remaining": "Repository docs exist, not operational document generation, full knowledge or fiscal certification."
+    },
+    {
+      "id": "scheduling",
+      "phrase": "agenda",
+      "requirements": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-003",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-004",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-005",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-SCH-006"
+      ],
+      "tasks": ["R02-T026", "R02-T027", "R02-T028", "R02-T029"],
+      "stage": "Added V0.2 tasks, reminders gated by V0.5",
+      "product_status": "planned",
+      "evidence_paths": [
+        "docs/04-ux-design/open-cycling-workshop-platform-phase-4-ux-ui-design-system-v0.1.md",
+        "services/platform/src/cycling_workshop/app.py"
+      ],
+      "acceptance": [
+        "Two overlapping confirmed bookings for one constrained resource cannot both commit; cancellation/override is audited and idempotent.",
+        "DST ambiguous/nonexistent time, adjacent intervals, offline provisional collisions, reload and tenant isolation have explicit expected results; list UI works without drag gestures."
+      ],
+      "remaining": "UX named Schedule/appointments but no executable FR/task; new requirements and tasks fill planning gap, not runtime."
+    },
+    {
+      "id": "staff",
+      "phrase": "personal",
+      "requirements": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-STF-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-STF-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-STF-003",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-STF-004",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-STF-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-IAM-008"
+      ],
+      "tasks": ["R01-T028", "R01-T029", "R02-T010", "R02-T024", "R02-T025", "R02-T029"],
+      "stage": "IAM V0.1; staff operations added V0.2",
+      "product_status": "partial",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/identity",
+        "apps/web/src/features/administration"
+      ],
+      "acceptance": [
+        "Staff profile never creates account/grant; inactive/wrong-location mechanic cannot receive new work and historical attribution remains readable to authorized roles.",
+        "Working intervals/exceptions and estimated workload are scope-controlled, explain unknown durations and do not expose sensitive reasons or invent actual hours."
+      ],
+      "remaining": "IAM exists; directory/availability/assignment/workload not completed; payroll excluded."
+    },
+    {
+      "id": "metrics",
+      "phrase": "métricas",
+      "requirements": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-MET-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-MET-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-MET-003",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-MET-004",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-MET-005"
+      ],
+      "tasks": ["R09-T023"],
+      "stage": "V0.9 operational baseline",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/app.py",
+        "docs/06-quality/open-cycling-workshop-platform-phase-6-qa-testing-verification-strategy-v0.1.md"
+      ],
+      "acceptance": [
+        "Fixed event/ledger fixtures pin versioned backlog/cycle-time/revenue/payment/refund/stock formulas, units, timezone, cancelled/rework and zero-denominator behavior.",
+        "Scopes/caches/exports deny cross-tenant data; currency and missing cost remain explicit; offline snapshot never reports global real-time totals; table equals chart."
+      ],
+      "remaining": "Broad analytics task existed; new formula/privacy/freshness criteria make acceptance concrete, not implemented dashboard."
+    },
+    {
+      "id": "automation",
+      "phrase": "automatizaciones",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-AUT-008"
+      ],
+      "tasks": [
+        "R08-T001",
+        "R08-T002",
+        "R08-T003",
+        "R08-T004",
+        "R08-T005",
+        "R08-T006",
+        "R08-T007",
+        "R08-T008",
+        "R08-T009",
+        "R08-T010",
+        "R08-T011",
+        "R08-T012"
+      ],
+      "stage": "V0.8 after business/provider boundaries",
+      "product_status": "planned",
+      "evidence_paths": [
+        "services/platform/src/cycling_workshop/jobs",
+        "services/platform/src/cycling_workshop/events",
+        "services/platform/src/cycling_workshop/worker.py"
+      ],
+      "acceptance": [
+        "Versioned WHEN/IF/THEN rule runs with current scoped permission, deterministic conditions and per-action idempotency.",
+        "Loop limits, dry run, retries/dead letter and disable/revoke stop future effects; crash recovery never duplicates payment/inventory/message effects."
+      ],
+      "remaining": "Durable job infrastructure is not an automation engine or visual builder."
+    },
+    {
+      "id": "accessibility",
+      "phrase": "interfaz accesible",
+      "requirements": [
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-003",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-004",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-005",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-006",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-007",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-008",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-009",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#ACC-010",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#AC-007"
+      ],
+      "tasks": ["R01-T011", "R02-T014", "R02-T015", "R06-T009", "R09-T018", "R10-T004"],
+      "stage": "Every UI slice; manual release gates",
+      "product_status": "partial",
+      "evidence_paths": [
+        "packages/ui",
+        "apps/web/src/App.tsx",
+        "docs/11-device-qualification/2026-10-31-safe-tier1-protocol.md"
+      ],
+      "acceptance": [
+        "Keyboard/focus/labels/live status/zoom/reduced motion and color-independent meaning work across all themes and feature states.",
+        "WCAG 2.2 AA manual assistive-tech checks plus physical touch qualification corroborate automation; white label cannot waive minimum contrast/target requirements."
+      ],
+      "remaining": "Automated browser/layout evidence cannot close manual screen-reader/physical touch/complete WCAG qualification."
+    },
+    {
+      "id": "multiplatform",
+      "phrase": "multiplataforma",
+      "requirements": [
+        "docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md#ADR-011",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#NFR-001",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#NFR-002",
+        "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#OFF-014"
+      ],
+      "tasks": ["R01-T032", "R01-T033", "R01-T035", "R09-T007", "R09-T011", "R09-T019", "R10-T004"],
+      "stage": "PWA first; Windows/Android Tier1; other environments declared per evidence",
+      "product_status": "partial",
+      "evidence_paths": [
+        "infra/compose",
+        "docs/11-device-qualification",
+        "docs/07-operations/2026-10-14-local-runtime.md"
+      ],
+      "acceptance": [
+        "Installed PWA on declared Windows/Android devices survives offline/reload/update with accessible input; each supported browser/OS/version recorded separately.",
+        "Standalone/LAN/connected install, trusted TLS and clean restore are proven where claimed; Raspberry native hardware proof distinct from hosted ARM build."
+      ],
+      "remaining": "No native iOS/Android app promise; Tauri only justified capabilities. Unqualified platforms and physical install/recovery stay unclaimed."
+    }
+  ]
+}

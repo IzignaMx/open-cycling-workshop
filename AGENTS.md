@@ -8,3 +8,7 @@ All coding agents operating in this repository must read, in this order:
 4. the latest relevant normative product/domain/security/UX/operations specifications under `docs/`.
 
 The Master Agent Loop v0.2 is the default autonomous execution protocol. Preserve `AGPL-3.0-only`, DCO, Offline First, Local First, security, accessibility, data integrity, recovery and portability requirements. Never mark blocked/untested work as verified.
+
+For product scope and task selection, also read `docs/10-spec-development/2026-11-02-product-description-alignment.md`.
+Its coverage matrix is planning coverage, not runtime qualification; retain
+Master Loop priority and the separate evidence ledger.
