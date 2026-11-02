@@ -21,7 +21,7 @@ export function CustomerQuickCreate({ capture, onEdit, onSubmit }: CustomerQuick
     <form
       onSubmit={submit}
       className="grid gap-4"
-      aria-describedby="customer-create-status"
+      aria-describedby="customer-create-status customer-recovery-status"
       data-dirty={capture.dirty}
     >
       <label className="grid gap-1">
@@ -65,6 +65,9 @@ export function CustomerQuickCreate({ capture, onEdit, onSubmit }: CustomerQuick
       </Button>
       <p id="customer-create-status" role="status" aria-live="polite" className="min-h-6 text-sm">
         {message}
+      </p>
+      <p id="customer-recovery-status" role="status">
+        {capture.recoveryMessage}
       </p>
     </form>
   )

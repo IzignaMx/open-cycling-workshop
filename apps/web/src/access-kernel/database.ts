@@ -1,4 +1,5 @@
 import type { Table } from 'dexie'
+import type { CaptureCheckpoint, CaptureDraftContent } from './capture-checkpoint-types.js'
 import type { BrandingSnapshot } from '../branding/cache.js'
 import { OcwpDatabase } from '../local/database.js'
 import type {
@@ -14,6 +15,8 @@ import type {
 
 /** Side-effect-free scoped factory. The legacy ocwp database is never opened here. */
 export class KernelDatabase extends OcwpDatabase {
+  captureCheckpoints!: Table<CaptureCheckpoint, string>
+  captureDraftContents!: Table<CaptureDraftContent, [string, string]>
   brandingSnapshots!: Table<BrandingSnapshot, string>
   deviceControl!: Table<DeviceControl, string>
   accessContexts!: Table<AccessContextRecord, string>
@@ -71,6 +74,11 @@ export class KernelDatabase extends OcwpDatabase {
     })
     // v7 adds one admitted shared-brand document per partition; existing bytes remain untouched.
     this.version(7).stores({ brandingSnapshots: 'partitionId, principalKey' })
+    // v8 adds private draft content separately from durable no-content protection.
+    this.version(8).stores({
+      captureCheckpoints: 'checkpointId, &bindingKey',
+      captureDraftContents: '[checkpointId+channel], expiresAt',
+    })
     this.on('populate', (transaction) =>
       transaction
         .table('localMigrationState')

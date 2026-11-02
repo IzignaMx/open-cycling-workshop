@@ -45,7 +45,7 @@ export class BrandingDisplayController {
   #listeners = new Set<() => void>()
   #binding = ''
   #generation = 0
-  #flight: { followupAllowed: boolean; queued: boolean } | null = null
+  #flight: { followupAllowed: boolean; queued: boolean; localActivityQueued: boolean } | null = null
   #abort = new AbortController()
   #lastRefresh = -Infinity
   constructor(private readonly options: Options) {}
@@ -80,6 +80,19 @@ export class BrandingDisplayController {
       void this.refresh(true)
     }
   }
+  /** A completed local write may invalidate an in-flight cache read's entry fence.
+   * Coalesce one fresh offline read; null results/publications never create this event. */
+  refreshOfflineAfterLocalActivity(): void {
+    const source = this.options.capture()
+    if (!source || source.online) return
+    if (source.binding !== this.#binding) {
+      this.clear()
+      this.#binding = source.binding
+    }
+    if (this.#snapshot.profile) return
+    if (this.#flight) this.#flight.localActivityQueued = true
+    else void this.refreshOnce(true, false)
+  }
   async refresh(force = false): Promise<void> {
     await this.refreshOnce(force, true)
   }
@@ -99,7 +112,7 @@ export class BrandingDisplayController {
       return
     }
     if (!force && now >= this.#lastRefresh && now - this.#lastRefresh < 30000) return
-    const flight = { followupAllowed, queued: false },
+    const flight = { followupAllowed, queued: false, localActivityQueued: false },
       generation = this.#generation,
       abort = this.#abort
     const current = () =>
@@ -167,9 +180,15 @@ export class BrandingDisplayController {
         if (this.#flight === flight) {
           this.#flight = null
           // Honor one coalesced explicit request with fresh admission/time.
-          // The trailing flight cannot queue another, even if notifications
-          // keep requesting refresh. A null cache result alone never retries.
-          if (current() && flight.queued) void this.refreshOnce(true, false)
+          // Ordinary refresh notifications cannot chain trailing requests. A
+          // distinct completed local-write event may owe one offline-only read;
+          // neither a null cache result nor a publication creates that event.
+          if (
+            current() &&
+            (flight.queued ||
+              (flight.localActivityQueued && this.options.capture()?.online === false))
+          )
+            void this.refreshOnce(true, false)
         }
       }
     }

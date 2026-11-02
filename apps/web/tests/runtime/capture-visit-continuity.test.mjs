@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { setup, login } from './runtime-fixture.mjs'
+import { setup, login, until } from './runtime-fixture.mjs'
 import { observeCaptureMounts } from './capture-component-host.mjs'
 
 // Actual integration seam: actual controller reconnect, real App branching,
@@ -103,6 +103,7 @@ for (const kind of kinds) {
     }
     const first = f.form().submit()
     try {
+      await until(() => calls === 1, 'protected repository invocation')
       assert.equal(calls, 1)
       await reconnect(f)
       f.fill()

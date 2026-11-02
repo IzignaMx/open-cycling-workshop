@@ -14,6 +14,14 @@ import {
   setup,
   login,
 } from './runtime-fixture.mjs'
+// Logo barriers must not intercept unrelated capture-checkpoint SHA-256 work.
+function isLogoDigest(args) {
+  const value = args[1]
+  const bytes = ArrayBuffer.isView(value)
+    ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+    : new Uint8Array(value)
+  return [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)
+}
 test('production composition requires real parsed pages, isolated DB and offline same-session reload', async (t) => {
   const first = setup(t)
   await first.runtime.start()
@@ -1296,9 +1304,12 @@ test('disconnect during preference copy retains offline admission and probes wit
   await second.runtime.offline()
   assert.equal(second.runtime.getSnapshot().sync, 'offline')
   release()
-  await settleProbe()
-  t.mock.timers.tick(0)
-  await settleProbe()
+  // Recovery adds admitted asynchronous storage work after preference copying.
+  // Wait for the actual publication without advancing the next network probe.
+  for (let i = 0; i < 200 && second.runtime.getSnapshot().phase !== 'ready'; i++) {
+    await settleProbe()
+    t.mock.timers.tick(0)
+  }
   assert.equal(second.runtime.getSnapshot().phase, 'ready')
   assert.equal(second.runtime.getSnapshot().sync, 'offline')
   assert.deepEqual(calls, ['/api/v1/auth/me', '/api/v1/auth/context'])
@@ -1346,7 +1357,7 @@ test('organization-wide account retains concrete workshop through automatic reva
   const second = setup(t, { name: first.name, storage: first.storage, server, online: false })
   await second.runtime.start()
   t.mock.timers.tick(2000)
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 200; i++) {
     await settleProbe()
     t.mock.timers.tick(0)
     if (second.runtime.getSnapshot().sync === 'synced') break
@@ -1699,6 +1710,7 @@ test('queued offline read recovers after a customer commit advances ownership du
   })
   t.mock.method(performance, 'now', () => elapsed)
   t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (!isLogoDigest(args)) return digest(...args)
     if (++calls === 1) {
       entered()
       await gate
@@ -1743,6 +1755,7 @@ for (const edge of ['rollback', 'expiry', 'takeover', 'future snapshot']) {
     })
     t.mock.method(performance, 'now', () => elapsed)
     t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (!isLogoDigest(args)) return digest(...args)
       if (++calls === 1) {
         entered()
         await gate
@@ -1872,6 +1885,7 @@ for (const edge of ['advance', 'rollback', 'expiry', 'takeover', 'logout', 'futu
     t.after(() => release())
     t.mock.method(performance, 'now', () => elapsed)
     t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (!isLogoDigest(args)) return digest(...args)
       if (++calls === 1) {
         entered()
         await gate
@@ -2183,6 +2197,7 @@ test('connected reload readmits shared branding while v1 personal records surviv
     }
   })
   t.mock.method(crypto.subtle, 'digest', async (...args) => {
+    if (!isLogoDigest(args)) return digest(...args)
     if (writing && !held) {
       held = true
       entered()
@@ -3428,4 +3443,133 @@ test('transition visit logout followed by retained metadata verification does no
     status: 'committed',
     view: 'updated',
   })
+})
+
+for (const activity of ['submit', 'edit-only', 'refused'])
+  test(`offline branding remains available when ${activity} capture writes advance both bounded logo reads`, async (t) => {
+    const { withLogo } = await import('../branding/fixture.mjs')
+    const f = setup(t, {
+      server: brandedApi(['branding.read'], (url) =>
+        response(url, withLogo({ display_name: 'Shared workshop' })),
+      ),
+    })
+    f.runtime.scheduleSync = () => {}
+    await login(f.runtime)
+    await until(() => f.runtime.branding.getSnapshot().profile !== null, 'initial brand')
+    const snapshots = await f.database.brandingSnapshots.toArray()
+    const digest = crypto.subtle.digest.bind(crypto.subtle)
+    let releaseFirst,
+      releaseSecond,
+      firstEntered,
+      secondEntered,
+      calls = 0
+    const firstGate = new Promise((resolve) => {
+        releaseFirst = resolve
+      }),
+      secondGate = new Promise((resolve) => {
+        releaseSecond = resolve
+      })
+    const firstStarted = new Promise((resolve) => {
+        firstEntered = resolve
+      }),
+      secondStarted = new Promise((resolve) => {
+        secondEntered = resolve
+      })
+    t.after(() => {
+      releaseFirst()
+      releaseSecond()
+    })
+    t.mock.method(crypto.subtle, 'digest', async (...args) => {
+      if (isLogoDigest(args)) {
+        calls++
+        if (calls === 1) {
+          firstEntered()
+          await firstGate
+        }
+        if (calls === 2) {
+          secondEntered()
+          await secondGate
+        }
+      }
+      return digest(...args)
+    })
+    f.env.online = false
+    await f.runtime.offline()
+    await firstStarted
+    f.env.now = NOW + 10
+    const view = f.runtime.getSnapshot().capture.viewToken
+    const persistenceMessage = activity === 'refused' ? 'El borrador supera' : 'Borrador guardado'
+    f.runtime.editCaptureCustomer(
+      view,
+      'displayName',
+      activity === 'refused' ? 'x'.repeat(65537) : 'Captured during cache admission',
+    )
+    await until(
+      () =>
+        f.runtime.getSnapshot().capture.customer.recoveryMessage?.startsWith(persistenceMessage),
+      'autosave acknowledged',
+    )
+    releaseFirst()
+    await secondStarted
+    f.env.now = NOW + 20
+    if (activity === 'submit') await f.runtime.submitCaptureCustomer(view)
+    else {
+      f.runtime.editCaptureCustomer(view, 'phone', '222')
+      await until(
+        () =>
+          f.runtime.getSnapshot().capture.customer.recoveryMessage?.startsWith(persistenceMessage),
+        'second autosave acknowledged',
+      )
+    }
+    releaseSecond()
+    await until(() => !f.runtime.branding.getSnapshot().loading, 'final cache read')
+    assert.equal(f.runtime.getSnapshot().phase, 'ready')
+    if (activity === 'refused') {
+      assert.equal(f.runtime.getSnapshot().capture.customer.blocked, true)
+      assert.equal(await f.database.captureDraftContents.count(), 0)
+    }
+    assert.equal(
+      (await f.database.operationJournal.toArray()).length,
+      activity === 'submit' ? 1 : 0,
+    )
+    assert.equal(f.runtime.branding.getSnapshot().profile?.display_name, 'Shared workshop')
+    assert.equal(f.runtime.branding.getSnapshot().cached, true)
+    assert.deepEqual(await f.database.brandingSnapshots.toArray(), snapshots)
+  })
+
+test('late old capture receipt cannot request offline branding in a new login', async (t) => {
+  const f = setup(t, { server: brandedApi(['branding.read']) })
+  f.runtime.scheduleSync = () => {}
+  await login(f.runtime)
+  let release, entered
+  const gate = new Promise((resolve) => {
+      release = resolve
+    }),
+    started = new Promise((resolve) => {
+      entered = resolve
+    })
+  t.after(() => release())
+  const original = f.runtime.repositories.createCustomer.bind(f.runtime.repositories)
+  f.runtime.repositories.createCustomer = async (...args) => {
+    const result = await original(...args)
+    entered()
+    await gate
+    return result
+  }
+  const view = f.runtime.getSnapshot().capture.viewToken
+  f.runtime.editCaptureCustomer(view, 'displayName', 'Old captured customer')
+  const submitting = f.runtime.submitCaptureCustomer(view)
+  await started
+  await f.runtime.logout()
+  await login(f.runtime, 'B')
+  let requests = 0
+  const refresh = f.runtime.branding.refreshOfflineAfterLocalActivity.bind(f.runtime.branding)
+  f.runtime.branding.refreshOfflineAfterLocalActivity = () => {
+    requests++
+    refresh()
+  }
+  release()
+  await submitting
+  assert.equal(requests, 0)
+  assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
 })

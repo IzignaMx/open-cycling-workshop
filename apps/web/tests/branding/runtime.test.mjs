@@ -290,3 +290,110 @@ for (const invalidation of ['clear', 'invalid admission', 'stale source']) {
     assert.equal(env.controller.getSnapshot().profile, null)
   })
 }
+
+test('completed local events coalesce during original and trailing offline reads without null loops', async () => {
+  let reads = 0
+  const release = [],
+    entered = []
+  const gates = [0, 1].map(
+    (_, i) =>
+      new Promise((resolve) => {
+        release[i] = resolve
+      }),
+  )
+  const started = [0, 1].map(
+    (_, i) =>
+      new Promise((resolve) => {
+        entered[i] = resolve
+      }),
+  )
+  const f = setup({
+    repository: {
+      read: async () => {
+        const i = reads++
+        if (i < 2) {
+          entered[i]()
+          await gates[i]
+        }
+        return null
+      },
+      write: async () => assert.fail('offline write'),
+    },
+  })
+  f.offline()
+  await started[0]
+  for (let i = 0; i < 20; i++) f.controller.refreshOfflineAfterLocalActivity()
+  release[0]()
+  await started[1]
+  for (let i = 0; i < 20; i++) f.controller.refreshOfflineAfterLocalActivity()
+  release[1]()
+  for (let i = 0; i < 10; i++) await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(reads, 3, 'one owed read per flight; final null cannot self-enqueue')
+  assert.equal(f.controller.getSnapshot().profile, null)
+  assert.equal(f.counts().readCalls, 0)
+})
+
+test('local event never initiates online transport or a cache read with an already accepted profile', async () => {
+  const f = setup()
+  for (let i = 0; i < 20; i++) f.controller.refreshOfflineAfterLocalActivity()
+  await Promise.resolve()
+  assert.equal(f.counts().readCalls, 0)
+  f.offline()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(f.controller.getSnapshot().cached, true)
+  for (let i = 0; i < 20; i++) f.controller.refreshOfflineAfterLocalActivity()
+  assert.equal(f.counts().readCalls, 0)
+})
+
+for (const edge of ['clear', 'takeover', 'invalid admission', 'online'])
+  test(`owed offline activity refresh is discarded after ${edge}`, async () => {
+    let release,
+      entered,
+      reads = 0,
+      validations = 0,
+      live = true,
+      online = false,
+      binding = 'same'
+    const gate = new Promise((resolve) => {
+        release = resolve
+      }),
+      started = new Promise((resolve) => {
+        entered = resolve
+      })
+    const f = setup({
+      capture: () =>
+        live
+          ? {
+              online,
+              binding,
+              isCurrent: () => live,
+              ticket: {},
+              context: { capabilities: ['branding.read'] },
+            }
+          : null,
+      validate: async () => ++validations === 1 || edge !== 'invalid admission',
+      repository: {
+        read: async () => {
+          reads++
+          entered()
+          await gate
+          return null
+        },
+        write: async () => assert.fail('offline write'),
+      },
+    })
+    const first = f.controller.refresh(true)
+    await started
+    for (let i = 0; i < 10; i++) f.controller.refreshOfflineAfterLocalActivity()
+    if (edge === 'clear') {
+      live = false
+      f.controller.clear()
+    }
+    if (edge === 'takeover') binding = 'new-owner'
+    if (edge === 'online') online = true
+    release()
+    await first
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.equal(reads, 1)
+    assert.equal(f.counts().readCalls, 0, 'owed local refresh cannot become an online fetch')
+  })

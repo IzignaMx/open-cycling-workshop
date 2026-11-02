@@ -26,8 +26,9 @@ import { addScopedVisualUser, FULL_CAPABILITIES, seedWorkshop } from './helpers/
 
 const UNKNOWN =
   'No se pudo confirmar si el cambio se guardó. No lo envíes otra vez; verifica el estado del taller antes de continuar.'
-const customerForm = (page: Page) => page.locator('form[aria-describedby="customer-create-status"]')
-const orderForm = (page: Page) => page.locator('form[aria-describedby="order-intake-status"]')
+const customerForm = (page: Page) =>
+  page.locator('form[aria-describedby~="customer-create-status"]')
+const orderForm = (page: Page) => page.locator('form[aria-describedby~="order-intake-status"]')
 const CUSTOMER = {
   Nombre: 'Privado continuidad cliente',
   Correo: 'visit@example.invalid',
@@ -191,7 +192,9 @@ test('capture visit restores drafts, hidden bicycle fields and clean retained de
     .getByRole('textbox', { name: 'Problema reportado', exact: true })
     .fill('Orden para defaults limpios')
   await order.getByRole('button', { name: 'Guardar orden' }).click()
-  await expect(order.getByRole('status')).toHaveText('Orden guardada localmente')
+  await expect(order.locator('#order-intake-status[role="status"]')).toHaveText(
+    'Orden guardada localmente',
+  )
   await expect(order).toHaveAttribute('data-dirty', 'false')
   const saved = await kernelSnapshot(page)
   await reverify(page, ['Orden para defaults limpios', seeded.customerId], info, 'defaults')
@@ -268,10 +271,22 @@ for (const kind of ['customer', 'order'] as const)
       // The native callback gate precedes the kernel postwrite fence. Reverification
       // invalidates its source: real committed bytes are NOT authority to say saved.
       await releaseJournalCompletion(page)
-      await expect(form.getByRole('status')).toHaveText(UNKNOWN)
+      await expect(
+        form.locator(
+          customer
+            ? '#customer-create-status[role="status"]'
+            : '#order-intake-status[role="status"]',
+        ),
+      ).toHaveText(UNKNOWN)
       await reverify(page, Object.values(values), info, `${kind}-unknown`)
       await fields(form, values)
-      await expect(form.getByRole('status')).toHaveText(UNKNOWN)
+      await expect(
+        form.locator(
+          customer
+            ? '#customer-create-status[role="status"]'
+            : '#order-intake-status[role="status"]',
+        ),
+      ).toHaveText(UNKNOWN)
       await fill(form, Object.fromEntries(Object.keys(values).map((name) => [name, ''])))
       if (!customer) {
         await form.getByLabel('Agregar bicicleta').uncheck()
@@ -292,7 +307,13 @@ for (const kind of ['customer', 'order'] as const)
       await input.fill('Otro intento explícito prohibido')
       await input.press('Enter')
       await form.evaluate((element) => (element as HTMLFormElement).requestSubmit())
-      await expect(form.getByRole('status')).toHaveText(UNKNOWN)
+      await expect(
+        form.locator(
+          customer
+            ? '#customer-create-status[role="status"]'
+            : '#order-intake-status[role="status"]',
+        ),
+      ).toHaveText(UNKNOWN)
       expect((await kernelSnapshot(page)).journal).toEqual(committed.journal)
       expect((await probe(page)).writes).toBe(customer ? 1 : 2)
       await evidence(page, info, `${kind}-unknown-restored`)
@@ -413,7 +434,7 @@ test('capture visit accepted new principal never displays old private draft or l
       Correo: '',
       Teléfono: '',
     })
-    await expect(customerForm(page).getByRole('status')).toBeEmpty()
+    await expect(customerForm(page).locator('#customer-create-status[role="status"]')).toBeEmpty()
     await expect(page.locator('body')).not.toContainText('Privado borrador de visita cerrada')
     expect((await kernelSnapshot(page, committed.partition.partitionId)).journal).toEqual(
       committed.journal,

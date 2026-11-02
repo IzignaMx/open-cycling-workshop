@@ -376,3 +376,90 @@ test('closed empty visit notice does not falsely claim a pending or unknown capt
     'Las capturas no están disponibles en esta visita. Inicia una nueva sesión para continuar.',
   )
 })
+
+test('hydration restores exact fields and hidden order values with detached projections', () => {
+  const owner = fresh()
+  const token = owner.hydrationToken()
+  const projections = {
+    customer: { channel: 'customer', draft: { ...customer } },
+    order: {
+      channel: 'order',
+      draft: { ...order, withBicycle: false },
+      retainedSelection: { customerId: 'prior', priority: 'normal' },
+    },
+  }
+  assert.equal(owner.hydrate(projections, token), true)
+  projections.customer.draft.displayName = 'external mutation'
+  assert.deepEqual(owner.projection('customer'), { channel: 'customer', draft: customer })
+  assert.equal(owner.projection('order').draft.brand, 'brand')
+  assert.equal(owner.projection('order').draft.withBicycle, false)
+  assert.deepEqual(owner.projection('order').retainedSelection, {
+    customerId: 'prior',
+    priority: 'normal',
+  })
+  assert.ok(Object.isFrozen(owner.projection('order').retainedSelection))
+  assert.equal(owner.hydrate(projections, token), false)
+})
+test('hydrated saved order retained defaults are not unsent work', () => {
+  const owner = fresh(),
+    token = owner.hydrationToken()
+  const clean = {
+    ...owner.projection('order'),
+    draft: { ...owner.projection('order').draft, customerId: 'retained', priority: 'high' },
+    retainedSelection: { customerId: 'retained', priority: 'high' },
+  }
+  assert.equal(owner.hydrate({ order: clean }, token), true)
+  assert.equal(owner.hasUnsent(), false)
+  assert.equal(owner.getSnapshot().order.dirty, false)
+})
+test('hydration cannot replace edits including same-value events or ABA', () => {
+  for (const values of [[''], ['later', '']]) {
+    const owner = fresh(),
+      token = owner.hydrationToken()
+    for (const value of values) owner.editCustomer(view(owner), 'displayName', value)
+    assert.equal(
+      owner.hydrate({ customer: { channel: 'customer', draft: customer } }, token),
+      false,
+    )
+    assert.equal(owner.getSnapshot().customer.draft.displayName, '')
+  }
+})
+test('hydration refuses pending and unknown and closed or changed visits', () => {
+  for (const change of ['pending', 'unknown', 'closed', 'new', 'scope']) {
+    const owner = fresh(),
+      token = owner.hydrationToken()
+    if (change === 'pending' || change === 'unknown') {
+      const attempt = owner.begin(view(owner), 'customer')
+      if (change === 'unknown') owner.finish(attempt.token, unknown)
+    } else if (change === 'closed') owner.endVisit()
+    else if (change === 'new') owner.startVisit()
+    else owner.observeScope({ ...scope, userId: 'other' })
+    assert.equal(
+      owner.hydrate({ customer: { channel: 'customer', draft: customer } }, token),
+      false,
+      change,
+    )
+  }
+})
+test('unrelated edit does not reject hydration of only unchanged channel', () => {
+  const owner = fresh(),
+    token = owner.hydrationToken()
+  owner.editCustomer(view(owner), 'displayName', 'typed meanwhile')
+  const projection = {
+    channel: 'order',
+    draft: order,
+    retainedSelection: { customerId: '', priority: 'normal' },
+  }
+  assert.equal(owner.hydrate({ order: projection }, token), true)
+  assert.equal(owner.getSnapshot().customer.draft.displayName, 'typed meanwhile')
+  assert.deepEqual(owner.getSnapshot().order.draft, order)
+})
+test('hydration token cannot cross instances or overwrite a completed attempt reset', () => {
+  const owner = fresh(),
+    token = owner.hydrationToken()
+  const other = fresh()
+  assert.equal(other.hydrate({ customer: { channel: 'customer', draft: customer } }, token), false)
+  const attempt = owner.begin(view(owner), 'customer')
+  owner.finish(attempt.token, saved)
+  assert.equal(owner.hydrate({ customer: { channel: 'customer', draft: customer } }, token), false)
+})

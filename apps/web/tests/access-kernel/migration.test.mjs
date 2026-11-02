@@ -124,15 +124,15 @@ async function assertRows(db, names) {
   }
 }
 for (const nativeVersion of [1, 10, 20, 30, 40])
-  test(`native ${nativeVersion} upgrades losslessly to actual native70/logical7 without attribution`, async () => {
+  test(`native ${nativeVersion} upgrades losslessly to actual native80/logical8 without attribution`, async () => {
     const name = `migration-${crypto.randomUUID()}`
     const names = await seed(name, nativeVersion)
     const db = createKernelDatabase(name)
     try {
       await db.open()
-      assert.equal(db.verno, 7)
-      assert.equal(db.backendDB().version, 70)
-      assert.equal(db.tables.length, 17)
+      assert.equal(db.verno, 8)
+      assert.equal(db.backendDB().version, 80)
+      assert.equal(db.tables.length, 19)
       await assertRows(db, names)
       assert.deepEqual(await db.localMigrationState.get('identity-kernel-v5'), {
         key: 'identity-kernel-v5',
@@ -189,7 +189,7 @@ for (const failure of ['abort', 'quota'])
       await candidate.delete()
     }
   })
-test('versionchange closes the old connection; simulated future v8 carries all v7 data', async () => {
+test('versionchange closes the old connection; simulated future v9 carries all v8 data', async () => {
   const name = `future-${crypto.randomUUID()}`
   const names = await seed(name, 40)
   const db = createKernelDatabase(name)
@@ -210,11 +210,11 @@ test('versionchange closes the old connection; simulated future v8 carries all v
   })
   const future = createKernelDatabase(name)
   // Fixture only, never a reserved production store/migration.
-  future.version(8).stores({ futureQuoteFixture: 'id' })
+  future.version(9).stores({ futureQuoteFixture: 'id' })
   try {
     await future.open()
     assert.equal(db.isOpen(), false)
-    assert.equal(future.backendDB().version, 80)
+    assert.equal(future.backendDB().version, 90)
     await assertRows(future, names)
     assert.deepEqual(await future.operationJournal.get('owned'), journal)
     assert.equal(await future.cacheRecords.count(), 1)
@@ -238,7 +238,7 @@ test('authenticated factory cannot open legacy name; legacy class remains v4', a
   assert.equal(typeof Dexie, 'function')
 })
 
-test('activation blocker: legacy v4 Dexie opens v7 and can still write sealed legacy stores', async () => {
+test('activation blocker: legacy v4 Dexie opens v8 and can still write sealed legacy stores', async () => {
   const name = `old-bundle-${crypto.randomUUID()}`
   const upgraded = createKernelDatabase(name)
   await upgraded.open()
@@ -246,7 +246,7 @@ test('activation blocker: legacy v4 Dexie opens v7 and can still write sealed le
   const oldBundle = new OcwpDatabase(name)
   try {
     await oldBundle.open()
-    assert.equal(oldBundle.backendDB().version, 70)
+    assert.equal(oldBundle.backendDB().version, 80)
     await oldBundle.mutationQueue.add({
       mutation_id: 'old-bundle-write',
       payload: { preserved: true },
@@ -265,7 +265,7 @@ test('isolated database names must be primitive strings before native coercion',
   }
 })
 
-test('v5 to v7 adds pagination indices and branding cache without attributing or rewriting any retained bytes', async () => {
+test('v5 to v8 adds pagination indices and branding cache without attributing or rewriting any retained bytes', async () => {
   const name = `v5-v6-${crypto.randomUUID()}`
   const v5 = new OcwpDatabase(name)
   v5.version(5).stores({
@@ -316,7 +316,7 @@ test('v5 to v7 adds pagination indices and branding cache without attributing or
   const current = createKernelDatabase(name)
   try {
     await current.open()
-    assert.equal(current.backendDB().version, 70)
+    assert.equal(current.backendDB().version, 80)
     assert.deepEqual(await current.operationJournal.toArray(), [journal])
     assert.deepEqual(await current.operationDelivery.toArray(), [delivery])
     assert.deepEqual(await current.operationEvents.toArray(), [event])
@@ -346,6 +346,73 @@ test('v5 to v7 adds pagination indices and branding cache without attributing or
       (await current.operationJournal.get('original')).authoredDatasetIncarnation,
       undefined,
     )
+  } finally {
+    current.close()
+    await current.delete()
+  }
+})
+
+test('actual v7 schema upgrades to v8 preserving all retained bytes and adding empty private stores', async () => {
+  const name = `v7-v8-${crypto.randomUUID()}`
+  const old = new OcwpDatabase(name)
+  old.version(5).stores({
+    deviceControl: 'key',
+    accessContexts: 'partitionId',
+    cachePartitions: 'partitionId, principalKey',
+    cacheRecords: '[partitionId+entityType+entityId], [partitionId+entityType]',
+    operationJournal:
+      'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId]',
+    operationDelivery:
+      'mutationId, state, [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+    operationEvents: '++sequence, mutationId',
+    localMigrationState: 'key',
+  })
+  old.version(6).stores({
+    operationJournal:
+      'mutationId, [principalKey+locationId], localSequence, [principalKey+locationId+entityType+entityId], [principalKey+locationId+localSequence], [principalKey+locationId+entityType+entityId+localSequence]',
+    operationDelivery:
+      'mutationId, state, [principalKey+locationId+entityType+state+localSequence], [principalKey+locationId+entityType+state+retryAt], [principalKey+locationId+localSequence], [principalKey+locationId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+unresolved+localSequence], [attemptId+deviceGeneration+state], [principalKey+locationId+entityType+entityId+dispatchable+localSequence], [principalKey+locationId+entityType+entityId+blocked+localSequence], [principalKey+locationId+entityType+entityId+resultVersion]',
+    operationEvents: '++sequence, mutationId, [mutationId+sequence]',
+  })
+  old.version(7).stores({ brandingSnapshots: 'partitionId, principalKey' })
+  const retained = {
+    customers: { customer_id: 'legacy', unknown: { private: 'synthetic legacy' } },
+    deviceControl: { key: 'device', generation: 10, unknown: 'retain' },
+    accessContexts: { partitionId: 'partition', unknown: ['retain'] },
+    cachePartitions: { partitionId: 'partition', principalKey: 'principal', unknown: true },
+    cacheRecords: {
+      partitionId: 'partition',
+      entityType: 'customer',
+      entityId: 'entity',
+      payload: { name: 'synthetic' },
+    },
+    operationJournal: { mutationId: 'mutation', envelope: { untouched: true } },
+    operationDelivery: { mutationId: 'mutation', state: 'unknown', unknown: 'retain' },
+    operationEvents: { sequence: 1, mutationId: 'mutation', unknown: { history: true } },
+    localMigrationState: { key: 'identity-kernel-v5', unknown: { attribution: 'unchanged' } },
+    brandingSnapshots: {
+      partitionId: 'partition',
+      principalKey: 'principal',
+      unknown: { bytes: 'retain' },
+    },
+  }
+  await old.open()
+  assert.equal(old.backendDB().version, 70)
+  for (const [table, row] of Object.entries(retained)) await old.table(table).add(row)
+  old.close()
+  const current = createKernelDatabase(name)
+  try {
+    await current.open()
+    assert.equal(current.backendDB().version, 80)
+    for (const [table, row] of Object.entries(retained))
+      assert.deepEqual(await current.table(table).toArray(), [row])
+    assert.equal(await current.captureCheckpoints.count(), 0)
+    assert.equal(await current.captureDraftContents.count(), 0)
+    assert.equal(current.captureCheckpoints.schema.idxByName.bindingKey.unique, true)
+    assert.deepEqual(current.captureDraftContents.schema.primKey.keyPath, [
+      'checkpointId',
+      'channel',
+    ])
   } finally {
     current.close()
     await current.delete()
