@@ -17,7 +17,13 @@ official_module_reference_20261102:
   python_local: 4957_passed671_environment_skips12_warnings_not_hosted_proof
   repository_local: 150_passed_after_reconciliation
   source_review: accepted_bounded_scope_native_evidence_pending
-  publication: not_authorized_for_this_package
+  publication: separately_authorized_PR82_draft_corrective_CI_pending
+  integration: only_after_all_checks_and_independent_review_then_fresh_main
+  first_hosted_ci: 41449605372_terminal_failure
+  first_aggregate: 26_of27_only_browser125_pass1_fail
+  first_direct_browser: 125_pass1_fail_zero_flaky_isolated_fixture_process_undefined
+  first_repeats: skipped_after_direct_failure_not_expiry_behavior_regression
+  corrective_scope: test_only_Vite_production_environment_constant_and_emitted_guard
   V01_physical_and_release_gates: unchanged_partial
 
 pr81_source_acceptance_20261102:

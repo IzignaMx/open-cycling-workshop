@@ -10,7 +10,10 @@
       timing assertion failure is unexplained, not declared fixed.
 - [ ] Qualify the static official metadata reference, omission/error isolation,
       capture preservation, accessibility and actual host composition.
-- [ ] Obtain separate publication/integration authorization and exact-source evidence.
+- [x] Record separate12:57 approval; PR82 published draft for CI.
+- [ ] Qualify the corrective exact head before ready/merge, then fresh main.
+      First direct browser125/126 failed only isolated fixture Node-environment
+      bundling; correction is test-only and still needs fresh native execution.
 - M0 remains qualified data-only source; M1 is a prerequisite, not an SDK, loader,
   installer, connector identity, permission grant or offline operational feature.
   V0.1 remains partial. Physical R01-T035/T1–T8, full crash/capacity/installation,

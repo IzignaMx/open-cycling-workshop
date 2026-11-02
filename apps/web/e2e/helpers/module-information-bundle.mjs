@@ -8,6 +8,9 @@ export async function moduleInformationBundle() {
   const result = await build({
     root: fileURLToPath(new URL('../..', import.meta.url)),
     configFile: false,
+    // Library mode preserves this Node expression unless explicitly replaced.
+    // Match the production PWA React build without installing a browser global shim.
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     plugins: [react(), tailwindcss()],
     logLevel: 'error',
     build: {
@@ -36,5 +39,7 @@ export async function moduleInformationBundle() {
     }
   }
   if (!script || !style) throw new Error('Fixture must include actual React and host styles')
+  if (script.includes('process.env.NODE_ENV'))
+    throw new Error('Browser fixture must not require Node process.env.NODE_ENV')
   return { script, style }
 }

@@ -182,11 +182,11 @@ def test_quote_v8_reservation_is_explicitly_nonbinding_not_quote_activation() ->
     assert "does not implement quote storage" in text
 
 
-def test_current_m1_checkpoint_is_partial_and_has_no_inherited_publication() -> None:
+def test_current_m1_checkpoint_is_partial_and_has_separate_publication_authority() -> None:
     state = read(BASE + "execution-state.yaml")
     assert "current_checkpoint: official_module_reference_20261102" in state
     block = state.split("official_module_reference_20261102:\n", 1)[1].split("\n\n", 1)[0]
-    assert "publication: not_authorized_for_this_package" in block
+    assert "publication: separately_authorized_PR82_draft_corrective_CI_pending" in block
     assert "canonical_SDK_tasks: prerequisite_only_not_complete" in block
     record = read(BASE + "2026-11-02-official-module-reference.md")
     for token in (

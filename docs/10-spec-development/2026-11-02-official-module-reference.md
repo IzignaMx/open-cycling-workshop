@@ -7,7 +7,9 @@ public SDK, installer, connector, sandbox, authority grant or release.
 ## Admission and selected scope
 
 The maintainer's12:37 continuation instruction permits bounded local plan work;
-it does not authorize this package's publication/merge/deployment. The established
+it did not itself authorize publication/merge/deployment. The separate12:57
+approval authorized draft publication now, conditional integration only after all
+checks/review pass, then fresh main; no deployment. The established
 [strategy](../08-open-source/2026-10-27-compatible-modules.md) and product alignment
 permit an independent M1 reference after higher-risk source readiness. PR81 closes
 the preceding bounded source qualification; physical/manual and broader recovery
@@ -83,7 +85,7 @@ results, not module runtime or native-browser qualification.
 
 R01-T035/T1–T8, installation, full crash/recovery, physical capacity and broader
 release-security gates remain separate. Historical cleanup41011497919 is UNKNOWN;
-ownership40927223929 is SPENT. Pages remains source3c6513d. No new publication authority.
+ownership40927223929 is SPENT. Pages remains source3c6513d. No deployment authority or physical gate closure follows from publication.
 
 ## Local implementation checkpoint
 
@@ -113,7 +115,8 @@ false-compatibility-claim mutant was rejected by the real rendered-copy assertio
 Five native cases are authored/collected and the isolated actual-component bundle
 builds; **zero native cases were executed locally**. The existing sandbox blocker
 is respected. Native error containment, layout, focus and capture preservation
-remain unqualified until actual execution. No publication or merge is authorized.
+remain unqualified until actual execution. At that local checkpoint publication/merge was not yet authorized; the later
+separate12:57 approval below supersedes that pending authority status.
 
 Local full Python run: **4,957 passed, 671 environment skips, 12 retained warnings**
 (no configured PostgreSQL/runtime), not full hosted qualification. After the final
@@ -122,3 +125,37 @@ checks/format, mypy124 source files, OpenAPI and generated TypeScript contracts
 passed. Whole-tree formatting and ESLint passed (ignored artifact output remains
 outside source linting). Python evidence: `artifacts/module-reference/python-full.log`;
 repository refresh: `repository-final.log`. No skipped integration test is marked verified.
+
+## PR82 first hosted attempt and bounded correction
+
+PR82 published in draft after separate12:57 sequence approval, source
+`050eca442695b8fbf6ef7f6b37fe2ca9a6389599`, tree
+`3983dcc9625d17d013875a9464a02a85343c672a`, CI41449605372.
+Direct browser artifact13145621832: **125 passed, one failed**, zero flaky/skipped.
+All four real authenticated new module journeys and the retained121 cases passed.
+Only the isolated omission/error fixture failed both attempts before React mounted;
+the actual trace reports `ReferenceError: process is not defined` at emitted
+bundle line25423. Actual Vite library-mode output retained12 NODE_ENV references,
+unlike the production PWA build. This does not establish a production App defect.
+
+The sole test-builder correction explicitly replaces `process.env.NODE_ENV` with
+the production constant and rejects emitted output that still contains it. No
+browser global shim, production source, native assertion, timeout or retry setting
+changes. Actual bundle assertion RED→GREEN confirms zero unresolved references;
+independent review rebuilt it. Native production-React error containment still
+requires a fresh complete hosted run, not merely successful compilation.
+
+The first run skipped repetitions after direct failure: steps39–41 and43 did not
+execute. Inventory-expiry artifact13145282485 contains only `status: incomplete`;
+mandatory step44 correctly fails. This is missing repetition evidence, not a
+reproduced expiry-behavior defect. The first attempt ended in failure. Independently verified aggregate artifact
+13146318540 records26/27 controls, with only browser E2E failing (125 passed,
+one isolated-fixture failure). No failed result is relabelled green.
+
+The fresh full Python paired proof was independently accepted (artifact13144029449):
+5,628 collected =5,570 passed +58 exact expected skips, zero failure/error/unrun,
+source/run/nonce/image and primary/independent cleanup/predecessor verified.
+Runtime41449606364, Security41449605239, micro41449605566 and DCO41449605851
+were also independently accepted for this first source, not inherited by any
+corrective head. Complete CI and independent evidence review remain mandatory
+before ready/merge, with fresh-main acceptance afterward.
