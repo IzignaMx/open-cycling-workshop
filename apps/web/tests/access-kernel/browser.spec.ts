@@ -38,8 +38,8 @@ for (const nativeVersion of [1, 10, 20, 30, 40]) {
         await db.delete()
       }
     }, nativeVersion)
-    expect(result.nativeVersion).toBe(70)
-    expect(result.stores).toBe(17)
+    expect(result.nativeVersion).toBe(80)
+    expect(result.stores).toBe(19)
     expect(result.preserved).toEqual(result.original)
     expect(result.journalCount).toBe(0)
     expect(result.partitions).toBe(0)
@@ -263,10 +263,10 @@ test('real IndexedDB records the old-bundle activation blocker without pretendin
       await candidate.delete()
     }
   })
-  expect(result).toEqual({ version: 70, legacyWrites: 1 })
+  expect(result).toEqual({ version: 80, legacyWrites: 1 })
 })
 
-test('real IndexedDB native50 to native70 preserves journal and unknown evidence exactly', async ({
+test('real IndexedDB native50 to native80 preserves journal and unknown evidence exactly', async ({
   page,
 }) => {
   await page.goto('/')
@@ -339,13 +339,13 @@ test('real IndexedDB native50 to native70 preserves journal and unknown evidence
     }
   })
   expect(result.beforeVersion).toBe(50)
-  expect(result.afterVersion).toBe(70)
+  expect(result.afterVersion).toBe(80)
   expect(result.retained).toEqual(result.original)
   expect(result.retained.journal).not.toHaveProperty('authoredDatasetIncarnation')
   expect(result.indexed).toBe(true)
 })
 
-test('real IndexedDB native60 to native70 retains every original store and closes the old connection', async ({
+test('real IndexedDB native60 to native80 retains every original store and closes the old connection', async ({
   page,
 }) => {
   await page.goto('/')
@@ -353,7 +353,10 @@ test('real IndexedDB native60 to native70 retains every original store and close
     const name = `branding-v6-upgrade-${crypto.randomUUID()}`
     const candidate = window.kernelHarness.createKernelDatabase(name)
     const schemas = candidate.tables
-      .filter((table) => table.name !== 'brandingSnapshots')
+      .filter(
+        (table) =>
+          !['brandingSnapshots', 'captureCheckpoints', 'captureDraftContents'].includes(table.name),
+      )
       .map((table) => ({ name: table.name, schema: table.schema }))
     const open = indexedDB.open(name, 60)
     open.onupgradeneeded = () => {
@@ -417,9 +420,9 @@ test('real IndexedDB native60 to native70 retains every original store and close
     }
   })
   expect(result.closed).toBe(true)
-  expect(result.nativeVersion).toBe(70)
+  expect(result.nativeVersion).toBe(80)
   expect(result.originalStores).toBe(16)
-  expect(result.stores).toBe(17)
+  expect(result.stores).toBe(19)
   expect(result.retained).toEqual(result.originals)
   expect(result.snapshots).toBe(0)
 })

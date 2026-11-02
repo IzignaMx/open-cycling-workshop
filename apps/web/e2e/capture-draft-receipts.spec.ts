@@ -134,8 +134,8 @@ for (const scenario of cases)
     const customer = scenario.form === 'customer'
     const form = page.locator(
       customer
-        ? 'form[aria-describedby="customer-create-status"]'
-        : 'form[aria-describedby="order-intake-status"]',
+        ? 'form[aria-describedby~="customer-create-status"]'
+        : 'form[aria-describedby~="order-intake-status"]',
     )
     const oldValues: Record<string, string> = customer
       ? { Nombre: 'Cliente envío anterior', Correo: 'old@example.invalid', Teléfono: '5550101' }
@@ -200,7 +200,9 @@ for (const scenario of cases)
       }
       await expect(form).toHaveAttribute('data-dirty', 'true')
       await releaseJournalCompletion(page)
-      const status = form.getByRole('status')
+      const status = form.locator(
+        customer ? '#customer-create-status[role="status"]' : '#order-intake-status[role="status"]',
+      )
       await expect(status).toHaveText(PREVIOUS_SAVED)
       await expect(status).toHaveAttribute('aria-live', 'polite')
       await expect(form).toHaveAttribute('data-dirty', 'true')

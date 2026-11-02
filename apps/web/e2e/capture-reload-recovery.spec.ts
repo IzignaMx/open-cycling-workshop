@@ -61,7 +61,7 @@ type Content = {
 }
 const form = (page: Page, channel: Channel) =>
   page.locator(
-    `form[aria-describedby="${channel === 'customer' ? 'customer-create' : 'order-intake'}-status"]`,
+    `form[aria-describedby~="${channel === 'customer' ? 'customer-create' : 'order-intake'}-status"]`,
   )
 const commandStatus = (page: Page, channel: Channel) =>
   page.locator(`#${channel === 'customer' ? 'customer-create' : 'order-intake'}-status`)

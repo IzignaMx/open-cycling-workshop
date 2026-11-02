@@ -187,3 +187,39 @@ backend, workflow or deployment changes. Ten browser cases remain authored and
 collected, **not executed**. PostgreSQL/scanner and complete hosted gates are still
 required. Independent source review does not substitute for those gates. A separate
 publication/conditional integration authorization is required before any remote PR.
+
+## First hosted attempt and scoped test correction — 09:44 UTC
+
+PR81 first published head `0f0781c551c4ebf46d85b7d7df3ef07f03d211c7`, tree
+`74ac222cd5021fcb87360f54b226c5af72034ebc`, ran CI41413376026. Full Python was
+independently accepted at5,567 passed plus58 exact expected skips, with both shard
+cleanup proofs. Runtime/security/containment/DCO companions passed their separate
+source-bound reviews. **The overall attempt failed and is not acceptance.**
+
+The isolated native kernel artifact recorded6 passes and8 failures, all retaining
+an obsolete expected native version70 instead of the actual80. Its version/store
+expectations and true-v6 fixture are corrected without weakening original-row,
+old-client, index, blocked-upgrade or abort assertions. Four structural-theme
+journeys independently retain the same obsolete70 expectation and now require80.
+
+The aggregate recorded26/27 controls and92 browser passes/29 failures. Direct
+browser/repeat stages were skipped after the kernel failure, so inventory-expiry
+repetition correctly reported incomplete; this is not an observed expiry defect.
+The large qualification archive exceeded the connector's512MiB transfer limit;
+no size/access workaround was used. Available text summarizes failures but does
+not retain their first assertions. This diagnostic limit is preserved explicitly.
+
+Independent real ReactDOMServer rendering of both production components and the
+actual shared Button, parsed with installed lxml, reproduced four selector REDs:
+old exact `aria-describedby` equality matches zero forms because the attribute is
+now a valid two-ID token list; generic status matching sees two separate messages.
+Token-membership matching and the original command-status ID produce four GREENs.
+This is rendered-HTML predicate evidence, **not native browser execution**. The
+repair preserves all feedback, privacy, journal, keyboard and accessibility checks.
+It does not claim that all29 hosted failures have been resolved before a new run.
+
+The correction changes only six browser-test files, five additional to the original
+package: **39 total files**. No production behavior, dependency, workflow, timeout,
+retry policy or security control is changed by this repair. Independent diff review
+accepted this bounded correction. Complete fresh exact-head CI and native evidence
+remain mandatory before ready/merge, followed by fresh-main validation.
