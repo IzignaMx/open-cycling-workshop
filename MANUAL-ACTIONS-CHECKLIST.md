@@ -1,5 +1,19 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-01 · Borradores recientes y recibos de capturas anteriores
+
+- [x] Proteger las ediciones de formularios montados frente a un recibo exitoso
+      anterior; RED/GREEN fresco y revisión independiente. Véase el
+      [registro de alcance y evidencia](docs/10-spec-development/2026-11-01-capture-draft-receipts.md).
+- [ ] Calificar el candidato exacto mediante controles hosted y navegador PWA;
+      cuatro casos recopilados localmente no equivalen a ejecución.
+- [ ] Verificar fresh main tras la integración condicionada a todos los gates.
+- Segunda reconstrucción del mismo alcance el 2 de noviembre tras pérdida del
+  candidato local; no se heredan sus hashes ni resultados. No hay garantía de
+  borradores durables al recargar, navegar o desmontar por reconexión.
+- Sin despliegue, cambios de permisos ni pruebas físicas. T1–T8/R01-T035,
+  recuperación/capacidad y cleanup histórico UNKNOWN permanecen pendientes.
+
 ## 2026-11-02 · Reconstructed current checkpoint; physical gates remain open
 
 - [x] Reconcile retained PR77 candidate and fresh-main acceptance for `cdb44aac`:

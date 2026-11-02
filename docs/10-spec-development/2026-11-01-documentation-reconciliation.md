@@ -15,7 +15,7 @@ required. Parent owns authorized publication; merge remains conditional on evide
 Accepted baseline main: `cdb44aac572df65489fb95a15c0a813cd5445d95`, tree
 `abff5e9e9bd75fe17e5ece00327c63ba0a9485c8` (merged PR77).
 The [PR77 acceptance record](https://github.com/IzignaMx/open-cycling-workshop/pull/77)
-was read on November1 and retained in the session. It reports prior independent
+was read again during the November 2 reconstruction. It reports prior independent
 exact-source artifact review; this reconstruction did not redownload/revalidate
 those archives or rerun their workflows.
 

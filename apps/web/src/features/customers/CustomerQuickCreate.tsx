@@ -21,10 +21,16 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const draftRevision = useRef<object>({})
   const gate = useRef(new CaptureSubmissionGate())
   const [blocked, setBlocked] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  function markEdited() {
+    // An interaction (including ABA or same-value edits) belongs to a newer draft.
+    draftRevision.current = {}
+  }
 
   function finish(feedback: CaptureFeedback) {
     gate.current.finish(feedback)
@@ -35,6 +41,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!gate.current.begin()) return
+    const submittedRevision = draftRevision.current
     setBusy(true)
     setMessage(null)
     try {
@@ -46,6 +53,12 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
       const feedback = captureFeedback({ kind: 'resolved', value: result })
       finish(feedback)
       if (feedback.status !== 'saved') return
+      if (draftRevision.current !== submittedRevision) {
+        setMessage(
+          'El envío anterior se guardó localmente. El formulario actual sigue sin guardar.',
+        )
+        return
+      }
       setDisplayName('')
       setEmail('')
       setPhone('')
@@ -69,9 +82,10 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
         <input
           required
           value={displayName}
-          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            markEdited()
             setDisplayName(event.currentTarget.value)
-          }
+          }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="name"
         />
@@ -81,7 +95,10 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
         <input
           type="email"
           value={email}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            markEdited()
+            setEmail(event.currentTarget.value)
+          }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="email"
         />
@@ -91,7 +108,10 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
         <input
           inputMode="tel"
           value={phone}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setPhone(event.currentTarget.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            markEdited()
+            setPhone(event.currentTarget.value)
+          }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="tel"
         />

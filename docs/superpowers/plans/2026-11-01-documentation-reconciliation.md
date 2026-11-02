@@ -17,7 +17,7 @@ package, authorized publication before CI and evidence-conditional integration.
 - [x] Reconcile PR77 retained receipt, historical pending statuses and README captures.
 - [x] Separate plan-local W02-I1 tasks from canonical partial mappings; add bounded CSV.
 - [x] Run fresh focused/retained tests, formatting, link and repository checks.
-- [ ] Independently review the reconstructed exact patch.
+- [x] Independently review the reconstructed exact patch; preserve historical evidence.
 - [ ] Accept exact candidate and fresh-main evidence before qualification claims.
 
 No commit/publication occurs in this worker. Permission alone is not evidence.
