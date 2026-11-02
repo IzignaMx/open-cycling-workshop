@@ -1,3 +1,8 @@
+import { CaptureVisit, type CaptureVisitSnapshot, type CaptureVisitScope } from './capture-visit.js'
+import { captureFeedback } from '../features/capture-feedback.js'
+import { captureValidation } from './capture-outcome.js'
+import { normalizeOrderIntake } from '../features/orders/order-model.js'
+import type { CustomerDraftState, OrderDraftState } from '../features/draft-state.js'
 import { TransitionProtection, type TransitionProtectionSnapshot } from './transition-protection.js'
 import { orderTransitionFeedback } from '../features/orders/transition-feedback.js'
 import type { CaptureSubmissionResult } from './capture-outcome.js'
@@ -71,10 +76,12 @@ export interface WorkshopSnapshot {
   legacyPresent: boolean
   timelineMessage: string | null
   identityKey: string
+  capture: CaptureVisitSnapshot | null
   transitionProtection: TransitionProtectionSnapshot
 }
 const empty = (): WorkshopSnapshot => ({
   phase: 'locked',
+  capture: null,
   user: null,
   context: null,
   selectedLocationId: null,
@@ -149,6 +156,8 @@ export class WorkshopController {
   #locationsNetworkSequence = -1
   #disposed = false
   #sequence = 0
+  readonly #captureVisit = new CaptureVisit()
+  #captureSource: BaselineSession | null = null
   readonly #transitionProtection = new TransitionProtection()
   #active: BaselineSession | null = null
   #working: BaselineSession | null = null
@@ -634,11 +643,25 @@ export class WorkshopController {
     return this.#preferences
   }
   private publish(patch: Partial<WorkshopSnapshot>) {
-    this.#snapshot = Object.freeze({ ...this.#snapshot, ...patch })
+    const next = { ...this.#snapshot, ...patch }
+    const source = this.#captureSource
+    if (
+      next.phase !== 'ready' ||
+      !source ||
+      this.#active !== source ||
+      !source.isCurrent(source.identity)
+    ) {
+      this.#captureVisit.suspendView()
+      next.capture = null
+    } else next.capture = this.#captureVisit.getSnapshot()
+    this.#snapshot = Object.freeze(next)
     this.branding.reconcile()
     for (const listener of this.#listeners) listener()
   }
   private cancel() {
+    this.#captureVisit.suspendView()
+    this.#captureSource = null
+    this.#snapshot = Object.freeze({ ...this.#snapshot, capture: null })
     this.branding.clear()
     this.invalidateAccount()
     this.#locationPage++
@@ -854,6 +877,7 @@ export class WorkshopController {
     return source
   }
   async login(input: LoginRequestPayload): Promise<void> {
+    this.#captureVisit.startVisit()
     this.#transitionProtection.startVisit()
     const previous = this.#active ?? this.#working
     const sequence = this.blank('verifying'),
@@ -1109,6 +1133,9 @@ export class WorkshopController {
     const connected = online && this.#verifiedOnline
     this.#brandingAdmissionRefresh = connected ? source : null
     this.observeTransitionScope(source)
+    this.#captureVisit.observeScope(this.captureScope(source))
+    this.#captureVisit.activateView()
+    this.#captureSource = source
     this.publish({
       phase: 'ready',
       user,
@@ -1286,6 +1313,7 @@ export class WorkshopController {
       return
     const saved = this.sessionStore.getSnapshot()
     if (saved) {
+      this.#captureVisit.startVisit()
       this.#transitionProtection.startVisit()
       await this.verifyStored(saved, locationId)
     }
@@ -1293,6 +1321,7 @@ export class WorkshopController {
   async changeWorkshop() {
     const saved = this.sessionStore.getSnapshot()
     if (saved?.user?.location_id === null) {
+      this.#captureVisit.endVisit()
       this.#transitionProtection.endVisit()
       const source = this.#active
       const sequence = this.blank('selector')
@@ -1348,6 +1377,7 @@ export class WorkshopController {
     else this.publish({ message: 'Conéctate para verificar la sesión y reintentar.' })
   }
   async logout() {
+    this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     const source = this.#active ?? this.#working
     this.blank('locked')
@@ -1465,6 +1495,106 @@ export class WorkshopController {
       ...(page.hasIssues && this.#snapshot.sync === 'synced' ? { sync: 'conflict' as const } : {}),
     })
   }
+  hasUnsentCaptures(): boolean {
+    return this.#captureVisit.hasUnsent()
+  }
+  private captureSource(view: object): BaselineSession | null {
+    const source = this.#captureSource
+    return source &&
+      this.#active === source &&
+      this.#snapshot.phase === 'ready' &&
+      source.isCurrent(source.identity) &&
+      this.#captureVisit.isCurrentView(view)
+      ? source
+      : null
+  }
+  editCaptureCustomer<K extends keyof CustomerDraftState>(
+    view: object,
+    field: K,
+    value: CustomerDraftState[K],
+  ): void {
+    if (this.captureSource(view) && this.#captureVisit.editCustomer(view, field, value))
+      this.publish({})
+  }
+  editCaptureOrder<K extends keyof OrderDraftState>(
+    view: object,
+    field: K,
+    value: OrderDraftState[K],
+  ): void {
+    if (this.captureSource(view) && this.#captureVisit.editOrder(view, field, value))
+      this.publish({})
+  }
+  async submitCaptureCustomer(view: object): Promise<void> {
+    const source = this.captureSource(view)
+    if (!source) return
+    const attempt = this.#captureVisit.begin(view, 'customer')
+    if (!attempt) return
+    this.publish({})
+    let feedback
+    try {
+      // Subscribers may synchronously replace authority while observing busy.
+      if (this.captureSource(view) !== source) {
+        feedback = captureFeedback({
+          kind: 'resolved',
+          value: { status: 'not_saved', reason: 'write_failure' },
+        })
+      } else {
+        const { displayName, email, phone } = attempt.input
+        feedback = captureFeedback({
+          kind: 'resolved',
+          value: await this.createCustomer({
+            displayName,
+            email: email || null,
+            phone: phone || null,
+          }),
+        })
+      }
+    } catch (error) {
+      feedback = captureFeedback({ kind: 'rejected', error })
+    }
+    if (this.#captureVisit.finish(attempt.token, feedback)) this.publish({})
+  }
+  async submitCaptureOrder(view: object): Promise<void> {
+    const source = this.captureSource(view)
+    if (!source) return
+    const attempt = this.#captureVisit.begin(view, 'order')
+    if (!attempt) return
+    this.publish({})
+    let feedback
+    try {
+      if (this.captureSource(view) !== source) {
+        feedback = captureFeedback({
+          kind: 'resolved',
+          value: { status: 'not_saved', reason: 'write_failure' },
+        })
+      } else {
+        const draft = attempt.input
+        let normalized
+        try {
+          normalized = normalizeOrderIntake({
+            ...draft,
+            brand: draft.withBicycle ? draft.brand : null,
+            model: draft.withBicycle ? draft.model : null,
+          })
+        } catch (error) {
+          const validation = captureValidation(error)
+          if (!validation) throw error
+          if (
+            this.#captureVisit.finish(
+              attempt.token,
+              captureFeedback({ kind: 'resolved', value: validation }),
+            )
+          )
+            this.publish({})
+          return
+        }
+        feedback = captureFeedback({ kind: 'resolved', value: await this.createOrder(normalized) })
+      }
+    } catch (error) {
+      feedback = captureFeedback({ kind: 'rejected', error })
+    }
+    if (this.#captureVisit.finish(attempt.token, feedback)) this.publish({})
+  }
   async createCustomer(input: {
     displayName: string
     email?: string | null
@@ -1489,8 +1619,8 @@ export class WorkshopController {
     this.wakeLocalSync(source, networkSequence)
     return { status: 'saved' }
   }
-  private observeTransitionScope(source: BaselineSession): void {
-    this.#transitionProtection.observeScope({
+  private captureScope(source: BaselineSession): CaptureVisitScope {
+    return {
       apiRealm: source.context.principal.apiRealm,
       organizationId: source.context.principal.organizationId,
       userId: source.context.principal.userId,
@@ -1500,7 +1630,10 @@ export class WorkshopController {
       policyRevision: source.context.policyRevision,
       capabilities: source.context.capabilities,
       sessionBindingId: source.identity.sessionHandle,
-    })
+    }
+  }
+  private observeTransitionScope(source: BaselineSession): void {
+    this.#transitionProtection.observeScope(this.captureScope(source))
   }
   async transition(orderId: string, action: OrderAction): Promise<OrderTransitionResult> {
     let source: BaselineSession
@@ -1714,6 +1847,7 @@ export class WorkshopController {
     }
   }
   dispose() {
+    this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     this.#disposed = true
     this.cancel()

@@ -16,6 +16,9 @@ import { SyncStatus } from './features/sync/SyncStatus.js'
 import { WorkshopShell } from './personalization/WorkshopShell.js'
 import type { WorkshopController } from './runtime/controller.js'
 
+const CAPTURE_LEAVE_CONFIRMATION =
+  '¿Continuar y descartar los formularios sin enviar o sin confirmar? El trabajo local ya guardado se conserva. Esta acción no confirma ni revierte los envíos pendientes; no los repitas.'
+
 export function App({ runtime }: { runtime: WorkshopController }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot)
   const brand = useSyncExternalStore(runtime.branding.subscribe, runtime.branding.getSnapshot)
@@ -23,26 +26,22 @@ export function App({ runtime }: { runtime: WorkshopController }) {
   useEffect(() => () => inventory.dispose(), [inventory])
   const brandingEditor = useMemo(() => new BrandingEditorController(runtime), [runtime])
   useEffect(() => () => brandingEditor.dispose(), [brandingEditor])
-  const leaveWorkshop = (action: () => Promise<void>) => {
+  const leaveWorkshop = async (action: () => Promise<void>) => {
     if (
-      hasUnsentForms(document) &&
-      !window.confirm(
-        '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
-      )
+      (runtime.hasUnsentCaptures() || hasUnsentForms(document)) &&
+      !window.confirm(CAPTURE_LEAVE_CONFIRMATION)
     )
       return
-    void action()
+    await action()
   }
   const administration = useMemo(() => new AdministrationController(runtime), [runtime])
   useLayoutEffect(() => {
     administration.setLogoutGuard(
       () =>
-        !hasUnsentForms(document) ||
-        window.confirm(
-          '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.',
-        ),
+        (!runtime.hasUnsentCaptures() && !hasUnsentForms(document)) ||
+        window.confirm(CAPTURE_LEAVE_CONFIRMATION),
     )
-  }, [administration])
+  }, [administration, runtime])
   useEffect(() => () => administration.dispose(), [administration])
   useEffect(() => {
     void runtime.start()
@@ -112,7 +111,13 @@ export function App({ runtime }: { runtime: WorkshopController }) {
         </section>
       </main>
     )
-  if (state.phase !== 'ready' || !state.user || !state.context || !runtime.preferences)
+  if (
+    state.phase !== 'ready' ||
+    !state.user ||
+    !state.context ||
+    !runtime.preferences ||
+    !state.capture
+  )
     return (
       <main className="login-shell" data-runtime-state={state.phase.toUpperCase()}>
         <section className="workshop-panel">
@@ -132,7 +137,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 key={state.identityKey}
                 busy={state.phase === 'verifying'}
                 message={state.message}
-                onLogin={(input) => runtime.login(input)}
+                onLogin={(input) => leaveWorkshop(() => runtime.login(input))}
               />
               {state.phase === 'held' && runtime.sessionStore.getToken() ? (
                 <Button type="button" onClick={() => void runtime.retryVerification()}>
@@ -156,6 +161,8 @@ export function App({ runtime }: { runtime: WorkshopController }) {
         </section>
       </main>
     )
+  const capture = state.capture
+  const viewToken = capture.viewToken
   const context = state.context,
     readCustomers = context.capabilities.includes('customers.read'),
     readOrders = context.capabilities.includes('orders.read'),
@@ -185,6 +192,11 @@ export function App({ runtime }: { runtime: WorkshopController }) {
     >
       <div data-runtime-state="READY" data-selected-workshop={context.selectedLocationId}>
         <SyncStatus state={state.sync} />
+        {capture.notice ? (
+          <p role="status" className="workshop-notice">
+            {capture.notice}
+          </p>
+        ) : null}
         {state.message ? (
           <p role="status" className="workshop-notice">
             {state.message}
@@ -270,7 +282,11 @@ export function App({ runtime }: { runtime: WorkshopController }) {
           <section className="workshop-panel" aria-labelledby="customer-create-title">
             <h2 id="customer-create-title">Alta rápida</h2>
             {writeCustomers ? (
-              <CustomerQuickCreate onCreate={(input) => runtime.createCustomer(input)} />
+              <CustomerQuickCreate
+                capture={capture.customer}
+                onEdit={(field, value) => runtime.editCaptureCustomer(viewToken, field, value)}
+                onSubmit={() => runtime.submitCaptureCustomer(viewToken)}
+              />
             ) : (
               <p>Tu sesión no tiene el permiso customers.write.</p>
             )}
@@ -305,7 +321,9 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             {writeOrders && readCustomers ? (
               <OrderQuickIntake
                 customers={state.customers}
-                onCreateOrder={(input) => runtime.createOrder(input)}
+                capture={capture.order}
+                onEdit={(field, value) => runtime.editCaptureOrder(viewToken, field, value)}
+                onSubmit={() => runtime.submitCaptureOrder(viewToken)}
               />
             ) : (
               <p>Para registrar una orden necesitas orders.write y customers.read.</p>

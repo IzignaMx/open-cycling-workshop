@@ -1,73 +1,20 @@
-import {
-  captureFeedback,
-  CaptureSubmissionGate,
-  type CaptureFeedback,
-} from '../capture-feedback.js'
-import type { CaptureSubmissionResult } from '../../runtime/capture-outcome.js'
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-
-import { hasCustomerDraft } from '../draft-state.js'
+import { type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@ocwp/ui'
+import type { CustomerDraftState } from '../draft-state.js'
+import type { CaptureFormSnapshot } from '../../runtime/capture-visit.js'
 
 export interface CustomerQuickCreateProps {
-  onCreate(input: {
-    displayName: string
-    email: string | null
-    phone: string | null
-  }): Promise<CaptureSubmissionResult>
+  capture: CaptureFormSnapshot<CustomerDraftState>
+  onEdit<K extends keyof CustomerDraftState>(field: K, value: CustomerDraftState[K]): void
+  onSubmit(): Promise<void>
 }
 
-export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const draftRevision = useRef<object>({})
-  const gate = useRef(new CaptureSubmissionGate())
-  const [blocked, setBlocked] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  function markEdited() {
-    // An interaction (including ABA or same-value edits) belongs to a newer draft.
-    draftRevision.current = {}
-  }
-
-  function finish(feedback: CaptureFeedback) {
-    gate.current.finish(feedback)
-    setBlocked(gate.current.blocked)
-    setMessage(feedback.message)
-  }
-
+export function CustomerQuickCreate({ capture, onEdit, onSubmit }: CustomerQuickCreateProps) {
+  const { busy, blocked, message } = capture
+  const { displayName, email, phone } = capture.draft
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!gate.current.begin()) return
-    const submittedRevision = draftRevision.current
-    setBusy(true)
-    setMessage(null)
-    try {
-      const result = await onCreate({
-        displayName,
-        email: email || null,
-        phone: phone || null,
-      })
-      const feedback = captureFeedback({ kind: 'resolved', value: result })
-      finish(feedback)
-      if (feedback.status !== 'saved') return
-      if (draftRevision.current !== submittedRevision) {
-        setMessage(
-          'El envío anterior se guardó localmente. El formulario actual sigue sin guardar.',
-        )
-        return
-      }
-      setDisplayName('')
-      setEmail('')
-      setPhone('')
-      setMessage('Cliente guardado localmente')
-    } catch (error) {
-      finish(captureFeedback({ kind: 'rejected', error }))
-    } finally {
-      setBusy(false)
-    }
+    await onSubmit()
   }
 
   return (
@@ -75,7 +22,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
       onSubmit={submit}
       className="grid gap-4"
       aria-describedby="customer-create-status"
-      data-dirty={blocked || busy || hasCustomerDraft({ displayName, email, phone })}
+      data-dirty={capture.dirty}
     >
       <label className="grid gap-1">
         <span className="font-medium">Nombre</span>
@@ -83,8 +30,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           required
           value={displayName}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setDisplayName(event.currentTarget.value)
+            onEdit('displayName', event.currentTarget.value)
           }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="name"
@@ -96,8 +42,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           type="email"
           value={email}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setEmail(event.currentTarget.value)
+            onEdit('email', event.currentTarget.value)
           }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="email"
@@ -109,8 +54,7 @@ export function CustomerQuickCreate({ onCreate }: CustomerQuickCreateProps) {
           inputMode="tel"
           value={phone}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            markEdited()
-            setPhone(event.currentTarget.value)
+            onEdit('phone', event.currentTarget.value)
           }}
           className="min-h-11 rounded-lg border border-[var(--ocwp-color-control-border)] bg-[var(--ocwp-color-surface)] px-3"
           autoComplete="tel"

@@ -389,7 +389,7 @@ test("same-workshop restricted user cannot render another reader's cached data o
   ])
   const logout = page.getByRole('button', { name: 'Cerrar esta sesión', exact: true })
   const expectedPrompt =
-    '¿Continuar y descartar los formularios sin enviar? El trabajo local ya guardado se conserva.'
+    '¿Continuar y descartar los formularios sin enviar o sin confirmar? El trabajo local ya guardado se conserva. Esta acción no confirma ni revierte los envíos pendientes; no los repitas.'
   const cancellation = page.waitForEvent('dialog')
   const cancelledClick = logout.click()
   const cancelDialog = await cancellation
