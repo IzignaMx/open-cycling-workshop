@@ -270,7 +270,7 @@ def test_m2_local_laboratory_does_not_claim_runtime_or_production_admission() ->
 
 def test_m2_hosted_preparation_keeps_execution_and_physical_gates_open() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: m2_tls_certificate_repair_20261103" in state
+    assert "m2_tls_certificate_repair_20261103:" in state
     block = state.split("m2_hosted_preparation_20261102:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "status: local_preparation_runtime_unqualified",
@@ -350,3 +350,73 @@ def test_m2_local_certificate_repair_keeps_hosted_cause_unproven() -> None:
         "not the hosted root cause",
     ):
         assert token in record
+
+
+def test_m2_acceptance_checkpoint_separates_tree_qualified_lab_and_fresh_main() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: m2_laboratory_acceptance_20261103" in state
+    block = state.split("m2_laboratory_acceptance_20261103:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: bounded_synthetic_lab_accepted_full_M2_incomplete",
+        "main: 35f88e0f2a9a9e7b0f0dece03498cc6265205b91",
+        "tree: 106e11df74b4e656c4b6227610648b3466c3e436",
+        "fifth_M2_run: 41568644741",
+        "fresh_main_CI: 41656497568",
+        "sixth_M2_run: not_authorized_not_executed",
+        "next_proposal_implementation_authority: not_granted",
+        "first_hosted_failure: known_image_preparation_BuildKit_boundary",
+        "second_third_fourth_hosted_causes: UNKNOWN_unchanged",
+        "first_second_cleanup: unproven_historical",
+        "V01_physical_and_release_gates: unchanged_partial",
+    ):
+        assert token in block
+    assert "active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md" in state
+    assert "last_checkpoint: m2_laboratory_acceptance_20261103" in state
+
+
+def test_m2_acceptance_record_binds_receipts_without_claiming_full_release() -> None:
+    record = read(BASE + "2026-11-03-m2-laboratory-acceptance.md")
+    for token in (
+        "35f88e0f2a9a9e7b0f0dece03498cc6265205b91",
+        "106e11df74b4e656c4b6227610648b3466c3e436",
+        "40740e51b1d24d04af49479b24d2eb0d01483d24",
+        "cabae2c7b36dff39d32b2a70c5e52b35aa10466e864ca6fcc2e74a529fc01f58",
+        "3d2f9274ce2df1ee5638b4b0f7bc548d2c567729a1164a10f4a6fdafd5167463",
+        "2997aafa6be6e674d813560c62c35778b629cfc46d1b91efcf6a1054515fafd0",
+        "b555bf1aada493bebabdd900823a5d296ed54c55667c79f2402774c1ad5adfe0",
+        "27/27",
+        "5971",
+        "58",
+        "1237",
+        "126",
+        "20/9/5/10",
+        "kernel 14",
+        "not downloaded",
+        "not tracked repository files",
+        "not secure erasure",
+        "full M2 remains incomplete",
+        "R09-T020",
+        "R10-T014",
+        "T1\u2013T8",
+        "R01-T035",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+        "Pages",
+        "first and second",
+        "no sixth",
+    ):
+        assert token in record
+    for run in (41568644741, 41656497568, 41656497424, 41656497409, 41656497803):
+        assert f"https://github.com/IzignaMx/open-cycling-workshop/actions/runs/{run}" in record
+
+
+def test_checklist_supersedes_historical_permissions_without_rewriting_them() -> None:
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    current = checklist.split("## 2026-11-03 · PR83 accepted bounded laboratory and fresh main", 1)[
+        1
+    ].split("\n## ", 1)[0]
+    assert "full M2 remains incomplete" in current
+    assert "no sixth" in current
+    assert "5971" in current and "27/27" in current
+    assert "Historical source-stage snapshots" in checklist
+    assert "Obtain separate publication and single-run permission before a fifth" in checklist

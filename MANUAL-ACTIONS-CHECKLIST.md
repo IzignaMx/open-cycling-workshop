@@ -1,5 +1,37 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-03 · PR83 accepted bounded laboratory and fresh main
+
+- [x] Merge PR83 under separate approval. Main is
+      `35f88e0f2a9a9e7b0f0dece03498cc6265205b91`, tree
+      `106e11df74b4e656c4b6227610648b3466c3e436`.
+- [x] Independently accept fifth synthetic M2 run41568644741 on the same tree:
+      19 checks, 16 supervisor milestones, 13 API checks, stopped API/database
+      disposal and independent owned-container/root absence for that attempt.
+- [x] Independently accept fresh-main CI41656497568: 27/27, 5971 Python passes
+      plus58 exact skips, 1237 frontend/API1, 126 direct/126 aggregate browser
+      passes; small repeat reports20/9/5/10 and kernel14 have zero retries.
+      Runtime41656497424, security41656497803 and micro41656497409 accepted.
+- Large browser ZIPs were not downloaded or byte/trace/screenshot verified.
+  Direct counts come from the job log; aggregate counts from its JSON receipt.
+- The bounded laboratory plan is complete; full M2 remains incomplete.
+  Production identities, operator provisioning, grants and restore/lifecycle
+  policy remain separate decisions. No production implementation is admitted.
+- [ ] Review the [proposed lifecycle/restore design](docs/superpowers/specs/2026-11-03-m2-lifecycle-restore-proposal.md) and resolve required decisions
+      before authorizing another implementation or execution increment.
+- Five laboratory permits are consumed; no sixth run is authorized or executed.
+  Fresh-main ordinary CI is not a sixth M2 run. Historical failed attempts and
+  unproven first/second cleanup remain unchanged; later cleanup is not secure erasure.
+- T1–T8/R01-T035, SPENT40927223929, UNKNOWN41011497919, maximum capacity and Pages
+  remain unchanged. See [immutable evidence and limits](docs/10-spec-development/2026-11-03-m2-laboratory-acceptance.md).
+
+### Historical source-stage snapshots
+
+The following M2 sections retain their original unchecked approval/runtime gates.
+They describe what was pending when authored, not a request to repeat consumed
+runs or reopen completed bounded acceptance. The current section above supersedes
+those statuses only where supported by its specific receipts.
+
 ## 2026-11-03 · M2 local certificate correction, hosted cause still UNKNOWN
 
 - [x] Close fourth hosted attempt41552838556 with failure at connector_run and
