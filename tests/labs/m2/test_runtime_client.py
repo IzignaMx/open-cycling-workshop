@@ -73,10 +73,14 @@ def test_negative_tls_requires_actual_verification_error_not_connection_refusal(
     import ssl
 
     module = subject()
-    assert module.is_certificate_failure(ConnectionError("public-canary")) is False
+    assert (
+        module.is_certificate_failure(ConnectionError("public-canary"), probe="wrong_hostname")
+        is False
+    )
     outer = RuntimeError("public-canary")
     outer.__cause__ = ssl.SSLCertVerificationError("public-verification-canary")
-    assert module.is_certificate_failure(outer) is True
+    outer.__cause__.verify_code = 62
+    assert module.is_certificate_failure(outer, probe="wrong_hostname") is True
 
 
 def test_credential_file_contract_requires_bare_opaque_format():
@@ -128,3 +132,74 @@ def test_effective_policy_missing_or_mismatched_refused(field, value):
     evidence[field] = value
     with pytest.raises(subject().RuntimeClientRefused):
         subject().validate_os_evidence(**evidence)
+
+
+def test_unrelated_ca_extension_failure_cannot_pass_negative_tls_probes(monkeypatch):
+    """Public exception fixture only; no certificates, TLS, sockets or credentials."""
+    import ssl
+    from types import SimpleNamespace
+
+    module = subject()
+    error = ssl.SSLCertVerificationError("PUBLIC EXCEPTION FIXTURE")
+    error.verify_code = 92  # X509_V_ERR_CA_CERT_MISSING_KEY_USAGE, not hostname/trust.
+
+    class Client:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, *args):
+            raise error
+
+    monkeypatch.setattr(module, "private_file", lambda *args, **kwargs: b"PUBLIC FIXTURE")
+    monkeypatch.setattr(module.ssl, "create_default_context", lambda **kwargs: SimpleNamespace())
+    monkeypatch.setattr(module.httpx, "HTTPTransport", lambda **kwargs: object())
+    monkeypatch.setattr(module.httpx, "Client", lambda **kwargs: Client())
+    with pytest.raises(module.RuntimeClientRefused):
+        module.negative_tls_checks()
+
+
+@pytest.mark.parametrize(
+    "probe,code,expected",
+    [
+        ("wrong_hostname", 62, True),
+        ("wrong_ca", 20, True),
+        ("wrong_ca", 21, True),
+        ("wrong_hostname", 20, False),
+        ("wrong_hostname", 21, False),
+        ("wrong_ca", 62, False),
+        ("wrong_hostname", 92, False),
+        ("wrong_ca", 92, False),
+        ("wrong_hostname", 10, False),
+        ("wrong_ca", 10, False),
+        ("wrong_hostname", "62", False),
+        ("wrong_hostname", None, False),
+        ("unknown", 62, False),
+    ],
+)
+def test_negative_tls_requires_exact_probe_failure_code(probe, code, expected):
+    import ssl
+
+    error = ssl.SSLCertVerificationError("PUBLIC EXCEPTION FIXTURE")
+    error.verify_code = code
+    outer = RuntimeError("PUBLIC WRAPPER FIXTURE")
+    outer.__cause__ = error
+    assert subject().is_certificate_failure(outer, probe=probe) is expected
+
+
+def test_negative_tls_classifier_bounds_cycles_and_chain_length():
+    import ssl
+
+    first, second = RuntimeError("PUBLIC"), RuntimeError("PUBLIC")
+    first.__cause__, second.__cause__ = second, first
+    assert subject().is_certificate_failure(first, probe="wrong_hostname") is False
+    tail = ssl.SSLCertVerificationError("PUBLIC")
+    tail.verify_code = 62
+    head = tail
+    for _ in range(16):
+        wrapper = RuntimeError("PUBLIC")
+        wrapper.__cause__ = head
+        head = wrapper
+    assert subject().is_certificate_failure(head, probe="wrong_hostname") is False

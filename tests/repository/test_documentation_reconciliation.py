@@ -270,7 +270,7 @@ def test_m2_local_laboratory_does_not_claim_runtime_or_production_admission() ->
 
 def test_m2_hosted_preparation_keeps_execution_and_physical_gates_open() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: m2_incremental_diagnostics_20261102" in state
+    assert "current_checkpoint: m2_tls_certificate_repair_20261103" in state
     block = state.split("m2_hosted_preparation_20261102:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "status: local_preparation_runtime_unqualified",
@@ -324,5 +324,29 @@ def test_m2_diagnostics_preserves_failed_attempts_and_authority_boundary() -> No
         "no fourth attempt",
         "SPENT",
         "T1\u2013T8",
+    ):
+        assert token in record
+
+
+def test_m2_local_certificate_repair_keeps_hosted_cause_unproven() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "m2_tls_certificate_repair_20261103:" in state
+    block = state.split("m2_tls_certificate_repair_20261103:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "fourth_hosted_cause: UNKNOWN",
+        "offline_current_CA: strict_error92_missing_key_usage",
+        "offline_explicit_CA: strict_verification_passed",
+        "offline_cleanup: verified",
+        "publication_fifth_attempt_merge: not_authorized",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-02-m2-incremental-diagnostics.md")
+    for token in (
+        "41552838556",
+        "41552838539",
+        "5954",
+        "error92",
+        "OpenSSL3.5.7",
+        "not the hosted root cause",
     ):
         assert token in record

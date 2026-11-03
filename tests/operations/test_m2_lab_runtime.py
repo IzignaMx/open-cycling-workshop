@@ -666,3 +666,37 @@ def test_actual_operation_failure_preserves_only_observed_prefix(tmp_path, monke
     )
     leaked = "SYNTHETIC-PRIVATE-CANARY" in json.dumps(progress.value())
     assert not leaked
+
+
+def test_root_ca_command_is_hermetic_and_explicitly_strict_compatible(tmp_path, monkeypatch):
+    """Command contract only; fake executor never generates keys or uses OpenSSL."""
+    runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
+    runtime.run(plan, owned, evidence, execute=execute)
+    commands = [call for call in execute.calls if call[0] == "openssl"]
+    assert len(commands) == 3
+    assert commands[0] == [
+        "openssl",
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "1",
+        "-subj",
+        "/CN=OCWP-M2-Ephemeral",
+        "-keyout",
+        str(plan.root / "ca/ca.key"),
+        "-out",
+        str(plan.root / "ca/ca.crt"),
+        "-config",
+        "/dev/null",
+        "-addext",
+        "basicConstraints=critical,CA:TRUE",
+        "-addext",
+        "keyUsage=critical,keyCertSign,cRLSign",
+        "-addext",
+        "subjectKeyIdentifier=hash",
+        "-addext",
+        "authorityKeyIdentifier=keyid:always",
+    ]

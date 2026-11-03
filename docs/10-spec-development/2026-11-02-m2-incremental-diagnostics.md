@@ -1,5 +1,55 @@
 # M2 incremental diagnostics: local implementation, runtime unqualified
 
+## 2026-11-03: fourth attempt and local certificate correction
+
+Fourth attempt41552838556 tested published head
+`67de22c19983640877a6fcb2612461e554f01513`, tree
+`8226f761818633a319685d950d867c8b711af196`, through merge
+`9ec894a5f5cd5b3d8bcaa236246ec417924011fa`. PR83 remains draft and main unchanged.
+The supervisor completed12 milestones through connector creation, then failed
+at `connector_run`, the attached command boundary. The identity-validated API
+snapshot reported ready/serving and13 checks; this is API self-report, not full
+connector, TLS or OS acceptance. The command result does not distinguish client
+refusal, Docker start failure, timeout or output limits. Cause remains UNKNOWN.
+Independent cleanup verified owned container/root absence for this attempt.
+The873-byte artifact SHA256 is
+`4d5636d59f105cc991dd0ac473caddac2f502854e1e06e69dbec16a853d184eb`.
+
+Ordinary CI41552838539 separately passed27/27,5954 Python+58 exact skips,
+1237 frontend/API1 and126 direct-log/126 aggregate browser cases. Small repeats
+20/9/5/10 and kernel14 were retry-free and byte/source verified. Two large
+browser ZIPs (332398558 and332631756 bytes) were not downloaded or byte/trace/
+screenshot inspected. No result transfers to later unpublished repairs.
+
+A pure local regression proved the negative TLS probes previously accepted any
+`SSLCertVerificationError`, including unrelated certificate-extension error92.
+The corrected classifier requires hostname mismatch62 for the hostname probe,
+and issuer-chain errors20/21 for the wrong-CA probe, while retaining strict
+verification, certificate-error type checking and bounded exception traversal.
+This is an evidence-quality correction, not the hosted root cause.
+
+The user separately approved an offline experiment at01:21UTC. Exact existing
+CA/leaf commands under local OpenSSL3.5.7 failed strict verification with error92
+at CA depth1: missing CA key usage. The same leaf commands with explicit CA
+extensions passed. The comparison made CA creation independent of default
+configuration using `-config /dev/null`, critical CA basic constraints and
+keyCertSign/cRLSign key usage, subject key identifier and authority key identifier.
+No verification flag was weakened. The minimal local repair encodes those
+extensions without new mounts, files, access, credential policies or time limits.
+
+The experiment used an owned private temporary directory, captured command output
+without exposing keys, and retained only source/script hashes, public extension
+booleans and numeric verification outcomes. Cleanup was independently verified.
+No listener, network connection, certificate installation or system-trust change
+occurred. The actual hosted CA was purged, so this local reproduction does not
+prove its extensions or explain the precise hosted failure. All four hosted
+permissions are consumed; no fifth run, publication or merge is authorized.
+Final combined local validation will be recorded with the frozen candidate receipt;
+previous diagnostic counts below describe their earlier source only.
+
+The earlier sections are retained historical checkpoints. Their three-attempt
+and pending-permission wording does not override this fourth-attempt record.
+
 ## Verified baseline and retained failures
 
 PR83 remains a draft, not merged. Published head

@@ -1,6 +1,27 @@
 schema: 1
 
-current_checkpoint: m2_incremental_diagnostics_20261102
+current_checkpoint: m2_tls_certificate_repair_20261103
+m2_tls_certificate_repair_20261103:
+  status: local_repair_runtime_unqualified
+  baseline_published_head: 67de22c19983640877a6fcb2612461e554f01513
+  baseline_tree: 8226f761818633a319685d950d867c8b711af196
+  main_unchanged: e9c11ad11a564c80add99f4dc901ffe2d583c8e6
+  fourth_run: 41552838556
+  fourth_boundary: connector_run_after12_supervisor_milestones
+  fourth_hosted_cause: UNKNOWN
+  fourth_cleanup: verified_current_attempt_only
+  ordinary_CI: 41552838539_passed27_of27_Python5954_plus58_expected_skips
+  offline_authority: user_20261103_0121_local_temporary_certificates_keys_cleanup_only
+  offline_current_CA: strict_error92_missing_key_usage
+  offline_explicit_CA: strict_verification_passed
+  offline_cleanup: verified
+  local_scope: explicit_CA_extensions_and_probe_specific_negative_TLS_evidence
+  publication_fifth_attempt_merge: not_authorized
+  production_changes: none
+  evidence: docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md
+  V01_physical_and_release_gates: unchanged_partial
+
+# Historical local diagnostic checkpoint; fourth-attempt evidence is above.
 m2_incremental_diagnostics_20261102:
   status: local_implementation_runtime_unqualified
   baseline_published_head: 280c8923d773fea7eff420e1bbe26edcd22d4195

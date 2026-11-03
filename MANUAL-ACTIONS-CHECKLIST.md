@@ -1,5 +1,26 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-03 · M2 local certificate correction, hosted cause still UNKNOWN
+
+- [x] Close fourth hosted attempt41552838556 with failure at connector_run and
+      independently verified cleanup for that attempt. Twelve supervisor steps
+      completed; API reported13 checks. Neither proves connector/TLS acceptance.
+- [x] Qualify ordinary CI41552838539:27/27,5954 Python+58 exact skips,
+      1237 frontend,126 direct/126 aggregate browsers. Large ZIPs remain unreviewed.
+- [x] Correct the locally reproduced negative-TLS evidence classifier: unrelated
+      certificate errors cannot count as hostname or trust rejection evidence.
+- [x] Obtain01:21 local-only certificate/key experiment permission, reproduce
+      strict error92 from current CA commands, compare explicit extensions and
+      independently verify temporary resource removal. No network or trust change.
+- [x] Freeze and independently review the combined local repair. Full-suite
+      results accompany the exact candidate receipt; no native acceptance inferred.
+- [ ] Obtain separate publication and single-run permission before a fifth
+      diagnostic attempt. No merge is authorized; all four run permits are spent.
+- The offline OpenSSL3.5.7 result proves a local generation defect, not the
+  purged hosted certificate or precise fourth-run cause. T1–T8/R01-T035,
+  SPENT40927223929, historical UNKNOWN41011497919 and Pages remain unchanged.
+- See [source, evidence and boundaries](docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md).
+
 ## 2026-11-02 · M2 diagnostic evidence: third attempt failed, cleanup verified
 
 - [x] Consume exactly three separately authorized laboratory attempts; retain

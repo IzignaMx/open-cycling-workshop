@@ -129,15 +129,24 @@ def authorization_header(raw: bytes) -> str:
         raise RuntimeClientRefused() from None
 
 
-def is_certificate_failure(error: BaseException) -> bool:
-    """Only a real verification failure counts, never an arbitrary refused socket."""
+def is_certificate_failure(error: BaseException, *, probe: str) -> bool:
+    """Require the intended OpenSSL verification code, not unrelated TLS failure.
+
+    Codes from OpenSSL x509_vfy.h: hostname mismatch62; unavailable local issuer20
+    or unverifiable leaf chain21. Expiry, CA constraints and missing key usage92
+    must never count as hostname/trust-isolation proof. Strict TLS stays enabled.
+    """
+    expected = {"wrong_hostname": frozenset({62}), "wrong_ca": frozenset({20, 21})}
+    if probe not in expected:
+        return False
     seen: set[int] = set()
     current: BaseException | None = error
     for _ in range(16):
         if current is None or id(current) in seen:
             return False
         if isinstance(current, ssl.SSLCertVerificationError):
-            return True
+            code = getattr(current, "verify_code", None)
+            return type(code) is int and code in expected[probe]
         seen.add(id(current))
         current = current.__cause__ or current.__context__
     return False
@@ -170,7 +179,7 @@ def negative_tls_checks() -> dict[str, bool]:
             ) as client:
                 client.get(origin + RESOURCE)
         except Exception as error:
-            if not is_certificate_failure(error):
+            if not is_certificate_failure(error, probe=label):
                 raise RuntimeClientRefused() from None
             result[label] = True
         else:
