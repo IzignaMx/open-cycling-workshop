@@ -202,7 +202,7 @@ def test_script_entry_preserves_closed_imported_failures(tmp_path, monkeypatch, 
     cleanup = importlib.import_module("scripts.ci.m2_lab_cleanup")
     calls = []
 
-    def fake_runtime(p, owned, evidence):
+    def fake_runtime(p, owned, evidence, *, progress):
         calls.append("runtime")
         m.write_json(
             owned,
@@ -266,3 +266,274 @@ def test_script_entry_preserves_closed_imported_failures(tmp_path, monkeypatch, 
     )
     assert not leaked
     assert m.check_evidence(output.parent) > 0
+
+
+def test_failed_result_write_still_invokes_independent_cleanup(tmp_path, monkeypatch):
+    m = module()
+    runtime = importlib.import_module("scripts.ci.m2_lab_runtime")
+    calls = []
+
+    def run(*args, **kwargs):
+        raise m.LabFailure("source")
+
+    def write(*args, **kwargs):
+        calls.append("write")
+        raise OSError("PRIVATE-CANARY")
+
+    def clean(*args, **kwargs):
+        calls.append("cleanup")
+        return False
+
+    monkeypatch.setattr(runtime, "run", run)
+    monkeypatch.setattr(m, "write_json", write)
+    monkeypatch.setattr(m, "cleanup_receipt", clean)
+    result = m.main(
+        [
+            "run",
+            "--image",
+            "sha256:" + "d" * 64,
+            "--pg-image",
+            "sha256:" + "e" * 64,
+            "--commit",
+            "b" * 40,
+            "--tree",
+            "c" * 40,
+            "--owned",
+            str(tmp_path / "owned.json"),
+            "--evidence",
+            str(tmp_path / "result.json"),
+        ]
+    )
+    assert result == 1 and calls == ["write", "cleanup"]
+
+
+def test_schema2_partial_diagnostic_cannot_be_promoted_to_pass(tmp_path):
+    m, p = module(), plan()
+    diagnostic = {
+        "schema": 1,
+        "stage": "images",
+        "completed": ["source"],
+        "api": {"observation": "absent", "snapshot": None},
+    }
+    common = {"commit": p.commit, "tree": p.tree, "nonce": p.nonce}
+    result = {
+        "schema": 2,
+        **common,
+        "status": "failed",
+        "reason": "identity",
+        "checks": {},
+        "diagnostics": diagnostic,
+    }
+    cleanup = {
+        "schema": 1,
+        **common,
+        "status": "passed",
+        "reason": "clean",
+        "containers_absent": True,
+        "root_removed": True,
+    }
+    m.write_json(tmp_path / "result.json", result)
+    m.write_json(tmp_path / "cleanup.json", cleanup)
+    assert m.check_evidence(tmp_path) > 0
+    result.update(status="passed", reason="completed", checks=dict.fromkeys(m.CHECKS, True))
+    m.write_json(tmp_path / "result.json", result)
+    with pytest.raises(m.LabFailure):
+        m.check_evidence(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["future", "duplicate", "stage", "boolean_schema", "extra", "snapshot", "phase"]
+)
+def test_diagnostic_validator_rejects_forged_or_inconsistent_progress(mutation):
+    m = module()
+    value = {
+        "schema": 1,
+        "stage": "images",
+        "completed": ["source"],
+        "api": {"observation": "absent", "snapshot": None},
+    }
+    if mutation == "future":
+        value["completed"] = ["images"]
+    elif mutation == "duplicate":
+        value["completed"] = ["source", "source"]
+    elif mutation == "stage":
+        value["stage"] = "api_stop"
+    elif mutation == "boolean_schema":
+        value["schema"] = True
+    elif mutation == "extra":
+        value["exception"] = "private-canary"
+    elif mutation == "snapshot":
+        value["api"]["snapshot"] = {}
+    elif mutation == "phase":
+        value["api"] = {
+            "observation": "valid",
+            "snapshot": {
+                "phase": "ready",
+                "stage": "authority_initialization",
+                "checks": dict.fromkeys(m.SERVICE_CHECKS, True),
+                "database_cleanup_complete": False,
+            },
+        }
+    with pytest.raises(m.LabFailure):
+        m.validate_diagnostics(value)
+
+
+def test_snapshot_exception_cannot_skip_cleanup(tmp_path, monkeypatch):
+    m = module()
+    runtime = importlib.import_module("scripts.ci.m2_lab_runtime")
+    calls = []
+
+    def run(*args, **kwargs):
+        raise m.LabFailure("source")
+
+    def snapshot(*args, **kwargs):
+        raise OSError("PRIVATE-CANARY")
+
+    def clean(*args, **kwargs):
+        calls.append("cleanup")
+        return False
+
+    monkeypatch.setattr(runtime, "run", run)
+    monkeypatch.setattr(runtime, "snapshot", snapshot)
+    monkeypatch.setattr(m, "cleanup_receipt", clean)
+    result = m.main(
+        [
+            "run",
+            "--image",
+            "sha256:" + "d" * 64,
+            "--pg-image",
+            "sha256:" + "e" * 64,
+            "--commit",
+            "b" * 40,
+            "--tree",
+            "c" * 40,
+            "--owned",
+            str(tmp_path / "owned.json"),
+            "--evidence",
+            str(tmp_path / "result.json"),
+        ]
+    )
+    assert result == 1 and calls == ["cleanup"]
+
+
+@pytest.mark.parametrize(
+    "checks", [{"scope": True}, {"postgresql_18_4": True}, {"pool_recovered": True}]
+)
+def test_api_projection_rejects_checks_not_completed_at_current_stage(checks):
+    m = module()
+    with pytest.raises(m.LabFailure):
+        m.validate_api_projection(
+            {
+                "phase": "preparing",
+                "stage": "authority_initialization",
+                "checks": checks,
+                "database_cleanup_complete": False,
+            }
+        )
+
+
+def test_exact_mode_is_checked_on_open_descriptor_not_replacement_path(tmp_path, monkeypatch):
+    import os
+
+    m = module()
+    path = tmp_path / "status.json"
+    path.write_text("{}")
+    path.chmod(0o644)
+    original = os.open
+
+    def swap(name, flags, *args, **kwargs):
+        fd = original(name, flags, *args, **kwargs)
+        if Path(name) == path:
+            path.rename(tmp_path / "opened.json")
+            path.write_text("{}")
+            path.chmod(0o600)
+        return fd
+
+    monkeypatch.setattr(m.os, "open", swap)
+    with pytest.raises(m.LabFailure):
+        m.read_json(path, exact_mode=0o600)
+
+
+def test_schema2_success_requires_finished_progress_and_stopped_snapshot(tmp_path):
+    m, p = module(), plan()
+    progress = m.Progress()
+    for stage in m.SUPERVISOR_STAGES:
+        progress.enter(stage)
+        progress.finish()
+    progress.api = {
+        "observation": "valid",
+        "snapshot": {
+            "phase": "stopped",
+            "stage": "database_cleanup",
+            "checks": dict.fromkeys(m.SERVICE_CHECKS, True),
+            "database_cleanup_complete": True,
+        },
+    }
+    identity = m.identity_fields(p)
+    result = {
+        "schema": 2,
+        **identity,
+        "status": "passed",
+        "reason": "completed",
+        "checks": dict.fromkeys(m.CHECKS, True),
+        "diagnostics": progress.value(),
+    }
+    cleanup = {
+        "schema": 1,
+        **identity,
+        "status": "passed",
+        "reason": "clean",
+        "containers_absent": True,
+        "root_removed": True,
+    }
+    m.write_json(tmp_path / "result.json", result)
+    m.write_json(tmp_path / "cleanup.json", cleanup)
+    assert m.check_evidence(tmp_path) > 0
+    progress.api["snapshot"]["phase"] = "failed"
+    result["diagnostics"] = progress.value()
+    m.write_json(tmp_path / "result.json", result)
+    with pytest.raises(m.LabFailure):
+        m.check_evidence(tmp_path)
+
+
+def test_termination_after_result_publication_still_enters_cleanup(tmp_path, monkeypatch):
+    m = module()
+    runtime = importlib.import_module("scripts.ci.m2_lab_runtime")
+    calls = []
+    original = m.write_json
+
+    def run(*args, **kwargs):
+        raise m.LabFailure("source")
+
+    def interrupted_write(path, value):
+        original(path, value)
+        calls.append("published")
+        raise KeyboardInterrupt
+
+    def clean(*args, **kwargs):
+        calls.append("cleanup")
+        return False
+
+    monkeypatch.setattr(runtime, "run", run)
+    monkeypatch.setattr(m, "write_json", interrupted_write)
+    monkeypatch.setattr(m, "cleanup_receipt", clean)
+    with pytest.raises(KeyboardInterrupt):
+        m.main(
+            [
+                "run",
+                "--image",
+                "sha256:" + "d" * 64,
+                "--pg-image",
+                "sha256:" + "e" * 64,
+                "--commit",
+                "b" * 40,
+                "--tree",
+                "c" * 40,
+                "--owned",
+                str(tmp_path / "owned.json"),
+                "--evidence",
+                str(tmp_path / "result.json"),
+            ]
+        )
+    assert calls == ["published", "cleanup"]
+    assert m.read_json(tmp_path / "result.json")["status"] == "failed"

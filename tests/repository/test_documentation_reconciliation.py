@@ -270,7 +270,7 @@ def test_m2_local_laboratory_does_not_claim_runtime_or_production_admission() ->
 
 def test_m2_hosted_preparation_keeps_execution_and_physical_gates_open() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: m2_hosted_preparation_20261102" in state
+    assert "current_checkpoint: m2_incremental_diagnostics_20261102" in state
     block = state.split("m2_hosted_preparation_20261102:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "status: local_preparation_runtime_unqualified",
@@ -291,5 +291,38 @@ def test_m2_hosted_preparation_keeps_execution_and_physical_gates_open() -> None
         "same-repository PR",
         "database_cleanup_complete",
         "15-minute",
+    ):
+        assert token in record
+
+
+def test_m2_diagnostics_preserves_failed_attempts_and_authority_boundary() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("m2_incremental_diagnostics_20261102:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: local_implementation_runtime_unqualified",
+        "third_runtime: failed_cause_UNKNOWN",
+        "third_cleanup: verified_current_attempt_only",
+        "publication_fourth_attempt_merge: not_authorized",
+        "production_changes: none",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-02-m2-incremental-diagnostics.md")
+    for token in (
+        "41518365154",
+        "41527723967",
+        "41541751810",
+        "41541751816",
+        "5851",
+        "58",
+        "27/27",
+        "UNKNOWN",
+        "not secure erasure",
+        "all-or-nothing",
+        "closed",
+        "1 MiB",
+        "one day",
+        "no fourth attempt",
+        "SPENT",
+        "T1\u2013T8",
     ):
         assert token in record

@@ -26,12 +26,13 @@ class FakeExecutor:
     def status(self, phase):
         p = self.plan
         value = {
-            "schema": 1,
+            "schema": 2,
             "nonce": p.nonce,
             "source_commit": p.commit,
             "source_tree": p.tree,
             "phase": phase,
-            "checks": dict.fromkeys(self.runtime.SERVICE_CHECKS, True),
+            "stage": "database_cleanup" if phase == "stopped" else "serving",
+            "checks": dict.fromkeys(hosted.SERVICE_CHECKS, True),
             "database_cleanup_complete": phase == "stopped",
         }
         if self.problem == "schema_bool":
@@ -183,7 +184,7 @@ def setup(tmp_path, monkeypatch):
 def test_run_requires_all_observed_checks_and_records_before_private_inputs(tmp_path, monkeypatch):
     runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
     result = runtime.run(plan, owned, evidence, execute=execute)
-    assert set(result) == set(runtime.SERVICE_CHECKS) | {
+    assert set(result) == set(hosted.SERVICE_CHECKS) | {
         "network_isolation",
         "tls_hostname",
         "tls_trust",
@@ -414,3 +415,254 @@ def test_unexpected_execution_failure_has_closed_stage_reason(
     assert str(error.value) == expected
     assert "PRIVATE-DIAGNOSTIC" not in str(error.value)
     assert not evidence.exists()
+
+
+SUPERVISOR_STAGES = (
+    "source",
+    "images",
+    "workspace",
+    "private_inputs",
+    "db_create",
+    "db_start",
+    "db_ready",
+    "api_create",
+    "api_start",
+    "api_ready",
+    "namespace",
+    "connector_create",
+    "connector_run",
+    "connector_result",
+    "api_stop",
+    "database_disposal",
+)
+
+
+@pytest.mark.parametrize("boundary", SUPERVISOR_STAGES)
+def test_each_boundary_retains_only_completed_prefix(tmp_path, monkeypatch, boundary):
+    runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
+    progress = hosted.Progress()
+    original = progress.enter
+
+    def enter(stage):
+        original(stage)
+        if stage == boundary:
+            raise hosted.LabFailure("command")
+
+    monkeypatch.setattr(progress, "enter", enter)
+    with pytest.raises(hosted.LabFailure):
+        runtime.run(plan, owned, evidence, execute=execute, progress=progress)
+    value = progress.value()
+    assert value["stage"] == boundary
+    assert value["completed"] == list(SUPERVISOR_STAGES[: SUPERVISOR_STAGES.index(boundary)])
+    assert not evidence.exists()
+
+
+def test_completed_progress_and_valid_snapshot_are_distinct_from_pass(tmp_path, monkeypatch):
+    runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
+    progress = hosted.Progress()
+    checks = runtime.run(plan, owned, evidence, execute=execute, progress=progress)
+    runtime.snapshot(plan, progress)
+    value = progress.value()
+    assert value["stage"] == "completed" and value["completed"] == list(SUPERVISOR_STAGES)
+    assert value["api"]["observation"] == "valid"
+    assert value["api"]["snapshot"]["phase"] == "stopped"
+    assert set(checks) == hosted.CHECKS and all(checks.values())
+
+
+@pytest.mark.parametrize(
+    "problem",
+    [
+        "absent",
+        "torn",
+        "duplicate",
+        "unknown",
+        "nonce",
+        "tree",
+        "commit",
+        "mode",
+        "symlink",
+        "hardlink",
+        "fifo",
+        "oversized",
+        "schema",
+        "stage",
+        "check",
+        "boolean",
+    ],
+)
+def test_api_snapshot_rejects_untrusted_payload_without_copying_it(tmp_path, monkeypatch, problem):
+    runtime, plan, _owned, _evidence, execute = setup(tmp_path, monkeypatch)
+    plan.root.mkdir(mode=0o700)
+    (plan.root / "credential").mkdir(mode=0o700)
+    execute.status("ready")
+    path = plan.root / "credential/api-status.json"
+    value = json.loads(path.read_text())
+    canary = "PRIVATE-CANARY-NEVER-EXPORT"
+    if problem == "absent":
+        path.unlink()
+    elif problem == "torn":
+        path.write_text("{" + canary)
+    elif problem == "duplicate":
+        path.write_text('{"schema":2,"schema":2}')
+    elif problem == "unknown":
+        value[canary] = canary
+    elif problem in ("nonce", "tree", "commit"):
+        value[{"nonce": "nonce", "tree": "source_tree", "commit": "source_commit"}[problem]] = (
+            "0"
+            * len(
+                value[{"nonce": "nonce", "tree": "source_tree", "commit": "source_commit"}[problem]]
+            )
+        )
+    elif problem == "mode":
+        path.chmod(0o644)
+    elif problem == "symlink":
+        path.rename(path.with_suffix(".saved"))
+        path.symlink_to(path.with_suffix(".saved"))
+    elif problem == "hardlink":
+        path.with_suffix(".link").hardlink_to(path)
+    elif problem == "fifo":
+        path.unlink()
+        os.mkfifo(path)
+    elif problem == "oversized":
+        path.write_text(" " * 65537)
+    elif problem == "schema":
+        value["schema"] = True
+    elif problem == "stage":
+        value["stage"] = canary
+    elif problem == "check":
+        value["checks"][canary] = True
+    elif problem == "boolean":
+        value["checks"]["scope"] = 1
+    if problem in ("unknown", "nonce", "tree", "commit", "schema", "stage", "check", "boolean"):
+        path.write_text(json.dumps(value))
+    progress = hosted.Progress()
+    runtime.snapshot(plan, progress)
+    result = progress.value()["api"]
+    assert result["observation"] not in ("valid", "not_observed")
+    assert result["snapshot"] is None
+    leaked = canary in json.dumps(progress.value())
+    assert not leaked
+
+
+def test_snapshot_cannot_read_after_reserved_deadline(tmp_path, monkeypatch):
+    runtime, plan, _owned, _evidence, _execute = setup(tmp_path, monkeypatch)
+    now = [0.0]
+    monkeypatch.setattr(hosted.time, "monotonic", lambda: now[0])
+    progress = hosted.Progress()
+    now[0] = 760
+    monkeypatch.setattr(runtime, "read_json", lambda *a, **k: pytest.fail("expired snapshot read"))
+    runtime.snapshot(plan, progress)
+    assert progress.value()["api"] == {"observation": "unavailable", "snapshot": None}
+
+
+@pytest.mark.parametrize("kind", ["foreign_owner", "unexpected_file", "directory_mode"])
+def test_snapshot_rejects_unsafe_private_directory(tmp_path, monkeypatch, kind):
+    runtime, plan, _owned, _evidence, execute = setup(tmp_path, monkeypatch)
+    plan.root.mkdir(mode=0o700)
+    directory = plan.root / "credential"
+    directory.mkdir(mode=0o700)
+    execute.status("ready")
+    if kind == "unexpected_file":
+        (directory / "not-in-inventory").write_text("canary")
+    elif kind == "directory_mode":
+        directory.chmod(0o755)
+    else:
+        from types import SimpleNamespace
+
+        original = Path.lstat
+
+        def info(path, *args, **kwargs):
+            value = original(path, *args, **kwargs)
+            if path == directory:
+                return SimpleNamespace(st_mode=value.st_mode, st_uid=os.getuid() + 1)
+            return value
+
+        monkeypatch.setattr(Path, "lstat", info)
+    progress = hosted.Progress()
+    runtime.snapshot(plan, progress)
+    assert progress.value()["api"] == {"observation": "filesystem", "snapshot": None}
+
+
+def test_snapshot_read_overtime_does_not_claim_valid(tmp_path, monkeypatch):
+    runtime, plan, _owned, _evidence, _execute = setup(tmp_path, monkeypatch)
+    now = [0.0]
+    monkeypatch.setattr(hosted.time, "monotonic", lambda: now[0])
+    progress = hosted.Progress()
+
+    def value(_plan):
+        now[0] = 761
+        return {
+            "phase": "ready",
+            "stage": "serving",
+            "checks": dict.fromkeys(hosted.SERVICE_CHECKS, True),
+            "database_cleanup_complete": False,
+        }
+
+    monkeypatch.setattr(runtime, "_api_value", value)
+    runtime.snapshot(plan, progress)
+    assert progress.value()["api"] == {"observation": "unavailable", "snapshot": None}
+
+
+@pytest.mark.parametrize("boundary", SUPERVISOR_STAGES)
+def test_actual_operation_failure_preserves_only_observed_prefix(tmp_path, monkeypatch, boundary):
+    runtime, plan, owned, evidence, execute = setup(tmp_path, monkeypatch)
+    progress = hosted.Progress()
+    save = runtime._save_owned
+    status = runtime._status
+    triggered = []
+
+    def fail():
+        triggered.append(True)
+        raise OSError("SYNTHETIC-PRIVATE-CANARY")
+
+    def save_owned(*args, **kwargs):
+        if boundary == "workspace":
+            fail()
+        return save(*args, **kwargs)
+
+    def read_status(p, phase):
+        if (boundary == "api_ready" and phase == "ready") or (
+            boundary == "database_disposal" and phase == "stopped"
+        ):
+            fail()
+        return status(p, phase)
+
+    def command(args, *, timeout=5):
+        role = (
+            args[args.index("--name") + 1].rsplit("-", 1)[1]
+            if args[:2] == ["docker", "create"]
+            else None
+        )
+        target = (
+            (boundary == "source" and args[0] == "git")
+            or (boundary == "images" and args[:3] == ["docker", "image", "inspect"])
+            or (boundary == "private_inputs" and args[0] == "openssl")
+            or (boundary.endswith("_create") and role == boundary.removesuffix("_create"))
+            or (boundary == "db_start" and args == ["docker", "start", "1" * 64])
+            or (
+                boundary == "db_ready" and args[:3] == ["docker", "exec", "1" * 64] and "sh" in args
+            )
+            or (boundary == "api_start" and args == ["docker", "start", "2" * 64])
+            or (boundary == "namespace" and "readlink" in args)
+            or (boundary == "connector_run" and args[:3] == ["docker", "start", "--attach"])
+            or (boundary == "api_stop" and args[:2] == ["docker", "stop"])
+        )
+        if target:
+            fail()
+        result = execute(args, timeout=timeout)
+        if boundary == "connector_result" and args[:3] == ["docker", "start", "--attach"]:
+            triggered.append(True)
+            return '{"status":"SYNTHETIC-PRIVATE-CANARY"}'
+        return result
+
+    monkeypatch.setattr(runtime, "_save_owned", save_owned)
+    monkeypatch.setattr(runtime, "_status", read_status)
+    with pytest.raises(hosted.LabFailure):
+        runtime.run(plan, owned, evidence, execute=command, progress=progress)
+    assert triggered == [True]
+    assert progress.value()["stage"] == boundary
+    assert progress.value()["completed"] == list(
+        SUPERVISOR_STAGES[: SUPERVISOR_STAGES.index(boundary)]
+    )
+    leaked = "SYNTHETIC-PRIVATE-CANARY" in json.dumps(progress.value())
+    assert not leaked

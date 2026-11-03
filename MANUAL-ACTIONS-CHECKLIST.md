@@ -1,5 +1,25 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-02 · M2 diagnostic evidence: third attempt failed, cleanup verified
+
+- [x] Consume exactly three separately authorized laboratory attempts; retain
+      first/second cleanup as unproven and third runtime cause as UNKNOWN.
+- [x] Independently verify third-attempt owned container/root absence. This is
+      not secure erasure or retrospective proof for earlier attempts.
+- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+58 exact
+      skips,1237 frontend,126 direct/126 aggregate browsers. Large browser ZIPs
+      were not downloaded or byte/trace/screenshot inspected.
+- [x] Implement and independently review local closed incremental diagnostics,
+      including fault, canary, identity and unconditional-cleanup regressions.
+- [ ] Obtain separate approval before publishing any further changes or executing
+      a fourth diagnostic attempt; no merge is authorized.
+- [ ] Qualify actual M2 PostgreSQL/TLS/process/isolation behavior. The third
+      failure has no retained internal stage signal; ordinary CI is not M2 proof.
+- No production route, credential policy, network/mount access or resource/time
+  limit expansion. Physical T1–T8/R01-T035, SPENT40927223929, historical
+  UNKNOWN41011497919 and Pages remain unchanged. Earlier sections are historical.
+- See [diagnostic evidence and boundaries](docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md).
+
 ## 2026-11-02 · M2 hosted preparation: no runtime acceptance
 
 - [x] Record 18:51 preparation-only authority for isolated harness/workflow.

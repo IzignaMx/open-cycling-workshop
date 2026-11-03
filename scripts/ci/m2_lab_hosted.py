@@ -12,6 +12,7 @@ import re
 import stat
 import sys
 import tempfile
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -336,6 +337,172 @@ CHECKS = SERVICE_CHECKS | frozenset(
 )
 
 
+SUPERVISOR_STAGES = (
+    "source",
+    "images",
+    "workspace",
+    "private_inputs",
+    "db_create",
+    "db_start",
+    "db_ready",
+    "api_create",
+    "api_start",
+    "api_ready",
+    "namespace",
+    "connector_create",
+    "connector_run",
+    "connector_result",
+    "api_stop",
+    "database_disposal",
+)
+API_STAGES = (
+    "authority_initialization",
+    "functional_scope",
+    "functional_response",
+    "functional_rotation",
+    "functional_grants",
+    "functional_revocation",
+    "postgres_revoke_before_read",
+    "postgres_read_before_revoke",
+    "postgres_lock_timeout",
+    "postgres_statement_timeout",
+    "postgres_transaction_timeout",
+    "postgres_pool_recovery",
+    "credential_delivery",
+    "listener_start",
+    "serving",
+    "database_cleanup",
+)
+API_CHECK_GROUPS: tuple[frozenset[str], ...] = (
+    frozenset({"postgresql_18_4", "fresh_database"}),
+    frozenset({"scope"}),
+    frozenset({"closed_response"}),
+    frozenset({"rotation"}),
+    frozenset({"current_grants"}),
+    frozenset({"revocation"}),
+    frozenset({"revoke_before_read"}),
+    frozenset({"read_before_revoke"}),
+    frozenset({"row_lock_timeout"}),
+    frozenset({"statement_timeout"}),
+    frozenset({"transaction_timeout"}),
+    frozenset({"pool_recovered"}),
+    frozenset(),
+    frozenset(),
+    frozenset(),
+    frozenset(),
+)
+API_OBSERVATIONS = frozenset(
+    {
+        "not_observed",
+        "valid",
+        "absent",
+        "invalid",
+        "identity_mismatch",
+        "filesystem",
+        "unavailable",
+    }
+)
+
+
+class Progress:
+    """Fixed observations; stage is first uncompleted boundary, not proof of entry."""
+
+    def __init__(self) -> None:
+        self.deadline = time.monotonic() + 760
+        self.stage = "source"
+        self.completed: list[str] = []
+        self.api: dict[str, Any] = {"observation": "not_observed", "snapshot": None}
+
+    def enter(self, stage: str) -> None:
+        if tuple(self.completed) != SUPERVISOR_STAGES[: len(self.completed)] or (
+            len(self.completed) >= len(SUPERVISOR_STAGES)
+            or SUPERVISOR_STAGES[len(self.completed)] != stage
+        ):
+            raise LabFailure("evidence")
+        self.stage = stage
+
+    def finish(self) -> None:
+        self.enter(self.stage)
+        self.completed.append(self.stage)
+        self.stage = (
+            SUPERVISOR_STAGES[len(self.completed)]
+            if len(self.completed) < len(SUPERVISOR_STAGES)
+            else "completed"
+        )
+
+    def value(self) -> dict[str, Any]:
+        return {
+            "schema": 1,
+            "stage": self.stage,
+            "completed": list(self.completed),
+            "api": self.api,
+        }
+
+
+def validate_api_projection(value: Any) -> None:
+    if (
+        type(value) is not dict
+        or set(value) != {"phase", "stage", "checks", "database_cleanup_complete"}
+        or value["phase"] not in ("preparing", "ready", "stopped", "failed")
+        or value["stage"] not in API_STAGES
+        or type(value["checks"]) is not dict
+        or set(value["checks"]) - SERVICE_CHECKS
+        or any(item is not True for item in value["checks"].values())
+        or type(value["database_cleanup_complete"]) is not bool
+    ):
+        raise LabFailure("evidence")
+    index = API_STAGES.index(value["stage"])
+    before = set().union(*API_CHECK_GROUPS[:index])
+    through = before | API_CHECK_GROUPS[index]
+    if set(value["checks"]) not in (before, through):
+        raise LabFailure("evidence")
+    phase = value["phase"]
+    if (
+        (phase in ("preparing", "ready") and value["database_cleanup_complete"])
+        or (phase == "ready" and value["stage"] != "serving")
+        or (
+            phase == "stopped"
+            and (value["stage"] != "database_cleanup" or not value["database_cleanup_complete"])
+        )
+        or (phase in ("ready", "stopped") and set(value["checks"]) != SERVICE_CHECKS)
+    ):
+        raise LabFailure("evidence")
+
+
+def validate_diagnostics(value: Any) -> bool:
+    if (
+        type(value) is not dict
+        or set(value) != {"schema", "stage", "completed", "api"}
+        or type(value["schema"]) is not int
+        or value["schema"] != 1
+        or type(value["completed"]) is not list
+    ):
+        raise LabFailure("evidence")
+    completed = value["completed"]
+    count = len(completed)
+    if count > len(SUPERVISOR_STAGES) or completed != list(SUPERVISOR_STAGES[:count]):
+        raise LabFailure("evidence")
+    stage = SUPERVISOR_STAGES[count] if count < len(SUPERVISOR_STAGES) else "completed"
+    api = value["api"]
+    if (
+        value["stage"] != stage
+        or type(api) is not dict
+        or set(api) != {"observation", "snapshot"}
+        or type(api["observation"]) is not str
+        or api["observation"] not in API_OBSERVATIONS
+    ):
+        raise LabFailure("evidence")
+    if api["observation"] == "valid":
+        validate_api_projection(api["snapshot"])
+    elif api["snapshot"] is not None:
+        raise LabFailure("evidence")
+    return (
+        stage == "completed"
+        and api["observation"] == "valid"
+        and api["snapshot"]["phase"] == "stopped"
+    )
+
+
 def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for key, item in pairs:
@@ -362,7 +529,7 @@ def safe_parents(path: Path) -> None:
             raise LabFailure("filesystem")
 
 
-def read_json(path: Path, maximum: int = 65536) -> dict[str, Any]:
+def read_json(path: Path, maximum: int = 65536, *, exact_mode: int | None = None) -> dict[str, Any]:
     safe_parents(path)
     descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
@@ -373,6 +540,7 @@ def read_json(path: Path, maximum: int = 65536) -> dict[str, Any]:
             or info.st_uid != os.getuid()
             or info.st_nlink != 1
             or stat.S_IMODE(info.st_mode) & 0o022
+            or (exact_mode is not None and stat.S_IMODE(info.st_mode) != exact_mode)
         ):
             raise LabFailure("filesystem")
         raw = os.read(descriptor, maximum + 1)
@@ -423,11 +591,16 @@ def check_evidence(directory: Path) -> int:
     total = 0
     for name in ("result.json", "cleanup.json"):
         value = read_json(directory / name, MAX_EVIDENCE)
-        specific = {"checks"} if name == "result.json" else {"containers_absent", "root_removed"}
+        new_result = name == "result.json" and value.get("schema") == 2
+        specific = (
+            ({"checks", "diagnostics"} if new_result else {"checks"})
+            if name == "result.json"
+            else {"containers_absent", "root_removed"}
+        )
         if (
             set(value) != shared | specific | (identity if identity <= set(value) else set())
             or type(value.get("schema")) is not int
-            or value["schema"] != 1
+            or value["schema"] != (2 if new_result else 1)
             or value.get("status") not in ("passed", "failed")
             or value.get("reason") not in REASONS
         ):
@@ -447,6 +620,9 @@ def check_evidence(directory: Path) -> int:
             ):
                 raise LabFailure("evidence")
             complete = set(checks) == CHECKS and all(checks.values())
+            if new_result:
+                diagnostic_complete = validate_diagnostics(value["diagnostics"])
+                complete = complete and diagnostic_complete
         else:
             if any(type(value[key]) is not bool for key in specific):
                 raise LabFailure("evidence")
@@ -518,11 +694,12 @@ def cleanup_receipt(owned_path: Path, output: Path) -> bool:
         write_json(
             output.with_name("result.json"),
             {
-                "schema": 1,
+                "schema": 2,
                 **identity,
                 "status": "failed",
                 "reason": "not_started",
                 "checks": {},
+                "diagnostics": Progress().value(),
             },
         )
     return success
@@ -563,6 +740,7 @@ def main(arguments: list[str] | None = None) -> int:
             os.getuid(),
             os.getgid(),
         )
+        progress = Progress()
         checks: dict[str, bool] = {}
         passed = False
         reason = "runtime"
@@ -574,24 +752,34 @@ def main(arguments: list[str] | None = None) -> int:
         try:
             from scripts.ci.m2_lab_runtime import run
 
-            checks = run(plan, owned, output)
+            checks = run(plan, owned, output, progress=progress)
             passed = set(checks) == CHECKS and all(value is True for value in checks.values())
             reason = "completed" if passed else "runtime"
         except Exception as error:
             reason = error.reason if isinstance(error, LabFailure) else "runtime"
         finally:
             signal.signal(signal.SIGTERM, previous)
-            write_json(
-                output,
-                {
-                    "schema": 1,
-                    **identity_fields(plan),
-                    "status": "passed" if passed else "failed",
-                    "reason": reason,
-                    "checks": checks,
-                },
-            )
-            clean_passed = cleanup_receipt(owned, output.with_name("cleanup.json"))
+            try:
+                from scripts.ci.m2_lab_runtime import snapshot
+
+                snapshot(plan, progress)
+                passed = passed and validate_diagnostics(progress.value())
+                if not passed and reason == "completed":
+                    reason = "evidence"
+                write_json(
+                    output,
+                    {
+                        "schema": 2,
+                        **identity_fields(plan),
+                        "status": "passed" if passed else "failed",
+                        "reason": reason,
+                        "checks": checks,
+                        "diagnostics": progress.value(),
+                    },
+                )
+            finally:
+                clean_passed = cleanup_receipt(owned, output.with_name("cleanup.json"))
+
         return 0 if passed and clean_passed else 1
     except Exception:
         # Closed diagnostics only. Failure evidence is independently attempted by

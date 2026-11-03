@@ -1,6 +1,25 @@
 schema: 1
 
-current_checkpoint: m2_hosted_preparation_20261102
+current_checkpoint: m2_incremental_diagnostics_20261102
+m2_incremental_diagnostics_20261102:
+  status: local_implementation_runtime_unqualified
+  baseline_published_head: 280c8923d773fea7eff420e1bbe26edcd22d4195
+  baseline_tree: 1476ce82f8afa2ec11a3d70e5fdcf7da2f395384
+  main_unchanged: e9c11ad11a564c80add99f4dc901ffe2d583c8e6
+  evidence: docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md
+  scope: closed_incremental_diagnostics_only
+  third_runtime: failed_cause_UNKNOWN
+  third_cleanup: verified_current_attempt_only
+  first_second_cleanup: unproven_historical
+  ordinary_CI: 41541751816_passed27_of27_Python5851_plus58_expected_skips
+  production_changes: none
+  local_validation: Python5341_passed671_environment_skips_frontend1237_passed
+  independent_review: accepted_local_diagnostics_not_runtime_qualification
+  publication_fourth_attempt_merge: not_authorized
+  V01_physical_and_release_gates: unchanged_partial
+
+# Historical preparation snapshot; current evidence is above. Never reinterpret
+# the original not-performed/not-authorized fields as the later attempt outcomes.
 m2_hosted_preparation_20261102:
   status: local_preparation_runtime_unqualified
   prior_local_source: e4c5a2b8385dbcdfb71aabeac5351aeccb1e08f5

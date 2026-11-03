@@ -19,13 +19,14 @@ from typing import Any
 
 from scripts.ci.m2_lab_hosted import (
     ROLES,
-    SERVICE_CHECKS,
     LabFailure,
+    Progress,
     RunPlan,
     create_command,
     parse_json,
     read_json,
     safe_parents,
+    validate_api_projection,
     verify_containment,
 )
 from scripts.ci.quote_capacity_micro import run as bounded_command
@@ -186,8 +187,21 @@ def _private_inputs(plan: RunPlan, command: Callable[..., str]) -> None:
     _new_file(root / "public/ca.crt", (ca / "ca.crt").read_bytes(), 0o444)
 
 
-def _status(plan: RunPlan, phase: str) -> dict[str, bool]:
-    value = read_json(plan.root / "credential/api-status.json")
+def _api_value(plan: RunPlan) -> dict[str, Any]:
+    path = plan.root / "credential/api-status.json"
+    safe_parents(path)
+    info = path.parent.lstat()
+    if (
+        not stat.S_ISDIR(info.st_mode)
+        or info.st_uid != os.getuid()
+        or stat.S_IMODE(info.st_mode) != 0o700
+    ):
+        raise LabFailure("filesystem")
+    # Reject on the first unknown/fourth entry; never enumerate an unbounded directory.
+    for count, item in enumerate(path.parent.iterdir()):
+        if count >= 3 or item.name not in {"credential", "scope.json", "api-status.json"}:
+            raise LabFailure("filesystem")
+    value = read_json(path, exact_mode=0o600)
     if (
         set(value)
         != {
@@ -196,38 +210,73 @@ def _status(plan: RunPlan, phase: str) -> dict[str, bool]:
             "source_commit",
             "source_tree",
             "phase",
+            "stage",
             "checks",
             "database_cleanup_complete",
         }
         or type(value["schema"]) is not int
-        or value["schema"] != 1
-        or value["nonce"] != plan.nonce
+        or value["schema"] != 2
+    ):
+        raise LabFailure("evidence")
+    if (
+        value["nonce"] != plan.nonce
         or value["source_commit"] != plan.commit
         or value["source_tree"] != plan.tree
-        or value["phase"] not in ("preparing", "ready", "stopped", "failed")
-        or type(value["database_cleanup_complete"]) is not bool
     ):
         raise LabFailure("identity")
-    checks = value["checks"]
+    projection = {
+        key: value[key] for key in ("phase", "stage", "checks", "database_cleanup_complete")
+    }
+    validate_api_projection(projection)
+    return projection
+
+
+def snapshot(plan: RunPlan, progress: Progress) -> None:
+    """Single bounded regular-file read inside the reserved second; no retries."""
+    observation, value = "unavailable", None
+    if time.monotonic() < progress.deadline:
+        try:
+            value = _api_value(plan)
+            observation = "valid"
+        except FileNotFoundError:
+            observation = "absent"
+        except LabFailure as error:
+            observation = {"identity": "identity_mismatch", "filesystem": "filesystem"}.get(
+                error.reason, "invalid"
+            )
+        except OSError:
+            observation = "filesystem"
+        except Exception:
+            observation = "unavailable"
+        if time.monotonic() >= progress.deadline:
+            observation, value = "unavailable", None
+    progress.api = {
+        "observation": observation,
+        "snapshot": value if observation == "valid" else None,
+    }
+
+
+def _status(plan: RunPlan, phase: str) -> dict[str, bool]:
+    value = _api_value(plan)
     if value["phase"] == "preparing" and phase == "ready":
         raise FileNotFoundError
-    if (
-        value["phase"] != phase
-        or not isinstance(checks, dict)
-        or set(checks) != SERVICE_CHECKS
-        or any(v is not True for v in checks.values())
-        or value["database_cleanup_complete"] is not (phase == "stopped")
-    ):
+    if value["phase"] != phase:
         raise LabFailure("runtime")
-    return checks
+    return {key: True for key in value["checks"]}
 
 
 def run(
-    plan: RunPlan, owned: Path, evidence: Path, *, execute: Callable[..., str] = bounded_command
+    plan: RunPlan,
+    owned: Path,
+    evidence: Path,
+    *,
+    execute: Callable[..., str] = bounded_command,
+    progress: Progress | None = None,
 ) -> dict[str, bool]:
     """Observe this exact synthetic run. Never publish a passed final receipt here."""
     del evidence  # The CLI combines our observations with independently verified cleanup.
-    deadline = time.monotonic() + RUNTIME_SECONDS
+    progress = Progress() if progress is None else progress
+    deadline = progress.deadline - 1  # Reserve one second within 760 for the pre-cleanup snapshot.
 
     def check_deadline() -> None:
         if time.monotonic() >= deadline:
@@ -249,6 +298,7 @@ def run(
         return row
 
     phase = "source"
+    progress.enter("source")
     previous_umask = os.umask(0o077)
     try:
         if plan.uid != os.getuid() or plan.gid != os.getgid():
@@ -259,6 +309,8 @@ def run(
             or command(["git", "--no-optional-locks", "status", "--porcelain"])
         ):
             raise LabFailure("source")
+        progress.finish()
+        progress.enter("images")
         phase = "identity"
         for image in (plan.image, plan.pg_image):
             row = parse_json(
@@ -273,6 +325,8 @@ def run(
                     or labels.get("org.opencontainers.image.tree") != plan.tree
                 ):
                     raise LabFailure("source")
+        progress.finish()
+        progress.enter("workspace")
         phase = "ownership"
         manifest: dict[str, Any] = {
             "schema": 1,
@@ -289,8 +343,11 @@ def run(
             (plan.root / name).mkdir(mode=0o700)
             manifest["directories"][name] = _identity(plan.root / name)
             _save_owned(owned, manifest)
+        progress.finish()
+        progress.enter("private_inputs")
         phase = "private_input"
         _private_inputs(plan, command)
+        progress.finish()
 
         def create(role: str, db_id: str = "") -> str:
             nonlocal phase
@@ -317,8 +374,13 @@ def run(
             _save_owned(owned, manifest)
             return cid
 
+        progress.enter("db_create")
         db = create("db")
+        progress.finish()
+        progress.enter("db_start")
         command(["docker", "start", db], timeout=10)
+        progress.finish()
+        progress.enter("db_ready")
         until = min(deadline, time.monotonic() + 60)
         while True:
             check_deadline()
@@ -340,9 +402,15 @@ def run(
                 raise LabFailure("runtime")
             check_deadline()
             time.sleep(min(0.5, max(0, until - time.monotonic())))
+        progress.finish()
+        progress.enter("api_create")
         api = create("api", db)
+        progress.finish()
+        progress.enter("api_start")
         phase = "runtime"
         command(["docker", "start", api], timeout=10)
+        progress.finish()
+        progress.enter("api_ready")
         until = min(deadline, time.monotonic() + 120)
         while True:
             check_deadline()
@@ -363,6 +431,8 @@ def run(
                     raise LabFailure("runtime") from None
                 check_deadline()
                 time.sleep(min(0.2, max(0, until - time.monotonic())))
+        progress.finish()
+        progress.enter("namespace")
         namespaces = []
         for role, cid in (("db", db), ("api", api)):
             row = inspect(role, cid, db if role == "api" else "")
@@ -374,9 +444,15 @@ def run(
             namespaces.append(ns)
         if namespaces[0] != namespaces[1]:
             raise LabFailure("containment")
+        progress.finish()
+        progress.enter("connector_create")
         connector = create("connector")
+        progress.finish()
+        progress.enter("connector_run")
         phase = "runtime"
         raw = command(["docker", "start", "--attach", connector], timeout=120)
+        progress.finish()
+        progress.enter("connector_result")
         result = parse_json(raw)
         if (
             not isinstance(result, dict)
@@ -409,13 +485,18 @@ def run(
             or row["State"]["ExitCode"] != 0
         ):
             raise LabFailure("runtime")
+        progress.finish()
+        progress.enter("api_stop")
         command(["docker", "stop", "--time", "5", api], timeout=10)
         row = inspect("api", api, db)
         if row.get("State", {}).get("Running") is not False or row["State"].get("ExitCode") != 0:
             raise LabFailure("runtime")
+        progress.finish()
+        progress.enter("database_disposal")
         if _status(plan, "stopped") != checks:
             raise LabFailure("runtime")
         check_deadline()
+        progress.finish()
         return {
             **checks,
             "network_isolation": True,

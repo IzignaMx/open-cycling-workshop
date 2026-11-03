@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import stat
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -61,17 +62,113 @@ _CHECKS = frozenset(
 Phase = Literal["preparing", "ready", "stopped", "failed"]
 
 
-def status_payload(run: OwnedRun, phase: Phase, checks: dict[str, bool], *, cleanup: bool) -> bytes:
+API_STAGES = (
+    "authority_initialization",
+    "functional_scope",
+    "functional_response",
+    "functional_rotation",
+    "functional_grants",
+    "functional_revocation",
+    "postgres_revoke_before_read",
+    "postgres_read_before_revoke",
+    "postgres_lock_timeout",
+    "postgres_statement_timeout",
+    "postgres_transaction_timeout",
+    "postgres_pool_recovery",
+    "credential_delivery",
+    "listener_start",
+    "serving",
+    "database_cleanup",
+)
+
+
+STAGE_CHECKS = {
+    "authority_initialization": frozenset({"postgresql_18_4", "fresh_database"}),
+    "functional_scope": frozenset({"scope"}),
+    "functional_response": frozenset({"closed_response"}),
+    "functional_rotation": frozenset({"rotation"}),
+    "functional_grants": frozenset({"current_grants"}),
+    "functional_revocation": frozenset({"revocation"}),
+    "postgres_revoke_before_read": frozenset({"revoke_before_read"}),
+    "postgres_read_before_revoke": frozenset({"read_before_revoke"}),
+    "postgres_lock_timeout": frozenset({"row_lock_timeout"}),
+    "postgres_statement_timeout": frozenset({"statement_timeout"}),
+    "postgres_transaction_timeout": frozenset({"transaction_timeout"}),
+    "postgres_pool_recovery": frozenset({"pool_recovered"}),
+    "credential_delivery": frozenset(),
+    "listener_start": frozenset(),
+    "serving": frozenset(),
+    "database_cleanup": frozenset(),
+}
+
+
+def valid_check_prefix(stage: str, checks: dict[str, bool]) -> bool:
+    if stage not in API_STAGES:
+        raise LabDenied(503)
+    index = API_STAGES.index(stage)
+    before = set().union(*(STAGE_CHECKS[item] for item in API_STAGES[:index]))
+    return set(checks) in (before, before | STAGE_CHECKS[stage])
+
+
+class ApiProgress:
+    """Bounded self-report, not authority or independent runtime qualification."""
+
+    def __init__(self, publish: Callable[[str, dict[str, bool]], None] | None = None):
+        self.stage = "authority_initialization"
+        self.checks: dict[str, bool] = {}
+        self._publish = publish
+
+    def advance(self, stage: str) -> None:
+        if stage not in API_STAGES:
+            raise LabDenied(503)
+        self.stage = stage
+        self.publish()
+
+    def complete(self, *names: str) -> None:
+        if not names or set(names) - STAGE_CHECKS[self.stage]:
+            raise LabDenied(503)
+        self.checks.update(dict.fromkeys(names, True))
+        self.publish()
+
+    def publish(self) -> None:
+        if self._publish is not None:
+            self._publish(self.stage, dict(self.checks))
+
+
+def status_payload(
+    run: OwnedRun,
+    phase: Phase,
+    checks: dict[str, bool],
+    *,
+    cleanup: bool,
+    stage: str = "authority_initialization",
+) -> bytes:
     if (
         phase not in ("preparing", "ready", "stopped", "failed")
         or set(checks) - _CHECKS
-        or any(type(value) is not bool for value in checks.values())
+        or any(value is not True for value in checks.values())
+        or stage not in API_STAGES
+        or not valid_check_prefix(stage, checks)
+        or (phase == "ready" and stage != "serving")
+        or (phase == "stopped" and stage != "database_cleanup")
+        or (phase in ("ready", "stopped") and set(checks) != _CHECKS)
+        or (phase in ("preparing", "ready") and cleanup is not False)
+        or (phase == "stopped" and cleanup is not True)
+        or any(
+            type(value) is not str or re.fullmatch(pattern, value) is None
+            for value, pattern in (
+                (run.nonce, r"[0-9a-f]{32}"),
+                (run.source_commit, r"[0-9a-f]{40}"),
+                (run.source_tree, r"[0-9a-f]{40}"),
+            )
+        )
         or type(cleanup) is not bool
     ):
         raise LabDenied(503)
     data = json.dumps(
         {
-            "schema": 1,
+            "schema": 2,
+            "stage": stage,
             "nonce": run.nonce,
             "source_commit": run.source_commit,
             "source_tree": run.source_tree,
@@ -90,8 +187,12 @@ def credential_payload(credential: Credential) -> bytes:
     return credential.authorization().removeprefix("Bearer ").encode("ascii")
 
 
-def functional_checks(authority: LabAuthority) -> dict[str, bool]:
+def functional_checks(
+    authority: LabAuthority, progress: ApiProgress | None = None
+) -> dict[str, bool]:
     """Real scoped SQL and closed ASGI; caller determines SQLite versus PG evidence."""
+    progress = progress or ApiProgress()
+    progress.advance("functional_scope")
     primary = authority.issue()
     with authority.read(primary.authorization()) as (scope, session):
         rows = session.scalars(
@@ -102,6 +203,8 @@ def functional_checks(authority: LabAuthority) -> dict[str, bool]:
         ).all()
         if len(rows) != 3 or any(not row.sku.startswith("LAB-A-1-") for row in rows):
             raise LabDenied(503)
+    progress.complete("scope")
+    progress.advance("functional_response")
     with TestClient(create_lab_app(authority)) as client:
         response = client.get(PATH, headers={"Authorization": primary.authorization()})
         if (
@@ -115,6 +218,8 @@ def functional_checks(authority: LabAuthority) -> dict[str, bool]:
             or client.get("/docs").status_code != 404
         ):
             raise LabDenied(503)
+    progress.complete("closed_response")
+    progress.advance("functional_rotation")
     replacement = authority.rotate(primary.credential_id)
     try:
         with authority.read(primary.authorization()):
@@ -126,6 +231,8 @@ def functional_checks(authority: LabAuthority) -> dict[str, bool]:
         raise LabDenied(503)
     with authority.read(replacement.authorization()):
         pass
+    progress.complete("rotation")
+    progress.advance("functional_grants")
     authority.update_grants(replacement.credential_id, installation_read=False, machine_read=True)
     try:
         with authority.read(replacement.authorization()):
@@ -135,6 +242,8 @@ def functional_checks(authority: LabAuthority) -> dict[str, bool]:
             raise LabDenied(503) from None
     else:
         raise LabDenied(503)
+    progress.complete("current_grants")
+    progress.advance("functional_revocation")
     authority.revoke(replacement.credential_id)
     try:
         with authority.read(replacement.authorization()):
@@ -144,6 +253,7 @@ def functional_checks(authority: LabAuthority) -> dict[str, bool]:
             raise LabDenied(503) from None
     else:
         raise LabDenied(503)
+    progress.complete("revocation")
     return {
         "scope": True,
         "current_grants": True,
@@ -159,7 +269,9 @@ def timeout_evidence(
     return observed == [expected] and minimum <= elapsed < maximum
 
 
-def postgres_revoke_ordering(authority: PostgresLabAuthority) -> dict[str, bool]:
+def postgres_revoke_ordering(
+    authority: PostgresLabAuthority, progress: ApiProgress | None = None
+) -> dict[str, bool]:
     """External SQL sessions bypass the local RLock but take canonical DB locks."""
 
     def revoke_in_session(credential_id: str) -> None:
@@ -169,6 +281,8 @@ def postgres_revoke_ordering(authority: PostgresLabAuthority) -> dict[str, bool]
             machine.revoked, machine.verifier = True, ""
             authority._audit(session, "revoke", machine, time.time())
 
+    progress = progress or ApiProgress()
+    progress.advance("postgres_revoke_before_read")
     first = authority.issue()
     revoke_in_session(first.credential_id)
     try:
@@ -180,6 +294,8 @@ def postgres_revoke_ordering(authority: PostgresLabAuthority) -> dict[str, bool]
     else:
         raise LabDenied(503)
 
+    progress.complete("revoke_before_read")
+    progress.advance("postgres_read_before_revoke")
     second = authority.issue()
     started = threading.Event()
     writer_pid: list[int] = []
@@ -237,6 +353,7 @@ def postgres_revoke_ordering(authority: PostgresLabAuthority) -> dict[str, bool]
             raise LabDenied(503) from None
     else:
         raise LabDenied(503)
+    progress.complete("read_before_revoke")
     return {"revoke_before_read": True, "read_before_revoke": True}
 
 
@@ -255,11 +372,20 @@ def _sqlstate_observation(engine: Engine) -> Iterator[list[str]]:
         event.remove(engine, "handle_error", record_sqlstate)
 
 
-def postgres_checks(authority: PostgresLabAuthority) -> dict[str, bool]:
+def postgres_checks(
+    authority: PostgresLabAuthority, progress: ApiProgress | None = None
+) -> dict[str, bool]:
     """Runtime-only actual PostgreSQL locks/timeouts, not substituted by SQLite tests."""
     if authority._engine.dialect.name != "postgresql":
         raise LabDenied(503)
-    checks = {**functional_checks(authority), **postgres_revoke_ordering(authority)}
+    progress = progress or ApiProgress()
+    # create_owned has already verified server identity and fresh owned database.
+    progress.complete("postgresql_18_4", "fresh_database")
+    checks = {
+        **functional_checks(authority, progress),
+        **postgres_revoke_ordering(authority, progress),
+    }
+    progress.advance("postgres_lock_timeout")
     with _sqlstate_observation(authority._engine) as observed:
         credential = authority.issue()
         with authority.read(credential.authorization()) as (scope, _session):
@@ -292,6 +418,8 @@ def postgres_checks(authority: PostgresLabAuthority) -> dict[str, bool]:
             finally:
                 holder.close()
         checks["row_lock_timeout"] = True
+        progress.complete("row_lock_timeout")
+        progress.advance("postgres_statement_timeout")
         observed.clear()
         started = time.clock_gettime(time.CLOCK_BOOTTIME)
         try:
@@ -304,6 +432,8 @@ def postgres_checks(authority: PostgresLabAuthority) -> dict[str, bool]:
         else:
             raise LabDenied(503)
         checks["statement_timeout"] = True
+        progress.complete("statement_timeout")
+        progress.advance("postgres_transaction_timeout")
         # Fatal transaction timeout is probed through another real session using the
         # identical budget installer, then invalidated; it cannot poison the API owner.
         observed.clear()
@@ -323,6 +453,8 @@ def postgres_checks(authority: PostgresLabAuthority) -> dict[str, bool]:
         finally:
             timed.close()
         checks["transaction_timeout"] = True
+        progress.complete("transaction_timeout")
+        progress.advance("postgres_pool_recovery")
         with authority.read(credential.authorization()) as (scope, session):
             if (
                 session.scalar(
@@ -332,6 +464,7 @@ def postgres_checks(authority: PostgresLabAuthority) -> dict[str, bool]:
             ):
                 raise LabDenied(503)
         authority.revoke(credential.credential_id)
+        progress.complete("pool_recovered")
         return {**checks, "pool_recovered": True, "postgresql_18_4": True, "fresh_database": True}
 
 
@@ -407,7 +540,14 @@ def main() -> int:
 
     authority: PostgresLabAuthority | None = None
     run: OwnedRun | None = None
-    checks: dict[str, bool] = {}
+    phase: Phase = "preparing"
+
+    def publish(stage: str, checks: dict[str, bool]) -> None:
+        if run is None:
+            raise LabDenied(503)
+        _status(status_payload(run, phase, checks, cleanup=False, stage=stage))
+
+    progress = ApiProgress(publish)
     stopped = threading.Event()
     failure = False
 
@@ -418,13 +558,16 @@ def main() -> int:
     signal.signal(signal.SIGINT, stop)
     try:
         run = parse_run_manifest(read_private_file(MANIFEST_FILE, 4096))
-        _status(status_payload(run, "preparing", checks, cleanup=False))
+        progress.advance("authority_initialization")
         authority = PostgresLabAuthority.create_owned()
         if authority.owned_run != run:
             raise LabDenied(503)
-        checks = postgres_checks(authority)
+        checks = postgres_checks(authority, progress)
+        if checks != progress.checks or set(checks) != _CHECKS:
+            raise LabDenied(503)
         if stopped.is_set():
             raise LabDenied(503)
+        progress.advance("credential_delivery")
         credential = authority.issue()
         with authority.read(credential.authorization()) as (scope, _session):
             binding = json.dumps(
@@ -436,16 +579,29 @@ def main() -> int:
         except Exception:
             authority.revoke(credential.credential_id)
             raise LabDenied(503) from None
+
+        def ready() -> None:
+            nonlocal phase
+            phase = "ready"
+            progress.advance("serving")
+
+        progress.advance("listener_start")
         serve(
             create_lab_app(authority),
             run_deadline=authority.run_deadline,
             stop_event=stopped,
-            on_ready=lambda: _status(status_payload(run, "ready", checks, cleanup=False)),
+            on_ready=ready,
         )
     except Exception:
         failure = True
     finally:
         if authority is not None:
+            if not failure:
+                try:
+                    phase = "preparing"
+                    progress.advance("database_cleanup")
+                except Exception:
+                    failure = True
             try:
                 authority.close()
             except Exception:
@@ -456,7 +612,13 @@ def main() -> int:
             )
             try:
                 _status(
-                    status_payload(run, "failed" if failure else "stopped", checks, cleanup=cleanup)
+                    status_payload(
+                        run,
+                        "failed" if failure else "stopped",
+                        progress.checks,
+                        cleanup=cleanup,
+                        stage=progress.stage,
+                    )
                 )
             except Exception:
                 failure = True
