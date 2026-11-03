@@ -1,6 +1,83 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-## 2026-11-02 · M1 host-only reference: implemented; hosted qualification pending
+## 2026-11-03 · M2 local certificate correction, hosted cause still UNKNOWN
+
+- [x] Close fourth hosted attempt41552838556 with failure at connector_run and
+      independently verified cleanup for that attempt. Twelve supervisor steps
+      completed; API reported13 checks. Neither proves connector/TLS acceptance.
+- [x] Qualify ordinary CI41552838539:27/27,5954 Python+58 exact skips,
+      1237 frontend,126 direct/126 aggregate browsers. Large ZIPs remain unreviewed.
+- [x] Correct the locally reproduced negative-TLS evidence classifier: unrelated
+      certificate errors cannot count as hostname or trust rejection evidence.
+- [x] Obtain01:21 local-only certificate/key experiment permission, reproduce
+      strict error92 from current CA commands, compare explicit extensions and
+      independently verify temporary resource removal. No network or trust change.
+- [x] Freeze and independently review the combined local repair. Full-suite
+      results accompany the exact candidate receipt; no native acceptance inferred.
+- [ ] Obtain separate publication and single-run permission before a fifth
+      diagnostic attempt. No merge is authorized; all four run permits are spent.
+- The offline OpenSSL3.5.7 result proves a local generation defect, not the
+  purged hosted certificate or precise fourth-run cause. T1–T8/R01-T035,
+  SPENT40927223929, historical UNKNOWN41011497919 and Pages remain unchanged.
+- See [source, evidence and boundaries](docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md).
+
+## 2026-11-02 · M2 diagnostic evidence: third attempt failed, cleanup verified
+
+- [x] Consume exactly three separately authorized laboratory attempts; retain
+      first/second cleanup as unproven and third runtime cause as UNKNOWN.
+- [x] Independently verify third-attempt owned container/root absence. This is
+      not secure erasure or retrospective proof for earlier attempts.
+- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+58 exact
+      skips,1237 frontend,126 direct/126 aggregate browsers. Large browser ZIPs
+      were not downloaded or byte/trace/screenshot inspected.
+- [x] Implement and independently review local closed incremental diagnostics,
+      including fault, canary, identity and unconditional-cleanup regressions.
+- [ ] Obtain separate approval before publishing any further changes or executing
+      a fourth diagnostic attempt; no merge is authorized.
+- [ ] Qualify actual M2 PostgreSQL/TLS/process/isolation behavior. The third
+      failure has no retained internal stage signal; ordinary CI is not M2 proof.
+- No production route, credential policy, network/mount access or resource/time
+  limit expansion. Physical T1–T8/R01-T035, SPENT40927223929, historical
+  UNKNOWN41011497919 and Pages remain unchanged. Earlier sections are historical.
+- See [diagnostic evidence and boundaries](docs/10-spec-development/2026-11-02-m2-incremental-diagnostics.md).
+
+## 2026-11-02 · M2 hosted preparation: no runtime acceptance
+
+- [x] Record 18:51 preparation-only authority for isolated harness/workflow.
+- [x] Prepare test-only PostgreSQL/TLS/UDS processes and exact-source supervisor;
+      no normal application routes, production grants or host firewall changes.
+- [ ] Freeze and independently review local evidence/source before publication.
+- [ ] Obtain explicit publication **and execution** approval: the same-repository
+      PR trigger would run immediately, bounded to one standard 30-minute job.
+- [ ] Observe actual PostgreSQL, TLS, OS isolation and independent cleanup receipts;
+      local functional/static/fake-controller tests do not close those gates.
+- Proposed evidence: two closed JSON files, <=1 MiB, one-day retention. Build/pull
+  disk peak has no separate quota beyond the existing runner capacity; image and
+  free-space admission checks do not imply a peak bound. See
+  [preparation and proposed limits](docs/10-spec-development/2026-11-02-m2-hosted-preparation.md).
+- No keys, runtime password files, containers or GitHub executions were created
+  during preparation. M2/SDK and physical V0.1 remain incomplete.
+
+## 2026-11-02 · M2 synthetic laboratory: historical local functional checkpoint
+
+- [x] Record separate design and16:07 isolated synthetic implementation approval;
+      no production access, new human grants, publication or deployment authority.
+- [x] Keep machine authority, ASGI application and owned memory projection inside
+      a test-only package absent from normal app routes/wheel/schema.
+- [x] Complete independent corrective review and local regression: laboratory102,
+      full Python5060+671 environment skips, repository151, frontend1237.
+      Static/build/contracts passed; none is native/runtime qualification.
+- [ ] Implement/qualify actual PostgreSQL18, separate process/TLS, enforced egress,
+      mounts/resources/transport and crash teardown in a capable authorized environment.
+      Docker/psql are absent here; preflight refuses runtime execution.
+- [ ] Obtain separate publication authority before any remote candidate.
+- SQLite/ASGI functional tests are not native/runtime qualification. No real data,
+  new human permission, production credential or installation was created. See
+  [source and limitations](docs/10-spec-development/2026-11-02-m2-synthetic-laboratory.md).
+- PR82 M1 has a retained final fresh-main receipt (CI41463493290,27/27); the older
+  pending source stamp below is historical. Full M2/SDK and V0.1 remain incomplete.
+
+## 2026-11-02 · M1 host-only reference: historical source checkpoint
 
 - [x] Reconcile accepted PR81 main `aa432060` from the retained final Library v2
       receipt, not the stale PR body whose final update failed. See
