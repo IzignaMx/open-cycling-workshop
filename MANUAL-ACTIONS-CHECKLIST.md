@@ -1,5 +1,43 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-03 · Selected restore policy, local characterization only
+
+- [x] Select explicit fresh connector enrollment after database restore under
+      the delegated policy decision. Automatic identity continuity through a new
+      durable witness is not selected.
+- Ordinary service restart is not database restoration: restart alone must not
+  trigger destructive re-enrollment or dataset-incarnation rotation. The disposable
+  lab's fresh process witness is not a production restart policy.
+- The production machine authority remains absent; its implementation, permissions,
+  enrollment/retirement roles, credential lifecycle and recovery fencing need a
+  separate concrete design. No persistent access or infrastructure is authorized.
+- New authority characterization uses fake SQL against real control flow. It is
+  not native PostgreSQL restore proof, production lifecycle evidence or a new
+  hosted laboratory pass. The exact local package passed202 targeted tests
+  (173 repository and29 pure bootstrap cases). Full Python/frontend suites were
+  not rerun; historical counts below do not cover these new tests.
+- [x] Independently validate this local documentation/characterization package.
+- [ ] Obtain separate publication approval; no sixth M2 run is authorized.
+- See the [selected lifecycle policy](docs/superpowers/specs/2026-11-03-m2-lifecycle-restore-proposal.md).
+  Full M2, T1–T8/R01-T035, SPENT40927223929, UNKNOWN41011497919, capacity and Pages
+  remain unchanged.
+
+## 2026-11-03 · PR84 fresh-main ordinary acceptance
+
+- [x] Accept merged main `c0fe501a9f93393c106c49aece4a27af495b79e9`, tree
+      `bbb9b6e4d140c96df54ee18ac4890f64a4a4be51`, under separate merge approval.
+- [x] Independently accept [CI41713827892](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41713827892):
+      27/27, Python5974 +58 exact skips, frontend1237/API1, direct126 from the
+      terminal log and aggregate126. Small reports20/9/5/10 and kernel14: retry0.
+      Runtime41713827934, security41713827842 and micro41713828087 accepted.
+- Large browser archives were not downloaded or byte/trace/screenshot reviewed.
+  No M2 workflow ran on main push. This does not qualify restore or physical gates.
+- Retained coordinator archive receipt `artifacts/m2-hosted/pr84-postmerge/final/review.json`,
+  SHA256 `ec46275af1fa1fda87c19be9bc2200638020dca6ec891f3d5a0298ef86d7f8ef`.
+  This is not a tracked or public repository file.
+- The PR83 checkpoint below is historical. Its pending lifecycle choice has been
+  resolved by the selected policy above; its runtime evidence remains unchanged.
+
 ## 2026-11-03 · PR83 accepted bounded laboratory and fresh main
 
 - [x] Merge PR83 under separate approval. Main is
