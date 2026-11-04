@@ -730,8 +730,14 @@ def test_pr88_baseline_acceptance_does_not_qualify_new_lookup() -> None:
 
 def test_lookup_initial_hosted_failure_is_preserved_without_cause_invention() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_diagnostic_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_diagnostic_20261104" in state
+    assert (
+        "historical_lookup_diagnostic_checkpoint: local_customer_lookup_diagnostic_20261104"
+        in state
+    )
+    assert (
+        "historical_lookup_diagnostic_last_checkpoint: local_customer_lookup_diagnostic_20261104"
+        in state
+    )
     block = state.split("local_customer_lookup_diagnostic_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "status: initial_hosted_failed_bounded_diagnostic_in_progress",
@@ -756,5 +762,36 @@ def test_lookup_initial_hosted_failure_is_preserved_without_cause_invention() ->
         "51 confirmed baseline",
         "not downloaded",
         "af2dd26e6832418aa66b40f1e4413a66a2d56960e2ae3df0db7011c40ee657a5",
+    ):
+        assert token in record
+
+
+def test_lookup_locator_repair_preserves_two_failed_runs_and_proof_limits() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_locator_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_locator_20261104" in state
+    block = state.split("local_customer_lookup_locator_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "second_CI: 41847937571",
+        "second_controls: 26_of27_not_accepted",
+        "workflow_repetitions: skipped_after_direct_browser_failure_not_qualified",
+        "expiry_guard: failed_closed_on_skipped_zero_of10_executed_incomplete_artifact",
+        "second_browser: direct132_passed1_failed_aggregate132_passed1_failed",
+        "diagnosis: exact_label_locator_defect_reproduced_with_installed_engine",
+        "proof_limit: rendered_component_and_selector_functions_not_native_browser",
+        "repair: test_only_named_combobox_plus_positive_count_one",
+        "production_pagination_defect: not_established_no_production_fix",
+        "merge: blocked_until_complete_fresh_qualification",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "26/27",
+        "132 passed / 1 failed",
+        "Playwright 1.62.0",
+        "exactClienteLabelMatches",
+        "vacuous",
+        "not native browser execution",
+        "f208000e8b7d97401d74e970a6d3af71f1f80bd44e3d3ef5c86c75d22d3d68c2",
     ):
         assert token in record

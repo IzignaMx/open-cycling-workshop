@@ -102,7 +102,8 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     expect(baseline?.targetAdmitted).toBe(true)
     const form = page.locator('form[aria-describedby~="order-intake-status"]')
     const query = form.getByLabel('Buscar cliente por nombre', { exact: true })
-    const selected = form.getByLabel('Cliente', { exact: true })
+    const selected = form.getByRole('combobox', { name: 'Cliente', exact: true })
+    await expect(selected).toHaveCount(1)
     await query.fill(target.display_name)
     stage = 'page_one'
     await query.press('Enter')

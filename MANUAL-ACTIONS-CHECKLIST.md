@@ -1,10 +1,38 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 diagnostic failure; test-locator repair
+
+- [x] Preserve second CI 41847937571: 26/27 controls, not accepted. Both browser
+      suites: 132 passed / 1 failed; lookup retried once. Python: 6,127 + 58 exact
+      skips; frontend: 1,296. Earlier shim and broad-button failures cleared.
+- [ ] Obtain all required repetitions: sync/order, cutover, administration and
+      inventory expiry were skipped after direct browser failure. The always-run
+      expiry guard failed on `check "skipped"`; its artifact is incomplete, with
+      zero of ten expiry repetitions executed. Aggregate 26/27 is not all gates.
+- [x] Validate eight bounded snapshots: page two contains the target option,
+      READY/exhausted, exact baseline 51, query/name match, selection still empty.
+- [x] Reproduce exact-label locator mismatch with actual rendered components and
+      installed Playwright selector functions. The initial zero-count assertion
+      was vacuous. This is local selector proof, not native browser execution or
+      evidence of a production pagination defect.
+- [x] Validate test-only named-combobox locator and positive count-one guard.
+      Frontend: 1,296 passed. Python: 5,515 passed, 671 environment skips,
+      12 warnings, 383.52 s, exit 0, before final documentation/correction-contract
+      stamp. Post-stamp repository: 186 passed; static/format checks passed.
+      Five repair paths, 19 overall; native collected/typechecked, not executed
+      locally. No production lookup change is admitted.
+- [ ] Complete fresh hosted qualification before merge. This source checkpoint
+      performs no publication or M2 execution. Preserve both failed receipts and
+      historical UNKNOWN evidence; large browser ZIPs were not downloaded.
+- Physical T1–T8/R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
 ## 2026-11-04 · PR89 initial hosted failure; bounded diagnosis underway
+
+Historical diagnostic-stage snapshot; superseded by the second failure and proof above.
 
 - [x] Preserve initial CI 41821564647: 25/27 controls passed, not accepted.
       Direct and aggregate browsers each reported 131 passed / 2 failed, with one
-      retry for each failing case. A continue-on-error step badge is not acceptance.
+      retry for each failing case. The browser step failed; it has no continue-on-error setting.
 - Python: 6,126 passed + 58 exact skips; frontend: 1,293 passed on initial tree 32542706. These partial successes do not qualify changed diagnostic source.
 - [x] Identify the offline keyboard shim type error and existing broad-button
       strict-mode locator failure; narrow corrections have local proof only.

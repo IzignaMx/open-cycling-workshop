@@ -1,6 +1,39 @@
 schema: 1
 
-current_checkpoint: local_customer_lookup_diagnostic_20261104
+current_checkpoint: local_customer_lookup_locator_20261104
+local_customer_lookup_locator_20261104:
+  status: test_locator_repair_locally_validated_hosted_not_accepted
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  second_head: ab1c8947448536dcc7588ef0c3892990dd948b2c
+  second_tested_merge: 7f70e6fb092812e969096474f9b1f6bc99180ead
+  second_tree: 7e5b2b391438c10c33a640cd56a0c841876a3ad7
+  second_CI: 41847937571
+  second_controls: 26_of27_not_accepted
+  second_browser: direct132_passed1_failed_aggregate132_passed1_failed
+  second_Python: 6127_passed_58_exact_expected_skips
+  second_frontend: 1296_passed
+  workflow_repetitions: skipped_after_direct_browser_failure_not_qualified
+  expiry_guard: failed_closed_on_skipped_zero_of10_executed_incomplete_artifact
+  aggregate_scope: 26_of27_does_not_cover_all_required_workflow_gates
+  diagnosis: exact_label_locator_defect_reproduced_with_installed_engine
+  proof_limit: rendered_component_and_selector_functions_not_native_browser
+  repair: test_only_named_combobox_plus_positive_count_one
+  production_pagination_defect: not_established_no_production_fix
+  final_local_validation: Python5515_passed_671_environment_skips_12_warnings_383_52s_exit0
+  final_Python_scope: before_final_documentation_and_correction_contract_stamp
+  final_repository: 186_passed_after_final_stamp
+  final_frontend: 1296_passed
+  repair_scope: five_paths_nineteen_overall_vs_accepted_main
+  native: collected_typechecked_not_executed_locally
+  publication: not_performed_at_this_source_stage
+  merge: blocked_until_complete_fresh_qualification
+  M2: no_run_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical diagnostic preparation and uncertainty; second failure and later proof above.
+historical_lookup_diagnostic_checkpoint: local_customer_lookup_diagnostic_20261104
+historical_lookup_diagnostic_last_checkpoint: local_customer_lookup_diagnostic_20261104
 local_customer_lookup_diagnostic_20261104:
   status: initial_hosted_failed_bounded_diagnostic_in_progress
   canonical_pair: FR-CUS-002_R02-T001_partial
@@ -2588,7 +2621,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_customer_lookup_diagnostic_20261104
+last_checkpoint: local_customer_lookup_locator_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

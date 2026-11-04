@@ -74,7 +74,71 @@ accent-insensitive semantics and server-wide completeness remain deferred.
    test results alone grant neither. No seventh M2 run, migration or new authority
    is granted.
 
-## Current source stage: initial hosted failure and bounded diagnosis
+## Current source stage: test-locator repair after diagnostic failure
+
+[CI 41847937571](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41847937571)
+on head `ab1c8947448536dcc7588ef0c3892990dd948b2c`, tested merge
+`7f70e6fb092812e969096474f9b1f6bc99180ead`, tree
+`7e5b2b391438c10c33a640cd56a0c841876a3ad7`, failed with 26/27 controls.
+Direct and aggregate browser suites each reported 132 passed / 1 failed, with
+one retry for the lookup case. Python: 6,127 passed + 58 exact expected skips;
+frontend: 1,296 passed. Offline typechecking and the former broad-button locator
+no longer failed. Runtime/security/micro evidence was accepted independently.
+None of those partial results qualifies the package for merge. The 26/27 figure
+covers aggregate controls, not every required workflow gate: direct browser failure
+skipped sync/order, cutover, administration and inventory-expiry repetitions.
+The always-run expiry guard invoked `check "skipped"` and failed closed; its
+size/digest-verified artifact contains only `{"status":"incomplete"}`. Zero of
+the ten required expiry repetitions ran. This is missing downstream qualification,
+not evidence of an independently failing expiry scenario. All repetition gates
+remain required for fresh acceptance.
+
+Eight bounded diagnostic snapshots were validated from the terminal log. Page two
+was READY, with exact 51-record baseline membership, the target admitted and its
+name matching, the query matching, two pages examined and traversal exhausted.
+The target option was present among two options, while selection remained empty.
+The test nevertheless reported its descendant option locator absent at line 120.
+
+Local diagnosis then rendered the actual OrderQuickIntake and Button with
+ReactDOMServer, parsed the actual wrapping label tree, and exercised the verbatim
+installed Playwright 1.62.0 getElementLabels, elementText and createTextMatcher
+functions. The proof reports actualRenderedTargetOptionCount=1 and
+exactClienteLabelMatches=0: exact label matching includes option text inside the
+wrapping label, rather than using the control's accessible role name. The earlier
+zero-count assertion was vacuous because the parent label locator matched nothing.
+This demonstrates a test-locator defect, not a production pagination defect.
+The proof is not native browser execution; native selection and the rest of the
+scenario still require fresh hosted qualification.
+
+The bounded repair changes only the test's customer-control locator to the named
+combobox and asserts a positive count of one before descendant assertions. There
+is no production lookup fix, broader search scope, new storage or authority.
+Proof: `artifacts/customer-lookup/pr89-locator-repair/engine-proof.log` and retained
+rendered HTML/script. Final frontend: 1,296 passed. Final full Python: 5,515 passed,
+671 environment skips, 12 warnings, 383.52 s, exit 0, retained in
+`artifacts/customer-lookup/pr89-locator-repair/full-python.log`. Product/test source
+was frozen before that run; the final documentation and correction-contract stamp
+followed. Post-stamp repository verification: 186 passed, binding those final
+contract assertions separately. Documentation Ruff/format, Prettier and diff checks
+passed. Strict web/offline/native typechecks and native collection passed, but no
+native browser was executed locally. The repair changes five paths, 19 overall
+against accepted main. These local results do not close hosted repetition gates.
+Publication is not performed by this source checkpoint; merge remains blocked
+until complete fresh qualification. No M2 execution is authorized.
+
+Second failed receipt:
+`artifacts/customer-lookup/pr89-diagnostic-qualification/final/review-corrected.json`, SHA256
+`e63da20a411cf2371b29610712634ebc618ab534c6fd9d39c06f8272bc761f77`.
+This corrected receipt explicitly includes downstream skipped repetition gates;
+its initial version remains `review.json` (also retained as `review-initial.json`), SHA256
+`f208000e8b7d97401d74e970a6d3af71f1f80bd44e3d3ef5c86c75d22d3d68c2`.
+The approximately 358 MB direct and aggregate browser archives were not downloaded
+or byte/trace/screenshot reviewed. Receipt/proof paths identify retained coordinator
+archive artifacts, not tracked/public repository files. Preserve both failed runs
+and their historical UNKNOWN diagnosis below; later local proof does not rewrite
+the earlier evidence or establish all remaining native assertions.
+
+## Historical source stage: initial hosted failure and bounded diagnosis
 
 [PR89](https://github.com/IzignaMx/open-cycling-workshop/pull/89) initial head
 `90802550261d3a634423f0fb6dab0dcdd18a693d`, tested merge
@@ -82,10 +146,15 @@ accent-insensitive semantics and server-wide completeness remain deferred.
 `325427062580dfd5eedf5b2e1b3b371328e10cfe`, was **not accepted**.
 [CI 41821564647](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41821564647)
 passed 25/27 controls. Both direct and aggregate browser suites reported
-131 passed / 2 failed; each failing case retried once. The browser step uses
-continue-on-error, so its successful step badge was not suite acceptance.
+131 passed / 2 failed; each failing case retried once. The browser step has no
+continue-on-error setting; its terminal conclusion was failure. An earlier
+intermediate step-status reading was erroneous and was corrected. No step badge
+alone establishes suite acceptance.
 Python independently qualified 6,126 passed plus 58 exact expected skips;
 frontend reported 1,293 passed. These results do not cancel the failed controls.
+Fresh terminal step review also confirms that this initial run skipped all four
+repetition groups and its always-run expiry guard failed. No repetition pass is
+claimed for either failed run; aggregate counts omit these additional gates.
 
 - Offline typechecking rejected `preventDefault` on the retained keyboard-event
   shim. The ordinary web typecheck had passed. A narrow shim correction has local
