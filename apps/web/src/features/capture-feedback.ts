@@ -16,6 +16,7 @@ const validationMessages: Record<CaptureValidationCode, string> = {
   customer_name_required: 'El nombre es obligatorio',
   customer_name_too_long: 'El nombre no puede superar 200 caracteres',
   customer_email_too_long: 'El correo no puede superar 320 caracteres',
+  customer_email_invalid: 'El correo no es válido',
   customer_phone_too_long: 'El teléfono no puede superar 64 caracteres',
   order_problem_required: 'El problema reportado es obligatorio',
   priority_invalid: 'Selecciona una prioridad válida',

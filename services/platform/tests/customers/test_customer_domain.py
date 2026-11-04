@@ -163,3 +163,64 @@ def test_customer_storage_caps_count_normalized_codepoints_without_truncation(na
     assert len(customer.display_name) == 200
     assert len(customer.email) == 320
     assert len(customer.phone) == 64
+
+
+@pytest.mark.parametrize("operation", ["create", "update"])
+@pytest.mark.parametrize(
+    "field,value",
+    [("display_name", None)]
+    + [
+        (field, value)
+        for field in ("display_name", "email", "phone")
+        for value in (123, True, {"public": "canary"}, [])
+    ],
+)
+def test_customer_rejects_malformed_supplied_field_types_without_coercion(operation, field, value):
+    original = Customer.create(
+        customer_id="public-customer",
+        organization_id="org-1",
+        location_id="loc-1",
+        display_name="Original",
+        email="public@example.test",
+        phone="123",
+    )
+    with pytest.raises(ValueError, match=field):
+        if operation == "create":
+            Customer.create(
+                customer_id="new",
+                organization_id="org-1",
+                location_id="loc-1",
+                **{"display_name": "Public", field: value},
+            )
+        else:
+            original.update(**{field: value})
+    if operation == "update":
+        with pytest.raises(ValueError, match=field):
+            if field == "display_name":
+                original.rename(value)
+            else:
+                original.change_contact(**{"email": None, "phone": None, field: value})
+    assert (original.display_name, original.email, original.phone, original.version) == (
+        "Original",
+        "public@example.test",
+        "123",
+        1,
+    )
+
+
+def test_customer_null_clears_contacts_and_omission_preserves_existing_contacts():
+    original = Customer.create(
+        customer_id="public-customer",
+        organization_id="org-1",
+        location_id="loc-1",
+        display_name="Public",
+        email="public@example.test",
+        phone="123",
+    )
+    unchanged = original.update(display_name="Renamed")
+    assert (unchanged.email, unchanged.phone) == (original.email, original.phone)
+    email_cleared = unchanged.update(email=None)
+    assert email_cleared.email is None and email_cleared.phone == "123"
+    cleared = unchanged.update(email=None, phone=None)
+    assert cleared.email is None and cleared.phone is None
+    assert (cleared.display_name, cleared.version) == ("Renamed", 3)

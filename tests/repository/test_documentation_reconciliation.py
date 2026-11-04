@@ -468,8 +468,8 @@ def test_pr84_main_receipt_is_separate_from_local_policy_characterization() -> N
 
 def test_customer_limits_checkpoint_preserves_admission_and_evidence_boundary() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: customer_field_limits_20261104" in state
-    assert "last_checkpoint: customer_field_limits_20261104" in state
+    assert "historical_customer_limits_checkpoint: customer_field_limits_20261104" in state
+    assert "historical_customer_limits_last_checkpoint: customer_field_limits_20261104" in state
     assert "customer_field_limits_20261104:\n" in state
     block = state.split("customer_field_limits_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
@@ -501,5 +501,79 @@ def test_pr85_main_receipt_does_not_qualify_customer_fix() -> None:
         "5987",
         "04aad320c1fc887fd6436fd518c40952c378a8dcaf93ac6d12087af2bb79283d",
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in block
+
+
+def test_customer_admissibility_checkpoint_preserves_new_command_scope() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: customer_admissibility_20261104" in state
+    assert "last_checkpoint: customer_admissibility_20261104" in state
+    block = state.split("customer_admissibility_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "requirement: FR-CUS-001",
+        "canonical_task: R01-T030",
+        "status: locally_validated_independently_reviewed_hosted_pending",
+        "local_Python_scope: before_final_documentation_stamp_only",
+        "local_Python: 5432_passed_671_environment_skips_12_warnings_384_99s_exit0",
+        "native_browser: one_new_case_fourteen_file_cases_collected_zero_executed",
+        "normalization: existing_prepared_values_unchanged_no_truncation",
+        "replay: historical_receipt_first_unchanged",
+        "nullable_contacts: explicit_null_clears_omission_preserves",
+        "create_unknown_keys: compatibility_unchanged",
+        "publication: not_authorized",
+        "runtime_qualification: pending_not_inherited_from_PR86",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    assert (ROOT / evidence).is_file()
+
+
+def test_customer_admissibility_record_bounds_projection_and_evidence() -> None:
+    record = read(BASE + "2026-11-04-customer-admissibility.md")
+    for token in (
+        "FR-CUS-001",
+        "R01-T030",
+        "FR-CUS-002",
+        "R02-T001",
+        "Python whitespace",
+        "U+0085",
+        "U+001C",
+        "U+FEFF",
+        "existing prepared values",
+        "receipt-first",
+        "explicit null",
+        "omission",
+        "unknown keys",
+        "NoReferencedTableError",
+        "not valid behavioral RED",
+        "native browser",
+        "not PostgreSQL",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+        "R01-T035",
+    ):
+        assert token in record
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    section = checklist.split("## 2026-11-04 · Customer command admissibility", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    assert "not search or V0.2 completion" in section
+    assert "No publication" in section
+
+
+def test_pr86_main_acceptance_does_not_qualify_admissibility_candidate() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("pr86_fresh_main_acceptance_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "23def8f45bc02e16b9f7f0b3263ed34f97a2da02",
+        "409a61aa3a33e4f4c3ad19a03cd572c64c052599",
+        "41780887753",
+        "6004",
+        "1246",
+        "b32b210d3ab0c28895b1d9f11b79cc7f290e40c9a9cc0fe6c88bf5501ee5636c",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+        "status: accepted_baseline_not_admissibility_candidate_evidence",
     ):
         assert token in block
