@@ -1,6 +1,37 @@
 schema: 1
 
-current_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+current_checkpoint: local_customer_lookup_listener_streaming_20261104
+local_customer_lookup_listener_streaming_20261104:
+  status: locally_validated_bounded_streaming_hosted_unqualified
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  fifth_head: c4b0065d1764b2216c3d0c83863f26390ffe0f23
+  fifth_tested_merge: 69414e0a98ce773b37d7dff4bfb450c80d4103ae
+  fifth_tree: db730204b415cf331deec7c7d662b0c0e5a63540
+  fifth_CI: 41901853638
+  fifth_refusal: listeners_oversized_observed_only_for_this_run
+  fifth_direct: 133_passed_lookup_completed
+  fifth_Python: 6258_passed_58_exact_expected_skips
+  fifth_repeats: zero_all_groups_aggregate_build_browser_not_executed
+  fourth_refusal_subtype: UNKNOWN_preserved
+  replaces: prior_64KiB_per_table_input_cap_explicit_budget_change
+  new_budget: combined4MiB_including_headers_LF_rows16384_excluding_headers
+  stream_bounds: line1024_excluding_LF_chunk4096_shared2s_cooperative
+  absence: both_tables_valid_full_EOF_required
+  limits: not_interruptible_wallclock_not_atomic_snapshot_no_hosted_guarantee
+  privacy: closed_subcodes_no_raw_tables_addresses_IDs_or_exceptions
+  final_local_validation: Python5679_passed_671_environment_skips_12_warnings_434_27s_exit0
+  final_Python_scope: frozen_source_contracts_before_documentation_stamp
+  final_frontend: 1296_passed_zero_failed_zero_skipped
+  focused: 101_passed_independent304_passed
+  final_repository: 189_passed_after_documentation_stamp
+  repair_scope: six_paths_twentyfive_overall_vs_accepted_main
+  authority: local_only_no_cleanup_CI_publication_or_merge
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical diagnostic stage: fifth run identified oversized, fourth remains unknown.
+historical_listener_diagnostics_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+historical_listener_diagnostics_last_checkpoint: local_customer_lookup_listener_diagnostics_20261104
 local_customer_lookup_listener_diagnostics_20261104:
   status: locally_validated_listener_diagnostics_hosted_unqualified
   canonical_pair: FR-CUS-002_R02-T001_partial
@@ -2689,7 +2720,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+last_checkpoint: local_customer_lookup_listener_streaming_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

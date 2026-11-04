@@ -1,6 +1,28 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 fifth oversized refusal; local bounded streaming
+
+- [x] Preserve CI 41901853638: fifth listeners subtype oversized observed; fourth
+      subtype remains UNKNOWN. Initial prep/direct 133/lookup passed; Python 6,258 + 58 exact skips. All repetitions zero; aggregate build/browser not executed.
+- No protected listener, owner, table composition or historical count established.
+- [x] Replace 64 KiB per-table cap explicitly with combined 4 MiB including headers
+      and LF, 16,384 logical data rows, 1,024-byte physical LF-lines excluding LF,
+      4,096-byte chunks,
+      and shared two-second cooperative budget. Not interruptible hard wallclock.
+- Both valid tables must reach EOF before absence; unterminated line is malformed.
+  Closed subcodes only, no raw values. Keep refusal and all service/handoff gates.
+- Local synthetic proof: focused 101 passed, independent 304 passed. Final Python:
+  5,679 passed, 671 environment skips, 12 warnings, 434.27 s, exit 0, before final
+  documentation stamp. Frontend: 1,296 passed, zero failures/skips. Six repair
+  paths, 25 overall. Post-stamp repository: 189 passed; docs static/format clean.
+  Old-cap RED and blank-row regression/correction retained.
+  No wait/retry/kill,
+  actual cleanup/DB/reset, publication, CI or merge. Not an atomic snapshot or
+  hosted budget guarantee. Physical/capacity/SPENT/UNKNOWN/Pages unchanged.
+
 ## 2026-11-04 · PR89 fourth refusal; local-only diagnostics
+
+Historical diagnostics snapshot; fifth observed subtype and new local budget are above.
 
 - [x] Preserve CI 41885869487: initial preparation accepted; direct browser 133
       passed including lookup; Python 6,243 + 58 exact skips; frontend 1,296.
@@ -251,7 +273,7 @@ Historical pre-publication local checkpoint; current hosted failure is above.
 ## 2026-11-04 · PR85 merged historical baseline
 
 - [x] Independently accept main4b3b886c/tree6a1e: CI41757541938 passed27/27,
-      Python5987 +58 exact skips, frontend1237/API1, browser126 direct-log/126
+      Python5987 + 58 exact skips, frontend1237/API1, browser126 direct-log/126
       aggregate, repeats20/9/5/10 and kernel14 retry0. Runtime/security/micro accepted.
 - Large browser archives were not downloaded or byte/trace/screenshot reviewed.
   This main push did not run M2. The separately approved sixth PR85 attempt is
@@ -287,7 +309,7 @@ Historical pre-publication local checkpoint; current hosted failure is above.
 - [x] Accept merged main `c0fe501a9f93393c106c49aece4a27af495b79e9`, tree
       `bbb9b6e4d140c96df54ee18ac4890f64a4a4be51`, under separate merge approval.
 - [x] Independently accept [CI41713827892](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41713827892):
-      27/27, Python5974 +58 exact skips, frontend1237/API1, direct126 from the
+      27/27, Python5974 + 58 exact skips, frontend1237/API1, direct126 from the
       terminal log and aggregate126. Small reports20/9/5/10 and kernel14: retry0.
       Runtime41713827934, security41713827842 and micro41713828087 accepted.
 - Large browser archives were not downloaded or byte/trace/screenshot reviewed.
@@ -335,7 +357,7 @@ those statuses only where supported by its specific receipts.
 - [x] Close fourth hosted attempt41552838556 with failure at connector_run and
       independently verified cleanup for that attempt. Twelve supervisor steps
       completed; API reported13 checks. Neither proves connector/TLS acceptance.
-- [x] Qualify ordinary CI41552838539:27/27,5954 Python+58 exact skips,
+- [x] Qualify ordinary CI41552838539:27/27,5954 Python+ 58 exact skips,
       1237 frontend,126 direct/126 aggregate browsers. Large ZIPs remain unreviewed.
 - [x] Correct the locally reproduced negative-TLS evidence classifier: unrelated
       certificate errors cannot count as hostname or trust rejection evidence.
@@ -357,7 +379,7 @@ those statuses only where supported by its specific receipts.
       first/second cleanup as unproven and third runtime cause as UNKNOWN.
 - [x] Independently verify third-attempt owned container/root absence. This is
       not secure erasure or retrospective proof for earlier attempts.
-- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+58 exact
+- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+ 58 exact
       skips,1237 frontend,126 direct/126 aggregate browsers. Large browser ZIPs
       were not downloaded or byte/trace/screenshot inspected.
 - [x] Implement and independently review local closed incremental diagnostics,

@@ -337,7 +337,7 @@ def test_valid_empty_table_and_ipv6_rows_are_parsed_without_runtime_reads():
         (b"\xff", "read_error"),
         ((HEADER + "\n 0: 0100007F:1F40 00000000:0000 0A").encode(), "malformed"),
         (
-            (HEADER + "\n 0: 0100007F:1F40 00000000:0000 0A 0:0 0:0 0 1 0 0").encode(),
+            (HEADER + "\n 0: 0100007F:1F40 00000000:0000 0A 0:0 0:0 0 1 0 0\n").encode(),
             "protected_listener",
         ),
         (None, "read_error"),
@@ -383,7 +383,7 @@ def test_listener_diagnostic_is_closed_and_stops_before_database(monkeypatch, ca
     assert "PRIVATE-CANARY" not in output.err
     assert len(output.err) < 160
     assert downstream == []
-    assert reads == ([] if raw is None else [65537])
+    assert reads == [] if raw is None else all(0 < size <= 4096 for size in reads)
 
 
 def test_listener_diagnostic_cannot_escape_its_stage_or_allowlist():
@@ -423,16 +423,14 @@ def test_mutated_exception_fields_never_leak_at_output_boundary(monkeypatch, cap
     assert "PRIVATE-CANARY" not in output.err
 
 
-def test_large_clear_time_wait_snapshot_is_still_refused_at_unchanged_cap(monkeypatch):
+def test_large_clear_time_wait_snapshot_is_completely_scanned(monkeypatch):
     import io
 
     table = HEADER + "\n" + ("0: 0100007F:1F40 0100007F:C350 06 0:0 0:0 0 1 0 0\n" * 2000)
     assert phase.listener_table_clear(table)
     assert len(table.encode()) > 65536
     monkeypatch.setattr(phase.Path, "open", lambda *_a, **_kw: io.BytesIO(table.encode()))
-    with pytest.raises(phase.FixtureRefused) as error:
-        phase.fixture_listeners_absent()
-    assert error.value.listener_reason == "oversized"
+    assert phase.fixture_listeners_absent() is True
 
 
 def test_reader_accepts_both_clear_tables_and_preserves_first_refusal(monkeypatch):
@@ -453,3 +451,246 @@ def test_reader_accepts_both_clear_tables_and_preserves_first_refusal(monkeypatc
         == "protected_listener"
     )
     assert phase.listener_table_reason(HEADER + "\nmalformed\n" + listener) == "malformed"
+
+
+STREAM_ROW = b"0: 0100007F:1F40 0100007F:C350 06 0:0 0:0 0 1 0 0\n"
+
+
+def stream_sources(monkeypatch, tables, *, chunks=None, clocks=None):
+    import io
+
+    reads = []
+    closed = []
+    opened_paths = []
+
+    class Source(io.BytesIO):
+        def read(self, size=-1):
+            reads.append(size)
+            if chunks is not None:
+                size = min(size, chunks)
+            return super().read(size)
+
+        def close(self):
+            closed.append(True)
+            super().close()
+
+    def opened(path, *_a, **_kw):
+        opened_paths.append(str(path))
+        value = tables[len(opened_paths) - 1]
+        if isinstance(value, Exception):
+            raise value
+        return Source(value)
+
+    monkeypatch.setattr(phase.Path, "open", opened)
+    monkeypatch.setattr(phase.time, "monotonic", clocks or (lambda: 1.0))
+    return reads, closed, opened_paths
+
+
+def test_stream_requires_complete_second_table_after_large_first(monkeypatch):
+    table = (HEADER + "\n").encode() + STREAM_ROW * 2000
+    reads, closed, paths = stream_sources(monkeypatch, [table, table], chunks=37)
+    assert phase.fixture_listeners_absent()
+    assert len(paths) == len(closed) == 2
+    assert len(reads) > 100 and max(reads) <= 4096
+
+
+@pytest.mark.parametrize(
+    "kind,reason",
+    [
+        ("listener", "protected_listener"),
+        ("malformed", "malformed"),
+        ("partial", "malformed"),
+        ("encoding", "read_error"),
+        ("read", "read_error"),
+        ("long", "oversized"),
+    ],
+)
+def test_fail_late_second_table_never_reaches_database(monkeypatch, kind, reason):
+    first = (HEADER + "\n").encode() + STREAM_ROW * 2000
+    second = {
+        "listener": first + STREAM_ROW.replace(b" 06 ", b" 0A "),
+        "malformed": first + b"PRIVATE-CANARY\n",
+        "partial": first + STREAM_ROW.rstrip(b"\n"),
+        "encoding": first + b"\xc3\xa9\n",
+        "read": OSError("PRIVATE-CANARY"),
+        "long": first + b"x" * 1025 + b"\n",
+    }[kind]
+    stream_sources(monkeypatch, [first, second], chunks=31)
+    downstream = []
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.prepare_phase(
+            environment(),
+            inspect=lambda *_: json.dumps(inspection()),
+            other_sessions=lambda: downstream.append("sessions") or 0,
+            prepare=lambda _: downstream.append("prepare"),
+        )
+    assert error.value.listener_reason == reason
+    assert downstream == [] and "PRIVATE-CANARY" not in str(error.value)
+
+
+@pytest.mark.parametrize("extra", [0, 1])
+def test_combined_byte_budget_exact_boundary(monkeypatch, extra):
+    table = (HEADER + "\n").encode() + STREAM_ROW
+    monkeypatch.setattr(phase, "LISTENER_MAX_BYTES", len(table) * 2)
+    stream_sources(monkeypatch, [table, table + b" " * extra])
+    if extra:
+        with pytest.raises(phase.FixtureRefused) as error:
+            phase.fixture_listeners_absent()
+        assert error.value.listener_reason == "oversized"
+    else:
+        assert phase.fixture_listeners_absent()
+
+
+@pytest.mark.parametrize("extra", [0, 1])
+def test_combined_row_budget_exact_boundary(monkeypatch, extra):
+    header = (HEADER + "\n").encode()
+    stream_sources(monkeypatch, [header + STREAM_ROW * 8192, header + STREAM_ROW * (8192 + extra)])
+    if extra:
+        with pytest.raises(phase.FixtureRefused) as error:
+            phase.fixture_listeners_absent()
+        assert error.value.listener_reason == "budget_exceeded"
+    else:
+        assert phase.fixture_listeners_absent()
+
+
+@pytest.mark.parametrize("extra", [0, 1])
+def test_line_limit_and_split_chunks_exact_boundary(monkeypatch, extra):
+    row = STREAM_ROW.rstrip(b"\n")
+    row += b" " * (1024 + extra - len(row)) + b"\n"
+    table = (HEADER + "\n").encode() + row
+    stream_sources(monkeypatch, [table, (HEADER + "\n").encode()], chunks=7)
+    if extra:
+        with pytest.raises(phase.FixtureRefused) as error:
+            phase.fixture_listeners_absent()
+        assert error.value.listener_reason == "oversized"
+    else:
+        assert phase.fixture_listeners_absent()
+
+
+@pytest.mark.parametrize(
+    "value,reason",
+    [
+        (float("nan"), "read_error"),
+        (float("inf"), "read_error"),
+        (-1.0, "read_error"),
+        (2.0, "deadline"),
+    ],
+)
+def test_shared_clock_invalid_or_elapsed_second_table_refuses(monkeypatch, value, reason):
+    paths = []
+
+    def clock():
+        return value if len(paths) == 2 else 0.0
+
+    _, _, paths = stream_sources(monkeypatch, [(HEADER + "\n").encode()] * 2, clocks=clock)
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == reason
+
+
+def test_clock_exception_never_discloses_or_reads(monkeypatch):
+    def clock():
+        raise RuntimeError("PRIVATE-CANARY")
+
+    _, _, paths = stream_sources(monkeypatch, [], clocks=clock)
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == "read_error"
+    assert paths == [] and "PRIVATE-CANARY" not in str(error.value)
+
+
+@pytest.mark.parametrize("extra", [0, 1])
+def test_actual_four_mib_combined_ceiling(monkeypatch, extra):
+    header = (HEADER + "\n").encode()
+    remaining = 4 * 1024 * 1024 - 2 * len(header)
+    count, tail = divmod(remaining, 1024)
+    row = STREAM_ROW.rstrip(b"\n")
+    full = row + b" " * (1023 - len(row)) + b"\n"
+    last = row + b" " * (tail - 1 - len(row)) + b"\n"
+    second = header + full * count + last
+    assert len(header) + len(second) == phase.LISTENER_MAX_BYTES
+    stream_sources(monkeypatch, [header, second + b" " * extra])
+    if extra:
+        with pytest.raises(phase.FixtureRefused) as error:
+            phase.fixture_listeners_absent()
+        assert error.value.listener_reason == "oversized"
+    else:
+        assert phase.fixture_listeners_absent()
+
+
+@pytest.mark.parametrize("reason", ["budget_exceeded", "deadline"])
+def test_new_budget_diagnostics_have_exact_closed_output(monkeypatch, capsys, reason):
+    def refuse(_):
+        raise phase.FixtureRefused("listeners", listener_reason=reason)
+
+    monkeypatch.setattr(phase, "prepare_phase", refuse)
+    assert phase.main() == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert json.loads(output.err) == {
+        "prepared": False,
+        "stage": "listeners",
+        "reason": "refused",
+        "listener_reason": reason,
+    }
+
+
+def test_read_failure_after_valid_header_is_not_eof(monkeypatch):
+    import io
+
+    class Source(io.BytesIO):
+        def read(self, size=-1):
+            if self.tell():
+                raise OSError("PRIVATE-CANARY")
+            return super().read(size)
+
+    monkeypatch.setattr(phase.Path, "open", lambda *_a, **_kw: Source((HEADER + "\n").encode()))
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == "read_error"
+    assert "PRIVATE-CANARY" not in str(error.value)
+
+
+@pytest.mark.parametrize("table_index", [0, 1])
+def test_empty_data_line_retains_whole_table_parser_refusal(monkeypatch, table_index):
+    valid = (HEADER + "\n").encode()
+    tables = [valid, valid]
+    tables[table_index] += b"\n"
+    assert phase.listener_table_reason(tables[table_index].decode()) == "malformed"
+    stream_sources(monkeypatch, tables)
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == "malformed"
+
+
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        b"\n",
+        b" \t\n",
+        b"\r\n",
+        b"\v\n",
+        b"\f\n",
+        STREAM_ROW.rstrip(b"\n") + b"\r\n",
+        STREAM_ROW.rstrip(b"\n") + b"\v" + STREAM_ROW,
+    ],
+)
+def test_stream_logical_row_grammar_matches_original_parser(monkeypatch, suffix):
+    table = (HEADER + "\n").encode() + suffix
+    expected = phase.listener_table_reason(table.decode())
+    stream_sources(monkeypatch, [table, (HEADER + "\n").encode()])
+    if expected is None:
+        assert phase.fixture_listeners_absent()
+    else:
+        with pytest.raises(phase.FixtureRefused) as error:
+            phase.fixture_listeners_absent()
+        assert error.value.listener_reason == expected
+
+
+def test_internal_row_separator_cannot_bypass_row_budget(monkeypatch):
+    table = (HEADER + "\n").encode() + STREAM_ROW.rstrip(b"\n") + b"\v" + STREAM_ROW
+    monkeypatch.setattr(phase, "LISTENER_MAX_ROWS", 1)
+    stream_sources(monkeypatch, [table])
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == "budget_exceeded"

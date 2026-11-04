@@ -10,6 +10,7 @@ No runtime action happens on import. Tests inject every external operation.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import selectors
@@ -33,7 +34,14 @@ INSPECT_FORMAT = (
 )
 
 
-LISTENER_REASONS = frozenset({"oversized", "malformed", "read_error", "protected_listener"})
+LISTENER_REASONS = frozenset(
+    {"oversized", "malformed", "read_error", "protected_listener", "budget_exceeded", "deadline"}
+)
+LISTENER_MAX_BYTES = 4 * 1024 * 1024
+LISTENER_MAX_ROWS = 16384
+LISTENER_MAX_LINE = 1024
+LISTENER_CHUNK = 4096
+LISTENER_SCAN_SECONDS = 2.0
 
 
 def safe_listener_reason(stage: object, reason: object) -> str | None:
@@ -123,22 +131,81 @@ def listener_table_reason(table: str) -> str | None:
 
 
 def fixture_listeners_absent() -> bool:
-    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
-        try:
+    """Complete two-table scan, bounded in memory and total work, never a snapshot.
+
+    Bytes include headers/newlines; rows exclude headers. Every line needs LF.
+    The shared deadline is cooperative: it cannot interrupt a blocked kernel read.
+    No wait/retry repairs a refusal; post-scan ownership races remain unchanged.
+    """
+    total_bytes = 0
+    total_rows = 0
+    previous: float | None = None
+    started: float | None = None
+
+    def refuse(reason: str) -> None:
+        raise FixtureRefused("listeners", listener_reason=reason)
+
+    def check_clock() -> None:
+        nonlocal previous, started
+        now = time.monotonic()
+        if not math.isfinite(now) or (previous is not None and now < previous):
+            refuse("read_error")
+        if started is None:
+            started = now
+        previous = now
+        if now - started >= LISTENER_SCAN_SECONDS:
+            refuse("deadline")
+
+    try:
+        check_clock()
+        for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+            pending = b""
+            header: str | None = None
+            check_clock()
             with Path(path).open("rb") as source:
-                table = source.read(65537)
-        except Exception:
-            raise FixtureRefused("listeners", listener_reason="read_error") from None
-        if len(table) > 65536:
-            raise FixtureRefused("listeners", listener_reason="oversized")
-        try:
-            decoded = table.decode("ascii")
-        except UnicodeError:
-            raise FixtureRefused("listeners", listener_reason="read_error") from None
-        reason = listener_table_reason(decoded)
-        if reason is not None:
-            raise FixtureRefused("listeners", listener_reason=reason)
-    return True
+                while True:
+                    check_clock()
+                    block = source.read(min(LISTENER_CHUNK, LISTENER_MAX_BYTES - total_bytes + 1))
+                    check_clock()
+                    total_bytes += len(block)
+                    if total_bytes > LISTENER_MAX_BYTES:
+                        refuse("oversized")
+                    if not block:
+                        if pending or header is None:
+                            refuse("malformed")
+                        break
+                    block.decode("ascii")  # Reject encoding errors even in a partial line.
+                    # At most one small chunk plus the bounded partial line is held.
+                    pending += block
+                    while b"\n" in pending:
+                        check_clock()
+                        line, pending = pending.split(b"\n", 1)
+                        if len(line) > LISTENER_MAX_LINE:
+                            refuse("oversized")
+                        decoded = line.decode("ascii")
+                        # Preserve the original splitlines grammar, including blank
+                        # rows and internal separators, and count every logical row.
+                        for logical_line in (decoded + "\n").splitlines():
+                            check_clock()
+                            if header is None:
+                                reason = listener_table_reason(logical_line)
+                                header = logical_line
+                            else:
+                                total_rows += 1
+                                if total_rows > LISTENER_MAX_ROWS:
+                                    refuse("budget_exceeded")
+                                reason = listener_table_reason(header + "\n" + logical_line + "\n")
+                            if reason is not None:
+                                refuse(reason)
+                    if len(pending) > LISTENER_MAX_LINE:
+                        refuse("oversized")
+                check_clock()
+        check_clock()
+        return True
+    except FixtureRefused:
+        raise
+    except Exception:
+        raise FixtureRefused("listeners", listener_reason="read_error") from None
 
 
 def other_fixture_sessions() -> int:

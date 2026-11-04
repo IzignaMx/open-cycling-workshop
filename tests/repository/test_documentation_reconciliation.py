@@ -840,8 +840,14 @@ def test_lookup_phase_isolation_does_not_erase_failed_required_gates() -> None:
 
 def test_lookup_listener_diagnostics_preserve_refusal_and_unknown_condition() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_listener_diagnostics_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_listener_diagnostics_20261104" in state
+    assert (
+        "historical_listener_diagnostics_checkpoint: "
+        "local_customer_lookup_listener_diagnostics_20261104" in state
+    )
+    assert (
+        "historical_listener_diagnostics_last_checkpoint: "
+        "local_customer_lookup_listener_diagnostics_20261104" in state
+    )
     block = state.split("local_customer_lookup_listener_diagnostics_20261104:\n", 1)[1].split(
         "\n\n", 1
     )[0]
@@ -871,5 +877,39 @@ def test_lookup_listener_diagnostics_preserve_refusal_and_unknown_condition() ->
         "65,537",
         "actual condition and owner remain UNKNOWN",
         "c344f349b249972735937c29ebba69c18f59542b247e4f4a8d624b9c67a57917",
+    ):
+        assert token in record
+
+
+def test_lookup_streaming_budget_is_explicit_and_not_hosted_qualification() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
+    block = state.split("local_customer_lookup_listener_streaming_20261104:\n", 1)[1].split(
+        "\n\n", 1
+    )[0]
+    for token in (
+        "fifth_CI: 41901853638",
+        "fifth_refusal: listeners_oversized_observed_only_for_this_run",
+        "fourth_refusal_subtype: UNKNOWN_preserved",
+        "new_budget: combined4MiB_including_headers_LF_rows16384_excluding_headers",
+        "stream_bounds: line1024_excluding_LF_chunk4096_shared2s_cooperative",
+        "absence: both_tables_valid_full_EOF_required",
+        "limits: not_interruptible_wallclock_not_atomic_snapshot_no_hosted_guarantee",
+        "authority: local_only_no_cleanup_CI_publication_or_merge",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41901853638",
+        "4 MiB",
+        "16,384",
+        "1,024",
+        "4,096",
+        "cooperative",
+        "unterminated",
+        "budget_exceeded",
+        "deadline",
+        "57a533470fda391c1ea008ef69684c1ee97f1fb1ef145224f46b69c776734d81",
     ):
         assert token in record

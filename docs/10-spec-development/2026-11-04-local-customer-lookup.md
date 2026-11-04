@@ -74,7 +74,69 @@ accent-insensitive semantics and server-wide completeness remain deferred.
    test results alone grant neither. No seventh M2 run, migration or new authority
    is granted.
 
-## Current source stage: local-only closed refusal diagnostics
+## Current source stage: local-only bounded table streaming
+
+[CI 41901853638](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41901853638)
+on head `c4b0065d1764b2216c3d0c83863f26390ffe0f23`, tested merge
+`69414e0a98ce773b37d7dff4bfb450c80d4103ae`, tree
+`db730204b415cf331deec7c7d662b0c0e5a63540`, observed the closed refusal subtype
+`listener_reason=oversized` before the first repetition. Initial preparation
+accepted, direct browser 133 passed including lookup, Python 6,258 + 58 exact
+expected skips and frontend 1,296 passed. All repetitions remained unexecuted;
+aggregate browser-check build/preparation/browser correctly stayed unexecuted.
+The run remains unqualified. Oversized input is established only for this fifth
+run; the fourth run's subtype stays UNKNOWN. Neither establishes a protected
+listener, process owner, table composition or historical row count.
+
+Retained receipt:
+`artifacts/customer-lookup/pr89-listener-qualification/final/review.json`, SHA256
+`57a533470fda391c1ea008ef69684c1ee97f1fb1ef145224f46b69c776734d81`.
+The approximately 347 MB direct archive was not downloaded. These are coordinator
+archive paths, not tracked/public evidence files.
+
+### Admitted local implementation plan
+
+Replace the previous 64 KiB per-table input cap with bounded streaming across both
+TCP tables. This is an explicit budget change, not preservation of the old cap:
+
+- Combined input: 4 MiB, including headers and LF bytes.
+- Combined logical data rows: 16,384, excluding headers. Preserve the original
+  splitlines grammar, including CR/VT/FF boundaries; every logical data row counts.
+  A reproduced blank-row regression was corrected, not silently admitted.
+- Each physical LF-delimited line: at most 1,024 bytes, excluding LF; read chunks
+  at most 4,096 bytes.
+- One shared two-second monotonic cooperative budget across both tables. A blocking
+  read cannot be interrupted by this check; this is not a hard wallclock bound.
+- Absence requires both valid tables to reach full EOF. An unterminated final line
+  is malformed. A protected listener or invalid/over-budget input still refuses.
+- Preserve closed output; add budget_exceeded for the row limit and deadline for
+  the cooperative time limit. Byte/line excess remains oversized; encoding, clock
+  or read errors map to read_error. No addresses, IDs, raw exceptions or table
+  contents are emitted.
+
+Use synthetic mocked inputs and boundary/equivalence tests, then independent
+review. Do not wait for an endpoint to disappear, retry, kill processes, reset a
+real database or relax protected-listener refusal. The two-table read is not an
+atomic snapshot and retains the trusted-runner TOCTOU limitation. Passing local
+fixtures neither proves the new budget fits hosted input nor establishes a hosted
+root cause beyond the already observed oversized subtype.
+
+Only local preparation is authorized here, not cleanup, publication, hosted CI or
+merge. The fixture service/destination checks, six guarded boundaries and refusal
+handoff remain unchanged. Local tests retained the old-cap RED and the separate
+two-failure blank-row regression before correction. Focused wrapper/workflow:
+101 passed; independent targeted review: 304 passed. Final full Python: 5,679
+passed, 671 environment skips, 12 warnings, 434.27 s, exit 0, retained in
+`artifacts/customer-lookup/phase-listener-diagnosis/full-python-streaming-final.log`.
+Frontend: 1,296 passed, zero failures/skips. Source and contracts were frozen before
+full Python; only this final documentation stamp followed. Post-stamp repository
+checks passed 189 tests; documentation Ruff/format, Prettier and diff checks passed.
+Six repair paths, 25 overall versus
+accepted main. No real Docker/PG/reset or hosted streaming success is established.
+Preserve all five failed
+runs and physical/capacity/SPENT/UNKNOWN/Pages gates below.
+
+## Historical source stage: local-only closed refusal diagnostics
 
 [CI 41885869487](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41885869487)
 on head `bdbfa0269f141349c619a3d1d6aaf90dacdf03e0`, tested merge
