@@ -223,6 +223,10 @@ for (const [field, value, message] of [
   ['email', 'a'.repeat(309) + '@example.com', 'El correo no puede superar 320 caracteres'],
   ['phone', '1'.repeat(65), 'El teléfono no puede superar 64 caracteres'],
   ['email', 'İ'.repeat(308) + '@example.com', 'El correo no puede superar 320 caracteres'],
+  ['email', 'person@localhost', 'El correo no es válido'],
+  ['email', 'per\u0085son@example.test', 'El correo no es válido'],
+  ['displayName', '\u0085', 'El nombre es obligatorio'],
+  ['displayName', '\u001c\u001d\u001e\u001f', 'El nombre es obligatorio'],
 ]) {
   test(`invalid customer ${field} (${value.length}) remains recoverable then saves corrected intent once`, async (t) => {
     const first = setup(t)

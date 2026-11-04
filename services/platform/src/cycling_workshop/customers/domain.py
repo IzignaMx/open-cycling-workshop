@@ -11,7 +11,9 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _normalize_name(value: str) -> str:
+def _normalize_name(value: object) -> str:
+    if not isinstance(value, str):
+        raise ValueError("display_name must be a string")
     normalized = " ".join(value.split())
     if not normalized:
         raise ValueError("display_name must not be blank")
@@ -20,9 +22,11 @@ def _normalize_name(value: str) -> str:
     return normalized
 
 
-def _normalize_email(value: str | None) -> str | None:
+def _normalize_email(value: object) -> str | None:
     if value is None:
         return None
+    if not isinstance(value, str):
+        raise ValueError("email must be a string or null")
     normalized = value.strip().lower()
     if not normalized:
         return None
@@ -33,9 +37,11 @@ def _normalize_email(value: str | None) -> str | None:
     return normalized
 
 
-def _normalize_phone(value: str | None) -> str | None:
+def _normalize_phone(value: object) -> str | None:
     if value is None:
         return None
+    if not isinstance(value, str):
+        raise ValueError("phone must be a string or null")
     normalized = "".join(value.split())
     if len(normalized) > 64:
         raise ValueError("phone must be at most 64 characters")
@@ -104,19 +110,9 @@ class Customer:
         phone: str | object | None = _UNSET,
         now: datetime | None = None,
     ) -> Customer:
-        next_name = (
-            self.display_name if display_name is _UNSET else _normalize_name(str(display_name))
-        )
-        next_email = (
-            self.email
-            if email is _UNSET
-            else _normalize_email(email if isinstance(email, str) else None)
-        )
-        next_phone = (
-            self.phone
-            if phone is _UNSET
-            else _normalize_phone(phone if isinstance(phone, str) else None)
-        )
+        next_name = self.display_name if display_name is _UNSET else _normalize_name(display_name)
+        next_email = self.email if email is _UNSET else _normalize_email(email)
+        next_phone = self.phone if phone is _UNSET else _normalize_phone(phone)
         return replace(
             self,
             display_name=next_name,

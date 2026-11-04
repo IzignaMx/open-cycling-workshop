@@ -1,5 +1,42 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · Customer command admissibility
+
+- [x] Admit the bounded FR-CUS-001/R01-T030 integrity correction: new-command
+      admissibility, not search or V0.2 completion.
+- [x] Complete strict domain types and local backend-projection validation while
+      preserving existing prepared values, normalization and PR86 length limits.
+- Preserve receipt-first replay, per-item conflicts, successful valid batch peers,
+  explicit null clearing versus omission preservation, and create unknown-key
+  compatibility. Reject before entity/journal effects and keep editable drafts.
+- [x] Complete fresh local validation and independent review; native browser and
+      PostgreSQL acceptance are not established for this candidate.
+- Frontend behavioral RED is retained. Fresh backend RED has 27 behavioral
+  failures/68 passes. The earlier 12-failure fixture artifact raised
+  NoReferencedTableError and does not count as behavioral RED.
+- Local Python: 5,432 passed, 671 environment skips, 12 warnings (384.99 s,
+  exit 0), before this documentation-only stamp. Final frontend: 1,256 passed;
+  focused backend: 108 passed with one existing warning; repository: 178 passed
+  with a separate post-stamp rerun. Static/types/build passed; chunk warning retained.
+- Independent review accepted production/tests; all 1,114,112 code points matched
+  the 29 Python whitespace characters and three mutations were detected.
+- One new PWA case / 14 file cases collected, zero executed locally. Collection
+  is not native acceptance; hosted qualification remains pending.
+- No publication, seventh M2 run, credentials, schema or migration is authorized.
+  Physical T1–T8/R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+- [Bounded design, matrix and plan](docs/10-spec-development/2026-11-04-customer-admissibility.md).
+
+## 2026-11-04 · PR86 accepted main, historical baseline for this candidate
+
+- [x] Accept main 23def8f4 / tree 409a: CI 41780887753 passed 27/27; Python:
+      6,004 + 58 exact skips; frontend: 1,246; API: 1; browser: 129 direct-log /
+      129 aggregate; small repeats: 20/9/5/10; kernel: 14; zero retries. Runtime/security/micro accepted.
+- Three customer-length PWA cases passed in the direct job log. Large browser
+  archives were not downloaded or byte/trace/screenshot reviewed. No M2 ran.
+- This evidence does not qualify changed admissibility source. The field-limit
+  section below is its original source-stage snapshot: its publication/hosted
+  gates were later resolved by separate PR86 approval and exact-source evidence.
+
 ## 2026-11-04 · Customer field limits, local integrity correction
 
 - [x] Admit FR-CUS-001/R01-T030 post-normalization limits as an active V0.1

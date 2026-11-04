@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -291,8 +292,9 @@ class SyncService:
                     organization_id=mutation.organization_id,
                     location_id=mutation.location_id,
                     display_name=display_name,
-                    email=email if isinstance(email, str) else None,
-                    phone=phone if isinstance(phone, str) else None,
+                    # Casts preserve the supplied values for domain runtime validation.
+                    email=cast(str | None, email),
+                    phone=cast(str | None, phone),
                     now=_as_utc(mutation.occurred_at),
                 )
             except ValueError as exc:

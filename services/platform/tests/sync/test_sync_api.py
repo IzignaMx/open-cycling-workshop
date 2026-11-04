@@ -368,3 +368,109 @@ def test_oversized_customer_updates_preserve_row_version_history_and_receipts():
     corrected = {**updates[0], "payload": {"display_name": "Corrected"}}
     retry = client.post("/api/v1/sync/mutations", json={"mutations": [corrected]})
     assert retry.json()["results"][0]["entity_version"] == 2
+
+
+def test_malformed_customer_types_conflict_per_item_preserve_existing_row_and_valid_peers():
+    from cycling_workshop.customers.models import CustomerRecord
+    from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
+    from sqlalchemy import func, select
+
+    client = build_client()
+    original = {
+        "mutation_id": new_id(),
+        "entity_type": "customer",
+        "entity_id": new_id(),
+        "operation": "create",
+        "organization_id": "org-1",
+        "location_id": "loc-1",
+        "base_version": None,
+        "occurred_at": "2026-08-07T00:00:00Z",
+        "payload": {"display_name": "Original", "email": "public@example.test", "phone": "123"},
+    }
+    assert (
+        client.post("/api/v1/sync/mutations", json={"mutations": [original]}).json()["results"][0][
+            "status"
+        ]
+        == "applied"
+    )
+    canary = "PUBLIC-SYNTHETIC-PRIVATE-CANARY"
+    malformed = [("display_name", None)] + [
+        (field, value)
+        for field in ("display_name", "email", "phone")
+        for value in (123, True, {"value": canary}, [])
+    ]
+    invalid = []
+    for operation in ("create", "update"):
+        for field, value in malformed:
+            invalid.append(
+                {
+                    **original,
+                    "mutation_id": new_id(),
+                    "entity_id": new_id() if operation == "create" else original["entity_id"],
+                    "operation": operation,
+                    "base_version": None if operation == "create" else 1,
+                    "payload": (
+                        {"display_name": "Public", field: value}
+                        if operation == "create"
+                        else {field: value}
+                    ),
+                }
+            )
+    before = {
+        **original,
+        "mutation_id": new_id(),
+        "entity_id": new_id(),
+        "payload": {"display_name": "Before", "unknown_compatibility_field": "ignored"},
+    }
+    after = {
+        **original,
+        "mutation_id": new_id(),
+        "entity_id": new_id(),
+        "payload": {"display_name": "After", "email": None, "phone": None},
+    }
+    response = client.post("/api/v1/sync/mutations", json={"mutations": [before, *invalid, after]})
+    assert response.status_code == 200
+    assert [item["status"] for item in response.json()["results"]] == [
+        "applied",
+        *["conflict"] * len(invalid),
+        "applied",
+    ]
+    assert all(item["error_code"] == "sync_conflict" for item in response.json()["results"][1:-1])
+    assert (canary in response.text) is False
+    with client.app.state.session_factory() as session:
+        row = session.get(CustomerRecord, original["entity_id"])
+        assert (row.display_name, row.email, row.phone, row.version) == (
+            "Original",
+            "public@example.test",
+            "123",
+            1,
+        )
+        assert session.scalar(select(func.count()).select_from(CustomerRecord)) == 3
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 3
+        assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 3
+        assert all(
+            session.get(MutationReceiptRecord, item["mutation_id"]) is None for item in invalid
+        )
+    # Same previously refused id can be explicitly corrected; then omission preserves.
+    cleared = {**invalid[-1], "payload": {"email": None, "phone": None}}
+    assert (
+        client.post("/api/v1/sync/mutations", json={"mutations": [cleared]}).json()["results"][0][
+            "entity_version"
+        ]
+        == 2
+    )
+    renamed = {
+        **cleared,
+        "mutation_id": new_id(),
+        "base_version": 2,
+        "payload": {"display_name": "Renamed"},
+    }
+    assert (
+        client.post("/api/v1/sync/mutations", json={"mutations": [renamed]}).json()["results"][0][
+            "entity_version"
+        ]
+        == 3
+    )
+    with client.app.state.session_factory() as session:
+        row = session.get(CustomerRecord, original["entity_id"])
+        assert (row.display_name, row.email, row.phone, row.version) == ("Renamed", None, None, 3)

@@ -904,3 +904,49 @@ for (const invalid of [
     if (invalid.field === 'Nombre') await evidence(page, info, 'customer-length-corrected')
   })
 }
+
+test('single-label customer email passes native validity but is rejected without losing recoverable input', async ({
+  page,
+  request,
+}) => {
+  await seedWorkshop(page, request)
+  const fields = { ...CUSTOMER, Correo: 'person@localhost' }
+  await fillFields(form(page, 'customer'), fields)
+  const email = form(page, 'customer').getByRole('textbox', { name: 'Correo', exact: true })
+  // Prove the real application handler, not a browser email-validation block,
+  // is responsible for refusing this server-inadmissible address.
+  expect(await email.evaluate((element) => (element as HTMLInputElement).checkValidity())).toBe(
+    true,
+  )
+  expect(
+    await form(page, 'customer').evaluate((element) =>
+      (element as HTMLFormElement).checkValidity(),
+    ),
+  ).toBe(true)
+  await acknowledged(page, 'customer')
+  const before = await kernelSnapshot(page)
+  await submit(page, 'customer').click()
+  await expect(commandStatus(page, 'customer')).toHaveText('El correo no es válido')
+  await expectFields(form(page, 'customer'), fields)
+  await expect(form(page, 'customer')).toHaveAttribute('data-dirty', 'true')
+  await expect(submit(page, 'customer')).toBeEnabled()
+  await acknowledged(page, 'customer')
+  expect((await kernelSnapshot(page)).journal).toEqual(before.journal)
+  await page.reload()
+  await waitForReady(page)
+  await expectFields(form(page, 'customer'), fields)
+  await expect(submit(page, 'customer')).toBeEnabled()
+  expect((await kernelSnapshot(page)).journal).toEqual(before.journal)
+  await email.fill(CUSTOMER.Correo)
+  await submit(page, 'customer').click()
+  await expect(commandStatus(page, 'customer')).toHaveText('Cliente guardado localmente')
+  await expectFields(form(page, 'customer'), { Nombre: '', Correo: '', Teléfono: '' })
+  const after = await kernelSnapshot(page)
+  expect(after.journal).toHaveLength(before.journal.length + 1)
+  expect(after.journal.slice(0, before.journal.length)).toEqual(before.journal)
+  expect(after.journal.at(-1)!.envelope.payload).toEqual({
+    display_name: CUSTOMER.Nombre,
+    email: CUSTOMER.Correo,
+    phone: CUSTOMER.Teléfono,
+  })
+})

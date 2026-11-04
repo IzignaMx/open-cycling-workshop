@@ -2,6 +2,7 @@ export type CaptureValidationCode =
   | 'customer_name_required'
   | 'customer_name_too_long'
   | 'customer_email_too_long'
+  | 'customer_email_invalid'
   | 'customer_phone_too_long'
   | 'order_problem_required'
   | 'priority_invalid'
@@ -22,6 +23,8 @@ export function captureValidation(error: unknown): CaptureNotSaved | null {
       return { status: 'not_saved', reason: 'validation', code: 'customer_name_required' }
     case 'El nombre no puede superar 200 caracteres':
       return { status: 'not_saved', reason: 'validation', code: 'customer_name_too_long' }
+    case 'El correo no es válido':
+      return { status: 'not_saved', reason: 'validation', code: 'customer_email_invalid' }
     case 'El correo no puede superar 320 caracteres':
       return { status: 'not_saved', reason: 'validation', code: 'customer_email_too_long' }
     case 'El teléfono no puede superar 64 caracteres':

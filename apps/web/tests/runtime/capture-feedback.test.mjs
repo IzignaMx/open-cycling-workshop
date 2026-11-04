@@ -59,6 +59,7 @@ test('capture fixed validation messages and hostile result objects do not expose
     'customer_name_required',
     'customer_name_too_long',
     'customer_email_too_long',
+    'customer_email_invalid',
     'customer_phone_too_long',
     'order_problem_required',
     'priority_invalid',

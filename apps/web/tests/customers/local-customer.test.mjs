@@ -49,6 +49,7 @@ const prepare = (input, dependencies = {}) =>
 for (const [field, value, message] of [
   ['displayName', 'a'.repeat(201), 'El nombre no puede superar 200 caracteres'],
   ['email', 'a'.repeat(309) + '@example.com', 'El correo no puede superar 320 caracteres'],
+  ['email', 'x'.repeat(321), 'El correo no puede superar 320 caracteres'],
   ['phone', '1'.repeat(65), 'El teléfono no puede superar 64 caracteres'],
   ['email', 'İ'.repeat(308) + '@example.com', 'El correo no puede superar 320 caracteres'],
 ]) {
@@ -90,4 +91,50 @@ test('customer limits count prepared Unicode codepoints without truncation or no
     'e\u0301'.repeat(100),
   )
   assert.throws(() => prepare({ displayName: 'e\u0301'.repeat(101) }))
+})
+
+for (const [label, input, message] of [
+  ['single-label email', { email: 'person@localhost' }, 'El correo no es válido'],
+  [
+    'internal Python whitespace email',
+    { email: 'per\u0085son@example.test' },
+    'El correo no es válido',
+  ],
+  ['NEXT LINE blank name', { displayName: '\u0085' }, 'El nombre es obligatorio'],
+  [
+    'control separators blank name',
+    { displayName: '\u001c\u001d\u001e\u001f' },
+    'El nombre es obligatorio',
+  ],
+]) {
+  test(`customer refuses server-inadmissible ${label} before allocating IDs`, () => {
+    let allocated = 0
+    assert.throws(
+      () =>
+        prepare(input, {
+          newId: () => {
+            allocated++
+            return 'synthetic'
+          },
+        }),
+      (error) => error instanceof Error && error.message === message,
+    )
+    assert.equal(allocated, 0)
+  })
+}
+test('customer admissibility checks backend projection without rewriting prepared input', () => {
+  for (const [input, expected] of [
+    [{ displayName: '\u0085Ana\u0085' }, { display_name: '\u0085Ana\u0085' }],
+    [{ displayName: 'A\u001cB' }, { display_name: 'A\u001cB' }],
+    [{ displayName: '\u200b' }, { display_name: '\u200b' }],
+    [{ email: '\u0085PERSON@EXAMPLE.TEST\u001c' }, { email: '\u0085person@example.test\u001c' }],
+    [{ email: '\u0085' }, { email: '\u0085' }],
+    [{ email: 'A@B.C' }, { email: 'a@b.c' }],
+  ]) {
+    const { customer, mutation } = prepare(input)
+    for (const [field, value] of Object.entries(expected)) {
+      assert.equal(customer[field], value)
+      assert.equal(mutation.payload[field], value)
+    }
+  }
 })
