@@ -371,20 +371,23 @@ class SyncService:
 
             def optional(field: str) -> str | None:
                 value = mutation.payload.get(field)
-                return value if isinstance(value, str) else None
+                return cast(str | None, value)
 
-            bicycle = Bicycle.create(
-                bicycle_id=mutation.entity_id,
-                customer_id=customer_id,
-                organization_id=mutation.organization_id,
-                location_id=mutation.location_id,
-                brand=brand,
-                model=optional("model"),
-                bicycle_type=optional("bicycle_type"),
-                wheel_size=optional("wheel_size"),
-                notes=optional("notes"),
-                now=_as_utc(mutation.occurred_at),
-            )
+            try:
+                bicycle = Bicycle.create(
+                    bicycle_id=mutation.entity_id,
+                    customer_id=customer_id,
+                    organization_id=mutation.organization_id,
+                    location_id=mutation.location_id,
+                    brand=brand,
+                    model=optional("model"),
+                    bicycle_type=optional("bicycle_type"),
+                    wheel_size=optional("wheel_size"),
+                    notes=optional("notes"),
+                    now=_as_utc(mutation.occurred_at),
+                )
+            except ValueError as exc:
+                raise SyncConflict("Invalid bicycle request") from exc
             repository.add(bicycle)
             return _Applied(
                 entity_id=bicycle.bicycle_id,
@@ -418,7 +421,7 @@ class SyncService:
         try:
             updated = existing.update(**update_kwargs)  # type: ignore[arg-type]
         except (TypeError, ValueError) as exc:
-            raise SyncConflict(str(exc)) from exc
+            raise SyncConflict("Invalid bicycle request") from exc
         repository.save(updated)
         return _Applied(
             entity_id=updated.bicycle_id,
@@ -466,21 +469,24 @@ class SyncService:
 
             def optional(field: str) -> str | None:
                 value = mutation.payload.get(field)
-                return value if isinstance(value, str) else None
+                return cast(str | None, value)
 
-            priority = mutation.payload.get("priority")
-            order = ServiceOrder.create(
-                order_id=mutation.entity_id,
-                customer_id=customer_id,
-                organization_id=mutation.organization_id,
-                location_id=mutation.location_id,
-                reported_problem=reported_problem,
-                bicycle_id=bicycle_id if isinstance(bicycle_id, str) else None,
-                intake_condition=optional("intake_condition"),
-                accessories=optional("accessories"),
-                priority=priority if isinstance(priority, str) else "normal",
-                now=_as_utc(mutation.occurred_at),
-            )
+            priority = mutation.payload.get("priority", "normal")
+            try:
+                order = ServiceOrder.create(
+                    order_id=mutation.entity_id,
+                    customer_id=customer_id,
+                    organization_id=mutation.organization_id,
+                    location_id=mutation.location_id,
+                    reported_problem=reported_problem,
+                    bicycle_id=bicycle_id if isinstance(bicycle_id, str) else None,
+                    intake_condition=optional("intake_condition"),
+                    accessories=optional("accessories"),
+                    priority=cast(str, priority),
+                    now=_as_utc(mutation.occurred_at),
+                )
+            except ValueError as exc:
+                raise SyncConflict("Invalid order request") from exc
             repository.add(order)
             return _Applied(
                 entity_id=order.order_id,

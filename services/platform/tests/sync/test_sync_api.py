@@ -11,7 +11,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
-def build_client() -> TestClient:
+def build_client(*, intake: bool = False) -> TestClient:
+    capabilities = ["customers.read", "customers.write", "sync.pull", "sync.push"]
+    if intake:
+        capabilities += ["bicycles.write", "orders.write"]
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -30,7 +33,7 @@ def build_client() -> TestClient:
                 username="test-user",
                 display_name="Test User",
                 password_hash="unused-in-token-tests",
-                capabilities=["customers.read", "customers.write", "sync.pull", "sync.push"],
+                capabilities=capabilities,
                 is_active=True,
                 session_version=1,
             )
@@ -48,7 +51,7 @@ def build_client() -> TestClient:
             user_id="user-1",
             organization_id="org-1",
             location_id="loc-1",
-            capabilities=frozenset({"sync.push", "sync.pull", "customers.write", "customers.read"}),
+            capabilities=frozenset(capabilities),
         )
     )
     client = TestClient(app)
@@ -474,3 +477,117 @@ def test_malformed_customer_types_conflict_per_item_preserve_existing_row_and_va
     with client.app.state.session_factory() as session:
         row = session.get(CustomerRecord, original["entity_id"])
         assert (row.display_name, row.email, row.phone, row.version) == ("Renamed", None, None, 3)
+
+
+def test_intake_invalid_items_preserve_rows_and_allow_valid_batch_peers():
+    from cycling_workshop.bicycles.models import BicycleRecord
+    from cycling_workshop.service_orders.models import ServiceOrderRecord
+    from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
+    from sqlalchemy import func, select
+
+    client = build_client(intake=True)
+
+    def mutation(entity, payload, *, entity_id=None, operation="create"):
+        return {
+            "mutation_id": new_id(),
+            "entity_type": entity,
+            "entity_id": entity_id or new_id(),
+            "operation": operation,
+            "organization_id": "org-1",
+            "location_id": "loc-1",
+            "base_version": 1 if operation == "update" else None,
+            "occurred_at": "2026-08-07T00:00:00Z",
+            "payload": payload,
+        }
+
+    customer = mutation("customer", {"display_name": "Public customer"})
+    bike_payload = {
+        "customer_id": customer["entity_id"],
+        "brand": "Public brand",
+        "model": "Keep",
+        "notes": "Keep notes",
+    }
+    bike = mutation("bicycle", bike_payload)
+    seed = client.post("/api/v1/sync/mutations", json={"mutations": [customer, bike]})
+    assert [r["status"] for r in seed.json()["results"]] == ["applied", "applied"]
+    bad_bike = [("brand", None), ("brand", "\u0085")] + [
+        (field, value)
+        for field, limit in [
+            ("brand", 120),
+            ("model", 120),
+            ("bicycle_type", 60),
+            ("wheel_size", 30),
+            ("notes", 2000),
+        ]
+        for value in ["🚲" * (limit + 1), 123, True, {"public": "CANARY"}, []]
+    ]
+    invalid = []
+    for field, value in bad_bike:
+        invalid.append(mutation("bicycle", {**bike_payload, field: value}))
+        invalid.append(
+            mutation("bicycle", {field: value}, entity_id=bike["entity_id"], operation="update")
+        )
+    order_payload = {"customer_id": customer["entity_id"], "reported_problem": "Public repair"}
+    bad_order = [
+        ("reported_problem", "\u0085"),
+        ("priority", "\u0085"),
+        ("reported_problem", None),
+        ("priority", None),
+        ("priority", "🚲" * 31),
+    ] + [
+        (field, value)
+        for field in ["reported_problem", "priority", "intake_condition", "accessories"]
+        for value in [123, True, {"public": "CANARY"}, []]
+    ]
+    invalid += [
+        mutation("service_order", {**order_payload, field: value}) for field, value in bad_order
+    ]
+    before = mutation(
+        "service_order",
+        {
+            **order_payload,
+            "intake_condition": None,
+            "accessories": None,
+            "unknown_compatibility": "ignored",
+        },
+    )
+    after = mutation(
+        "service_order",
+        {
+            **order_payload,
+            "reported_problem": "x" * 4001,
+            "intake_condition": "y" * 4001,
+            "accessories": "z" * 2001,
+        },
+    )
+    response = client.post("/api/v1/sync/mutations", json={"mutations": [before, *invalid, after]})
+    assert response.status_code == 200
+    assert [r["status"] for r in response.json()["results"]] == [
+        "applied",
+        *["conflict"] * len(invalid),
+        "applied",
+    ]
+    assert "CANARY" not in response.text
+    with client.app.state.session_factory() as session:
+        row = session.get(BicycleRecord, bike["entity_id"])
+        assert (row.brand, row.model, row.notes, row.version) == (
+            "Public brand",
+            "Keep",
+            "Keep notes",
+            1,
+        )
+        assert session.scalar(select(func.count()).select_from(BicycleRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(ServiceOrderRecord)) == 2
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 4
+        assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 4
+        assert all(
+            session.get(MutationReceiptRecord, item["mutation_id"]) is None for item in invalid
+        )
+        assert session.get(ServiceOrderRecord, before["entity_id"]).priority == "normal"
+    # Explicit clear is valid; omitted fields retain their values.
+    clear = {**invalid[1], "payload": {"model": None}}
+    cleared = client.post("/api/v1/sync/mutations", json={"mutations": [clear]})
+    assert cleared.json()["results"][0]["entity_version"] == 2
+    with client.app.state.session_factory() as session:
+        row = session.get(BicycleRecord, bike["entity_id"])
+        assert (row.model, row.notes, row.version) == (None, "Keep notes", 2)

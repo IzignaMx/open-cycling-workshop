@@ -169,3 +169,18 @@ def test_order_timeline_refusals_are_not_cacheable() -> None:
         response = client.get("/api/v1/service-orders/00000000-0000-7000-8000-0000000000ff/events")
         assert response.status_code == expected
         assert response.headers["cache-control"] == "no-store"
+
+
+def test_python_blank_intake_fields_are_safe_422_without_writes():
+    from cycling_workshop.service_orders.models import ServiceOrderRecord
+    from cycling_workshop.sync.models import ChangeRecord
+    from sqlalchemy import func, select
+
+    client = build_client()
+    for field in ("reported_problem", "priority"):
+        response = client.post("/api/v1/service-orders", json=_order_payload(**{field: "\u0085"}))
+        assert response.status_code == 422
+        assert response.json() == {"detail": "Invalid order request"}
+    with client.app.state.session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(ServiceOrderRecord)) == 0
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0

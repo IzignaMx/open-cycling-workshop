@@ -111,3 +111,110 @@ test('order transition builder refuses illegal transitions', () => {
     /mark_ready/,
   )
 })
+
+const bicycleInput = {
+  organizationId: 'org-1',
+  locationId: 'loc-1',
+  customerId: 'c1',
+  brand: 'Synthetic',
+}
+const orderInput = {
+  organizationId: 'org-1',
+  locationId: 'loc-1',
+  customerId: 'c1',
+  reportedProblem: 'Synthetic problem',
+}
+for (const [field, value, message] of [
+  ['brand', 'x'.repeat(121), 'La marca no puede superar 120 caracteres'],
+  ['model', 'x'.repeat(121), 'El modelo no puede superar 120 caracteres'],
+  ['bicycleType', 'x'.repeat(61), 'El tipo de bicicleta no puede superar 60 caracteres'],
+  ['wheelSize', 'x'.repeat(31), 'El tamaño de rueda no puede superar 30 caracteres'],
+  ['notes', 'x'.repeat(2001), 'Las notas de la bicicleta no pueden superar 2000 caracteres'],
+  ['brand', '\u0085', 'La marca de la bicicleta es obligatoria'],
+]) {
+  test(`bicycle prepared ${field} admission rejects before IDs (${value.length})`, () => {
+    let ids = 0
+    assert.throws(
+      () =>
+        buildLocalBicycleCreate(
+          { ...bicycleInput, [field]: value },
+          {
+            ...deps,
+            newId: () => {
+              ids++
+              return 'id'
+            },
+          },
+        ),
+      (error) => error.message === message,
+    )
+    assert.equal(ids, 0)
+  })
+}
+for (const [field, value, message] of [
+  ['reportedProblem', '\u001c\u0085', 'El problema reportado es obligatorio'],
+  ['priority', 'x'.repeat(31), 'La prioridad no puede superar 30 caracteres'],
+  ['priority', '\u0085', 'La prioridad es obligatoria'],
+]) {
+  test(`order prepared ${field} admission rejects before IDs (${value.length})`, () => {
+    let ids = 0
+    assert.throws(
+      () =>
+        buildLocalOrderCreate(
+          { ...orderInput, [field]: value },
+          {
+            ...deps,
+            newId: () => {
+              ids++
+              return 'id'
+            },
+          },
+        ),
+      (error) => error.message === message,
+    )
+    assert.equal(ids, 0)
+  })
+}
+test('bicycle admission keeps exact prepared values and codepoint boundary', () => {
+  const { bicycle, mutation } = buildLocalBicycleCreate(
+    {
+      ...bicycleInput,
+      brand: '😀'.repeat(120),
+      model: ' \u0085Model\u0085 ',
+      bicycleType: 't'.repeat(60),
+      wheelSize: 'w'.repeat(30),
+      notes: 'n'.repeat(2000),
+    },
+    deps,
+  )
+  assert.equal(bicycle.brand, '😀'.repeat(120))
+  assert.equal(bicycle.model, '\u0085Model\u0085')
+  assert.equal(mutation.payload.bicycle_type, 't'.repeat(60))
+  assert.equal(mutation.payload.wheel_size, 'w'.repeat(30))
+  assert.equal(mutation.payload.notes, 'n'.repeat(2000))
+})
+test('order builders retain long Text values and non-enumerated bounded priorities', () => {
+  const { order } = buildLocalOrderCreate(
+    {
+      ...orderInput,
+      reportedProblem: 'p'.repeat(4001),
+      intakeCondition: 'i'.repeat(4001),
+      accessories: 'a'.repeat(2001),
+      priority: 'z'.repeat(30),
+    },
+    deps,
+  )
+  assert.equal(order.reported_problem, 'p'.repeat(4001))
+  assert.equal(order.intake_condition, 'i'.repeat(4001))
+  assert.equal(order.accessories, 'a'.repeat(2001))
+  assert.equal(order.priority, 'z'.repeat(30))
+  assert.equal(
+    buildLocalOrderCreate({ ...orderInput, priority: ' ' }, deps).order.priority,
+    'normal',
+  )
+  assert.equal(
+    buildLocalOrderCreate({ ...orderInput, reportedProblem: 'A\u0085B' }, deps).order
+      .reported_problem,
+    'A\u0085B',
+  )
+})

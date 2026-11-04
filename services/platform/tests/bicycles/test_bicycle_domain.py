@@ -68,3 +68,37 @@ def test_bicycle_update_bumps_version_and_normalizes() -> None:
     # immutable identity
     assert updated.bicycle_id == bicycle.bicycle_id
     assert updated.customer_id == bicycle.customer_id
+
+
+@pytest.mark.parametrize(
+    "field,limit",
+    [("brand", 120), ("model", 120), ("bicycle_type", 60), ("wheel_size", 30), ("notes", 2000)],
+)
+@pytest.mark.parametrize("character", ["x", "🚲"])
+def test_bicycle_normalized_storage_limits(field, limit, character):
+    value = character * limit
+    assert getattr(_create(**{field: "  " + value + "  "}), field) == value
+    assert getattr(_create().update(**{field: value}), field) == value
+    with pytest.raises(ValueError):
+        _create(**{field: value + character})
+    with pytest.raises(ValueError):
+        _create().update(**{field: value + character})
+
+
+@pytest.mark.parametrize("field", ["brand", "model", "bicycle_type", "wheel_size", "notes"])
+@pytest.mark.parametrize("value", [12, False, {}, []])
+def test_bicycle_supplied_types_are_not_coerced(field, value):
+    with pytest.raises(ValueError):
+        _create(**{field: value})
+    original = _create()
+    with pytest.raises(ValueError):
+        original.update(**{field: value})
+    assert original.version == 1
+
+
+def test_bicycle_null_brand_rejected_optional_null_and_omission_retained():
+    with pytest.raises(ValueError):
+        _create().update(brand=None)
+    original = _create(model="Known", notes="Keep")
+    changed = original.update(model=None)
+    assert changed.model is None and changed.notes == "Keep"

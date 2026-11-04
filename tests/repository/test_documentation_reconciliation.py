@@ -507,8 +507,11 @@ def test_pr85_main_receipt_does_not_qualify_customer_fix() -> None:
 
 def test_customer_admissibility_checkpoint_preserves_new_command_scope() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: customer_admissibility_20261104" in state
-    assert "last_checkpoint: customer_admissibility_20261104" in state
+    assert "historical_customer_admissibility_checkpoint: customer_admissibility_20261104" in state
+    assert (
+        "historical_customer_admissibility_last_checkpoint: customer_admissibility_20261104"
+        in state
+    )
     block = state.split("customer_admissibility_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "requirement: FR-CUS-001",
@@ -527,7 +530,7 @@ def test_customer_admissibility_checkpoint_preserves_new_command_scope() -> None
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_customer_admissibility_plan: " + evidence in state
     assert (ROOT / evidence).is_file()
 
 
@@ -575,5 +578,78 @@ def test_pr86_main_acceptance_does_not_qualify_admissibility_candidate() -> None
         "b32b210d3ab0c28895b1d9f11b79cc7f290e40c9a9cc0fe6c88bf5501ee5636c",
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
         "status: accepted_baseline_not_admissibility_candidate_evidence",
+    ):
+        assert token in block
+
+
+def test_intake_admissibility_is_existing_integrity_prerequisite_not_release_expansion() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: intake_admissibility_20261104" in state
+    assert "last_checkpoint: intake_admissibility_20261104" in state
+    block = state.split("intake_admissibility_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005",
+        "admission: existing_shipped_integrity_prerequisite_V01_physical_partial",
+        "limits: bicycle120_120_60_30_2000_priority30_codepoints",
+        "status: locally_validated_independently_reviewed_hosted_pending",
+        "local_Python: 5510_passed_671_environment_skips_12_warnings_395_46s_exit0",
+        "local_Python_scope: before_final_documentation_stamp_only",
+        "native_browser: two_new_cases_sixteen_file_cases_collected_zero_executed",
+        "normalization: existing_prepared_values_unchanged_no_truncation",
+        "replay: historical_receipt_first_unchanged",
+        "priority: omitted_defaults_normal_supplied_null_or_nonstring_rejected_"
+        "frontend_blank_default_unchanged",
+        "excluded: REST_only_order_Text_caps_transition_notes_ID_authority",
+        "runtime_qualification: pending_not_inherited_from_PR87",
+        "publication: not_authorized",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    assert (ROOT / evidence).is_file()
+
+
+def test_intake_record_preserves_atomicity_defaults_and_evidence_limits() -> None:
+    record = " ".join(read(BASE + "2026-11-04-intake-admissibility.md").split())
+    for token in (
+        "FR-BIK-003",
+        "R02-T002",
+        "FR-SVC-001",
+        "R02-T005",
+        "not R01-T030",
+        "Python whitespace",
+        "120/120/60/30/2000",
+        "priority",
+        "omission",
+        "explicit null",
+        "receipt-first",
+        "no orphan",
+        "per-item",
+        "Text",
+        "transition notes",
+        "four real-controller",
+        "not native PostgreSQL",
+        "existing priority UI allowlist",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+        "R01-T035",
+    ):
+        assert token in record
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    assert "## 2026-11-04 · Existing intake admissibility prerequisite" in checklist
+
+
+def test_pr87_acceptance_is_historical_not_intake_candidate_qualification() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("pr87_fresh_main_acceptance_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "2f9abe5c8e74887177882032c8ba474f6e9bf761",
+        "a64e063d9ae91c36b53286d9e62e9f8b73b9af29",
+        "41793841607",
+        "6045",
+        "1256",
+        "1595e284d9c1079647b636ede9c4b48b9d9c9ec3640a4a7904512cc8f730f43b",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in block

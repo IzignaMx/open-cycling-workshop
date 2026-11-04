@@ -1,3 +1,4 @@
+import { hasPythonText } from '../../shared/python-whitespace.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
 import type { QueuedMutation } from '../../local/types.js'
 import { legalTransition, type OrderAction } from './state-machine.js'
@@ -42,7 +43,10 @@ export function buildLocalOrderCreate(
   dependencies: LocalDependencies,
 ): LocalOrderCreateResult {
   const reportedProblem = collapse(input.reportedProblem)
-  if (!reportedProblem) throw new Error('El problema reportado es obligatorio')
+  if (!hasPythonText(reportedProblem)) throw new Error('El problema reportado es obligatorio')
+  const priority = input.priority?.trim() || 'normal'
+  if (!hasPythonText(priority)) throw new Error('La prioridad es obligatoria')
+  if ([...priority].length > 30) throw new Error('La prioridad no puede superar 30 caracteres')
   const now = dependencies.now()
   const orderId = dependencies.newId()
   const order: LocalServiceOrder = {
@@ -55,7 +59,7 @@ export function buildLocalOrderCreate(
     reported_problem: reportedProblem,
     intake_condition: input.intakeCondition?.trim() || null,
     accessories: input.accessories?.trim() || null,
-    priority: input.priority?.trim() || 'normal',
+    priority,
     diagnosis: null,
     created_at: now,
     updated_at: now,

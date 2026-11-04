@@ -1,6 +1,56 @@
 schema: 1
 
-current_checkpoint: customer_admissibility_20261104
+current_checkpoint: intake_admissibility_20261104
+intake_admissibility_20261104:
+  status: locally_validated_independently_reviewed_hosted_pending
+  canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005
+  admission: existing_shipped_integrity_prerequisite_V01_physical_partial
+  limits: bicycle120_120_60_30_2000_priority30_codepoints
+  normalization: existing_prepared_values_unchanged_no_truncation
+  scope: required_Python_blank_and_malformed_intake_types
+  nullable_fields: omission_preserves_explicit_null_clears
+  priority: omitted_defaults_normal_supplied_null_or_nonstring_rejected_frontend_blank_default_unchanged
+  atomicity: local_pair_no_orphan_server_per_item_savepoints
+  replay: historical_receipt_first_unchanged
+  excluded: REST_only_order_Text_caps_transition_notes_ID_authority
+  evidence: docs/10-spec-development/2026-11-04-intake-admissibility.md
+  RED_evidence: four_real_controller_cases_admitted_commands_and_cleared_drafts
+  local_Python: 5510_passed_671_environment_skips_12_warnings_395_46s_exit0
+  local_Python_scope: before_final_documentation_stamp_only
+  local_frontend: 1272_passed
+  focused_backend: 200_passed_one_existing_warning
+  repository_contracts: 181_passed_poststamp_rerun_recorded_separately
+  independent_review: accepted_backend200_builder_feedback33_actual_recovery5
+  mutation_controls: five_detected
+  Unicode_projection: exhaustive_match
+  native_browser: two_new_cases_sixteen_file_cases_collected_zero_executed
+  static_build: passed_existing_chunk_size_warning_retained
+  changed_files: 25
+  runtime_qualification: pending_not_inherited_from_PR87
+  publication: not_authorized
+  seventh_M2_run: not_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+pr87_fresh_main_acceptance_20261104:
+  status: accepted_baseline_not_intake_candidate_evidence
+  main: 2f9abe5c8e74887177882032c8ba474f6e9bf761
+  tree: a64e063d9ae91c36b53286d9e62e9f8b73b9af29
+  CI: 41793841607
+  counts: 27_of27_Python6045_plus58_exact_skips_frontend1256_API1
+  browser: 130_direct_log_130_aggregate_repeats20_9_5_10_kernel14_retry0
+  customer_admissibility: named_single_label_PWA_typed_batch_twelve_replay_cases_verified
+  runtime_security_micro: 41793841605_41793841620_41793841622_accepted
+  large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed
+  receipt: artifacts/customer-admissibility/pr87-postmerge/final/review.json
+  receipt_sha256: 1595e284d9c1079647b636ede9c4b48b9d9c9ec3640a4a7904512cc8f730f43b
+  provenance: retained_coordinator_archive_not_tracked_or_public_repository_path
+  M2_main_push: no_run_no_seventh_authority
+
+# Historical PR87 source-stage snapshot; separately approved acceptance is above.
+# Preserve then-pending permissions and evidence, not current restrictions.
+historical_customer_admissibility_checkpoint: customer_admissibility_20261104
+historical_customer_admissibility_last_checkpoint: customer_admissibility_20261104
+historical_customer_admissibility_plan: docs/10-spec-development/2026-11-04-customer-admissibility.md
 customer_admissibility_20261104:
   status: locally_validated_independently_reviewed_hosted_pending
   requirement: FR-CUS-001
@@ -2449,7 +2499,7 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-04-customer-admissibility.md
+active_plan: docs/10-spec-development/2026-11-04-intake-admissibility.md
 active_plan_status: locally_validated_hosted_pending_publication_not_authorized
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
@@ -2458,7 +2508,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: customer_admissibility_20261104
+last_checkpoint: intake_admissibility_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

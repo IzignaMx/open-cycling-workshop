@@ -20,6 +20,14 @@ const validationMessages: Record<CaptureValidationCode, string> = {
   customer_phone_too_long: 'El teléfono no puede superar 64 caracteres',
   order_problem_required: 'El problema reportado es obligatorio',
   priority_invalid: 'Selecciona una prioridad válida',
+  bicycle_brand_empty: 'La marca de la bicicleta es obligatoria',
+  bicycle_brand_too_long: 'La marca no puede superar 120 caracteres',
+  bicycle_model_too_long: 'El modelo no puede superar 120 caracteres',
+  bicycle_type_too_long: 'El tipo de bicicleta no puede superar 60 caracteres',
+  bicycle_wheel_too_long: 'El tamaño de rueda no puede superar 30 caracteres',
+  bicycle_notes_too_long: 'Las notas de la bicicleta no pueden superar 2000 caracteres',
+  priority_required: 'La prioridad es obligatoria',
+  priority_too_long: 'La prioridad no puede superar 30 caracteres',
   bicycle_brand_required: 'La bicicleta requiere marca cuando se indica modelo',
 }
 

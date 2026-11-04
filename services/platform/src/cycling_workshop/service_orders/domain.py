@@ -64,6 +64,21 @@ def _optional_text(value: str | None) -> str | None:
     return normalized or None
 
 
+def _intake_required(value: object, field: str, *, limit: int | None = None) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string")
+    normalized = _required(value, field)
+    if limit is not None and len(normalized) > limit:
+        raise ValueError(f"{field} exceeds maximum length")
+    return normalized
+
+
+def _intake_optional(value: object, field: str) -> str | None:
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"{field} must be a string or null")
+    return _optional_text(value)
+
+
 @dataclass(frozen=True, slots=True)
 class ServiceOrderEvent:
     """Append-only timeline entry; one per executed transition."""
@@ -125,10 +140,10 @@ class ServiceOrder:
             organization_id=_required(organization_id, "organization_id"),
             location_id=_required(location_id, "location_id"),
             state=OrderState.INTAKE.value,
-            reported_problem=_required(reported_problem, "reported_problem"),
-            intake_condition=_optional_text(intake_condition),
-            accessories=_optional_text(accessories),
-            priority=_required(priority, "priority"),
+            reported_problem=_intake_required(reported_problem, "reported_problem"),
+            intake_condition=_intake_optional(intake_condition, "intake_condition"),
+            accessories=_intake_optional(accessories, "accessories"),
+            priority=_intake_required(priority, "priority", limit=30),
             diagnosis=None,
             created_at=timestamp,
             updated_at=timestamp,

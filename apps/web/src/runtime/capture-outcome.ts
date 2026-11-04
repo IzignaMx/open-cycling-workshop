@@ -6,6 +6,14 @@ export type CaptureValidationCode =
   | 'customer_phone_too_long'
   | 'order_problem_required'
   | 'priority_invalid'
+  | 'bicycle_brand_empty'
+  | 'bicycle_brand_too_long'
+  | 'bicycle_model_too_long'
+  | 'bicycle_type_too_long'
+  | 'bicycle_wheel_too_long'
+  | 'bicycle_notes_too_long'
+  | 'priority_required'
+  | 'priority_too_long'
   | 'bicycle_brand_required'
 
 export type CaptureNotSaved =
@@ -33,6 +41,22 @@ export function captureValidation(error: unknown): CaptureNotSaved | null {
       return { status: 'not_saved', reason: 'validation', code: 'order_problem_required' }
     case 'La bicicleta requiere marca cuando se indica modelo':
       return { status: 'not_saved', reason: 'validation', code: 'bicycle_brand_required' }
+    case 'La marca de la bicicleta es obligatoria':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_brand_empty' }
+    case 'La marca no puede superar 120 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_brand_too_long' }
+    case 'El modelo no puede superar 120 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_model_too_long' }
+    case 'El tipo de bicicleta no puede superar 60 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_type_too_long' }
+    case 'El tamaño de rueda no puede superar 30 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_wheel_too_long' }
+    case 'Las notas de la bicicleta no pueden superar 2000 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'bicycle_notes_too_long' }
+    case 'La prioridad es obligatoria':
+      return { status: 'not_saved', reason: 'validation', code: 'priority_required' }
+    case 'La prioridad no puede superar 30 caracteres':
+      return { status: 'not_saved', reason: 'validation', code: 'priority_too_long' }
     default:
       return error.message.startsWith('Prioridad desconocida: ')
         ? { status: 'not_saved', reason: 'validation', code: 'priority_invalid' }

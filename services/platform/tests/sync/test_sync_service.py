@@ -352,16 +352,20 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
 
 @pytest.mark.parametrize("strict", [False, True])
 @pytest.mark.parametrize(
-    "payload",
+    "entity_type,payload",
     [
-        {"display_name": "x" * 201},
-        {"display_name": "Public", "email": {"public": "historical"}},
-        {"display_name": 123},
+        ("customer", {"display_name": "x" * 201}),
+        ("customer", {"display_name": "Public", "email": {"public": "historical"}}),
+        ("customer", {"display_name": 123}),
+        ("bicycle", {"brand": None}),
+        ("bicycle", {"brand": "Public", "model": "x" * 121}),
+        ("service_order", {"priority": None, "reported_problem": "Public"}),
+        ("service_order", {"priority": "x" * 31, "reported_problem": "Public"}),
     ],
 )
 @pytest.mark.parametrize("operation", ["create", "update"])
 def test_historical_command_receipt_replays_before_new_domain_validation(
-    strict, payload, operation
+    strict, payload, operation, entity_type
 ):
     """Seed only an existing receipt; never insert an overflowing PostgreSQL row."""
     from cycling_workshop.sync.proof import PROOF_VERSION, envelope_digest
@@ -370,6 +374,7 @@ def test_historical_command_receipt_replays_before_new_domain_validation(
         mutation = replace(
             customer_create_mutation(),
             payload=payload,
+            entity_type=entity_type,
             operation=operation,
             base_version=1 if operation == "update" else None,
         )

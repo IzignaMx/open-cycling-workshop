@@ -81,17 +81,20 @@ def create_service_order(
             is None
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="bicycle not found")
-    order = ServiceOrder.create(
-        order_id=payload.order_id or new_id(),
-        customer_id=payload.customer_id,
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-        reported_problem=payload.reported_problem,
-        bicycle_id=payload.bicycle_id,
-        intake_condition=payload.intake_condition,
-        accessories=payload.accessories,
-        priority=payload.priority,
-    )
+    try:
+        order = ServiceOrder.create(
+            order_id=payload.order_id or new_id(),
+            customer_id=payload.customer_id,
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+            reported_problem=payload.reported_problem,
+            bicycle_id=payload.bicycle_id,
+            intake_condition=payload.intake_condition,
+            accessories=payload.accessories,
+            priority=payload.priority,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid order request") from exc
     repository = SqlAlchemyServiceOrderRepository(session)
     repository.add(order)
     append_change(
