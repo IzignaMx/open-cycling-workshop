@@ -285,15 +285,18 @@ class SyncService:
                 raise SyncConflict("customer create requires display_name")
             email = mutation.payload.get("email")
             phone = mutation.payload.get("phone")
-            customer = Customer.create(
-                customer_id=mutation.entity_id,
-                organization_id=mutation.organization_id,
-                location_id=mutation.location_id,
-                display_name=display_name,
-                email=email if isinstance(email, str) else None,
-                phone=phone if isinstance(phone, str) else None,
-                now=_as_utc(mutation.occurred_at),
-            )
+            try:
+                customer = Customer.create(
+                    customer_id=mutation.entity_id,
+                    organization_id=mutation.organization_id,
+                    location_id=mutation.location_id,
+                    display_name=display_name,
+                    email=email if isinstance(email, str) else None,
+                    phone=phone if isinstance(phone, str) else None,
+                    now=_as_utc(mutation.occurred_at),
+                )
+            except ValueError as exc:
+                raise SyncConflict(str(exc)) from exc
             repository.add(customer)
             return _Applied(
                 entity_id=customer.customer_id,

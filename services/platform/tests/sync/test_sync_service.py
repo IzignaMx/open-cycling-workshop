@@ -348,3 +348,53 @@ def test_workshop_core_entities_feed_entries_and_scope_isolation() -> None:
         )
         assert foreign_location.items == []
         assert foreign_location.next_cursor == 0
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_historical_oversized_command_receipt_replays_before_new_domain_validation(strict):
+    """Seed only an existing receipt; never insert an overflowing PostgreSQL row."""
+    from cycling_workshop.sync.proof import PROOF_VERSION, envelope_digest
+
+    with build_session() as session:
+        mutation = replace(customer_create_mutation(), payload={"display_name": "x" * 201})
+        proof = (
+            {
+                "actor_id": "user-1",
+                "command_digest": envelope_digest(mutation),
+                "proof_version": PROOF_VERSION,
+            }
+            if strict
+            else {}
+        )
+        receipt = MutationReceiptRecord(
+            mutation_id=mutation.mutation_id,
+            organization_id=mutation.organization_id,
+            location_id=mutation.location_id,
+            entity_type=mutation.entity_type,
+            entity_id=mutation.entity_id,
+            operation=mutation.operation,
+            status="applied",
+            entity_version=1,
+            applied_at=mutation.occurred_at,
+            **proof,
+        )
+        session.add(receipt)
+        session.commit()
+        before = {
+            column.name: getattr(receipt, column.name) for column in receipt.__table__.columns
+        }
+        context = (
+            SyncApplicationContext(
+                actor_id="user-1", write_protocol=1, canonical_digest=envelope_digest(mutation)
+            )
+            if strict
+            else None
+        )
+        result = SyncService.for_fixtures(session).apply(mutation, context=context)
+        session.commit()
+        assert result.status == "applied" and result.entity_version == 1
+        assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0
+        assert {
+            column.name: getattr(receipt, column.name) for column in receipt.__table__.columns
+        } == before

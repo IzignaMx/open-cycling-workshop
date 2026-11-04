@@ -50,14 +50,17 @@ def create_customer(
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    customer = Customer.create(
-        customer_id=payload.customer_id or new_id(),
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-        display_name=payload.display_name,
-        email=payload.email,
-        phone=payload.phone,
-    )
+    try:
+        customer = Customer.create(
+            customer_id=payload.customer_id or new_id(),
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+            display_name=payload.display_name,
+            email=payload.email,
+            phone=payload.phone,
+        )
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid customer request") from None
     repository = SqlAlchemyCustomerRepository(session)
     repository.add(customer)
     append_change(

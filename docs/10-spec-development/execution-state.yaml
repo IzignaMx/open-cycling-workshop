@@ -1,6 +1,48 @@
 schema: 1
 
-current_checkpoint: m2_restore_policy_20261103
+current_checkpoint: customer_field_limits_20261104
+customer_field_limits_20261104:
+  status: locally_validated_independently_reviewed_hosted_pending
+  requirement: FR-CUS-001
+  canonical_task: R01-T030
+  scope: customer_post_normalization_lengths_local_domain_REST_sync
+  normalization: unchanged_no_truncation_codepoint_limits
+  limits: name200_email320_phone64
+  evidence: docs/10-spec-development/2026-11-04-customer-field-limits.md
+  local_Python: 5391_passed_671_environment_skips_12_warnings_373_53s_exit0
+  local_Python_scope: before_final_documentation_stamp_only
+  local_frontend: 1246_passed_final
+  focused_backend_frontend: 70_24_passed
+  repository_contracts: 175_passed_poststamp_rerun_recorded_separately
+  RED_evidence: backend8_frontend9_failures_retained
+  independent_review: no_blockers_four_mutation_controls_detect_caps_and_UTF16
+  static_build: passed_existing_Vite_above500KB_warning_retained
+  native_browser: three_new_cases_thirteen_file_cases_collected_zero_executed
+  native_blocker: local_Docker_psql_unavailable
+  runtime_qualification: pending_not_inherited_from_PR85
+  M2_workflow_paths: none_of_eighteen_changed_files_match
+  publication: not_authorized
+  seventh_M2_run: not_authorized
+  production_machine_authority: absent_unchanged
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+pr85_fresh_main_acceptance_20261104:
+  status: historical_accepted_baseline_not_customer_fix_evidence
+  main: 4b3b886c0f9c91b3732595b44db926b6fcf6bbf9
+  tree: 6a1e9d2a1a3f9c28b7c42a4f1c109652645f6954
+  CI: 41757541938
+  counts: 27_of27_Python5987_plus58_exact_skips_frontend1237_API1
+  browser: 126_direct_log_126_aggregate_repeats20_9_5_10_kernel14_retry0
+  runtime_security_micro: 41757542023_41757541909_41757541906_accepted
+  large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed
+  receipt: artifacts/m2-hosted/pr85-postmerge/final/review.json
+  receipt_sha256: 04aad320c1fc887fd6436fd518c40952c378a8dcaf93ac6d12087af2bb79283d
+  provenance: retained_coordinator_archive_not_tracked_or_public_repository_path
+  M2_main_push: no_run_no_seventh_authority
+
+# Historical pre-publication policy snapshot; PR85 later merged under separate
+# approval. Its old sixth-run/publication gates are not current permissions.
+historical_restore_policy_checkpoint: m2_restore_policy_20261103
 m2_restore_policy_20261103:
   status: selected_policy_local_characterization_not_production_implementation
   policy: explicit_fresh_connector_enrollment_after_database_restore
@@ -2361,15 +2403,16 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
-active_plan_status: completed_bounded_laboratory_no_further_hosted_execution_authorized
+active_plan: docs/10-spec-development/2026-11-04-customer-field-limits.md
+active_plan_status: locally_validated_hosted_pending_publication_not_authorized
+historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
 previous_capture_reload_plan: docs/superpowers/plans/2026-11-02-capture-reload-recovery.md
 previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-continuity.md
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: m2_restore_policy_20261103
+last_checkpoint: customer_field_limits_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

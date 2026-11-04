@@ -113,3 +113,46 @@ def test_customer_get_is_denied_without_read_capability() -> None:
         headers={"Authorization": f"Bearer {writer}"},
     )
     assert response.status_code == 403
+
+
+def test_normalized_email_overflow_is_safe_422_without_customer_or_change():
+    from cycling_workshop.customers.models import CustomerRecord
+    from cycling_workshop.sync.models import ChangeRecord
+    from sqlalchemy import func, select
+
+    client, service = build_client()
+    token = token_for(service, capabilities={"customers.write"})
+    value = "İ" * 158 + "@x.co"
+    response = client.post(
+        "/api/v1/customers",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"location_id": "loc-1", "display_name": "Public", "email": value},
+    )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Invalid customer request"}
+    assert value not in response.text
+    with client.app.state.session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(CustomerRecord)) == 0
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0
+
+
+def test_rest_raw_caps_remain_and_supplementary_codepoints_fit_exact_boundary():
+    client, service = build_client()
+    token = token_for(service, capabilities={"customers.write"})
+    headers = {"Authorization": f"Bearer {token}"}
+    valid = {
+        "location_id": "loc-1",
+        "display_name": "🚲" * 200,
+        "email": "a" * 314 + "@x.com",
+        "phone": "1" * 64,
+    }
+    accepted = client.post("/api/v1/customers", headers=headers, json=valid)
+    assert accepted.status_code == 201
+    assert all(
+        accepted.json()[field] == valid[field] for field in ("display_name", "email", "phone")
+    )
+    for field in ("display_name", "email", "phone"):
+        rejected = client.post(
+            "/api/v1/customers", headers=headers, json={**valid, field: " " + valid[field]}
+        )
+        assert rejected.status_code == 422

@@ -101,3 +101,65 @@ def test_customer_partial_update_preserves_omitted_contact_fields() -> None:
     assert updated.email == "ana@example.com"
     assert updated.phone == "5512345678"
     assert updated.version == 2
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("display_name", "x" * 201),
+        ("email", "a" * 315 + "@x.com"),
+        ("phone", "1" * 65),
+        ("email", "İ" * 158 + "@x.co"),
+        ("display_name", "🚲" * 201),
+        ("display_name", "e\u0301" * 101),
+    ],
+)
+def test_customer_rejects_normalized_storage_overflow_without_mutating_original(field, value):
+    original = Customer.create(
+        customer_id="public-customer",
+        organization_id="org-1",
+        location_id="loc-1",
+        display_name="Original",
+    )
+    with pytest.raises(ValueError, match=field):
+        Customer.create(
+            customer_id="new",
+            organization_id="org-1",
+            location_id="loc-1",
+            **{"display_name": "Public", field: value},
+        )
+    with pytest.raises(ValueError, match=field):
+        original.update(**{field: value})
+    if field == "display_name":
+        with pytest.raises(ValueError, match=field):
+            original.rename(value)
+    else:
+        with pytest.raises(ValueError, match=field):
+            original.change_contact(**{"email": None, "phone": None, field: value})
+    assert original.display_name == "Original" and original.version == 1
+    assert original.email is None and original.phone is None
+
+
+@pytest.mark.parametrize(
+    "name,email,phone",
+    [
+        ("🚲" * 200, "a" * 314 + "@x.com", "1" * 64),
+        ("e\u0301" * 100, "İ" * 157 + "a@x.co", "☎" * 64),
+        ("  " + "n" * 200 + "  ", "  " + "a" * 314 + "@x.com  ", " " + "1 " * 64),
+    ],
+)
+def test_customer_storage_caps_count_normalized_codepoints_without_truncation(name, email, phone):
+    customer = Customer.create(
+        customer_id="public-customer",
+        organization_id="org-1",
+        location_id="loc-1",
+        display_name=name,
+        email=email,
+        phone=phone,
+    )
+    assert customer.display_name == " ".join(name.split())
+    assert customer.email == email.strip().lower()
+    assert customer.phone == "".join(phone.split())
+    assert len(customer.display_name) == 200
+    assert len(customer.email) == 320
+    assert len(customer.phone) == 64

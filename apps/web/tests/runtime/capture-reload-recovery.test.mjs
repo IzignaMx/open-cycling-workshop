@@ -217,3 +217,55 @@ test('voluntary same-workshop discard cannot restore the discarded input after r
   assert.equal(second.runtime.getSnapshot().capture.customer.draft.displayName, '')
   assert.equal(await second.database.captureDraftContents.count(), 0)
 })
+
+for (const [field, value, message] of [
+  ['displayName', 'a'.repeat(201), 'El nombre no puede superar 200 caracteres'],
+  ['email', 'a'.repeat(309) + '@example.com', 'El correo no puede superar 320 caracteres'],
+  ['phone', '1'.repeat(65), 'El teléfono no puede superar 64 caracteres'],
+  ['email', 'İ'.repeat(308) + '@example.com', 'El correo no puede superar 320 caracteres'],
+]) {
+  test(`invalid customer ${field} (${value.length}) remains recoverable then saves corrected intent once`, async (t) => {
+    const first = setup(t)
+    first.runtime.scheduleSync = () => {}
+    await login(first.runtime)
+    const view = first.runtime.getSnapshot().capture.viewToken
+    first.runtime.editCaptureCustomer(view, 'displayName', 'Synthetic draft')
+    first.runtime.editCaptureCustomer(view, field, value)
+    const draft = { ...first.runtime.getSnapshot().capture.customer.draft }
+    await first.runtime.submitCaptureCustomer(view)
+    const rejected = first.runtime.getSnapshot().capture.customer
+    assert.equal(await first.database.operationJournal.count(), 0)
+    assert.deepEqual(rejected.draft, draft)
+    assert.equal(rejected.dirty, true)
+    assert.equal(rejected.blocked, false)
+    assert.equal(rejected.busy, false)
+    assert.equal(rejected.message, message)
+    await until(
+      () =>
+        first.runtime
+          .getSnapshot()
+          .capture.customer.recoveryMessage?.startsWith('Borrador guardado'),
+      'invalid draft persisted after protection release',
+    )
+    first.runtime.dispose()
+    const second = setup(t, { name: first.name, storage: first.storage, online: false })
+    second.runtime.scheduleSync = () => {}
+    await second.runtime.start()
+    await until(
+      () => second.runtime.getSnapshot().phase === 'ready',
+      'ready after invalid draft reload',
+    )
+    const restored = second.runtime.getSnapshot().capture
+    assert.deepEqual(restored.customer.draft, draft)
+    assert.equal(restored.customer.blocked, false)
+    assert.equal(await second.database.operationJournal.count(), 0)
+    const corrected = { displayName: 'Corrected synthetic', email: 'ok@example.test', phone: '123' }
+    for (const [key, input] of Object.entries(corrected))
+      second.runtime.editCaptureCustomer(restored.viewToken, key, input)
+    await second.runtime.submitCaptureCustomer(restored.viewToken)
+    const journal = await second.database.operationJournal.toArray()
+    assert.equal(journal.length, 1)
+    assert.equal(second.runtime.getSnapshot().capture.customer.dirty, false)
+    assert.equal(second.runtime.getSnapshot().capture.customer.blocked, false)
+  })
+}

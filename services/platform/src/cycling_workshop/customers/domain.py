@@ -15,6 +15,8 @@ def _normalize_name(value: str) -> str:
     normalized = " ".join(value.split())
     if not normalized:
         raise ValueError("display_name must not be blank")
+    if len(normalized) > 200:
+        raise ValueError("display_name must be at most 200 characters")
     return normalized
 
 
@@ -24,6 +26,8 @@ def _normalize_email(value: str | None) -> str | None:
     normalized = value.strip().lower()
     if not normalized:
         return None
+    if len(normalized) > 320:
+        raise ValueError("email must be at most 320 characters")
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
         raise ValueError("email is not valid")
     return normalized
@@ -33,6 +37,8 @@ def _normalize_phone(value: str | None) -> str | None:
     if value is None:
         return None
     normalized = "".join(value.split())
+    if len(normalized) > 64:
+        raise ValueError("phone must be at most 64 characters")
     return normalized or None
 
 
