@@ -1,24 +1,110 @@
 # M2 lifecycle and restore: bounded anti-resurrection proposal
 
-2026-11-03. **Proposal only; no implementation or execution authorization.**
-Source inspected: `b5db35bd2bbb39848ce408e86ee31f9e4c00dffc`.
-This document does not authorize persistent access, credential issuance, a new
-storage service, production changes, publication, another hosted run or merge.
+2026-11-03. **Selected lifecycle policy; documentation only.**
+Accepted baseline: main `c0fe501a9f93393c106c49aece4a27af495b79e9`, tree
+`bbb9b6e4d140c96df54ee18ac4890f64a4a4be51`. The inspected local commit
+`062f881093527da55e2419d9b70268957632c26a` has that same tree, as recorded
+in the retained PR84 postmerge review. The earlier inventory at
+`b5db35bd2bbb39848ce408e86ee31f9e4c00dffc` (tree
+`106e11df74b4e656c4b6227610648b3466c3e436`) is historical; its laboratory
+implementation was rechecked against the accepted baseline for this decision.
+No production machine authority, persistent credential/storage service, runtime
+execution, publication or merge is authorized or implemented by this document.
 
-## Recommendation
+## Decision record and recommendation
 
-Keep the existing laboratory disposable: restart requires a fresh installation
-and fresh credentials; restored databases are not admitted. The next step is a **product-policy decision: is continuity across restore
-actually needed, or is explicit fresh enrollment acceptable?** No model or
-implementation should precede that decision. First distinguish what the current
-process-local witness protects from what it cannot protect.
-A durable anti-resurrection promise cannot be built entirely from values inside
-the database or backup being restored.
+On November 3 the maintainer delegated the lifecycle policy decision. The
+selected policy is **explicit fresh connector enrollment after database
+restore**, minimizing recovery complexity without
+silently reviving restored credentials. Automatic identity continuity through a
+new durable external witness is not selected.
 
-If continuity across restart/restore is ultimately required, select and review
-an independently protected witness and its recovery owner before implementing
-that promise. Until then, missing or uncertain witness state means unavailable,
-never automatic re-enrollment from restored rows.
+**Ordinary service restart is not database restoration.** Restart alone must not
+become a destructive re-enrollment trigger or rotate the dataset incarnation.
+For a future production connector, restart continuity should preserve an
+otherwise current authorized installation, subject to current grants, expiry and
+revocation. That is a requirement for future machine-authority design, not an
+implemented production capability. The disposable laboratory intentionally has a
+stricter boundary: each API process has a fresh run witness, so its old laboratory
+credentials cannot survive restart. Do not copy that laboratory policy into
+ordinary production restart handling.
+
+No new executable guard or state-machine abstraction is needed now: production
+has no connector machine principal to extend, and the laboratory already refuses
+existing/restored database adoption. The useful increment is this explicit
+contract, grounded in existing recovery and session code. An external durable
+anti-resurrection promise cannot be built entirely from values inside the same
+restored database or backup.
+
+## Source-backed restart and restoration distinction
+
+- `services/platform/src/cycling_workshop/identity/domain.py::Principal` is a
+  human user principal; `identity/security.py::SessionTokenService` issues tokens
+  with session version and optional dataset incarnation. It is not a machine
+  identity interface. `cycling_workshop/app.py::create_app` configures token
+  validation from the configured authentication secret.
+- `identity/dependencies.py::principal_from_request` and `effective_principal`
+  recheck current organization incarnation, active account/session version and
+  capability intersection. With unchanged secret, DB state and valid lifetime,
+  recreating the service does not itself invalidate a human session. This is
+  source behavior, not a newly executed restart qualification or a promise that
+  human sessions should be reused by connectors.
+- `identity/cutover.py::lock_compatibility` and `validate_incarnation` provide the
+  current compatibility barrier. `identity/cutover_cli.py::recover_cutover` /
+  `_change` require an exact expected incarnation and active cutover, validate
+  recovered quote history, generate a fresh incarnation, append an audit event
+  and commit together. Ordinary startup does not invoke this recovery operation.
+- `scripts/database/backup_postgres.py::restore_backup_bundle` accepts an
+  explicitly confirmed isolated empty target and verifies matching schema,
+  version and restored metadata. Its advisory lock coordinates that tool's
+  invocations, **not arbitrary live clients**. It does not itself rotate
+  incarnation or prove that the operator has stopped all writers.
+- `services/platform/tests/identity/test_cutover_http.py::test_rotation_does_not_collide_with_restored_session_counter`
+  and `test_cutover_postgres.py::test_restore_counter_collision_rotates_before_all_authenticated_paths`
+  cover rejection of prior sessions despite restored/colliding session counters
+  after incarnation rotation. These tests concern human admission, not absent
+  production machine credentials.
+- `tests/labs/m2/authority.py::LabAuthority.__init__` creates the process-local
+  run witness. `runtime_authority.py::PostgresLabAuthority._build_engine` refuses
+  an existing database. Existing M2 tests
+  `test_new_run_never_accepts_old_credential_and_close_is_terminal` and
+  `test_restored_old_database_rows_do_not_reconstruct_external_run_witness`
+  support disposable-run refusal, not persistent restart continuity.
+
+## Selected recovery sequence and low-friction limits
+
+1. Quiesce all old API/worker/connector admissions and isolate the restore target;
+   an unreachable or surviving worker is not evidence of quiescence. Never use
+   live database rollback as a supported shortcut.
+2. Restore into an isolated empty target and perform the accepted data/schema/
+   integrity checks. Keep it unavailable on uncertainty. Follow the existing
+   [backup and recovery procedure](../../07-operations/2026-10-14-backup-restore.md),
+   including its exact-incarnation recovery precondition before reopening.
+3. Perform the audited incarnation rotation for the restored organization before
+   accepting requests under that recovered authority. Do not rotate unrelated
+   organizations or treat a process restart as a recovery event.
+4. Keep future connector authority unavailable until separately authorized fresh
+   enrollment binds the recovered incarnation, exact installation/organization/
+   location and explicit current grants. Never reconstruct authorization from
+   restored verifiers, old credential files, cached grants or an old manifest.
+   Existing production has no such enrollment endpoint; this step is a future
+   lifecycle requirement, not a runnable instruction to mint credentials now.
+5. To reduce operator friction, eligible non-secret descriptive configuration may
+   be offered for review. Configuration is not authority: permission requests,
+   endpoint destinations and identity bindings require current validation, and
+   secrets/previous approval are not carried forward by the configuration copy.
+   Do not delete Core business data as part of module re-enrollment.
+6. Dispose or quarantine old connector projections according to an explicitly
+   defined future retention policy. Do not label restored/stale projection data
+   as current. Offline/unavailable means no current fetch and no queued privileged
+   admission, automatic refresh, replay or speculative success.
+
+This sequence relies on the supported operator-controlled recovery boundary. It
+is not a new automatic detector for privileged DB rollback, restoration of the
+whole process plus its witness, or split-brain workers. Those remain outside the
+laboratory guarantee. The immediate stopping point is reviewed documentation;
+no persistent access, storage, credential or production management surface is
+created to implement these future requirements.
 
 ## Evidence boundary
 
@@ -76,9 +162,9 @@ unsupported live-restore case, not evidence of a bypass in the qualified fresh
 laboratory flow. An actual reproducer must be labeled a controlled rollback
 intervention, never normal lifecycle admission.
 
-## Options and tradeoffs
+## Historical alternatives and current tradeoffs
 
-1. **Retire on every restart/restore (recommended current policy).** No adoption
+1. **Retire on every laboratory restart/restore (existing lab policy only).** No adoption
    of restored credentials or authority rows. Keep Core business-data recovery
    separate from connector authorization. Any future enrollment is explicit and
    newly scoped, never triggered by a backup or manifest. Lowest persistence
@@ -108,26 +194,29 @@ cannot preserve a revocation if that revocation and the epoch can both roll back
 
 ## Threat and failure matrix
 
-| Event                                                 | Required outcome / test                                                                                                                                                    | Claim boundary                                                                                                                                                    |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Old snapshot contains revoked credential              | Old generation never becomes admissible after acknowledged revoke. Compare retained external terminal state against restored rows; refuse mismatch.                        | Current live-restore case is unsupported; next model must expose it rather than report it already solved.                                                         |
-| External witness rolled back with DB                  | Refuse if independent freshness evidence detects rollback; otherwise explicitly outside the trust model.                                                                   | No wholly co-restored mechanism can establish that a later revocation happened. Signing stale state does not establish freshness.                                 |
-| Witness absent, unavailable or ambiguous              | Closed admission; no fallback to DB, manifest, expired receipt or cached allow.                                                                                            | Availability loss is deliberate. Cleanup must still run and report uncertainty separately.                                                                        |
-| Reset, restart or A→B→A installation switch           | New run/epoch cannot accept old credentials, deadlines or projection results. Never reset revision to an adoptable default.                                                | Restart rejection is current; durable epoch continuity is deferred.                                                                                               |
-| Multiple surviving API workers or split-brain restore | Quiesce and fence every old worker before any new admission; an unreachable worker is not proof of retirement.                                                             | Current single-process witness/local barrier is not a multi-worker coordination protocol. A future witness must participate in every admission, not only startup. |
-| Stale query or projection completes after retirement  | Do not display it as current or populate the new binding. Bind result acceptance to the initiating scope/epoch.                                                            | Already authorized response bytes may still arrive; no retroactive recall claim.                                                                                  |
-| Concurrent read and revoke                            | Revoke committed before the admission barrier refuses read; read holding barrier may finish before revoke acknowledgement. No later read admitted with revoked credential. | Preserve existing materialize-before-release semantics and bounded locks; external witness participation must not introduce a check/use gap.                      |
-| Crash between witness change and DB/audit change      | No success acknowledgement until required records durably agree. Incomplete transition is quarantined, never rolled back to allow.                                         | No cross-system atomicity assumed. A witness-first terminal denial may sacrifice availability; reconciliation is a separate design requirement.                   |
-| Clock rollback, jump, restart or suspension           | Fail closed on invalid evidence; never recreate a fresh lifetime from old expiry.                                                                                          | Time limits exposure, not historical revocation proof. No portable persisted monotonic timestamp claim.                                                           |
-| Grant reduction, disable, rotation                    | Snapshot cannot restore an earlier wider policy or verifier; no overlap or silent grant expansion.                                                                         | Disable, revoke and purge remain distinct operations; they do not delete Core data.                                                                               |
-| Cleanup fails or process survives                     | Admission retired independently; retain honest disposal failure and bounded external reap requirements.                                                                    | Absence evidence is attempt-specific, not erasure or a durable revocation ledger.                                                                                 |
+Rows concerning an external witness describe the deferred alternative and its
+limits, not a new dependency of the selected re-enrollment policy.
 
-## Optional synthetic slice after a continuity decision
+| Event                                                    | Required outcome / test                                                                                                                                                                    | Claim boundary                                                                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Old snapshot contains revoked credential                 | Old generation never becomes admissible after acknowledged revoke. Keep restored authority closed; require fresh enrollment after recovery. An external witness is a deferred alternative. | Current live restore is unsupported; no model or external witness is being implemented.                                                                           |
+| External witness rolled back with DB                     | Refuse if independent freshness evidence detects rollback; otherwise explicitly outside the trust model.                                                                                   | No wholly co-restored mechanism can establish that a later revocation happened. Signing stale state does not establish freshness.                                 |
+| Witness absent, unavailable or ambiguous                 | Closed admission; no fallback to DB, manifest, expired receipt or cached allow.                                                                                                            | Availability loss is deliberate. Cleanup must still run and report uncertainty separately.                                                                        |
+| Lab reset/restart, recovery or A→B→A installation switch | New run/epoch cannot accept old credentials, deadlines or projection results. Never reset revision to an adoptable default.                                                                | Lab restart rejection is current; ordinary production restart alone is not an incarnation change.                                                                 |
+| Multiple surviving API workers or split-brain restore    | Quiesce and fence every old worker before any new admission; an unreachable worker is not proof of retirement.                                                                             | Current single-process witness/local barrier is not a multi-worker coordination protocol. A future witness must participate in every admission, not only startup. |
+| Stale query or projection completes after retirement     | Do not display it as current or populate the new binding. Bind result acceptance to the initiating scope/epoch.                                                                            | Already authorized response bytes may still arrive; no retroactive recall claim.                                                                                  |
+| Concurrent read and revoke                               | Revoke committed before the admission barrier refuses read; read holding barrier may finish before revoke acknowledgement. No later read admitted with revoked credential.                 | Preserve existing materialize-before-release semantics and bounded locks; external witness participation must not introduce a check/use gap.                      |
+| Crash between witness change and DB/audit change         | No success acknowledgement until required records durably agree. Incomplete transition is quarantined, never rolled back to allow.                                                         | No cross-system atomicity assumed. A witness-first terminal denial may sacrifice availability; reconciliation is a separate design requirement.                   |
+| Clock rollback, jump, restart or suspension              | Fail closed on invalid evidence; never recreate a fresh lifetime from old expiry.                                                                                                          | Time limits exposure, not historical revocation proof. No portable persisted monotonic timestamp claim.                                                           |
+| Grant reduction, disable, rotation                       | Snapshot cannot restore an earlier wider policy or verifier; no overlap or silent grant expansion.                                                                                         | Disable, revoke and purge remain distinct operations; they do not delete Core data.                                                                               |
+| Cleanup fails or process survives                        | Admission retired independently; retain honest disposal failure and bounded external reap requirements.                                                                                    | Absence evidence is attempt-specific, not erasure or a durable revocation ledger.                                                                                 |
 
-Do not implement this model automatically. If the user chooses disposable
-re-enrollment, record that policy and retain the current unsupported-restore
-boundary; no new witness abstraction is necessary. If the user requires durable
-continuity, first select the intended trust and recovery protocol. Only where
+## Deferred optional protocol model, not a current task
+
+The selected re-enrollment policy does not require this model or a new witness
+abstraction. The following remains historical design exploration only. If a
+future explicit decision instead requires durable continuity across restoration,
+first select the intended trust and recovery protocol. Only where
 its assumptions need validation, propose a bounded test-only reference lifecycle
 model and adversarial tests, using public symbolic credential identifiers, not generated
 credentials, real PostgreSQL, listeners, keys or new persistent storage. Reuse
@@ -164,16 +253,17 @@ interruption and independent disposal evidence under a new approved plan.
 
 ## Decisions and stopping boundary
 
-This document may be reviewed now. First obtain the product-policy decision on
-continuity versus fresh enrollment. Only if it establishes a concrete need for
-a new protocol should a future implementation plan be proposed; a model is an
-optional validation aid, not a required deliverable or an automatic next task.
+The delegated product-policy choice is recorded above: fresh enrollment after
+restore, not destructive re-enrollment on ordinary restart. No further product
+preference question is needed for this documentation increment. A new protocol
+or model is not an automatic next task. Future production machine-authority
+implementation still needs its own concrete design and permission boundaries.
 Before implementing that chosen slice, confirm its exact scope and plan. The
 user has not authorized new persistent connector access or storage through this
 proposal. Separate decisions are required for:
 
-- Whether restart/restore must retain connectivity at all, or explicit fresh
-  enrollment is acceptable; exact installation and dataset-incarnation meaning.
+- How future ordinary restart continuity will be implemented while restore
+  requires fresh enrollment; exact installation and dataset-incarnation meaning.
 - Who may enroll, retire, restore and re-enroll; precise capabilities, audit and
   recovery approvals, without inheriting human Owner/wildcard authority.
 - If durable continuity is wanted, which independent witness is trusted, who
@@ -194,6 +284,15 @@ receipt plus source/tests, not production lifecycle or durable restore safety.
 - [Master Agent Loop](../../10-spec-development/open-cycling-workshop-platform-agent-master-loop-v0.2.md).
 - [Product coverage and its evidence boundary](../../10-spec-development/2026-11-02-product-description-alignment.md).
 
-Source references above are symbols in the inspected commit; tests were read,
-not rerun for this design-only task. No fresh runtime or external state inspection
-is implied by the retained fifth-run evidence.
+Historical human-session/recovery tests above were read, not rerun during this
+document refinement. The accompanying local characterization in
+`tests/labs/m2/test_runtime_authority.py` adds 11 cases and reports 29 passing
+cases total, using actual bootstrap control flow with fake SQL/engine inputs.
+The retained local result is
+`artifacts/m2-lifecycle-policy/bootstrap-characterization-final.log`; this is
+not a tracked public evidence file. No PostgreSQL, credentials, TLS or runtime
+resources were created by those cases, and they do not prove native restore
+behavior. This test path is included by the M2 workflow, so publication that
+triggers that workflow requires a separately approved sixth laboratory run.
+Local test scope implies no publication or execution permission. No fresh
+runtime inspection is implied by the retained fifth-run evidence.

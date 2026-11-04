@@ -354,7 +354,7 @@ def test_m2_local_certificate_repair_keeps_hosted_cause_unproven() -> None:
 
 def test_m2_acceptance_checkpoint_separates_tree_qualified_lab_and_fresh_main() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: m2_laboratory_acceptance_20261103" in state
+    assert "historical_m2_acceptance_checkpoint: m2_laboratory_acceptance_20261103" in state
     block = state.split("m2_laboratory_acceptance_20261103:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "status: bounded_synthetic_lab_accepted_full_M2_incomplete",
@@ -371,7 +371,6 @@ def test_m2_acceptance_checkpoint_separates_tree_qualified_lab_and_fresh_main() 
     ):
         assert token in block
     assert "active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md" in state
-    assert "last_checkpoint: m2_laboratory_acceptance_20261103" in state
 
 
 def test_m2_acceptance_record_binds_receipts_without_claiming_full_release() -> None:
@@ -420,3 +419,46 @@ def test_checklist_supersedes_historical_permissions_without_rewriting_them() ->
     assert "5971" in current and "27/27" in current
     assert "Historical source-stage snapshots" in checklist
     assert "Obtain separate publication and single-run permission before a fifth" in checklist
+
+
+def test_selected_restore_policy_keeps_runtime_and_authority_gates_closed() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: m2_restore_policy_20261103" in state
+    assert "last_checkpoint: m2_restore_policy_20261103" in state
+    block = state.split("m2_restore_policy_20261103:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "policy: explicit_fresh_connector_enrollment_after_database_restore",
+        "ordinary_service_restart: not_restore_no_destructive_reenrollment_or_incarnation_rotation",
+        "production_machine_authority: absent_implementation_pending",
+        "authority_characterization: fake_SQL_control_flow_only_not_native_PostgreSQL_restore",
+        "native_restore_qualification: not_established",
+        "sixth_M2_run: not_authorized_not_executed",
+        "publication: not_authorized_for_this_local_increment",
+        "V01_physical_and_release_gates: unchanged_partial",
+    ):
+        assert token in block
+    design = block.split("  design: ", 1)[1].splitlines()[0]
+    assert (ROOT / design).is_file()
+
+
+def test_pr84_main_receipt_is_separate_from_local_policy_characterization() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("pr84_fresh_main_acceptance_20261103:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "main: c0fe501a9f93393c106c49aece4a27af495b79e9",
+        "tree: bbb9b6e4d140c96df54ee18ac4890f64a4a4be51",
+        "CI: 41713827892",
+        "counts: 27_of27_Python5974_plus58_exact_skips_frontend1237_API1",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+        "ec46275af1fa1fda87c19be9bc2200638020dca6ec891f3d5a0298ef86d7f8ef",
+    ):
+        assert token in block
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    current = checklist.split(
+        "## 2026-11-03 · Selected restore policy, local characterization only", 1
+    )[1]
+    current = current.split("\n## ", 1)[0]
+    assert "Ordinary service restart is not database restoration" in current
+    assert "fake SQL" in current and "not native PostgreSQL restore proof" in current
+    assert "production machine authority remains absent" in current
+    assert "no sixth" in current
