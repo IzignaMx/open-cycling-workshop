@@ -768,8 +768,10 @@ def test_lookup_initial_hosted_failure_is_preserved_without_cause_invention() ->
 
 def test_lookup_locator_repair_preserves_two_failed_runs_and_proof_limits() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_locator_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_locator_20261104" in state
+    assert "historical_lookup_locator_checkpoint: local_customer_lookup_locator_20261104" in state
+    assert (
+        "historical_lookup_locator_last_checkpoint: local_customer_lookup_locator_20261104" in state
+    )
     block = state.split("local_customer_lookup_locator_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "second_CI: 41847937571",
@@ -793,5 +795,38 @@ def test_lookup_locator_repair_preserves_two_failed_runs_and_proof_limits() -> N
         "vacuous",
         "not native browser execution",
         "f208000e8b7d97401d74e970a6d3af71f1f80bd44e3d3ef5c86c75d22d3d68c2",
+    ):
+        assert token in record
+
+
+def test_lookup_phase_isolation_does_not_erase_failed_required_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_phase_isolation_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_phase_isolation_20261104" in state
+    block = state.split("local_customer_lookup_phase_isolation_20261104:\n", 1)[1].split("\n\n", 1)[
+        0
+    ]
+    for token in (
+        "third_CI: 41864390743",
+        "third_aggregate: 27_of27_not_complete_workflow_acceptance",
+        "third_browser: direct133_passed_aggregate133_passed_lookup_completed",
+        "third_repetitions: sync_order20_passed_cutover8_passed1_failed_admin_skipped_expiry0of10",
+        "counter_provenance: UNKNOWN_no_root_cause_claim",
+        "preparation: local_mock_only_no_Docker_PostgreSQL_or_cleanup_execution",
+        "authority: no_publication_CI_or_merge_at_this_stage",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41864390743",
+        "133 passed",
+        "8 passed / 1 failed",
+        "trusted runner",
+        "TOCTOU",
+        "within-case history",
+        "mock-only",
+        "counter provenance remains UNKNOWN",
+        "a5c6a0417cb80d091d1ad236280863e75d1ad0fbc61d2983b33922838acd1a7b",
     ):
         assert token in record

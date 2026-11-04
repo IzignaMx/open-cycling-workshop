@@ -1736,11 +1736,57 @@ def indexeddb_runtime_check() -> Check:
     return Check("indexeddb_100k", "fail", detail)
 
 
+BROWSER_PREPARATION_PHASES = ("INITIAL", "SYNC_ORDER", "CUTOVER", "ADMINISTRATION", "INVENTORY")
+
+
+def hosted_browser_preparation(env: dict[str, str]) -> tuple[bool, bool]:
+    """Validate trusted workflow handoff, not general-purpose cleanup authority.
+
+    Any hosted metadata forbids falling back to the legacy nonhosted path.
+    An accepted earlier preparation is not permission to reuse its fixture:
+    the aggregate must still execute the fresh ownership/concurrency guard.
+    """
+    hosted = any(
+        key in {"GITHUB_ACTIONS", "GITHUB_JOB", "OCWP_E2E_SERVICE_ID"}
+        or key.startswith("OCWP_BROWSER_PREP_")
+        for key in env
+    )
+    if not hosted:
+        return False, True
+    if (
+        env.get("GITHUB_ACTIONS") != "true"
+        or env.get("GITHUB_JOB") != "verify"
+        or re.fullmatch(r"[a-f0-9]{64}", env.get("OCWP_E2E_SERVICE_ID", "")) is None
+    ):
+        return True, False
+    for phase in BROWSER_PREPARATION_PHASES:
+        outcome_key = f"OCWP_BROWSER_PREP_{phase}_OUTCOME"
+        accepted_key = f"OCWP_BROWSER_PREP_{phase}_ACCEPTED"
+        if outcome_key not in env or accepted_key not in env:
+            return True, False
+        outcome, accepted = env[outcome_key], env[accepted_key]
+        if outcome in {"success", "failure"} and accepted == "true":
+            continue
+        if phase != "INITIAL" and outcome == "skipped" and accepted == "":
+            continue
+        return True, False
+    return True, True
+
+
 def browser_runtime_checks(
     pnpm_probe: Check, env: dict[str, str]
 ) -> tuple[list[Check], list[Check]]:
     checks: list[Check] = []
     blockers: list[Check] = []
+    hosted, handoff_valid = hosted_browser_preparation(env)
+    if not handoff_valid:
+        checks.extend(
+            [
+                Check("pwa_build", "fail", "not executed: browser fixture handoff refused"),
+                Check("browser_e2e", "fail", "not executed: browser fixture handoff refused"),
+            ]
+        )
+        return checks, blockers
     if pnpm_probe.status != "pass":
         blockers.extend(
             [
@@ -1799,9 +1845,12 @@ def browser_runtime_checks(
         )
         return checks, blockers
 
-    prepare = run_check(
-        "browser_e2e_prepare", [sys.executable, "scripts/e2e/prepare_e2e_database.py"], env=env
+    # Nonhosted callers retain the existing explicitly configured generic setup.
+    # Hosted callers may never bypass the fresh service ownership/session guard.
+    prepare_script = (
+        "scripts/ci/prepare_browser_phase.py" if hosted else "scripts/e2e/prepare_e2e_database.py"
     )
+    prepare = run_check("browser_e2e_prepare", [sys.executable, prepare_script], env=env)
     checks.append(prepare)
     if prepare.status != "pass":
         checks.append(Check("browser_e2e", "fail", "browser E2E database preparation failed"))

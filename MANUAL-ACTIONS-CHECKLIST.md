@@ -1,6 +1,38 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 third failure; local phase-isolation preparation
+
+- [x] Preserve CI 41864390743: aggregate 27/27 and both browser suites 133 passed,
+      lookup completed, but workflow unqualified. Python: 6,128 + 58 exact skips;
+      frontend: 1,296. Sync/order repeats: 20/20; cutover: 8/9, zero retries.
+- Administration repeats skipped; expiry zero of ten, guard failed closed. Do not
+  accept aggregate success as a replacement for any required repetition gate.
+- Counter provenance remains UNKNOWN. No production lookup defect or flaky-test
+  classification follows from the READY timeout after explicit verification retry.
+- [x] Prepare and review CI-only existing fixture preparation between independent
+      completed phases, preserving within-case history and all counts/assertions.
+      Trusted service identity and fixed destinations must be checked; TOCTOU and
+      trusted-runner limits remain explicit, not hostile-host attestation.
+- Mock-only local validation; no Docker/PG/cleanup execution or remote changes.
+  Six guarded boundaries, four additional preparations, no retries. Existing
+  initial-direct and aggregate preparations use the same guard; prior refusal or
+  incomplete preparation blocks aggregate prep/browser explicitly as not executed.
+  A genuine browser failure after accepted preparation is distinct. Limits:
+  inspect 5 s / 16 KiB plus 1 s reap;
+  two `/proc` reads of 64 KiB; DB connect 5 s / statement 2 s; preparation child
+  120 s with discarded output. Not a hard host-time/disk bound. Final combined
+  local counts: Python 5,630 passed, 671 environment skips, 12 warnings,
+  425.66 s, exit 0, before final documentation stamp; frontend 1,296 passed.
+  Post-stamp repository: 187 passed; documentation static/format checks passed.
+  Wrapper strict mypy passed; legacy verifier retains 36 unchanged baseline mypy
+  diagnostics, not a clean result. No actual Docker/PG/reset or hosted qualification.
+  No publication, CI, merge or M2 authority here.
+- Raw cutover trace/ZIP stays out of Space backups. Physical T1–T8/R01-T035,
+  capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
 ## 2026-11-04 · PR89 diagnostic failure; test-locator repair
+
+Historical locator-repair snapshot; third failed qualification is above.
 
 - [x] Preserve second CI 41847937571: 26/27 controls, not accepted. Both browser
       suites: 132 passed / 1 failed; lookup retried once. Python: 6,127 + 58 exact

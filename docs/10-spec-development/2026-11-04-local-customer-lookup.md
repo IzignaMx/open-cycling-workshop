@@ -74,7 +74,100 @@ accent-insensitive semantics and server-wide completeness remain deferred.
    test results alone grant neither. No seventh M2 run, migration or new authority
    is granted.
 
-## Current source stage: test-locator repair after diagnostic failure
+## Current source stage: mock-only independent-phase preparation
+
+[CI 41864390743](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41864390743)
+tested merge `c7e6ed692f84ac61933fa25db1541ecc09affced`, head
+`2ca9f81117d6c410a80ebb1b232fdeed76b25af7`, tree
+`e22d48d88eb3c00ad85a8029d17fd54c036e6c7e`. Direct and aggregate browser
+suites each reported 133 passed, including the new lookup case. Closed diagnostic
+signals reached done with an explicit selection retained. Aggregate controls passed
+27/27; Python: 6,128 + 58 exact expected skips; frontend: 1,296; API client: 1.
+This is not complete workflow acceptance: sync/order repeats passed 20/20, but
+cutover repetition reported 8 passed / 1 failed, with zero retries. The third
+service-order scope-integrity repetition timed out awaiting READY after explicit
+verification retry; retained DOM showed preparation of the authorized workshop.
+Administration repetitions were skipped; expiry ran zero of ten required cases
+and its always-run guard failed closed. Kernel: 14; inventory: 43 PostgreSQL and
+two edge privacy cases with cleanup; branding recovery: two cases. Non-CI evidence
+was accepted independently. The exact counter provenance remains UNKNOWN; no
+blanket flaky classification or production lookup root-cause claim is made.
+
+Retained failure receipt:
+`artifacts/customer-lookup/pr89-locator-qualification/final/review.json`, SHA256
+`a5c6a0417cb80d091d1ad236280863e75d1ad0fbc61d2983b33922838acd1a7b`.
+Both approximately 347 MB full-browser archives remain undownloaded. The supported
+10.3 MB cutover archive was size/digest verified and its failure context inspected
+locally. Raw trace/archive material may contain authentication data and is excluded
+from Space backups; only sanitized closed findings are suitable for sharing.
+All artifact paths denote retained coordinator evidence, not public source files.
+
+### Bounded local plan
+
+1. Prepare a CI-only wrapper around existing fixture preparation, with a trusted
+   full service container ID and fixed fixture DSNs. Read-only inspection must
+   reject unexpected destinations, redirects and identity mismatches before any
+   future invocation of existing preparation. Do not introduce new reset logic.
+2. Invoke existing preparation only between completed independent repeat phases,
+   preserving within-case history, reports, expected counts and zero-retry gates.
+   Do not reset an active case or weaken its scope, recovery or timeout assertions.
+3. Prove wrapper policy through mock-only execution and workflow/contract tests.
+   No Docker, PostgreSQL connection, credential generation or actual cleanup is
+   executed by this preparation. `scripts/ci/prepare_browser_phase.py` has four
+   additional preparation call sites in `.github/workflows/ci.yml`, before
+   sync/order, cutover, administration-clock and inventory-expiry repetitions.
+   The existing initial-direct and aggregate preparations use the same guard:
+   six guarded boundaries in total, only four additional preparations. Focused policy tests
+   live in `tests/operations/test_prepare_browser_phase.py` and existing CI
+   contract tests; production browser/runtime behavior is unchanged.
+4. Review the trusted runner assumptions and TOCTOU limit explicitly: a successful
+   bounded inspection is not hostile-host attestation and does not make later
+   external state immutable. Fail closed on ambiguous or mismatched evidence.
+5. Stop at independently reviewed local preparation. Publication, hosted CI and
+   merge are not granted at this source stage. Any later acceptance must establish
+   all 27 controls and every required repetition group, not just suite badges.
+
+No product lookup, schema, persistent authority, M2, physical or capacity scope is
+added. Preserve all three failed runs and the historical checkpoints below.
+The wrapper covers six guarded boundaries with four additional preparations,
+no retries and no new volumes/asset cleanup. Prior guard refusal or incomplete
+preparation must propagate through trusted workflow state into the always-run
+aggregate: its browser check fails explicitly as not executed before any further
+browser-check build, fixture preparation or browser launch. This restriction is
+inside `browser_runtime_checks`, not a claim that verifier `main()` performs no
+other commands first. The reviewed workflow supplies `--full-python-receipt` and
+CI=true; the explicit receipt argument itself avoids the generic pytest/PostgreSQL
+route even if CI is missing. A manual invocation without
+those inputs can take that legacy route before handoff and is outside the reviewed
+workflow. Rechecking later is insufficient. A genuine browser
+failure after accepted preparation remains distinguishable from guard refusal. Inspection has a five-second deadline, combined output capped at 16 KiB
+and a one-second reap allowance. Two `/proc` reads are capped at 64 KiB each.
+Database connection timeout is five seconds; statement timeout is two seconds.
+The existing preparation child has a 120-second limit with output discarded.
+Any other database client, including a transient health client, causes refusal.
+These are operation limits, not a hard total host-time or disk quota. The residual
+inspection → port/query → reset TOCTOU window relies on a trusted sequential
+runner. Local fake-policy tests and static checks do not establish actual Docker,
+PostgreSQL, reset, listener or hosted browser behavior. Final combined counts and
+independent local review are complete. The package has ten repair paths and 25
+paths overall versus accepted main. The preliminary pre-expansion Python run
+(5,557 passed, 671 environment skips, 12 warnings, 406.99 s) is retained but does
+not validate later aggregate/parser changes. Fresh unchanged-product frontend
+verification passed 1,296 tests. The wrapper's strict mypy check passes; whole-file
+mypy on the legacy aggregate verifier still reports 36 diagnostics, identical to
+the filename-normalized baseline. Do not describe that legacy check as clean.
+Other-client refusal deliberately includes the database health probe, so legitimate
+health-check overlap can refuse preparation; it is not permission to retry or relax
+the guard. Final frozen-source full Python: 5,630 passed, 671 environment skips,
+12 warnings, 425.66 s, exit 0, retained in
+`artifacts/customer-lookup/pr89-cutover-diagnosis/full-python-isolation-final.log`.
+Final frontend: 1,296 passed, zero failures/skips. Python preceded the final
+four-file documentation stamp; post-stamp repository checks bind the final
+contract/source documentation separately: 187 passed. Documentation Ruff/format,
+Prettier and diff checks passed. These are local tests and mocks, not
+actual Docker, PostgreSQL/reset or hosted CI qualification.
+
+## Historical source stage: test-locator repair after diagnostic failure
 
 [CI 41847937571](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41847937571)
 on head `ab1c8947448536dcc7588ef0c3892990dd948b2c`, tested merge
