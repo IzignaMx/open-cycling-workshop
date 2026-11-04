@@ -851,3 +851,56 @@ test('native old-writer-compatible commit invalidates recovery even after a heal
     await restore()
   }
 })
+
+for (const invalid of [
+  { field: 'Nombre', value: 'a'.repeat(201), message: 'El nombre no puede superar 200 caracteres' },
+  {
+    field: 'Correo',
+    value: 'a'.repeat(309) + '@example.com',
+    message: 'El correo no puede superar 320 caracteres',
+  },
+  {
+    field: 'Teléfono',
+    value: '1'.repeat(65),
+    message: 'El teléfono no puede superar 64 caracteres',
+  },
+]) {
+  test(`customer ${invalid.field} overflow retains recoverable draft without journal admission`, async ({
+    page,
+    request,
+  }, info) => {
+    await seedWorkshop(page, request)
+    const fields = { ...CUSTOMER, [invalid.field]: invalid.value }
+    await fillFields(form(page, 'customer'), fields)
+    await acknowledged(page, 'customer')
+    const before = await kernelSnapshot(page)
+    await submit(page, 'customer').click()
+    await expect(commandStatus(page, 'customer')).toHaveText(invalid.message)
+    await expectFields(form(page, 'customer'), fields)
+    await expect(form(page, 'customer')).toHaveAttribute('data-dirty', 'true')
+    await expect(submit(page, 'customer')).toBeEnabled()
+    // Actual native protection must settle back to recoverable UNSENT, never
+    // remain PROTECTED or manufacture a command receipt for rejected input.
+    await acknowledged(page, 'customer')
+    expect((await kernelSnapshot(page)).journal).toEqual(before.journal)
+    await page.reload()
+    await waitForReady(page)
+    await expectFields(form(page, 'customer'), fields)
+    await expect(submit(page, 'customer')).toBeEnabled()
+    expect((await kernelSnapshot(page)).journal).toEqual(before.journal)
+    await fillFields(form(page, 'customer'), CUSTOMER)
+    await submit(page, 'customer').click()
+    await expect(commandStatus(page, 'customer')).toHaveText('Cliente guardado localmente')
+    await expect(form(page, 'customer')).toHaveAttribute('data-dirty', 'false')
+    await expectFields(form(page, 'customer'), { Nombre: '', Correo: '', Teléfono: '' })
+    const after = await kernelSnapshot(page)
+    expect(after.journal).toHaveLength(before.journal.length + 1)
+    expect(after.journal.slice(0, before.journal.length)).toEqual(before.journal)
+    expect(after.journal.at(-1)!.envelope.payload).toEqual({
+      display_name: CUSTOMER.Nombre,
+      email: CUSTOMER.Correo,
+      phone: CUSTOMER.Teléfono,
+    })
+    if (invalid.field === 'Nombre') await evidence(page, info, 'customer-length-corrected')
+  })
+}

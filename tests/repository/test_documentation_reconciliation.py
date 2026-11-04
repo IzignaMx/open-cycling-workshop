@@ -370,7 +370,10 @@ def test_m2_acceptance_checkpoint_separates_tree_qualified_lab_and_fresh_main() 
         "V01_physical_and_release_gates: unchanged_partial",
     ):
         assert token in block
-    assert "active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md" in state
+    assert (
+        "historical_completed_lab_active_plan: "
+        "docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md"
+    ) in state
 
 
 def test_m2_acceptance_record_binds_receipts_without_claiming_full_release() -> None:
@@ -423,8 +426,7 @@ def test_checklist_supersedes_historical_permissions_without_rewriting_them() ->
 
 def test_selected_restore_policy_keeps_runtime_and_authority_gates_closed() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: m2_restore_policy_20261103" in state
-    assert "last_checkpoint: m2_restore_policy_20261103" in state
+    assert "historical_restore_policy_checkpoint: m2_restore_policy_20261103" in state
     block = state.split("m2_restore_policy_20261103:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "policy: explicit_fresh_connector_enrollment_after_database_restore",
@@ -462,3 +464,42 @@ def test_pr84_main_receipt_is_separate_from_local_policy_characterization() -> N
     assert "fake SQL" in current and "not native PostgreSQL restore proof" in current
     assert "production machine authority remains absent" in current
     assert "no sixth" in current
+
+
+def test_customer_limits_checkpoint_preserves_admission_and_evidence_boundary() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: customer_field_limits_20261104" in state
+    assert "last_checkpoint: customer_field_limits_20261104" in state
+    assert "customer_field_limits_20261104:\n" in state
+    block = state.split("customer_field_limits_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: locally_validated_independently_reviewed_hosted_pending",
+        "local_Python_scope: before_final_documentation_stamp_only",
+        "native_browser: three_new_cases_thirteen_file_cases_collected_zero_executed",
+        "requirement: FR-CUS-001",
+        "canonical_task: R01-T030",
+        "normalization: unchanged_no_truncation_codepoint_limits",
+        "runtime_qualification: pending_not_inherited_from_PR85",
+        "publication: not_authorized",
+        "seventh_M2_run: not_authorized",
+    ):
+        assert token in block
+    assert (ROOT / block.split("  evidence: ", 1)[1].splitlines()[0]).is_file()
+    record = read(BASE + "2026-11-04-customer-field-limits.md")
+    for token in ("200", "320", "64", "FR-CUS-001", "R01-T030", "no truncation"):
+        assert token in record
+
+
+def test_pr85_main_receipt_does_not_qualify_customer_fix() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "pr85_fresh_main_acceptance_20261104:\n" in state
+    block = state.split("pr85_fresh_main_acceptance_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "4b3b886c0f9c91b3732595b44db926b6fcf6bbf9",
+        "6a1e9d2a1a3f9c28b7c42a4f1c109652645f6954",
+        "41757541938",
+        "5987",
+        "04aad320c1fc887fd6436fd518c40952c378a8dcaf93ac6d12087af2bb79283d",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in block

@@ -1,5 +1,37 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · Customer field limits, local integrity correction
+
+- [x] Admit FR-CUS-001/R01-T030 post-normalization limits as an active V0.1
+      integrity correction, not customer search or R02 completion.
+- [x] Finish and independently validate local name200/email320/phone64 code-point
+      checks, preserved drafts, closed errors, REST422 and sync conflict without
+      invalid entity effects; prove a valid batch peer still succeeds.
+- Keep normalization unchanged with no truncation. Existing invalid retained
+  work is not deleted, rewritten or silently replayed.
+- [ ] Obtain separate publication approval. No seventh M2 run is authorized.
+- [Design, plan and historical baseline](docs/10-spec-development/2026-11-04-customer-field-limits.md).
+  Local Python5391 passed/671 environment skips/12 warnings; final frontend1246,
+  focused backend70/frontend24 and repository175 passed. Full Python preceded
+  only the final documentation stamp; repository contracts are rerun afterward.
+  Static/build checks passed with existing Vite >500KB warning retained.
+  Three new native cases/13 collected in the file were not executed locally
+  (Docker/psql unavailable). Hosted acceptance remains pending.
+  Historical CI does not qualify changed source. None of18 files matches M2 triggers.
+  No new authority/storage/migration; physical, SPENT/UNKNOWN and Pages unchanged.
+
+## 2026-11-04 · PR85 merged historical baseline
+
+- [x] Independently accept main4b3b886c/tree6a1e: CI41757541938 passed27/27,
+      Python5987 +58 exact skips, frontend1237/API1, browser126 direct-log/126
+      aggregate, repeats20/9/5/10 and kernel14 retry0. Runtime/security/micro accepted.
+- Large browser archives were not downloaded or byte/trace/screenshot reviewed.
+  This main push did not run M2. The separately approved sixth PR85 attempt is
+  historical; the earlier unchecked sixth-run/publication entries below are
+  retained source-stage snapshots, not invitations to repeat consumed work.
+- Production machine authority and native durable-restore qualification remain
+  incomplete. The selected restore-versus-restart policy remains in force.
+
 ## 2026-11-03 · Selected restore policy, local characterization only
 
 - [x] Select explicit fresh connector enrollment after database restore under

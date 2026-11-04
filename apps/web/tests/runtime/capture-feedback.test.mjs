@@ -57,6 +57,9 @@ test('capture fixed validation messages and hostile result objects do not expose
   assert.equal(typeof feedback.captureFeedback, 'function')
   const codes = [
     'customer_name_required',
+    'customer_name_too_long',
+    'customer_email_too_long',
+    'customer_phone_too_long',
     'order_problem_required',
     'priority_invalid',
     'bicycle_brand_required',

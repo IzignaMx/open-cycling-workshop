@@ -264,3 +264,107 @@ def test_sync_authentication_refusal_is_not_cacheable() -> None:
     response = client.post("/api/v1/sync/mutations", json={"mutations": []})
     assert response.status_code == 401
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_oversized_customer_fields_conflict_individually_and_valid_peer_commits():
+    from cycling_workshop.customers.models import CustomerRecord
+    from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
+    from sqlalchemy import func, select
+
+    client = build_client()
+    invalid = [
+        ("display_name", "x" * 201),
+        ("email", "a" * 315 + "@x.com"),
+        ("phone", "1" * 65),
+        ("email", "İ" * 158 + "@x.co"),
+    ]
+    mutations = []
+    for field, value in [*invalid, ("display_name", "Valid public peer")]:
+        mutations.append(
+            {
+                "mutation_id": new_id(),
+                "entity_type": "customer",
+                "entity_id": new_id(),
+                "operation": "create",
+                "organization_id": "org-1",
+                "location_id": "loc-1",
+                "base_version": None,
+                "occurred_at": "2026-08-07T00:00:00Z",
+                "payload": {"display_name": "Public", field: value},
+            }
+        )
+    response = client.post("/api/v1/sync/mutations", json={"mutations": mutations})
+    assert response.status_code == 200
+    assert [r["status"] for r in response.json()["results"]] == ["conflict"] * 4 + ["applied"]
+    assert all(r["error_code"] == "sync_conflict" for r in response.json()["results"][:4])
+    with client.app.state.session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(CustomerRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 1
+        assert (
+            session.get(CustomerRecord, mutations[-1]["entity_id"]).display_name
+            == "Valid public peer"
+        )
+        assert all(session.get(CustomerRecord, m["entity_id"]) is None for m in mutations[:-1])
+    # Rejection creates no applied receipt; correcting the same id remains possible.
+    corrected = {**mutations[0], "payload": {"display_name": "Corrected public customer"}}
+    retried = client.post("/api/v1/sync/mutations", json={"mutations": [corrected]})
+    assert retried.status_code == 200 and retried.json()["results"][0]["status"] == "applied"
+
+
+def test_oversized_customer_updates_preserve_row_version_history_and_receipts():
+    from cycling_workshop.customers.models import CustomerRecord
+    from cycling_workshop.sync.models import ChangeRecord, MutationReceiptRecord
+    from sqlalchemy import func, select
+
+    client = build_client()
+    created = {
+        "mutation_id": new_id(),
+        "entity_type": "customer",
+        "entity_id": new_id(),
+        "operation": "create",
+        "organization_id": "org-1",
+        "location_id": "loc-1",
+        "base_version": None,
+        "occurred_at": "2026-08-07T00:00:00Z",
+        "payload": {"display_name": "Original", "email": "public@example.invalid", "phone": "123"},
+    }
+    assert (
+        client.post("/api/v1/sync/mutations", json={"mutations": [created]}).json()["results"][0][
+            "status"
+        ]
+        == "applied"
+    )
+    invalid = [
+        ("display_name", "x" * 201),
+        ("email", "a" * 315 + "@x.com"),
+        ("phone", "1" * 65),
+        ("email", "İ" * 158 + "@x.co"),
+    ]
+    updates = [
+        {
+            **created,
+            "mutation_id": new_id(),
+            "operation": "update",
+            "base_version": 1,
+            "payload": {field: value},
+        }
+        for field, value in invalid
+    ]
+    response = client.post("/api/v1/sync/mutations", json={"mutations": updates})
+    assert response.status_code == 200
+    assert [result["status"] for result in response.json()["results"]] == ["conflict"] * 4
+    with client.app.state.session_factory() as session:
+        row = session.get(CustomerRecord, created["entity_id"])
+        assert (row.display_name, row.email, row.phone, row.version) == (
+            "Original",
+            "public@example.invalid",
+            "123",
+            1,
+        )
+        assert session.scalar(select(func.count()).select_from(CustomerRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 1
+        assert session.scalar(select(func.count()).select_from(MutationReceiptRecord)) == 1
+    corrected = {**updates[0], "payload": {"display_name": "Corrected"}}
+    retry = client.post("/api/v1/sync/mutations", json={"mutations": [corrected]})
+    assert retry.json()["results"][0]["entity_version"] == 2
