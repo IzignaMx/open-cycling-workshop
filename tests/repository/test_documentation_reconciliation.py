@@ -657,8 +657,10 @@ def test_pr87_acceptance_is_historical_not_intake_candidate_qualification() -> N
 
 def test_local_customer_lookup_is_bounded_partial_prerequisite() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_20261104" in state
+    assert "historical_local_customer_lookup_checkpoint: local_customer_lookup_20261104" in state
+    assert (
+        "historical_local_customer_lookup_last_checkpoint: local_customer_lookup_20261104" in state
+    )
     block = state.split("local_customer_lookup_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "canonical_pair: FR-CUS-002_R02-T001_partial",
@@ -724,3 +726,35 @@ def test_pr88_baseline_acceptance_does_not_qualify_new_lookup() -> None:
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in block
+
+
+def test_lookup_initial_hosted_failure_is_preserved_without_cause_invention() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_diagnostic_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_diagnostic_20261104" in state
+    block = state.split("local_customer_lookup_diagnostic_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: initial_hosted_failed_bounded_diagnostic_in_progress",
+        "initial_CI: 41821564647",
+        "initial_controls: 25_of27_passed_not_accepted",
+        "initial_browser: direct131_passed2_failed_aggregate131_passed2_failed",
+        "lookup_cause: UNKNOWN_not_established_by_passing_local_probes",
+        "merge: blocked_until_complete_fresh_qualification",
+        "M2: no_run_authorized",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41821564647",
+        "25/27",
+        "131 passed / 2 failed",
+        "continue-on-error",
+        "preventDefault",
+        "strict-mode",
+        "UNKNOWN",
+        "51 confirmed baseline",
+        "not downloaded",
+        "af2dd26e6832418aa66b40f1e4413a66a2d56960e2ae3df0db7011c40ee657a5",
+    ):
+        assert token in record

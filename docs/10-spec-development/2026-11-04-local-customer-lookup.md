@@ -74,7 +74,64 @@ accent-insensitive semantics and server-wide completeness remain deferred.
    test results alone grant neither. No seventh M2 run, migration or new authority
    is granted.
 
-## Current evidence
+## Current source stage: initial hosted failure and bounded diagnosis
+
+[PR89](https://github.com/IzignaMx/open-cycling-workshop/pull/89) initial head
+`90802550261d3a634423f0fb6dab0dcdd18a693d`, tested merge
+`8424d35fc04d41ed1a0c3045d7c36c7eeada6594`, tree
+`325427062580dfd5eedf5b2e1b3b371328e10cfe`, was **not accepted**.
+[CI 41821564647](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41821564647)
+passed 25/27 controls. Both direct and aggregate browser suites reported
+131 passed / 2 failed; each failing case retried once. The browser step uses
+continue-on-error, so its successful step badge was not suite acceptance.
+Python independently qualified 6,126 passed plus 58 exact expected skips;
+frontend reported 1,293 passed. These results do not cancel the failed controls.
+
+- Offline typechecking rejected `preventDefault` on the retained keyboard-event
+  shim. The ordinary web typecheck had passed. A narrow shim correction has local
+  proof; fresh combined validation remains pending.
+- The existing capture-visit test's broad button locator became a strict-mode
+  violation after lookup controls were added. A submit-specific locator correction
+  has local proof; this does not establish a native rerun outcome.
+- The new lookup case timed out waiting for the target option after its first
+  continuation. Its cause remains UNKNOWN. Local probes with 51 confirmed baseline
+  records and mounted App real-button interactions passed; they do not explain or
+  disprove the hosted failure. Logs do not contain the missing page's DOM, status
+  or cursor. The large browser ZIPs were not downloaded, and their screenshots,
+  error-context files and traces were not byte-reviewed.
+
+The coordinator approved bounded synthetic native diagnostic instrumentation and
+ordinary CI publication. This is not broader search scope, a new storage/API/auth
+change or a M2 execution. Merge remains blocked until complete fresh qualification.
+The repair package contains six frontend/test paths and these four documentation/
+contract paths, ten changed paths relative to the initial candidate and 19 overall
+relative to accepted main. It does not contain a production lookup-behavior fix.
+The diagnostic uses synthetic fixtures and bounded closed fields: exact 51-record
+baseline membership, target-name-match boolean, phase/status/page observations,
+query-equality booleans and counts. It does not emit raw customer IDs or names.
+
+Amended frontend: 1,296/1,296 passed, including three new diagnostic privacy/bounds
+tests. Strict web, offline and native typechecks, lint and format passed. Seven
+affected native cases were collected, not executed locally; the one new lookup
+case still lacks native acceptance. Final full Python: 5,514 passed, 671 environment
+skips, 12 warnings, 395.12 s, exit 0, retained in
+`artifacts/customer-lookup/pr89-repair/full-python.log`. Product/test source was
+frozen before that run; only this documentation stamp followed. Post-stamp
+repository verification: 185 passed, recorded separately in
+`artifacts/local-customer-lookup/docs-repair-final-repository.log`. Documentation
+Ruff/format, Prettier and diff checks passed. These are local repair/diagnostic
+readiness results, not a successful native or hosted lookup outcome. Historical
+local counts below do not qualify this changed diagnostic package.
+
+Retained failure receipt:
+`artifacts/customer-lookup/pr89-qualification/final/review.json`, SHA256
+`af2dd26e6832418aa66b40f1e4413a66a2d56960e2ae3df0db7011c40ee657a5`.
+Sanitized log excerpts and source-bound failure metadata are retained alongside it
+in the coordinator archive, not as tracked/public repository artifacts. Preserve
+this initial failure even if a later source passes. Physical and historical gates
+remain unchanged.
+
+## Historical pre-publication local evidence
 
 Implementation and independent local review are complete. An
 independent actual-runtime baseline with 61 customers showed that the first 50

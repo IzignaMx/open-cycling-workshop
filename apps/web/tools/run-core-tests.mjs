@@ -66,6 +66,7 @@ try {
     'tests/access-kernel/push-runtime.test.mjs',
     'tests/runtime/controller.test.mjs',
     'tests/runtime/customer-lookup.test.mjs',
+    'tests/runtime/lookup-diagnostics.test.mjs',
     'tests/runtime/capture-feedback.test.mjs',
     'tests/runtime/capture-recovery.test.mjs',
     'tests/runtime/capture-reload-recovery.test.mjs',

@@ -1,6 +1,32 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 initial hosted failure; bounded diagnosis underway
+
+- [x] Preserve initial CI 41821564647: 25/27 controls passed, not accepted.
+      Direct and aggregate browsers each reported 131 passed / 2 failed, with one
+      retry for each failing case. A continue-on-error step badge is not acceptance.
+- Python: 6,126 passed + 58 exact skips; frontend: 1,293 passed on initial tree 32542706. These partial successes do not qualify changed diagnostic source.
+- [x] Identify the offline keyboard shim type error and existing broad-button
+      strict-mode locator failure; narrow corrections have local proof only.
+- [ ] Establish the new native lookup failure's cause, currently UNKNOWN.
+      Passing local baseline and mounted App probes do not establish a hosted cause.
+- [x] Prepare bounded synthetic diagnostic instrumentation without raw customer
+      names/IDs. Frontend: 1,296 passed, including three diagnostic privacy/bounds tests.
+      Strict web/offline/native types, lint and format passed; seven affected native
+      cases collected, zero executed locally. This is not a production lookup fix.
+- [x] Complete final Python: 5,514 passed, 671 environment skips, 12 warnings,
+      395.12 s, exit 0, on frozen product/tests before this documentation stamp.
+      Post-stamp repository: 185 passed; documentation static/format checks passed.
+      Scope: ten repair paths, 19 overall versus accepted main. Coordinator approved
+      this diagnostic package's publication and ordinary CI, not M2.
+- [ ] Merge only after complete fresh qualification. Large browser archives were
+      not downloaded; no trace, screenshot or missing-page DOM review is claimed.
+- Preserve initial failure receipt and historical local proof separately. Physical
+  T1–T8/R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
 ## 2026-11-04 · Bounded local customer-name lookup
+
+Historical pre-publication local checkpoint; current hosted failure is above.
 
 - [x] Admit S2 local-read operability for the shipped intake picker as a bounded
       FR-CUS-002/R02-T001 prerequisite; full search and V0.2 remain incomplete.

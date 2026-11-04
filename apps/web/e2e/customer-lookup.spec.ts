@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { lookupDiagnostic } from './helpers/lookup-diagnostics.js'
 import {
   apiLogin,
   createCaseIdentity,
@@ -38,45 +39,116 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
   })
   await page.context().setOffline(true)
   await expect(page.getByLabel('Estado de sincronización')).toContainText('Sin conexión')
-  const before = (await kernelSnapshot(page)).journal
-  const form = page.locator('form[aria-describedby~="order-intake-status"]')
-  const query = form.getByLabel('Buscar cliente por nombre', { exact: true })
-  const selected = form.getByLabel('Cliente', { exact: true })
-  await query.fill(target.display_name)
-  await query.press('Enter')
-  await expect(form.locator('#customer-lookup-status')).toContainText('1 página')
-  await expect(selected.locator(`option[value="${target.customer_id}"]`)).toHaveCount(0)
-  await expect(
-    form.getByRole('button', { name: 'Continuar búsqueda local', exact: true }),
-  ).toBeEnabled()
-  expect((await kernelSnapshot(page)).journal).toEqual(before)
-  await form.getByRole('button', { name: 'Continuar búsqueda local', exact: true }).click()
-  await expect(selected.locator(`option[value="${target.customer_id}"]`)).toHaveText(
-    `${target.display_name} · ${target.customer_id}`,
-  )
-  await expect(selected).toHaveValue('')
-  await selected.selectOption(target.customer_id)
-  await expect(
-    form.getByRole('button', { name: 'Verificar cliente seleccionado', exact: true }),
-  ).toBeEnabled()
-  await query.fill('no local match')
-  await form.getByRole('button', { name: 'Buscar clientes locales', exact: true }).click()
-  await expect(selected).toHaveValue(target.customer_id)
-  await expect(selected.locator(`option[value="${target.customer_id}"]`)).toContainText(
-    target.display_name,
-  )
-  await form
-    .getByLabel('Problema reportado', { exact: true })
-    .fill('Revisión mediante selección explícita')
-  await expect(form.locator('button[type="submit"]')).toBeEnabled()
-  await form.locator('button[type="submit"]').click()
-  await expect.poll(async () => (await kernelSnapshot(page)).journal.length).toBe(before.length + 1)
-  const operation = (await kernelSnapshot(page)).journal.at(-1)!
-  expect(operation.entityType).toBe('service_order')
-  expect(operation.envelope.payload.customer_id).toBe(target.customer_id)
-  const accessibility = await new AxeBuilder({ page }).analyze()
-  expect(
-    accessibility.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? '')),
-  ).toEqual([])
-  await page.screenshot({ path: info.outputPath('customer-lookup-offline.png'), fullPage: true })
+  let admittedIds: string[] = []
+  let targetNameMatches = false
+  const expectedIds = customers.map((row) => row.customer_id)
+  let stage: 'baseline' | 'page_one' | 'page_two' | 'done' = 'baseline'
+  const diagnostic = async () => {
+    try {
+      const dom = await page.evaluate(() => {
+        const form = document.querySelector('form[aria-describedby~="order-intake-status"]')
+        const select = form?.querySelector('select')
+        return {
+          phase:
+            document.querySelector('[data-runtime-state]')?.getAttribute('data-runtime-state') ??
+            '',
+          query:
+            (form?.querySelector('input[type="search"]') as HTMLInputElement | null)?.value.slice(
+              0,
+              201,
+            ) ?? '',
+          status: form?.querySelector('#customer-lookup-status')?.textContent?.slice(0, 512) ?? '',
+          optionIds: Array.from(select?.options ?? [])
+            .slice(0, 53)
+            .map((option) => option.value.slice(0, 512)),
+          selectedId: select?.value ?? '',
+        }
+      })
+      const result = lookupDiagnostic({
+        ...dom,
+        stage,
+        admittedIds,
+        expectedIds,
+        targetId: target.customer_id,
+        targetNameMatches,
+        expectedQuery: target.display_name,
+      })
+      console.info('OCWP_LOOKUP_DIAGNOSTIC ' + JSON.stringify(result))
+      return result
+    } catch {
+      // Diagnostics must never replace the original assertion with a collection error.
+      console.info(
+        'OCWP_LOOKUP_DIAGNOSTIC ' + JSON.stringify({ schema: 1, stage, available: false }),
+      )
+      return null
+    }
+  }
+  try {
+    const admitted = await kernelSnapshot(page)
+    const before = admitted.journal
+    targetNameMatches =
+      admitted.records.find(
+        (row) => row.entityType === 'customer' && row.entityId === target.customer_id,
+      )?.payload.display_name === target.display_name
+    admittedIds = admitted.records
+      .filter((row) => row.entityType === 'customer')
+      .slice(0, 52)
+      .map((row) => row.entityId)
+    const baseline = await diagnostic()
+    expect(
+      baseline?.baselineExact,
+      'exact 51 synthetic customer IDs admitted in the current baseline',
+    ).toBe(true)
+    expect(baseline?.targetAdmitted).toBe(true)
+    const form = page.locator('form[aria-describedby~="order-intake-status"]')
+    const query = form.getByLabel('Buscar cliente por nombre', { exact: true })
+    const selected = form.getByLabel('Cliente', { exact: true })
+    await query.fill(target.display_name)
+    stage = 'page_one'
+    await query.press('Enter')
+    await expect(form.locator('#customer-lookup-status')).toContainText('1 página')
+    await expect(selected.locator(`option[value="${target.customer_id}"]`)).toHaveCount(0)
+    await expect(
+      form.getByRole('button', { name: 'Continuar búsqueda local', exact: true }),
+    ).toBeEnabled()
+    await diagnostic()
+    expect((await kernelSnapshot(page)).journal).toEqual(before)
+    stage = 'page_two'
+    await form.getByRole('button', { name: 'Continuar búsqueda local', exact: true }).click()
+    await expect(form.locator('#customer-lookup-status')).toContainText('2 páginas revisadas.')
+    await diagnostic()
+    await expect(selected.locator(`option[value="${target.customer_id}"]`)).toHaveText(
+      `${target.display_name} · ${target.customer_id}`,
+    )
+    await expect(selected).toHaveValue('')
+    await selected.selectOption(target.customer_id)
+    await expect(
+      form.getByRole('button', { name: 'Verificar cliente seleccionado', exact: true }),
+    ).toBeEnabled()
+    await query.fill('no local match')
+    await form.getByRole('button', { name: 'Buscar clientes locales', exact: true }).click()
+    await expect(selected).toHaveValue(target.customer_id)
+    await expect(selected.locator(`option[value="${target.customer_id}"]`)).toContainText(
+      target.display_name,
+    )
+    await form
+      .getByLabel('Problema reportado', { exact: true })
+      .fill('Revisión mediante selección explícita')
+    await expect(form.locator('button[type="submit"]')).toBeEnabled()
+    await form.locator('button[type="submit"]').click()
+    await expect
+      .poll(async () => (await kernelSnapshot(page)).journal.length)
+      .toBe(before.length + 1)
+    const operation = (await kernelSnapshot(page)).journal.at(-1)!
+    expect(operation.entityType).toBe('service_order')
+    expect(operation.envelope.payload.customer_id).toBe(target.customer_id)
+    const accessibility = await new AxeBuilder({ page }).analyze()
+    expect(
+      accessibility.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? '')),
+    ).toEqual([])
+    await page.screenshot({ path: info.outputPath('customer-lookup-offline.png'), fullPage: true })
+    stage = 'done'
+  } finally {
+    await diagnostic()
+  }
 })

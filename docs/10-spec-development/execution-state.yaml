@@ -1,6 +1,37 @@
 schema: 1
 
-current_checkpoint: local_customer_lookup_20261104
+current_checkpoint: local_customer_lookup_diagnostic_20261104
+local_customer_lookup_diagnostic_20261104:
+  status: initial_hosted_failed_bounded_diagnostic_in_progress
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  initial_head: 90802550261d3a634423f0fb6dab0dcdd18a693d
+  initial_tested_merge: 8424d35fc04d41ed1a0c3045d7c36c7eeada6594
+  initial_tree: 325427062580dfd5eedf5b2e1b3b371328e10cfe
+  initial_CI: 41821564647
+  initial_controls: 25_of27_passed_not_accepted
+  initial_browser: direct131_passed2_failed_aggregate131_passed2_failed
+  initial_Python: 6126_passed_58_exact_expected_skips
+  failed_controls: frontend_offline_typecheck_browser_e2e
+  lookup_cause: UNKNOWN_not_established_by_passing_local_probes
+  diagnostic_scope: synthetic_bounded_native_instrumentation_no_product_scope_expansion
+  fresh_local_validation: local_repair_diagnostic_ready_hosted_outcome_pending
+  repair_Python: 5514_passed_671_environment_skips_12_warnings_395_12s_exit0
+  repair_Python_scope: frozen_product_tests_before_documentation_stamp
+  repair_repository: 185_passed_after_documentation_stamp
+  repair_frontend: 1296_passed_three_new_diagnostic_privacy_bounds_tests
+  repair_static: strict_web_offline_native_types_lint_format_passed
+  repair_native: seven_affected_cases_collected_zero_executed_locally
+  repair_scope: ten_paths_six_frontend_four_documentation_nineteen_overall_vs_main
+  production_lookup_behavior_fix: none_cause_UNKNOWN
+  publication: bounded_diagnostic_and_ordinary_CI_approved_by_coordinator
+  merge: blocked_until_complete_fresh_qualification
+  M2: no_run_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical pre-publication local snapshot; does not override hosted failure above.
+historical_local_customer_lookup_checkpoint: local_customer_lookup_20261104
+historical_local_customer_lookup_last_checkpoint: local_customer_lookup_20261104
 local_customer_lookup_20261104:
   status: locally_validated_independently_reviewed_hosted_pending
   canonical_pair: FR-CUS-002_R02-T001_partial
@@ -2557,7 +2588,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_customer_lookup_20261104
+last_checkpoint: local_customer_lookup_diagnostic_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
