@@ -16,11 +16,23 @@ def _required(value: str, field: str) -> str:
     return value.strip()
 
 
-def _optional_text(value: str | None) -> str | None:
-    if value is None:
+def _text(value: object, field: str, limit: int, *, required: bool = False) -> str | None:
+    if value is None and not required:
         return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string" + ("" if required else " or null"))
     normalized = " ".join(value.split())
+    if required and not normalized:
+        raise ValueError(f"{field} must not be blank")
+    if len(normalized) > limit:
+        raise ValueError(f"{field} exceeds maximum length")
     return normalized or None
+
+
+def _brand(value: object) -> str:
+    normalized = _text(value, "brand", 120, required=True)
+    assert normalized is not None
+    return normalized
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,11 +71,11 @@ class Bicycle:
             customer_id=_required(customer_id, "customer_id"),
             organization_id=_required(organization_id, "organization_id"),
             location_id=_required(location_id, "location_id"),
-            brand=" ".join(_required(brand, "brand").split()),
-            model=_optional_text(model),
-            bicycle_type=_optional_text(bicycle_type),
-            wheel_size=_optional_text(wheel_size),
-            notes=_optional_text(notes),
+            brand=_brand(brand),
+            model=_text(model, "model", 120),
+            bicycle_type=_text(bicycle_type, "bicycle_type", 60),
+            wheel_size=_text(wheel_size, "wheel_size", 30),
+            notes=_text(notes, "notes", 2000),
             created_at=timestamp,
             updated_at=timestamp,
             version=1,
@@ -79,29 +91,15 @@ class Bicycle:
         notes: str | object | None = _UNSET,
         now: datetime | None = None,
     ) -> Bicycle:
-        next_brand = (
-            self.brand if brand is _UNSET else " ".join(_required(str(brand), "brand").split())
-        )
-        next_model = (
-            self.model
-            if model is _UNSET
-            else _optional_text(model if isinstance(model, str) else None)
-        )
+        next_brand = self.brand if brand is _UNSET else _brand(brand)
+        next_model = self.model if model is _UNSET else _text(model, "model", 120)
         next_type = (
-            self.bicycle_type
-            if bicycle_type is _UNSET
-            else _optional_text(bicycle_type if isinstance(bicycle_type, str) else None)
+            self.bicycle_type if bicycle_type is _UNSET else _text(bicycle_type, "bicycle_type", 60)
         )
         next_wheel = (
-            self.wheel_size
-            if wheel_size is _UNSET
-            else _optional_text(wheel_size if isinstance(wheel_size, str) else None)
+            self.wheel_size if wheel_size is _UNSET else _text(wheel_size, "wheel_size", 30)
         )
-        next_notes = (
-            self.notes
-            if notes is _UNSET
-            else _optional_text(notes if isinstance(notes, str) else None)
-        )
+        next_notes = self.notes if notes is _UNSET else _text(notes, "notes", 2000)
         return replace(
             self,
             brand=next_brand,

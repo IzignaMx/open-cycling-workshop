@@ -273,3 +273,69 @@ for (const [field, value, message] of [
     assert.equal(second.runtime.getSnapshot().capture.customer.blocked, false)
   })
 }
+
+for (const [field, value, message] of [
+  ['brand', 'x'.repeat(121), 'La marca no puede superar 120 caracteres'],
+  ['model', 'x'.repeat(121), 'El modelo no puede superar 120 caracteres'],
+  ['brand', '\u0085', 'La marca de la bicicleta es obligatoria'],
+  ['reportedProblem', '\u001c\u0085', 'El problema reportado es obligatorio'],
+  ['priority', '\u0085', 'Selecciona una prioridad válida'],
+]) {
+  test(`inline order invalid ${field} (${value.length}) leaves no partial batch and retains recoverable input`, async (t) => {
+    const first = setup(t)
+    first.runtime.scheduleSync = () => {}
+    await login(first.runtime)
+    const view = first.runtime.getSnapshot().capture.viewToken
+    const draft = {
+      customerId: 'historical-A',
+      reportedProblem: 'Synthetic repair',
+      priority: 'normal',
+      withBicycle: true,
+      brand: 'Synthetic bicycle',
+      model: 'Synthetic model',
+      [field]: value,
+    }
+    for (const [key, input] of Object.entries(draft))
+      first.runtime.editCaptureOrder(view, key, input)
+    const before = await first.database.cacheRecords.toArray()
+    const expectedDraft = { ...first.runtime.getSnapshot().capture.order.draft }
+    await first.runtime.submitCaptureOrder(view)
+    assert.equal(await first.database.operationJournal.count(), 0)
+    assert.deepEqual(await first.database.cacheRecords.toArray(), before)
+    const rejected = first.runtime.getSnapshot().capture.order
+    assert.deepEqual(rejected.draft, expectedDraft)
+    assert.equal(rejected.dirty, true)
+    assert.equal(rejected.blocked, false)
+    assert.equal(rejected.message, message)
+    await until(
+      () =>
+        first.runtime.getSnapshot().capture.order.recoveryMessage?.startsWith('Borrador guardado'),
+      'invalid inline draft autosaved',
+    )
+    first.runtime.dispose()
+    const second = setup(t, { name: first.name, storage: first.storage, online: false })
+    second.runtime.scheduleSync = () => {}
+    await second.runtime.start()
+    await until(() => second.runtime.getSnapshot().phase === 'ready', 'inline restored ready')
+    const restored = second.runtime.getSnapshot().capture
+    assert.deepEqual(restored.order.draft, expectedDraft)
+    assert.equal(restored.order.blocked, false)
+    assert.equal(await second.database.operationJournal.count(), 0)
+    for (const [key, input] of Object.entries({
+      brand: 'Corrected bicycle',
+      model: 'Corrected model',
+      reportedProblem: 'Corrected repair',
+      priority: 'normal',
+    }))
+      second.runtime.editCaptureOrder(restored.viewToken, key, input)
+    await second.runtime.submitCaptureOrder(restored.viewToken)
+    const journal = await second.database.operationJournal.toArray()
+    assert.equal(journal.length, 2)
+    const bicycle = journal.find((row) => row.envelope.entity_type === 'bicycle'),
+      order = journal.find((row) => row.envelope.entity_type === 'service_order')
+    assert.equal(bicycle.envelope.payload.brand, 'Corrected bicycle')
+    assert.equal(order.envelope.payload.bicycle_id, bicycle.envelope.entity_id)
+    assert.equal(order.envelope.payload.reported_problem, 'Corrected repair')
+    assert.equal(second.runtime.getSnapshot().capture.order.dirty, false)
+  })
+}

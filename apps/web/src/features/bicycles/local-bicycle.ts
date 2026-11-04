@@ -1,3 +1,4 @@
+import { hasPythonText } from '../../shared/python-whitespace.js'
 import type { LocalBicycle } from '../../local/bicycle-types.js'
 import type { QueuedMutation } from '../../local/types.js'
 
@@ -31,10 +32,22 @@ export function buildLocalBicycleCreate(
   dependencies: LocalBicycleCreateDependencies,
 ): LocalBicycleCreateResult {
   const brand = collapse(input.brand)
-  if (!brand) throw new Error('La marca de la bicicleta es obligatoria')
+  if (!hasPythonText(brand)) throw new Error('La marca de la bicicleta es obligatoria')
+  const model = input.model?.trim() ? collapse(input.model) : null
+  const bicycleType = input.bicycleType?.trim() || null
+  const wheelSize = input.wheelSize?.trim() || null
+  const notes = input.notes?.trim() || null
+  if ([...brand].length > 120) throw new Error('La marca no puede superar 120 caracteres')
+  if (model !== null && [...model].length > 120)
+    throw new Error('El modelo no puede superar 120 caracteres')
+  if (bicycleType !== null && [...bicycleType].length > 60)
+    throw new Error('El tipo de bicicleta no puede superar 60 caracteres')
+  if (wheelSize !== null && [...wheelSize].length > 30)
+    throw new Error('El tamaño de rueda no puede superar 30 caracteres')
+  if (notes !== null && [...notes].length > 2000)
+    throw new Error('Las notas de la bicicleta no pueden superar 2000 caracteres')
   const now = dependencies.now()
   const bicycleId = dependencies.newId()
-  const model = input.model?.trim() ? collapse(input.model) : null
   const bicycle: LocalBicycle = {
     bicycle_id: bicycleId,
     customer_id: input.customerId,
@@ -42,9 +55,9 @@ export function buildLocalBicycleCreate(
     location_id: input.locationId,
     brand,
     model,
-    bicycle_type: input.bicycleType?.trim() || null,
-    wheel_size: input.wheelSize?.trim() || null,
-    notes: input.notes?.trim() || null,
+    bicycle_type: bicycleType,
+    wheel_size: wheelSize,
+    notes,
     created_at: now,
     updated_at: now,
     version: 1,

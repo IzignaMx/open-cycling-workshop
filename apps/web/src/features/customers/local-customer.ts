@@ -1,3 +1,4 @@
+import { pythonWhitespace, hasPythonText } from '../../shared/python-whitespace.js'
 import type { LocalCustomer, QueuedMutation } from '../../local/types.js'
 
 export interface CreateCustomerInput {
@@ -18,11 +19,6 @@ export interface LocalCustomerCreateResult {
   mutation: QueuedMutation
 }
 
-// Python str.split/strip and re's Unicode whitespace set. This checks server
-// admissibility only; the existing prepared journal/optimistic values stay intact.
-const pythonWhitespace =
-  '\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000'
-const hasServerName = new RegExp(`[^${pythonWhitespace}]`, 'u')
 const serverEdgeWhitespace = new RegExp(`^[${pythonWhitespace}]+|[${pythonWhitespace}]+$`, 'gu')
 const serverEmail = new RegExp(
   `^[^@${pythonWhitespace}]+@[^@${pythonWhitespace}]+\\.[^@${pythonWhitespace}]+$`,
@@ -31,7 +27,7 @@ const serverEmail = new RegExp(
 
 function normalizeName(value: string): string {
   const normalized = value.trim().replace(/\s+/g, ' ')
-  if (!hasServerName.test(normalized)) throw new Error('El nombre es obligatorio')
+  if (!hasPythonText(normalized)) throw new Error('El nombre es obligatorio')
   return normalized
 }
 

@@ -169,3 +169,17 @@ def test_customer_bicycles_lists_only_that_customer() -> None:
     assert brands == ["Cube", "Scott"]
     assert all(row["customer_id"] == "customer-1" for row in listing.json())
     assert first["brand"] == "Cube"
+
+
+def test_python_blank_brand_is_safe_422_without_writes():
+    from cycling_workshop.bicycles.models import BicycleRecord
+    from cycling_workshop.sync.models import ChangeRecord
+    from sqlalchemy import func, select
+
+    client = build_client()
+    response = client.post("/api/v1/bicycles", json=_create_payload(brand="\u0085"))
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Invalid bicycle request"}
+    with client.app.state.session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(BicycleRecord)) == 0
+        assert session.scalar(select(func.count()).select_from(ChangeRecord)) == 0

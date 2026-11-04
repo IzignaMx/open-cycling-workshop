@@ -62,17 +62,20 @@ def create_bicycle(
         is None
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer not found")
-    bicycle = Bicycle.create(
-        bicycle_id=payload.bicycle_id or new_id(),
-        customer_id=payload.customer_id,
-        organization_id=principal.organization_id,
-        location_id=payload.location_id,
-        brand=payload.brand,
-        model=payload.model,
-        bicycle_type=payload.bicycle_type,
-        wheel_size=payload.wheel_size,
-        notes=payload.notes,
-    )
+    try:
+        bicycle = Bicycle.create(
+            bicycle_id=payload.bicycle_id or new_id(),
+            customer_id=payload.customer_id,
+            organization_id=principal.organization_id,
+            location_id=payload.location_id,
+            brand=payload.brand,
+            model=payload.model,
+            bicycle_type=payload.bicycle_type,
+            wheel_size=payload.wheel_size,
+            notes=payload.notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid bicycle request") from exc
     repository = SqlAlchemyBicycleRepository(session)
     repository.add(bicycle)
     append_change(

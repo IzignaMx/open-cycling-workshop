@@ -168,3 +168,37 @@ def test_set_diagnosis_requires_text_and_bumps_version() -> None:
     assert diagnosed.state == "DIAGNOSIS"
     with pytest.raises(ValueError, match="diagnosis"):
         order.set_diagnosis("   ", now=NOW)
+
+
+@pytest.mark.parametrize(
+    "field", ["reported_problem", "priority", "intake_condition", "accessories"]
+)
+@pytest.mark.parametrize("value", [12, False, {}, []])
+def test_intake_fields_reject_malformed_types(field, value):
+    with pytest.raises(ValueError):
+        _order(**{field: value})
+
+
+@pytest.mark.parametrize("character", ["x", "🚲"])
+def test_priority_normalized_storage_limit(character):
+    assert _order(priority=" " + character * 30 + " ").priority == character * 30
+    with pytest.raises(ValueError):
+        _order(priority=character * 31)
+
+
+@pytest.mark.parametrize("field", ["reported_problem", "priority"])
+@pytest.mark.parametrize("value", [None, "\u0085", "\x1c"])
+def test_required_intake_fields_reject_null_python_blank(field, value):
+    with pytest.raises(ValueError):
+        _order(**{field: value})
+
+
+def test_intake_text_columns_keep_existing_unbounded_domain_compatibility():
+    order = _order(reported_problem="x" * 4001, intake_condition="y" * 4001, accessories="z" * 2001)
+    assert len(order.reported_problem) == 4001
+    assert len(order.intake_condition) == 4001
+    assert len(order.accessories) == 2001
+    assert (
+        len(order.transition("start_diagnosis", actor_id="actor", note="n" * 2001).event.note)
+        == 2001
+    )

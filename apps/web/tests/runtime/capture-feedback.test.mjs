@@ -63,6 +63,14 @@ test('capture fixed validation messages and hostile result objects do not expose
     'customer_phone_too_long',
     'order_problem_required',
     'priority_invalid',
+    'bicycle_brand_empty',
+    'bicycle_brand_too_long',
+    'bicycle_model_too_long',
+    'bicycle_type_too_long',
+    'bicycle_wheel_too_long',
+    'bicycle_notes_too_long',
+    'priority_required',
+    'priority_too_long',
     'bicycle_brand_required',
   ]
   for (const code of codes) {

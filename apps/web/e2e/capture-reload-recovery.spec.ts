@@ -950,3 +950,56 @@ test('single-label customer email passes native validity but is rejected without
     phone: CUSTOMER.Teléfono,
   })
 })
+
+for (const invalid of [
+  { field: 'Modelo', value: 'x'.repeat(121), message: 'El modelo no puede superar 120 caracteres' },
+  { field: 'Problema reportado', value: '\u0085', message: 'El problema reportado es obligatorio' },
+]) {
+  test(`inline bicycle intake rejects ${invalid.field} without a partial local batch`, async ({
+    page,
+    request,
+  }) => {
+    const seeded = await seedWorkshop(page, request)
+    await prepare(page, 'order', seeded.customerId)
+    await form(page, 'order')
+      .getByRole('textbox', { name: invalid.field, exact: true })
+      .fill(invalid.value)
+    expect(
+      await form(page, 'order').evaluate((element) => (element as HTMLFormElement).checkValidity()),
+    ).toBe(true)
+    const fields = { ...ORDER, [invalid.field]: invalid.value }
+    await acknowledged(page, 'order')
+    const before = await kernelSnapshot(page)
+    await submit(page, 'order').click()
+    await expect(commandStatus(page, 'order')).toHaveText(invalid.message)
+    await expectFields(form(page, 'order'), fields)
+    await expect(form(page, 'order')).toHaveAttribute('data-dirty', 'true')
+    await expect(submit(page, 'order')).toBeEnabled()
+    await acknowledged(page, 'order')
+    const rejected = await kernelSnapshot(page)
+    expect(rejected.journal).toEqual(before.journal)
+    expect(rejected.records).toEqual(before.records)
+    await page.reload()
+    await waitForReady(page)
+    await expectFields(form(page, 'order'), fields)
+    await expect(form(page, 'order').getByLabel('Agregar bicicleta')).toBeChecked()
+    await expect(submit(page, 'order')).toBeEnabled()
+    expect((await kernelSnapshot(page)).journal).toEqual(before.journal)
+    await fillFields(form(page, 'order'), ORDER)
+    await submit(page, 'order').click()
+    await expect(commandStatus(page, 'order')).toHaveText('Orden guardada localmente')
+    await expect(form(page, 'order')).toHaveAttribute('data-dirty', 'false')
+    const after = await kernelSnapshot(page)
+    expect(after.journal).toHaveLength(before.journal.length + 2)
+    expect(after.journal.slice(0, before.journal.length)).toEqual(before.journal)
+    const added = after.journal.slice(before.journal.length)
+    const bicycle = added.find((row) => row.envelope.entity_type === 'bicycle')!
+    const order = added.find((row) => row.envelope.entity_type === 'service_order')!
+    expect(bicycle.envelope.payload).toMatchObject({ brand: ORDER.Marca, model: ORDER.Modelo })
+    expect(order.envelope.payload).toMatchObject({
+      reported_problem: ORDER['Problema reportado'],
+      bicycle_id: bicycle.envelope.entity_id,
+    })
+    expect(order.dependsOn).toEqual([bicycle.mutationId])
+  })
+}

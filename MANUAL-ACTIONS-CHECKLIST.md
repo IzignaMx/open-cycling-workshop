@@ -1,5 +1,47 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · Existing intake admissibility prerequisite
+
+- [x] Admit integrity repair of already shipped bicycle/order intake under
+      FR-BIK-003/R02-T002 and FR-SVC-001/R02-T005 as a documented prerequisite.
+      V0.1 remains physically partial; this is not R01-T030 or V0.2 completion.
+- [x] Enforce the five bicycle DB caps and priority cap, required Python-blank
+      rejection and malformed intake types without changing prepared values.
+- Preserve nullable-field omission/clear semantics, receipt-first replay and
+  per-item server savepoints. Omitted priority defaults to normal; supplied null
+  or non-string priority rejects. The frontend blank-string default stays unchanged. Invalid inline input must create no orphan bicycle or order,
+  no local journal commands, and must retain the editable draft.
+- Exclude REST-only order Text caps, transition notes, IDs/authority, migrations,
+  new priority policy, financial commands and feature expansion.
+- Four real-controller RED cases admitted one or two journal commands and cleared
+  drafts. Pure backend observations are not native PostgreSQL proof.
+- [x] Finish local tests and independent review; fresh runtime evidence is pending.
+- Full local Python: 5,510 passed, 671 environment skips, 12 warnings (395.46 s,
+  exit 0), before this documentation-only stamp. Frontend: 1,272 passed; focused
+  backend: 200 passed with one existing warning; repository: 181 passed, rerun
+  separately after the stamp. Static/types/build passed; chunk warning retained.
+- Independent review accepted backend 200, builder/feedback 33 and actual recovery
+  five; five mutation controls detected and exhaustive Unicode comparison matched.
+- Scope: 25 files. Two new PWA cases / 16 file cases collected, zero executed
+  locally. Collection is not native browser or PostgreSQL qualification.
+- Optional bicycle omission remains supported. Local paired admission is atomic;
+  server processing retains per-item savepoints, not cross-item atomicity.
+- No publication, seventh M2 run or new authority is granted. Physical T1–T8,
+  R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+- [Design, scope matrix and plan](docs/10-spec-development/2026-11-04-intake-admissibility.md).
+
+## 2026-11-04 · PR87 accepted main, historical intake baseline
+
+- [x] Accept main 2f9abe5c / tree a64e063d: CI 41793841607 passed 27/27;
+      Python: 6,045 + 58 exact skips; frontend: 1,256; API: 1; browsers: 130
+      direct-log / 130 aggregate; repeats: 20/9/5/10; kernel: 14; zero retries.
+- Named single-label email PWA, typed-field batch and 12 historical receipt-replay
+  cases were verified on this main. Runtime/security/micro accepted; no M2 ran.
+- Large browser archives were not downloaded or byte/trace/screenshot reviewed.
+  These results do not qualify changed intake source. The customer-admissibility
+  section below preserves its source-stage gates, later resolved by separate
+  PR87 approval and exact-source acceptance. It is not current publication authority.
+
 ## 2026-11-04 · Customer command admissibility
 
 - [x] Admit the bounded FR-CUS-001/R01-T030 integrity correction: new-command
