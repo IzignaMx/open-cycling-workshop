@@ -354,7 +354,16 @@ jobs:
       - name: Run isolated offline kernel browser tests
         run: pnpm --filter @ocwp/web test:kernel-browser
       - name: Prepare browser E2E database
-        run: uv run python scripts/e2e/prepare_e2e_database.py
+        id: browser_fixture_initial
+        shell: bash
+        env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+        run: |
+          uv run python scripts/ci/prepare_browser_phase.py
+          printf 'fixture_prepared=true\n' >> "$GITHUB_OUTPUT"
       - name: Run browser E2E
         env:
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/direct
@@ -370,27 +379,51 @@ jobs:
             apps/web/playwright-report/direct/
           if-no-files-found: warn
       - name: Repeat sync and order baseline journeys without retries
+        id: browser_repeat_sync_order
+        shell: bash
         env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/retry-free-repeat
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/retry-free-repeat
-        run: >-
-          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/order-lifecycle.spec.ts
-          --grep 'baseline setup|large reconnect batch|order baseline|order lifecycle'
+        run: |
+          uv run python scripts/ci/prepare_browser_phase.py
+          printf 'fixture_prepared=true\n' >> "$GITHUB_OUTPUT"
+          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/order-lifecycle.spec.ts \
+          --grep 'baseline setup|large reconnect batch|order baseline|order lifecycle' \
           --repeat-each=5 --retries=0 --workers=1
       - name: Repeat authenticated handoff and lost-ACK fences without retries
+        id: browser_repeat_cutover
+        shell: bash
         env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/cutover-repeat
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/cutover-repeat
-        run: >-
-          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/sync-scope-integrity.spec.ts
+        run: |
+          uv run python scripts/ci/prepare_browser_phase.py
+          printf 'fixture_prepared=true\n' >> "$GITHUB_OUTPUT"
+          pnpm --filter @ocwp/web exec playwright test e2e/sync-chaos.spec.ts e2e/sync-scope-integrity.spec.ts \
           --grep 'lost|foreign|checkpoint|handoff' --repeat-each=3 --retries=0 --workers=1
       - name: Repeat administration probe clock without retries
+        id: browser_repeat_administration
+        shell: bash
         env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/administration-clock-repeat
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/administration-clock-repeat
-        run: >-
-          pnpm --filter @ocwp/web exec playwright test e2e/administration.spec.ts
-          --grep 'automatic probe revalidation clears a newly entered administration secret'
+        run: |
+          uv run python scripts/ci/prepare_browser_phase.py
+          printf 'fixture_prepared=true\n' >> "$GITHUB_OUTPUT"
+          pnpm --filter @ocwp/web exec playwright test e2e/administration.spec.ts \
+          --grep 'automatic probe revalidation clears a newly entered administration secret' \
           --repeat-each=5 --retries=0 --workers=1
       - name: Upload administration clock repetition evidence
         if: always()
@@ -403,11 +436,18 @@ jobs:
           if-no-files-found: warn
       - name: Repeat inventory expiry without retries
         id: inventory_expiry_repeat
+        shell: bash
         env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
           OCWP_PLAYWRIGHT_OUTPUT_DIR: test-results/inventory-expiry-repeat
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/inventory-expiry-repeat
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/inventory-expiry-repeat-proof/results.json
         run: |
+          uv run python scripts/ci/prepare_browser_phase.py
+          printf 'fixture_prepared=true\n' >> "$GITHUB_OUTPUT"
           uv run python scripts/ci/inventory_expiry_repeat.py start
           pnpm --filter @ocwp/web exec playwright test e2e/inventory.spec.ts \
             --grep 'inventory-only display clears on .* expiry' \
@@ -436,6 +476,20 @@ jobs:
       - name: Run V0.1 qualification verifier
         if: always()
         env:
+          OCWP_E2E_SERVICE_ID: ${{ job.services.postgres.id }}
+          OCWP_E2E_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_TEST_DATABASE_URL: postgresql+psycopg://ocwp:ocwp-test@127.0.0.1:5432/ocwp_e2e
+          OCWP_BROWSER_PREP_INITIAL_OUTCOME: ${{ steps.browser_fixture_initial.outcome }}
+          OCWP_BROWSER_PREP_INITIAL_ACCEPTED: ${{ steps.browser_fixture_initial.outputs.fixture_prepared }}
+          OCWP_BROWSER_PREP_SYNC_ORDER_OUTCOME: ${{ steps.browser_repeat_sync_order.outcome }}
+          OCWP_BROWSER_PREP_SYNC_ORDER_ACCEPTED: ${{ steps.browser_repeat_sync_order.outputs.fixture_prepared }}
+          OCWP_BROWSER_PREP_CUTOVER_OUTCOME: ${{ steps.browser_repeat_cutover.outcome }}
+          OCWP_BROWSER_PREP_CUTOVER_ACCEPTED: ${{ steps.browser_repeat_cutover.outputs.fixture_prepared }}
+          OCWP_BROWSER_PREP_ADMINISTRATION_OUTCOME: ${{ steps.browser_repeat_administration.outcome }}
+          OCWP_BROWSER_PREP_ADMINISTRATION_ACCEPTED: ${{ steps.browser_repeat_administration.outputs.fixture_prepared }}
+          OCWP_BROWSER_PREP_INVENTORY_OUTCOME: ${{ steps.inventory_expiry_repeat.outcome }}
+          OCWP_BROWSER_PREP_INVENTORY_ACCEPTED: ${{ steps.inventory_expiry_repeat.outputs.fixture_prepared }}
           OCWP_FULL_PYTHON_NONCE_A: ${{ needs.python-tests.outputs.nonce_a }}
           OCWP_FULL_PYTHON_NONCE_B: ${{ needs.python-tests.outputs.nonce_b }}
           OCWP_FULL_PYTHON_IMAGE_ID: ${{ needs.python-tests.outputs.image_id }}

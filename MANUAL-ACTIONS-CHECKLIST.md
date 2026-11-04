@@ -1,5 +1,176 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 fifth oversized refusal; local bounded streaming
+
+- [x] Preserve CI 41901853638: fifth listeners subtype oversized observed; fourth
+      subtype remains UNKNOWN. Initial prep/direct 133/lookup passed; Python 6,258 + 58 exact skips. All repetitions zero; aggregate build/browser not executed.
+- No protected listener, owner, table composition or historical count established.
+- [x] Replace 64 KiB per-table cap explicitly with combined 4 MiB including headers
+      and LF, 16,384 logical data rows, 1,024-byte physical LF-lines excluding LF,
+      4,096-byte chunks,
+      and shared two-second cooperative budget. Not interruptible hard wallclock.
+- Both valid tables must reach EOF before absence; unterminated line is malformed.
+  Closed subcodes only, no raw values. Keep refusal and all service/handoff gates.
+- Local synthetic proof: focused 101 passed, independent 304 passed. Final Python:
+  5,679 passed, 671 environment skips, 12 warnings, 434.27 s, exit 0, before final
+  documentation stamp. Frontend: 1,296 passed, zero failures/skips. Six repair
+  paths, 25 overall. Post-stamp repository: 189 passed; docs static/format clean.
+  Old-cap RED and blank-row regression/correction retained.
+  No wait/retry/kill,
+  actual cleanup/DB/reset, publication, CI or merge. Not an atomic snapshot or
+  hosted budget guarantee. Physical/capacity/SPENT/UNKNOWN/Pages unchanged.
+
+## 2026-11-04 · PR89 fourth refusal; local-only diagnostics
+
+Historical diagnostics snapshot; fifth observed subtype and new local budget are above.
+
+- [x] Preserve CI 41885869487: initial preparation accepted; direct browser 133
+      passed including lookup; Python 6,243 + 58 exact skips; frontend 1,296.
+- First additional preparation refused at listeners stage. No repeat executed;
+  later phases skipped and expiry incomplete. Aggregate build/browser correctly
+  not executed: 24 passed among 26 emitted entries, not complete qualification.
+- Actual condition and owner remain UNKNOWN; the stage alone proves no actual
+  listener. Do not infer an owner or perform cleanup.
+- [x] Prepare optional closed listener_reason values only: oversized, malformed,
+      read_error, protected_listener. No counts, addresses, IDs, raw errors or
+      /proc content. Preserve 64 KiB cap, first refusal and acceptance behavior.
+- Simulated local proof: eight initial RED failures, 58 wrapper + 10 CI contracts
+  passed; independent 271 targeted and 1,447 equivalence cases passed. Final Python:
+  5,645 passed, 671 environment skips, 12 warnings, 424.17 s, exit 0, before this
+  documentation stamp. Post-stamp repository: 188 passed; docs static/format clean.
+  Frontend: 1,296 passed, zero failures/skips. Six repair
+  paths, 25 overall. Historical refusal subtype remains UNKNOWN. No Docker/PG/reset,
+  cleanup, publication, hosted CI or merge. Physical T1–T8/R01-T035, capacity,
+  SPENT/UNKNOWN and Pages remain unchanged.
+
+## 2026-11-04 · PR89 third failure; local phase-isolation preparation
+
+Historical phase-preparation snapshot; fourth refusal is above.
+
+- [x] Preserve CI 41864390743: aggregate 27/27 and both browser suites 133 passed,
+      lookup completed, but workflow unqualified. Python: 6,128 + 58 exact skips;
+      frontend: 1,296. Sync/order repeats: 20/20; cutover: 8/9, zero retries.
+- Administration repeats skipped; expiry zero of ten, guard failed closed. Do not
+  accept aggregate success as a replacement for any required repetition gate.
+- Counter provenance remains UNKNOWN. No production lookup defect or flaky-test
+  classification follows from the READY timeout after explicit verification retry.
+- [x] Prepare and review CI-only existing fixture preparation between independent
+      completed phases, preserving within-case history and all counts/assertions.
+      Trusted service identity and fixed destinations must be checked; TOCTOU and
+      trusted-runner limits remain explicit, not hostile-host attestation.
+- Mock-only local validation; no Docker/PG/cleanup execution or remote changes.
+  Six guarded boundaries, four additional preparations, no retries. Existing
+  initial-direct and aggregate preparations use the same guard; prior refusal or
+  incomplete preparation blocks aggregate prep/browser explicitly as not executed.
+  A genuine browser failure after accepted preparation is distinct. Limits:
+  inspect 5 s / 16 KiB plus 1 s reap;
+  two `/proc` reads of 64 KiB; DB connect 5 s / statement 2 s; preparation child
+  120 s with discarded output. Not a hard host-time/disk bound. Final combined
+  local counts: Python 5,630 passed, 671 environment skips, 12 warnings,
+  425.66 s, exit 0, before final documentation stamp; frontend 1,296 passed.
+  Post-stamp repository: 187 passed; documentation static/format checks passed.
+  Wrapper strict mypy passed; legacy verifier retains 36 unchanged baseline mypy
+  diagnostics, not a clean result. No actual Docker/PG/reset or hosted qualification.
+  No publication, CI, merge or M2 authority here.
+- Raw cutover trace/ZIP stays out of Space backups. Physical T1–T8/R01-T035,
+  capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
+## 2026-11-04 · PR89 diagnostic failure; test-locator repair
+
+Historical locator-repair snapshot; third failed qualification is above.
+
+- [x] Preserve second CI 41847937571: 26/27 controls, not accepted. Both browser
+      suites: 132 passed / 1 failed; lookup retried once. Python: 6,127 + 58 exact
+      skips; frontend: 1,296. Earlier shim and broad-button failures cleared.
+- [ ] Obtain all required repetitions: sync/order, cutover, administration and
+      inventory expiry were skipped after direct browser failure. The always-run
+      expiry guard failed on `check "skipped"`; its artifact is incomplete, with
+      zero of ten expiry repetitions executed. Aggregate 26/27 is not all gates.
+- [x] Validate eight bounded snapshots: page two contains the target option,
+      READY/exhausted, exact baseline 51, query/name match, selection still empty.
+- [x] Reproduce exact-label locator mismatch with actual rendered components and
+      installed Playwright selector functions. The initial zero-count assertion
+      was vacuous. This is local selector proof, not native browser execution or
+      evidence of a production pagination defect.
+- [x] Validate test-only named-combobox locator and positive count-one guard.
+      Frontend: 1,296 passed. Python: 5,515 passed, 671 environment skips,
+      12 warnings, 383.52 s, exit 0, before final documentation/correction-contract
+      stamp. Post-stamp repository: 186 passed; static/format checks passed.
+      Five repair paths, 19 overall; native collected/typechecked, not executed
+      locally. No production lookup change is admitted.
+- [ ] Complete fresh hosted qualification before merge. This source checkpoint
+      performs no publication or M2 execution. Preserve both failed receipts and
+      historical UNKNOWN evidence; large browser ZIPs were not downloaded.
+- Physical T1–T8/R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
+## 2026-11-04 · PR89 initial hosted failure; bounded diagnosis underway
+
+Historical diagnostic-stage snapshot; superseded by the second failure and proof above.
+
+- [x] Preserve initial CI 41821564647: 25/27 controls passed, not accepted.
+      Direct and aggregate browsers each reported 131 passed / 2 failed, with one
+      retry for each failing case. The browser step failed; it has no continue-on-error setting.
+- Python: 6,126 passed + 58 exact skips; frontend: 1,293 passed on initial tree 32542706. These partial successes do not qualify changed diagnostic source.
+- [x] Identify the offline keyboard shim type error and existing broad-button
+      strict-mode locator failure; narrow corrections have local proof only.
+- [ ] Establish the new native lookup failure's cause, currently UNKNOWN.
+      Passing local baseline and mounted App probes do not establish a hosted cause.
+- [x] Prepare bounded synthetic diagnostic instrumentation without raw customer
+      names/IDs. Frontend: 1,296 passed, including three diagnostic privacy/bounds tests.
+      Strict web/offline/native types, lint and format passed; seven affected native
+      cases collected, zero executed locally. This is not a production lookup fix.
+- [x] Complete final Python: 5,514 passed, 671 environment skips, 12 warnings,
+      395.12 s, exit 0, on frozen product/tests before this documentation stamp.
+      Post-stamp repository: 185 passed; documentation static/format checks passed.
+      Scope: ten repair paths, 19 overall versus accepted main. Coordinator approved
+      this diagnostic package's publication and ordinary CI, not M2.
+- [ ] Merge only after complete fresh qualification. Large browser archives were
+      not downloaded; no trace, screenshot or missing-page DOM review is claimed.
+- Preserve initial failure receipt and historical local proof separately. Physical
+  T1–T8/R01-T035, capacity, SPENT/UNKNOWN and Pages remain unchanged.
+
+## 2026-11-04 · Bounded local customer-name lookup
+
+Historical pre-publication local checkpoint; current hosted failure is above.
+
+- [x] Admit S2 local-read operability for the shipped intake picker as a bounded
+      FR-CUS-002/R02-T001 prerequisite; full search and V0.2 remain incomplete.
+- [x] Implement volatile name-only lookup using one existing kernel page of up to
+      50 candidate IDs per action, with explicit continue/restart and honest local
+      completeness. This is not a bound on all DB reads, latency or server coverage.
+- Keep one in-flight lookup, replace rather than accumulate results, and retain
+  at most one currently authorized selected-customer pin. Maximum 51 options.
+  Selection stays explicit by ID; never automatically select the first result.
+- Preserve the intake draft. Fence queries/results to exact session, capture source,
+  view token and query generation; clear/mask on non-ready or missing read grants.
+- No contact/ID/tag search, schema/index/API/storage/authority expansion or background
+  full scan. Native behavior and fresh qualification remain pending.
+- [x] Complete local verification and independent review. Publication remains
+      pending coordinator confirmation of applicable user authorization.
+- Final frozen-product Python: 5,513 passed, 671 environment skips, 12 warnings
+  (389.21 s, exit 0), before this documentation-only stamp. Frontend: 1,293 passed;
+  focused lookup: 21 independently reviewed; repository: 184 passed, rerun after
+  the stamp. Static/types/build passed; existing chunk-size warning retained.
+- Preserve the initial five fixture failures separately from the real two-held-digest
+  branding RED/control. Existing offline activity hook fixed the race; removing
+  both signals in a mutation reproduced it. No new branding authority or storage.
+- Scope: 15 files. One native PWA case collected/typechecked, zero executed locally;
+  native and hosted qualification remain pending.
+- No publication or seventh M2 run is authorized. Physical T1–T8/R01-T035,
+  capacity, SPENT/UNKNOWN and Pages remain unchanged.
+- [Bounded design and plan](docs/10-spec-development/2026-11-04-local-customer-lookup.md).
+
+## 2026-11-04 · PR88 accepted main, historical lookup baseline
+
+- [x] Accept main 5f5c0e3e / tree a5ff0e33: CI 41810260574 passed 27/27;
+      Python: 6,123 + 58 exact skips; frontend: 1,272; API: 1; browsers: 132
+      direct-log / 132 aggregate; repeats: 20/9/5/10; kernel: 14; zero retries.
+- Two inline-intake PWA cases, 75 invalid batch items with two valid peers and
+  28 replay cases were verified. Runtime/security/micro accepted; no M2 ran.
+- Large archives were not downloaded or byte/trace/screenshot reviewed. These
+  results do not qualify changed lookup source. The intake section below preserves
+  source-stage pending gates later resolved by separate PR88 approval and evidence.
+
 ## 2026-11-04 · Existing intake admissibility prerequisite
 
 - [x] Admit integrity repair of already shipped bicycle/order intake under
@@ -102,7 +273,7 @@
 ## 2026-11-04 · PR85 merged historical baseline
 
 - [x] Independently accept main4b3b886c/tree6a1e: CI41757541938 passed27/27,
-      Python5987 +58 exact skips, frontend1237/API1, browser126 direct-log/126
+      Python5987 + 58 exact skips, frontend1237/API1, browser126 direct-log/126
       aggregate, repeats20/9/5/10 and kernel14 retry0. Runtime/security/micro accepted.
 - Large browser archives were not downloaded or byte/trace/screenshot reviewed.
   This main push did not run M2. The separately approved sixth PR85 attempt is
@@ -138,7 +309,7 @@
 - [x] Accept merged main `c0fe501a9f93393c106c49aece4a27af495b79e9`, tree
       `bbb9b6e4d140c96df54ee18ac4890f64a4a4be51`, under separate merge approval.
 - [x] Independently accept [CI41713827892](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41713827892):
-      27/27, Python5974 +58 exact skips, frontend1237/API1, direct126 from the
+      27/27, Python5974 + 58 exact skips, frontend1237/API1, direct126 from the
       terminal log and aggregate126. Small reports20/9/5/10 and kernel14: retry0.
       Runtime41713827934, security41713827842 and micro41713828087 accepted.
 - Large browser archives were not downloaded or byte/trace/screenshot reviewed.
@@ -186,7 +357,7 @@ those statuses only where supported by its specific receipts.
 - [x] Close fourth hosted attempt41552838556 with failure at connector_run and
       independently verified cleanup for that attempt. Twelve supervisor steps
       completed; API reported13 checks. Neither proves connector/TLS acceptance.
-- [x] Qualify ordinary CI41552838539:27/27,5954 Python+58 exact skips,
+- [x] Qualify ordinary CI41552838539:27/27,5954 Python+ 58 exact skips,
       1237 frontend,126 direct/126 aggregate browsers. Large ZIPs remain unreviewed.
 - [x] Correct the locally reproduced negative-TLS evidence classifier: unrelated
       certificate errors cannot count as hostname or trust rejection evidence.
@@ -208,7 +379,7 @@ those statuses only where supported by its specific receipts.
       first/second cleanup as unproven and third runtime cause as UNKNOWN.
 - [x] Independently verify third-attempt owned container/root absence. This is
       not secure erasure or retrospective proof for earlier attempts.
-- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+58 exact
+- [x] Qualify ordinary CI41541751816 on head280c8923:27/27,5851 Python+ 58 exact
       skips,1237 frontend,126 direct/126 aggregate browsers. Large browser ZIPs
       were not downloaded or byte/trace/screenshot inspected.
 - [x] Implement and independently review local closed incremental diagnostics,

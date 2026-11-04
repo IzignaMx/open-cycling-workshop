@@ -34,6 +34,7 @@ declare module 'react' {
   export type KeyboardEvent<T = Element> = {
     key: string
     currentTarget: T
+    preventDefault(): void
     stopPropagation(): void
   }
   export type ChangeEvent<T = Element> = { currentTarget: T }

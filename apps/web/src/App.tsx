@@ -332,6 +332,10 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             {writeOrders && readCustomers ? (
               <OrderQuickIntake
                 customers={state.customers}
+                lookup={state.customerLookup}
+                onRetrySelected={() => runtime.retryCustomerSelection(viewToken)}
+                onQuery={(value) => runtime.editCustomerQuery(viewToken, value)}
+                onSearch={(action) => runtime.searchCustomers(viewToken, action)}
                 capture={capture.order}
                 onEdit={(field, value) => runtime.editCaptureOrder(viewToken, field, value)}
                 onSubmit={() => runtime.submitCaptureOrder(viewToken)}

@@ -1032,3 +1032,173 @@ def test_postgres_runtime_readback_is_closed_and_exact(fault):
             MODULE.full_postgres_settings(rows)
     else:
         assert MODULE.full_postgres_settings(rows) == MODULE.FULL_POSTGRES_SETTINGS
+
+
+BROWSER_PHASES = ("INITIAL", "SYNC_ORDER", "CUTOVER", "ADMINISTRATION", "INVENTORY")
+
+
+def hosted_browser_environment():
+    env = {
+        "CI": "true",
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_JOB": "verify",
+        "OCWP_E2E_SERVICE_ID": "a" * 64,
+        "OCWP_E2E_DATABASE_URL": "postgresql://example.invalid/ocwp_e2e",
+    }
+    for phase in BROWSER_PHASES:
+        env[f"OCWP_BROWSER_PREP_{phase}_OUTCOME"] = "success"
+        env[f"OCWP_BROWSER_PREP_{phase}_ACCEPTED"] = "true"
+    return env
+
+
+@pytest.mark.parametrize("phase", BROWSER_PHASES)
+@pytest.mark.parametrize(
+    "outcome,accepted",
+    [
+        ("failure", ""),
+        ("success", ""),
+        ("cancelled", "true"),
+        ("cancelled", ""),
+        ("unknown", "true"),
+        ("", ""),
+        ("success", "TRUE"),
+        ("skipped", "true"),
+    ],
+)
+def test_hosted_aggregate_never_runs_commands_after_unproven_preparation(
+    monkeypatch, phase, outcome, accepted
+):
+    env = hosted_browser_environment()
+    env[f"OCWP_BROWSER_PREP_{phase}_OUTCOME"] = outcome
+    env[f"OCWP_BROWSER_PREP_{phase}_ACCEPTED"] = accepted
+    calls = []
+
+    def command(name, args, **kwargs):
+        calls.append((name, args))
+        return MODULE.Check(name, "pass", "synthetic")
+
+    monkeypatch.setattr(MODULE, "run_check", command)
+    checks, blockers = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+    assert calls == []
+    assert not blockers
+    assert any(
+        c.name == "browser_e2e" and c.status == "fail" and "not executed" in c.detail
+        for c in checks
+    )
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"GITHUB_ACTIONS": "false"},
+        {"GITHUB_ACTIONS": ""},
+        {"GITHUB_JOB": "other"},
+        {"OCWP_E2E_SERVICE_ID": ""},
+        {"OCWP_E2E_SERVICE_ID": "wrong"},
+        {"OCWP_BROWSER_PREP_INITIAL_OUTCOME": "skipped", "OCWP_BROWSER_PREP_INITIAL_ACCEPTED": ""},
+    ],
+)
+def test_hosted_aggregate_refuses_invalid_context_or_skipped_initial(monkeypatch, change):
+    env = {**hosted_browser_environment(), **change}
+    calls = []
+    monkeypatch.setattr(
+        MODULE, "run_check", lambda *a, **k: calls.append(a) or MODULE.Check(a[0], "pass", "ok")
+    )
+    checks, _ = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+    assert calls == []
+    assert any(c.name == "browser_e2e" and c.status == "fail" for c in checks)
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"OCWP_E2E_SERVICE_ID": "a" * 64},
+        {"GITHUB_ACTIONS": "false"},
+        {"GITHUB_JOB": "verify"},
+        {"OCWP_BROWSER_PREP_INITIAL_OUTCOME": "success"},
+        {"OCWP_BROWSER_PREP_INITIAL_ACCEPTED": "true"},
+    ],
+)
+def test_partial_hosted_metadata_cannot_fall_back_to_generic_cleanup(monkeypatch, metadata):
+    env = {"OCWP_E2E_DATABASE_URL": "postgresql://example.invalid/ocwp_e2e", **metadata}
+    calls = []
+    monkeypatch.setattr(
+        MODULE, "run_check", lambda *a, **k: calls.append(a) or MODULE.Check(a[0], "pass", "ok")
+    )
+    checks, _ = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+    assert calls == []
+    assert any(c.name == "browser_e2e" and c.status == "fail" for c in checks)
+
+
+@pytest.mark.parametrize("outcome", ["success", "failure"])
+@pytest.mark.parametrize("skip_repeats", [False, True])
+def test_accepted_prior_phases_require_fresh_guarded_prepare(monkeypatch, outcome, skip_repeats):
+    env = hosted_browser_environment()
+    for phase in BROWSER_PHASES:
+        skipped = skip_repeats and phase != "INITIAL"
+        env[f"OCWP_BROWSER_PREP_{phase}_OUTCOME"] = "skipped" if skipped else outcome
+        env[f"OCWP_BROWSER_PREP_{phase}_ACCEPTED"] = "" if skipped else "true"
+    calls = []
+
+    def command(name, args, **kwargs):
+        calls.append((name, args, kwargs.get("env")))
+        return MODULE.Check(name, "pass", "synthetic")
+
+    monkeypatch.setattr(MODULE, "run_check", command)
+    checks, blockers = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+    assert not blockers and all(c.status == "pass" for c in checks)
+    prepares = [c for c in calls if c[0] == "browser_e2e_prepare"]
+    assert len(prepares) == 1
+    assert prepares[0][1] == [sys.executable, "scripts/ci/prepare_browser_phase.py"]
+    assert prepares[0][2]["OCWP_E2E_SERVICE_ID"] == "a" * 64
+    assert all("scripts/e2e/prepare_e2e_database.py" not in c[1] for c in calls)
+    assert len([c for c in calls if c[0] == "browser_e2e"]) == 1
+
+
+def test_fresh_hosted_guard_failure_does_not_launch_browser_or_generic_fallback(monkeypatch):
+    calls = []
+
+    def command(name, args, **kwargs):
+        calls.append((name, args))
+        return MODULE.Check(name, "fail" if name == "browser_e2e_prepare" else "pass", "synthetic")
+
+    monkeypatch.setattr(MODULE, "run_check", command)
+    checks, _ = MODULE.browser_runtime_checks(
+        MODULE.Check("tool_pnpm", "pass", "ok"), hosted_browser_environment()
+    )
+    assert all(name != "browser_e2e" for name, _ in calls)
+    assert all("scripts/e2e/prepare_e2e_database.py" not in args for _, args in calls)
+    assert any(c.name == "browser_e2e" and c.status == "fail" for c in checks)
+
+
+def test_ci_alone_retains_documented_nonhosted_preparation(monkeypatch):
+    calls = []
+
+    def command(name, args, **kwargs):
+        calls.append((name, args))
+        return MODULE.Check(name, "pass", "synthetic")
+
+    monkeypatch.setattr(MODULE, "run_check", command)
+    checks, blockers = MODULE.browser_runtime_checks(
+        MODULE.Check("tool_pnpm", "pass", "ok"),
+        {"CI": "true", "OCWP_E2E_DATABASE_URL": "postgresql://example.invalid/ocwp_e2e"},
+    )
+    assert not blockers and all(c.status == "pass" for c in checks)
+    assert next(args for name, args in calls if name == "browser_e2e_prepare") == [
+        sys.executable,
+        "scripts/e2e/prepare_e2e_database.py",
+    ]
+
+
+@pytest.mark.parametrize("phase", BROWSER_PHASES)
+@pytest.mark.parametrize("suffix", ["OUTCOME", "ACCEPTED"])
+def test_missing_phase_handoff_key_blocks_before_any_command(monkeypatch, phase, suffix):
+    env = hosted_browser_environment()
+    del env[f"OCWP_BROWSER_PREP_{phase}_{suffix}"]
+    calls = []
+    monkeypatch.setattr(
+        MODULE, "run_check", lambda *a, **k: calls.append(a) or MODULE.Check(a[0], "pass", "ok")
+    )
+    checks, _ = MODULE.browser_runtime_checks(MODULE.Check("tool_pnpm", "pass", "ok"), env)
+    assert calls == []
+    assert any(c.name == "browser_e2e" and c.status == "fail" for c in checks)

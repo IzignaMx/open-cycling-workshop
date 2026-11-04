@@ -293,7 +293,7 @@ for (const kind of ['customer', 'order'] as const)
         await form.getByRole('combobox', { name: 'Cliente', exact: true }).selectOption('')
       }
       await expect(form).toHaveAttribute('data-dirty', 'true')
-      await expect(form.getByRole('button')).toBeDisabled()
+      await expect(form.locator('button[type="submit"]')).toBeDisabled()
       // Restore required validity to make requestSubmit exercise the guard, not
       // merely native required-field validation. UNKNOWN must survive both edits.
       if (!customer)

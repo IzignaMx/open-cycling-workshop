@@ -1,3 +1,4 @@
+import { CustomerLookup, type CustomerLookupSnapshot } from './customer-lookup.js'
 import { CaptureRecovery, type RecoveryAttempt } from './capture-recovery.js'
 import { CaptureVisit, type CaptureVisitSnapshot, type CaptureVisitScope } from './capture-visit.js'
 import { captureFeedback } from '../features/capture-feedback.js'
@@ -62,6 +63,7 @@ export interface WorkshopSnapshot {
   selectedLocationId: string | null
   message: string | null
   sync: 'local' | 'offline' | 'syncing' | 'synced' | 'conflict' | 'error'
+  customerLookup: CustomerLookupSnapshot | null
   customers: LocalCustomer[]
   orders: LocalServiceOrder[]
   events: LocalServiceOrderEvent[]
@@ -90,6 +92,7 @@ const empty = (): WorkshopSnapshot => ({
   selectedLocationId: null,
   message: null,
   sync: 'local',
+  customerLookup: null,
   customers: [],
   orders: [],
   events: [],
@@ -159,6 +162,7 @@ export class WorkshopController {
   #locationsNetworkSequence = -1
   #disposed = false
   #sequence = 0
+  readonly #customerLookup = new CustomerLookup(() => this.publish({}))
   readonly #captureVisit = new CaptureVisit()
   #captureSource: BaselineSession | null = null
   readonly #captureRecovery: CaptureRecovery
@@ -689,9 +693,19 @@ export class WorkshopController {
       !source.isCurrent(source.identity)
     ) {
       this.#captureVisit.suspendView()
+      this.#customerLookup.clear()
+      next.customerLookup = null
       next.capture = null
     } else {
       const capture = this.#captureVisit.getSnapshot()
+      if (capture && source.context.capabilities.includes('customers.read')) {
+        this.#customerLookup.bind(capture.viewToken)
+        this.#customerLookup.select(capture.order.draft.customerId)
+        next.customerLookup = this.#customerLookup.snapshot()
+      } else {
+        this.#customerLookup.clear()
+        next.customerLookup = null
+      }
       const recovery = this.#captureRecovery.snapshot()
       next.capture = capture
         ? Object.freeze({
@@ -714,9 +728,10 @@ export class WorkshopController {
     for (const listener of this.#listeners) listener()
   }
   private maskCapture(): void {
+    this.#customerLookup.clear()
     this.#captureVisit.suspendView()
     this.#captureSource = null
-    this.#snapshot = Object.freeze({ ...this.#snapshot, capture: null })
+    this.#snapshot = Object.freeze({ ...this.#snapshot, capture: null, customerLookup: null })
   }
   private cancel() {
     this.maskCapture()
@@ -1225,6 +1240,8 @@ export class WorkshopController {
     this.armLease(source)
     if (!connected) this.probeOffline(source)
     await this.refresh()
+    const readyView = this.#snapshot.capture?.viewToken
+    if (readyView && current()) void this.resolveCustomerSelection(readyView)
     // Initial operational reads advance the kernel's trusted observation time.
     // Recover an overlapping cache read once, after those reads have settled.
     if (!connected && this.#active === source && current()) void this.branding.refresh(true)
@@ -1607,7 +1624,111 @@ export class WorkshopController {
     if (this.captureSource(view) && this.#captureVisit.editOrder(view, field, value)) {
       this.#captureRecovery.edit('order', this.#captureVisit.projection('order'))
       this.publish({})
+      if (field === 'customerId') void this.resolveCustomerSelection(view)
     }
+  }
+  editCustomerQuery(view: object, query: string): void {
+    const source = this.captureSource(view)
+    if (!source?.context.capabilities.includes('customers.read')) return
+    this.#customerLookup.edit(query)
+    this.publish({})
+  }
+  async retryCustomerSelection(view: object): Promise<void> {
+    if (!this.captureSource(view) || this.#customerLookup.snapshot().busy) return
+    this.#customerLookup.retry()
+    this.publish({})
+    await this.resolveCustomerSelection(view)
+  }
+  private async resolveCustomerSelection(view: object): Promise<void> {
+    const source = this.captureSource(view)
+    if (!source?.context.capabilities.includes('customers.read')) return
+    const id = this.#snapshot.capture?.order.draft.customerId ?? ''
+    this.#customerLookup.select(id)
+    const revision = this.#customerLookup.selectionRevision
+    const current = () =>
+      this.captureSource(view) === source &&
+      this.#snapshot.capture?.order.draft.customerId === id &&
+      this.#customerLookup.selectionRevision === revision
+    while (this.#customerLookup.snapshot().busy) {
+      await this.#customerLookup.wait()
+      if (!current()) return
+    }
+    if (!id || !current() || this.#customerLookup.snapshot().selection.status === 'available')
+      return
+    let readCompleted = false
+    await this.#customerLookup.run(
+      async () => {
+        const customer = await this.repositories.selectedCustomer(source, id)
+        readCompleted = true
+        return customer
+      },
+      (customer) => this.#customerLookup.selected(id, customer),
+      current,
+      () => this.#customerLookup.selectionRevision,
+    )
+    if (readCompleted && this.captureSource(view) === source)
+      this.branding.refreshOfflineAfterLocalActivity()
+  }
+  async searchCustomers(view: object, action: 'restart' | 'continue'): Promise<void> {
+    const source = this.captureSource(view)
+    if (!source?.context.capabilities.includes('customers.read')) return
+    const state = this.#customerLookup.snapshot()
+    if (state.busy) return
+    const query = state.query.trim().toLowerCase()
+    if (!query || [...state.query].length > 200) {
+      this.#customerLookup.message(
+        !query
+          ? 'Escribe un nombre para buscar en los clientes locales.'
+          : 'La búsqueda no puede superar 200 caracteres.',
+      )
+      this.publish({})
+      return
+    }
+    if (action === 'continue' && (!state.pages || state.nextAfterId === null)) return
+    const selectedId = this.#snapshot.capture?.order.draft.customerId ?? ''
+    const revision = this.#customerLookup.revision
+    const current = () =>
+      this.captureSource(view) === source &&
+      this.#customerLookup.revision === revision &&
+      this.#snapshot.capture?.order.draft.customerId === selectedId
+    let readCompleted = false
+    await this.#customerLookup.run(
+      async () => {
+        const page = await this.repositories.page(
+          source,
+          'customer',
+          action === 'continue' ? state.nextAfterId! : undefined,
+        )
+        readCompleted = true
+        if (!current()) return null
+        const selected = selectedId
+          ? await this.repositories.selectedCustomer(source, selectedId)
+          : null
+        const matches = page.items
+          .map((row) => row.optimistic ?? row.confirmed)
+          .filter((row): row is NonNullable<typeof row> => !!row)
+          .filter(
+            (row) =>
+              typeof row.display_name === 'string' &&
+              row.display_name.toLowerCase().includes(query),
+          )
+          .map((row) => ({
+            customer_id: row.customer_id as string,
+            display_name: row.display_name as string,
+          }))
+        return { matches, selected, nextAfterId: page.nextAfterId }
+      },
+      (result) => {
+        if (!result) return
+        this.#customerLookup.page(result.matches, result.nextAfterId, action === 'restart')
+        if (selectedId) this.#customerLookup.selected(selectedId, result.selected)
+      },
+      current,
+    )
+    // Reads advance the shared observation fence even when their query became stale.
+    // Check authority again after run's synchronous final publication, not query epoch.
+    if (readCompleted && this.captureSource(view) === source)
+      this.branding.refreshOfflineAfterLocalActivity()
   }
   async submitCaptureCustomer(view: object): Promise<void> {
     const source = this.captureSource(view)
@@ -1661,6 +1782,13 @@ export class WorkshopController {
     }
   }
   async submitCaptureOrder(view: object): Promise<void> {
+    const selection = this.#snapshot.customerLookup?.selection
+    if (
+      this.captureSource(view) &&
+      selection?.status === 'unavailable' &&
+      selection.id === this.#snapshot.capture?.order.draft.customerId
+    )
+      return
     const source = this.captureSource(view)
     if (!source || !this.#captureRecovery.canSubmit('order')) return
     const attempt = this.#captureVisit.begin(view, 'order')

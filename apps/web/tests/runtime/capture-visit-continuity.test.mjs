@@ -40,6 +40,11 @@ async function prepare(t, kind) {
     for (const [label, value] of Object.entries(kind.fields)) form().edit(label, value)
   }
   fill()
+  if (kind.name === 'order')
+    await until(
+      () => f.runtime.getSnapshot().customerLookup?.selection.status === 'available',
+      'current customer pin available',
+    )
   return { ...f, view, form, fill }
 }
 async function reconnect(f) {

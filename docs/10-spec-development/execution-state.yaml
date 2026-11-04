@@ -1,6 +1,218 @@
 schema: 1
 
-current_checkpoint: intake_admissibility_20261104
+current_checkpoint: local_customer_lookup_listener_streaming_20261104
+local_customer_lookup_listener_streaming_20261104:
+  status: locally_validated_bounded_streaming_hosted_unqualified
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  fifth_head: c4b0065d1764b2216c3d0c83863f26390ffe0f23
+  fifth_tested_merge: 69414e0a98ce773b37d7dff4bfb450c80d4103ae
+  fifth_tree: db730204b415cf331deec7c7d662b0c0e5a63540
+  fifth_CI: 41901853638
+  fifth_refusal: listeners_oversized_observed_only_for_this_run
+  fifth_direct: 133_passed_lookup_completed
+  fifth_Python: 6258_passed_58_exact_expected_skips
+  fifth_repeats: zero_all_groups_aggregate_build_browser_not_executed
+  fourth_refusal_subtype: UNKNOWN_preserved
+  replaces: prior_64KiB_per_table_input_cap_explicit_budget_change
+  new_budget: combined4MiB_including_headers_LF_rows16384_excluding_headers
+  stream_bounds: line1024_excluding_LF_chunk4096_shared2s_cooperative
+  absence: both_tables_valid_full_EOF_required
+  limits: not_interruptible_wallclock_not_atomic_snapshot_no_hosted_guarantee
+  privacy: closed_subcodes_no_raw_tables_addresses_IDs_or_exceptions
+  final_local_validation: Python5679_passed_671_environment_skips_12_warnings_434_27s_exit0
+  final_Python_scope: frozen_source_contracts_before_documentation_stamp
+  final_frontend: 1296_passed_zero_failed_zero_skipped
+  focused: 101_passed_independent304_passed
+  final_repository: 189_passed_after_documentation_stamp
+  repair_scope: six_paths_twentyfive_overall_vs_accepted_main
+  authority: local_only_no_cleanup_CI_publication_or_merge
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical diagnostic stage: fifth run identified oversized, fourth remains unknown.
+historical_listener_diagnostics_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+historical_listener_diagnostics_last_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+local_customer_lookup_listener_diagnostics_20261104:
+  status: locally_validated_listener_diagnostics_hosted_unqualified
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  fourth_head: bdbfa0269f141349c619a3d1d6aaf90dacdf03e0
+  fourth_tested_merge: dfe4248b2abf64ad7c93c5558c0f7a613c9757df
+  fourth_tree: f4eb60f3ee5ee0a6b4769916aac4187e38e061c0
+  fourth_CI: 41885869487
+  fourth_direct: 133_passed_lookup_completed
+  fourth_Python: 6243_passed_58_exact_expected_skips
+  fourth_initial_preparation: accepted_closed_payload
+  fourth_refusal: prepared_false_stage_listeners_reason_refused
+  fourth_repetitions: all_zero_later_phases_skipped_expiry_incomplete
+  fourth_aggregate: 24_passed_of26_entries_build_browser_not_executed_handoff_refused
+  actual_condition_and_owner: UNKNOWN_no_actual_listener_claim
+  diagnostics: optional_listener_reason_oversized_malformed_read_error_protected_listener
+  privacy: no_counts_addresses_IDs_raw_exceptions_or_proc_content
+  policy: unchanged_64KiB_cap_first_refusal_and_boolean_acceptance
+  final_local_validation: Python5645_passed_671_environment_skips_12_warnings_424_17s_exit0
+  final_Python_scope: frozen_source_contracts_before_documentation_stamp
+  final_frontend: 1296_passed_zero_failed_zero_skipped
+  targeted: wrapper58_plus10_CI_contracts_independent271_equivalence1447
+  diagnostic_RED: eight_failures_retained
+  final_repository: 188_passed_after_documentation_stamp
+  repair_scope: six_paths_twentyfive_overall_vs_accepted_main
+  authority: local_only_no_cleanup_CI_publication_or_merge
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical phase preparation; fourth hosted run safely refused, not qualified.
+historical_lookup_phase_isolation_checkpoint: local_customer_lookup_phase_isolation_20261104
+historical_lookup_phase_isolation_last_checkpoint: local_customer_lookup_phase_isolation_20261104
+local_customer_lookup_phase_isolation_20261104:
+  status: locally_validated_phase_isolation_preparation_hosted_unqualified
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  third_head: 2ca9f81117d6c410a80ebb1b232fdeed76b25af7
+  third_tested_merge: c7e6ed692f84ac61933fa25db1541ecc09affced
+  third_tree: e22d48d88eb3c00ad85a8029d17fd54c036e6c7e
+  third_CI: 41864390743
+  third_aggregate: 27_of27_not_complete_workflow_acceptance
+  third_browser: direct133_passed_aggregate133_passed_lookup_completed
+  third_Python: 6128_passed_58_exact_expected_skips
+  third_frontend: 1296_passed
+  third_repetitions: sync_order20_passed_cutover8_passed1_failed_admin_skipped_expiry0of10
+  counter_provenance: UNKNOWN_no_root_cause_claim
+  preparation: local_mock_only_no_Docker_PostgreSQL_or_cleanup_execution
+  boundary: between_completed_independent_phases_preserve_within_case_history
+  wrapper: scripts/ci/prepare_browser_phase.py
+  phase_count: six_guarded_boundaries_four_additional_repeat_preparations_no_retries
+  refusal_propagation: browser_check_failed_before_its_build_fixture_prep_or_browser_launch
+  verifier_scope: not_all_main_commands_reviewed_CI_uses_full_python_receipt
+  distinction: genuine_browser_failure_after_accepted_preparation_is_not_guard_refusal
+  limits: inspect5s_16KiB_reap1s_proc2x64KiB_connect5s_statement2s_child120s
+  resource_scope: no_new_volumes_or_asset_cleanup_not_hard_host_or_disk_quota
+  residual_risk: inspect_port_query_reset_TOCTOU_trusted_sequential_runner
+  final_local_validation: Python5630_passed_671_environment_skips_12_warnings_425_66s_exit0
+  final_Python_scope: frozen_source_before_final_documentation_stamp
+  final_frontend: 1296_passed_zero_failed_zero_skipped
+  final_repository: 187_passed_after_documentation_stamp
+  legacy_verifier_mypy: 36_unchanged_baseline_diagnostics_not_clean
+  wrapper_mypy: strict_passed
+  real_Docker_PostgreSQL_reset_hosted_qualification: not_executed_not_claimed
+  authority: no_publication_CI_or_merge_at_this_stage
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical locator repair; third run remained unqualified despite lookup success.
+historical_lookup_locator_checkpoint: local_customer_lookup_locator_20261104
+historical_lookup_locator_last_checkpoint: local_customer_lookup_locator_20261104
+local_customer_lookup_locator_20261104:
+  status: test_locator_repair_locally_validated_hosted_not_accepted
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  second_head: ab1c8947448536dcc7588ef0c3892990dd948b2c
+  second_tested_merge: 7f70e6fb092812e969096474f9b1f6bc99180ead
+  second_tree: 7e5b2b391438c10c33a640cd56a0c841876a3ad7
+  second_CI: 41847937571
+  second_controls: 26_of27_not_accepted
+  second_browser: direct132_passed1_failed_aggregate132_passed1_failed
+  second_Python: 6127_passed_58_exact_expected_skips
+  second_frontend: 1296_passed
+  workflow_repetitions: skipped_after_direct_browser_failure_not_qualified
+  expiry_guard: failed_closed_on_skipped_zero_of10_executed_incomplete_artifact
+  aggregate_scope: 26_of27_does_not_cover_all_required_workflow_gates
+  diagnosis: exact_label_locator_defect_reproduced_with_installed_engine
+  proof_limit: rendered_component_and_selector_functions_not_native_browser
+  repair: test_only_named_combobox_plus_positive_count_one
+  production_pagination_defect: not_established_no_production_fix
+  final_local_validation: Python5515_passed_671_environment_skips_12_warnings_383_52s_exit0
+  final_Python_scope: before_final_documentation_and_correction_contract_stamp
+  final_repository: 186_passed_after_final_stamp
+  final_frontend: 1296_passed
+  repair_scope: five_paths_nineteen_overall_vs_accepted_main
+  native: collected_typechecked_not_executed_locally
+  publication: not_performed_at_this_source_stage
+  merge: blocked_until_complete_fresh_qualification
+  M2: no_run_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical diagnostic preparation and uncertainty; second failure and later proof above.
+historical_lookup_diagnostic_checkpoint: local_customer_lookup_diagnostic_20261104
+historical_lookup_diagnostic_last_checkpoint: local_customer_lookup_diagnostic_20261104
+local_customer_lookup_diagnostic_20261104:
+  status: initial_hosted_failed_bounded_diagnostic_in_progress
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  initial_head: 90802550261d3a634423f0fb6dab0dcdd18a693d
+  initial_tested_merge: 8424d35fc04d41ed1a0c3045d7c36c7eeada6594
+  initial_tree: 325427062580dfd5eedf5b2e1b3b371328e10cfe
+  initial_CI: 41821564647
+  initial_controls: 25_of27_passed_not_accepted
+  initial_browser: direct131_passed2_failed_aggregate131_passed2_failed
+  initial_Python: 6126_passed_58_exact_expected_skips
+  failed_controls: frontend_offline_typecheck_browser_e2e
+  lookup_cause: UNKNOWN_not_established_by_passing_local_probes
+  diagnostic_scope: synthetic_bounded_native_instrumentation_no_product_scope_expansion
+  fresh_local_validation: local_repair_diagnostic_ready_hosted_outcome_pending
+  repair_Python: 5514_passed_671_environment_skips_12_warnings_395_12s_exit0
+  repair_Python_scope: frozen_product_tests_before_documentation_stamp
+  repair_repository: 185_passed_after_documentation_stamp
+  repair_frontend: 1296_passed_three_new_diagnostic_privacy_bounds_tests
+  repair_static: strict_web_offline_native_types_lint_format_passed
+  repair_native: seven_affected_cases_collected_zero_executed_locally
+  repair_scope: ten_paths_six_frontend_four_documentation_nineteen_overall_vs_main
+  production_lookup_behavior_fix: none_cause_UNKNOWN
+  publication: bounded_diagnostic_and_ordinary_CI_approved_by_coordinator
+  merge: blocked_until_complete_fresh_qualification
+  M2: no_run_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical pre-publication local snapshot; does not override hosted failure above.
+historical_local_customer_lookup_checkpoint: local_customer_lookup_20261104
+historical_local_customer_lookup_last_checkpoint: local_customer_lookup_20261104
+local_customer_lookup_20261104:
+  status: locally_validated_independently_reviewed_hosted_pending
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  admission: S2_existing_picker_local_read_prerequisite_V01_physical_partial
+  scan: one_existing_kernel_page50_per_explicit_action
+  resource_bound: candidate_IDs_not_total_DB_reads_or_latency_plus_one_selected_entity_read
+  query: volatile_case_insensitive_name_substring_only
+  query_limit: 200_codepoints_edit_invalidates_without_IO
+  selection: explicit_ID_stable_authorized_no_auto_first
+  options: current_browse_or_search_page_plus_one_deduplicated_pin_max51
+  lifecycle: exact_active_capture_source_view_token_query_generation_fences
+  completeness: local_cursor_only_not_global_snapshot_or_all_server_customers
+  excluded: contact_ID_tag_search_index_schema_API_storage_authority
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  local_Python: 5513_passed_671_environment_skips_12_warnings_389_21s_exit0
+  local_Python_scope: frozen_product_before_final_documentation_stamp
+  local_frontend: 1293_passed
+  focused_lookup: 21_passed_independently_reviewed
+  repository_contracts: 184_passed_poststamp_rerun_recorded_separately
+  initial_fixture_failures: five_retained_corrected_not_production_regressions
+  branding_RED: two_held_digests_reproduced_fixed_existing_offline_activity_hook
+  branding_mutation: removal_of_both_activity_signals_detected
+  native_browser: one_case_collected_typechecked_zero_executed
+  static_build: passed_existing_chunk_size_warning_retained
+  changed_files: 15
+  runtime_qualification: pending_not_inherited_from_PR88
+  publication: not_authorized
+  seventh_M2_run: not_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+pr88_fresh_main_acceptance_20261104:
+  status: accepted_baseline_not_lookup_candidate_evidence
+  main: 5f5c0e3eab6af6693016781184e387d442106af9
+  tree: a5ff0e33250206d8f6ea8dc66a9df3d0ad79481a
+  CI: 41810260574
+  counts: 27_of27_Python6123_plus58_exact_skips_frontend1272_API1
+  browser: 132_direct_log_132_aggregate_repeats20_9_5_10_kernel14_retry0
+  intake: two_named_PWA_cases_75_invalid_items_two_valid_peers_28_replay_cases_verified
+  runtime_security_micro: 41810260669_41810260514_41810260531_accepted
+  large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed
+  receipt: artifacts/intake-admissibility/pr88-postmerge/final/review.json
+  receipt_sha256: ed97f1fc5ec0af44cf8a5a5dd90d4e8a6ca6742acdafa2d90b6adb94b34b3255
+  provenance: retained_coordinator_archive_not_tracked_or_public_repository_path
+  M2_main_push: no_run_no_seventh_authority
+
+# Historical PR88 source-stage snapshot; separately approved acceptance is above.
+historical_intake_admissibility_checkpoint: intake_admissibility_20261104
+historical_intake_admissibility_last_checkpoint: intake_admissibility_20261104
+historical_intake_admissibility_plan: docs/10-spec-development/2026-11-04-intake-admissibility.md
 intake_admissibility_20261104:
   status: locally_validated_independently_reviewed_hosted_pending
   canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005
@@ -2499,7 +2711,7 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-04-intake-admissibility.md
+active_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 active_plan_status: locally_validated_hosted_pending_publication_not_authorized
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
@@ -2508,7 +2720,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: intake_admissibility_20261104
+last_checkpoint: local_customer_lookup_listener_streaming_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

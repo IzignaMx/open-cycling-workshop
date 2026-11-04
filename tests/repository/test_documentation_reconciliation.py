@@ -584,8 +584,8 @@ def test_pr86_main_acceptance_does_not_qualify_admissibility_candidate() -> None
 
 def test_intake_admissibility_is_existing_integrity_prerequisite_not_release_expansion() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: intake_admissibility_20261104" in state
-    assert "last_checkpoint: intake_admissibility_20261104" in state
+    assert "historical_intake_admissibility_checkpoint: intake_admissibility_20261104" in state
+    assert "historical_intake_admissibility_last_checkpoint: intake_admissibility_20261104" in state
     block = state.split("intake_admissibility_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005",
@@ -606,7 +606,7 @@ def test_intake_admissibility_is_existing_integrity_prerequisite_not_release_exp
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_intake_admissibility_plan: " + evidence in state
     assert (ROOT / evidence).is_file()
 
 
@@ -653,3 +653,263 @@ def test_pr87_acceptance_is_historical_not_intake_candidate_qualification() -> N
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in block
+
+
+def test_local_customer_lookup_is_bounded_partial_prerequisite() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "historical_local_customer_lookup_checkpoint: local_customer_lookup_20261104" in state
+    assert (
+        "historical_local_customer_lookup_last_checkpoint: local_customer_lookup_20261104" in state
+    )
+    block = state.split("local_customer_lookup_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "canonical_pair: FR-CUS-002_R02-T001_partial",
+        "admission: S2_existing_picker_local_read_prerequisite_V01_physical_partial",
+        "status: locally_validated_independently_reviewed_hosted_pending",
+        "local_Python: 5513_passed_671_environment_skips_12_warnings_389_21s_exit0",
+        "local_Python_scope: frozen_product_before_final_documentation_stamp",
+        "native_browser: one_case_collected_typechecked_zero_executed",
+        "scan: one_existing_kernel_page50_per_explicit_action",
+        "query: volatile_case_insensitive_name_substring_only",
+        "selection: explicit_ID_stable_authorized_no_auto_first",
+        "completeness: local_cursor_only_not_global_snapshot_or_all_server_customers",
+        "excluded: contact_ID_tag_search_index_schema_API_storage_authority",
+        "runtime_qualification: pending_not_inherited_from_PR88",
+        "publication: not_authorized",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    assert (ROOT / evidence).is_file()
+
+
+def test_lookup_record_requires_cursor_authority_and_honest_completeness() -> None:
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "FR-CUS-002",
+        "R02-T001",
+        "S2",
+        "50",
+        "zero matches",
+        "returned cursor",
+        "explicit continuation",
+        "restart",
+        "volatile",
+        "no global snapshot",
+        "not all server customers",
+        "selected customer",
+        "draft",
+        "generation",
+        "no automatic first selection",
+        "contact",
+        "tags",
+        "R01-T035",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    assert "## 2026-11-04 · Bounded local customer-name lookup" in checklist
+
+
+def test_pr88_baseline_acceptance_does_not_qualify_new_lookup() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("pr88_fresh_main_acceptance_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "5f5c0e3eab6af6693016781184e387d442106af9",
+        "a5ff0e33250206d8f6ea8dc66a9df3d0ad79481a",
+        "41810260574",
+        "6123",
+        "1272",
+        "ed97f1fc5ec0af44cf8a5a5dd90d4e8a6ca6742acdafa2d90b6adb94b34b3255",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in block
+
+
+def test_lookup_initial_hosted_failure_is_preserved_without_cause_invention() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert (
+        "historical_lookup_diagnostic_checkpoint: local_customer_lookup_diagnostic_20261104"
+        in state
+    )
+    assert (
+        "historical_lookup_diagnostic_last_checkpoint: local_customer_lookup_diagnostic_20261104"
+        in state
+    )
+    block = state.split("local_customer_lookup_diagnostic_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "status: initial_hosted_failed_bounded_diagnostic_in_progress",
+        "initial_CI: 41821564647",
+        "initial_controls: 25_of27_passed_not_accepted",
+        "initial_browser: direct131_passed2_failed_aggregate131_passed2_failed",
+        "lookup_cause: UNKNOWN_not_established_by_passing_local_probes",
+        "merge: blocked_until_complete_fresh_qualification",
+        "M2: no_run_authorized",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41821564647",
+        "25/27",
+        "131 passed / 2 failed",
+        "continue-on-error",
+        "preventDefault",
+        "strict-mode",
+        "UNKNOWN",
+        "51 confirmed baseline",
+        "not downloaded",
+        "af2dd26e6832418aa66b40f1e4413a66a2d56960e2ae3df0db7011c40ee657a5",
+    ):
+        assert token in record
+
+
+def test_lookup_locator_repair_preserves_two_failed_runs_and_proof_limits() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "historical_lookup_locator_checkpoint: local_customer_lookup_locator_20261104" in state
+    assert (
+        "historical_lookup_locator_last_checkpoint: local_customer_lookup_locator_20261104" in state
+    )
+    block = state.split("local_customer_lookup_locator_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "second_CI: 41847937571",
+        "second_controls: 26_of27_not_accepted",
+        "workflow_repetitions: skipped_after_direct_browser_failure_not_qualified",
+        "expiry_guard: failed_closed_on_skipped_zero_of10_executed_incomplete_artifact",
+        "second_browser: direct132_passed1_failed_aggregate132_passed1_failed",
+        "diagnosis: exact_label_locator_defect_reproduced_with_installed_engine",
+        "proof_limit: rendered_component_and_selector_functions_not_native_browser",
+        "repair: test_only_named_combobox_plus_positive_count_one",
+        "production_pagination_defect: not_established_no_production_fix",
+        "merge: blocked_until_complete_fresh_qualification",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "26/27",
+        "132 passed / 1 failed",
+        "Playwright 1.62.0",
+        "exactClienteLabelMatches",
+        "vacuous",
+        "not native browser execution",
+        "f208000e8b7d97401d74e970a6d3af71f1f80bd44e3d3ef5c86c75d22d3d68c2",
+    ):
+        assert token in record
+
+
+def test_lookup_phase_isolation_does_not_erase_failed_required_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert (
+        "historical_lookup_phase_isolation_checkpoint: "
+        "local_customer_lookup_phase_isolation_20261104" in state
+    )
+    assert (
+        "historical_lookup_phase_isolation_last_checkpoint: "
+        "local_customer_lookup_phase_isolation_20261104" in state
+    )
+    block = state.split("local_customer_lookup_phase_isolation_20261104:\n", 1)[1].split("\n\n", 1)[
+        0
+    ]
+    for token in (
+        "third_CI: 41864390743",
+        "third_aggregate: 27_of27_not_complete_workflow_acceptance",
+        "third_browser: direct133_passed_aggregate133_passed_lookup_completed",
+        "third_repetitions: sync_order20_passed_cutover8_passed1_failed_admin_skipped_expiry0of10",
+        "counter_provenance: UNKNOWN_no_root_cause_claim",
+        "preparation: local_mock_only_no_Docker_PostgreSQL_or_cleanup_execution",
+        "authority: no_publication_CI_or_merge_at_this_stage",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41864390743",
+        "133 passed",
+        "8 passed / 1 failed",
+        "trusted runner",
+        "TOCTOU",
+        "within-case history",
+        "mock-only",
+        "counter provenance remains UNKNOWN",
+        "a5c6a0417cb80d091d1ad236280863e75d1ad0fbc61d2983b33922838acd1a7b",
+    ):
+        assert token in record
+
+
+def test_lookup_listener_diagnostics_preserve_refusal_and_unknown_condition() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert (
+        "historical_listener_diagnostics_checkpoint: "
+        "local_customer_lookup_listener_diagnostics_20261104" in state
+    )
+    assert (
+        "historical_listener_diagnostics_last_checkpoint: "
+        "local_customer_lookup_listener_diagnostics_20261104" in state
+    )
+    block = state.split("local_customer_lookup_listener_diagnostics_20261104:\n", 1)[1].split(
+        "\n\n", 1
+    )[0]
+    for token in (
+        "fourth_CI: 41885869487",
+        "fourth_direct: 133_passed_lookup_completed",
+        "fourth_refusal: prepared_false_stage_listeners_reason_refused",
+        "actual_condition_and_owner: UNKNOWN_no_actual_listener_claim",
+        "diagnostics: optional_listener_reason_oversized_malformed_read_error_protected_listener",
+        "privacy: no_counts_addresses_IDs_raw_exceptions_or_proc_content",
+        "policy: unchanged_64KiB_cap_first_refusal_and_boolean_acceptance",
+        "authority: local_only_no_cleanup_CI_publication_or_merge",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41885869487",
+        "24 passed",
+        "26 entries",
+        "listener_reason",
+        "oversized",
+        "malformed",
+        "read_error",
+        "protected_listener",
+        "no counts",
+        "65,537",
+        "actual condition and owner remain UNKNOWN",
+        "c344f349b249972735937c29ebba69c18f59542b247e4f4a8d624b9c67a57917",
+    ):
+        assert token in record
+
+
+def test_lookup_streaming_budget_is_explicit_and_not_hosted_qualification() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
+    block = state.split("local_customer_lookup_listener_streaming_20261104:\n", 1)[1].split(
+        "\n\n", 1
+    )[0]
+    for token in (
+        "fifth_CI: 41901853638",
+        "fifth_refusal: listeners_oversized_observed_only_for_this_run",
+        "fourth_refusal_subtype: UNKNOWN_preserved",
+        "new_budget: combined4MiB_including_headers_LF_rows16384_excluding_headers",
+        "stream_bounds: line1024_excluding_LF_chunk4096_shared2s_cooperative",
+        "absence: both_tables_valid_full_EOF_required",
+        "limits: not_interruptible_wallclock_not_atomic_snapshot_no_hosted_guarantee",
+        "authority: local_only_no_cleanup_CI_publication_or_merge",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41901853638",
+        "4 MiB",
+        "16,384",
+        "1,024",
+        "4,096",
+        "cooperative",
+        "unterminated",
+        "budget_exceeded",
+        "deadline",
+        "57a533470fda391c1ea008ef69684c1ee97f1fb1ef145224f46b69c776734d81",
+    ):
+        assert token in record
