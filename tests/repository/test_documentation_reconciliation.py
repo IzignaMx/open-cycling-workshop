@@ -584,8 +584,8 @@ def test_pr86_main_acceptance_does_not_qualify_admissibility_candidate() -> None
 
 def test_intake_admissibility_is_existing_integrity_prerequisite_not_release_expansion() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: intake_admissibility_20261104" in state
-    assert "last_checkpoint: intake_admissibility_20261104" in state
+    assert "historical_intake_admissibility_checkpoint: intake_admissibility_20261104" in state
+    assert "historical_intake_admissibility_last_checkpoint: intake_admissibility_20261104" in state
     block = state.split("intake_admissibility_20261104:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005",
@@ -606,7 +606,7 @@ def test_intake_admissibility_is_existing_integrity_prerequisite_not_release_exp
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_intake_admissibility_plan: " + evidence in state
     assert (ROOT / evidence).is_file()
 
 
@@ -650,6 +650,77 @@ def test_pr87_acceptance_is_historical_not_intake_candidate_qualification() -> N
         "6045",
         "1256",
         "1595e284d9c1079647b636ede9c4b48b9d9c9ec3640a4a7904512cc8f730f43b",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in block
+
+
+def test_local_customer_lookup_is_bounded_partial_prerequisite() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_20261104" in state
+    block = state.split("local_customer_lookup_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "canonical_pair: FR-CUS-002_R02-T001_partial",
+        "admission: S2_existing_picker_local_read_prerequisite_V01_physical_partial",
+        "status: locally_validated_independently_reviewed_hosted_pending",
+        "local_Python: 5513_passed_671_environment_skips_12_warnings_389_21s_exit0",
+        "local_Python_scope: frozen_product_before_final_documentation_stamp",
+        "native_browser: one_case_collected_typechecked_zero_executed",
+        "scan: one_existing_kernel_page50_per_explicit_action",
+        "query: volatile_case_insensitive_name_substring_only",
+        "selection: explicit_ID_stable_authorized_no_auto_first",
+        "completeness: local_cursor_only_not_global_snapshot_or_all_server_customers",
+        "excluded: contact_ID_tag_search_index_schema_API_storage_authority",
+        "runtime_qualification: pending_not_inherited_from_PR88",
+        "publication: not_authorized",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    assert (ROOT / evidence).is_file()
+
+
+def test_lookup_record_requires_cursor_authority_and_honest_completeness() -> None:
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "FR-CUS-002",
+        "R02-T001",
+        "S2",
+        "50",
+        "zero matches",
+        "returned cursor",
+        "explicit continuation",
+        "restart",
+        "volatile",
+        "no global snapshot",
+        "not all server customers",
+        "selected customer",
+        "draft",
+        "generation",
+        "no automatic first selection",
+        "contact",
+        "tags",
+        "R01-T035",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    checklist = read("MANUAL-ACTIONS-CHECKLIST.md")
+    assert "## 2026-11-04 · Bounded local customer-name lookup" in checklist
+
+
+def test_pr88_baseline_acceptance_does_not_qualify_new_lookup() -> None:
+    state = read(BASE + "execution-state.yaml")
+    block = state.split("pr88_fresh_main_acceptance_20261104:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "5f5c0e3eab6af6693016781184e387d442106af9",
+        "a5ff0e33250206d8f6ea8dc66a9df3d0ad79481a",
+        "41810260574",
+        "6123",
+        "1272",
+        "ed97f1fc5ec0af44cf8a5a5dd90d4e8a6ca6742acdafa2d90b6adb94b34b3255",
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in block

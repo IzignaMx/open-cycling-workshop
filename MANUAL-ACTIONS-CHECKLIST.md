@@ -1,5 +1,45 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · Bounded local customer-name lookup
+
+- [x] Admit S2 local-read operability for the shipped intake picker as a bounded
+      FR-CUS-002/R02-T001 prerequisite; full search and V0.2 remain incomplete.
+- [x] Implement volatile name-only lookup using one existing kernel page of up to
+      50 candidate IDs per action, with explicit continue/restart and honest local
+      completeness. This is not a bound on all DB reads, latency or server coverage.
+- Keep one in-flight lookup, replace rather than accumulate results, and retain
+  at most one currently authorized selected-customer pin. Maximum 51 options.
+  Selection stays explicit by ID; never automatically select the first result.
+- Preserve the intake draft. Fence queries/results to exact session, capture source,
+  view token and query generation; clear/mask on non-ready or missing read grants.
+- No contact/ID/tag search, schema/index/API/storage/authority expansion or background
+  full scan. Native behavior and fresh qualification remain pending.
+- [x] Complete local verification and independent review. Publication remains
+      pending coordinator confirmation of applicable user authorization.
+- Final frozen-product Python: 5,513 passed, 671 environment skips, 12 warnings
+  (389.21 s, exit 0), before this documentation-only stamp. Frontend: 1,293 passed;
+  focused lookup: 21 independently reviewed; repository: 184 passed, rerun after
+  the stamp. Static/types/build passed; existing chunk-size warning retained.
+- Preserve the initial five fixture failures separately from the real two-held-digest
+  branding RED/control. Existing offline activity hook fixed the race; removing
+  both signals in a mutation reproduced it. No new branding authority or storage.
+- Scope: 15 files. One native PWA case collected/typechecked, zero executed locally;
+  native and hosted qualification remain pending.
+- No publication or seventh M2 run is authorized. Physical T1–T8/R01-T035,
+  capacity, SPENT/UNKNOWN and Pages remain unchanged.
+- [Bounded design and plan](docs/10-spec-development/2026-11-04-local-customer-lookup.md).
+
+## 2026-11-04 · PR88 accepted main, historical lookup baseline
+
+- [x] Accept main 5f5c0e3e / tree a5ff0e33: CI 41810260574 passed 27/27;
+      Python: 6,123 + 58 exact skips; frontend: 1,272; API: 1; browsers: 132
+      direct-log / 132 aggregate; repeats: 20/9/5/10; kernel: 14; zero retries.
+- Two inline-intake PWA cases, 75 invalid batch items with two valid peers and
+  28 replay cases were verified. Runtime/security/micro accepted; no M2 ran.
+- Large archives were not downloaded or byte/trace/screenshot reviewed. These
+  results do not qualify changed lookup source. The intake section below preserves
+  source-stage pending gates later resolved by separate PR88 approval and evidence.
+
 ## 2026-11-04 · Existing intake admissibility prerequisite
 
 - [x] Admit integrity repair of already shipped bicycle/order intake under

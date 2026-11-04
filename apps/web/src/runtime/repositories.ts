@@ -198,6 +198,18 @@ export class WorkshopRepositories {
       c.current,
     )
   }
+  async selectedCustomer(source: BaselineSession, customerId: string) {
+    const c = this.capture(source)
+    const record = await this.kernel.readEntity(c.ticket, 'customer', customerId, c.current)
+    const customer = record?.optimistic ?? record?.confirmed
+    if (
+      !customer ||
+      customer.customer_id !== customerId ||
+      typeof customer.display_name !== 'string'
+    )
+      return null
+    return { customer_id: customerId, display_name: customer.display_name }
+  }
   async issues(source: BaselineSession, afterSequence?: number) {
     const c = this.capture(source)
     return this.kernel.listIssues(

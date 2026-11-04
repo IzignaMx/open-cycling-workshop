@@ -1,6 +1,55 @@
 schema: 1
 
-current_checkpoint: intake_admissibility_20261104
+current_checkpoint: local_customer_lookup_20261104
+local_customer_lookup_20261104:
+  status: locally_validated_independently_reviewed_hosted_pending
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  admission: S2_existing_picker_local_read_prerequisite_V01_physical_partial
+  scan: one_existing_kernel_page50_per_explicit_action
+  resource_bound: candidate_IDs_not_total_DB_reads_or_latency_plus_one_selected_entity_read
+  query: volatile_case_insensitive_name_substring_only
+  query_limit: 200_codepoints_edit_invalidates_without_IO
+  selection: explicit_ID_stable_authorized_no_auto_first
+  options: current_browse_or_search_page_plus_one_deduplicated_pin_max51
+  lifecycle: exact_active_capture_source_view_token_query_generation_fences
+  completeness: local_cursor_only_not_global_snapshot_or_all_server_customers
+  excluded: contact_ID_tag_search_index_schema_API_storage_authority
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  local_Python: 5513_passed_671_environment_skips_12_warnings_389_21s_exit0
+  local_Python_scope: frozen_product_before_final_documentation_stamp
+  local_frontend: 1293_passed
+  focused_lookup: 21_passed_independently_reviewed
+  repository_contracts: 184_passed_poststamp_rerun_recorded_separately
+  initial_fixture_failures: five_retained_corrected_not_production_regressions
+  branding_RED: two_held_digests_reproduced_fixed_existing_offline_activity_hook
+  branding_mutation: removal_of_both_activity_signals_detected
+  native_browser: one_case_collected_typechecked_zero_executed
+  static_build: passed_existing_chunk_size_warning_retained
+  changed_files: 15
+  runtime_qualification: pending_not_inherited_from_PR88
+  publication: not_authorized
+  seventh_M2_run: not_authorized
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+pr88_fresh_main_acceptance_20261104:
+  status: accepted_baseline_not_lookup_candidate_evidence
+  main: 5f5c0e3eab6af6693016781184e387d442106af9
+  tree: a5ff0e33250206d8f6ea8dc66a9df3d0ad79481a
+  CI: 41810260574
+  counts: 27_of27_Python6123_plus58_exact_skips_frontend1272_API1
+  browser: 132_direct_log_132_aggregate_repeats20_9_5_10_kernel14_retry0
+  intake: two_named_PWA_cases_75_invalid_items_two_valid_peers_28_replay_cases_verified
+  runtime_security_micro: 41810260669_41810260514_41810260531_accepted
+  large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed
+  receipt: artifacts/intake-admissibility/pr88-postmerge/final/review.json
+  receipt_sha256: ed97f1fc5ec0af44cf8a5a5dd90d4e8a6ca6742acdafa2d90b6adb94b34b3255
+  provenance: retained_coordinator_archive_not_tracked_or_public_repository_path
+  M2_main_push: no_run_no_seventh_authority
+
+# Historical PR88 source-stage snapshot; separately approved acceptance is above.
+historical_intake_admissibility_checkpoint: intake_admissibility_20261104
+historical_intake_admissibility_last_checkpoint: intake_admissibility_20261104
+historical_intake_admissibility_plan: docs/10-spec-development/2026-11-04-intake-admissibility.md
 intake_admissibility_20261104:
   status: locally_validated_independently_reviewed_hosted_pending
   canonical_pairs: FR-BIK-003_R02-T002_and_FR-SVC-001_R02-T005
@@ -2499,7 +2548,7 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-04-intake-admissibility.md
+active_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 active_plan_status: locally_validated_hosted_pending_publication_not_authorized
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
@@ -2508,7 +2557,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: intake_admissibility_20261104
+last_checkpoint: local_customer_lookup_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

@@ -88,6 +88,34 @@ export function mount(componentPath, exportName, props) {
       const input = control(label)
       return input.props.type === 'checkbox' ? input.props.checked : input.props.value
     },
+    optionLabels(label) {
+      return nodes(control(label))
+        .filter((node) => node.type === 'option')
+        .map((node) =>
+          [node.props.children]
+            .flat(Infinity)
+            .filter((value) => typeof value === 'string')
+            .join(''),
+        )
+    },
+    text() {
+      function text(node) {
+        if (typeof node === 'string') return node
+        if (!node || typeof node !== 'object') return ''
+        return [node.props?.children].flat(Infinity).map(text).join(' ')
+      }
+      return text(tree)
+    },
+    press(label, key) {
+      let prevented = false
+      control(label).props.onKeyDown({
+        key,
+        preventDefault() {
+          prevented = true
+        },
+      })
+      return prevented
+    },
     async submit() {
       const pending = tree.props.onSubmit({ preventDefault() {} })
       render()
@@ -110,7 +138,8 @@ export function mount(componentPath, exportName, props) {
       return nodes(tree).find((node) => node.props?.role === 'status').props.children
     },
     disabled() {
-      return nodes(tree).find((node) => node.type === 'button').props.disabled
+      return nodes(tree).find((node) => node.type === 'button' && node.props.type === 'submit')
+        .props.disabled
     },
   }
 }

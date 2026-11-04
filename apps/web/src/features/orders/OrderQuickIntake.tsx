@@ -1,4 +1,5 @@
-import { type ChangeEvent, type FormEvent } from 'react'
+import type { CustomerLookupSnapshot } from '../../runtime/customer-lookup.js'
+import { type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { Button } from '@ocwp/ui'
 import type { OrderDraftState } from '../draft-state.js'
 import type { CaptureFormSnapshot } from '../../runtime/capture-visit.js'
@@ -7,10 +8,23 @@ export interface OrderQuickIntakeProps {
   capture: CaptureFormSnapshot<OrderDraftState>
   onEdit<K extends keyof OrderDraftState>(field: K, value: OrderDraftState[K]): void
   onSubmit(): Promise<void>
+  lookup?: CustomerLookupSnapshot | null
+  onRetrySelected?(): Promise<void>
+  onQuery?(value: string): void
+  onSearch?(action: 'restart' | 'continue'): Promise<void>
   customers: readonly { customer_id: string; display_name: string }[]
 }
 
-export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: OrderQuickIntakeProps) {
+export function OrderQuickIntake({
+  capture,
+  onEdit,
+  onSubmit,
+  customers,
+  lookup,
+  onQuery,
+  onSearch,
+  onRetrySelected,
+}: OrderQuickIntakeProps) {
   const { busy, blocked, message } = capture
   const {
     customerId,
@@ -22,8 +36,27 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
     brand,
     model,
   } = capture.draft
+  const page = lookup?.searching ? lookup.matches : customers
+  const selected = lookup?.selection.id === customerId ? lookup.selection : null
+  const options = [...page]
+  if (
+    selected?.status === 'available' &&
+    selected.customer &&
+    !options.some((row) => row.customer_id === customerId)
+  )
+    options.push(selected.customer)
+  const lookupBlocked =
+    !!lookup && (!!lookup.busy || !customerId || selected?.status !== 'available')
+  const duplicateNames = new Set(
+    options
+      .filter((row, index) =>
+        options.some((other, at) => at !== index && other.display_name === row.display_name),
+      )
+      .map((row) => row.display_name),
+  )
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (lookupBlocked) return
     await onSubmit()
   }
 
@@ -37,6 +70,55 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
       aria-describedby="order-intake-status order-recovery-status"
       data-dirty={capture.dirty}
     >
+      {lookup ? (
+        <div className="grid gap-2">
+          <label className="grid gap-1">
+            <span className="font-medium">Buscar cliente por nombre</span>
+            <input
+              type="search"
+              value={lookup.query}
+              className={inputClass}
+              aria-describedby="customer-lookup-status"
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                onQuery?.(event.currentTarget.value)
+              }
+              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  if (!lookup.busy) void onSearch?.('restart')
+                }
+              }}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={lookup.busy} onClick={() => void onSearch?.('restart')}>
+              Buscar clientes locales
+            </Button>
+            <Button
+              type="button"
+              disabled={lookup.busy || !lookup.pages || lookup.nextAfterId === null}
+              onClick={() => void onSearch?.('continue')}
+            >
+              Continuar búsqueda local
+            </Button>
+            <Button
+              type="button"
+              disabled={lookup.busy || !lookup.pages}
+              onClick={() => void onSearch?.('restart')}
+            >
+              Reiniciar búsqueda local
+            </Button>
+            <Button type="button" onClick={() => onQuery?.('')}>
+              Usar lista actual
+            </Button>
+            {customerId ? (
+              <Button type="button" disabled={lookup.busy} onClick={() => void onRetrySelected?.()}>
+                Verificar cliente seleccionado
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <label className="grid gap-1">
         <span className="font-medium">Cliente</span>
         <select
@@ -48,16 +130,24 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
           className={inputClass}
         >
           <option value="">Selecciona un cliente…</option>
-          {customers.map((customer) => (
+          {customerId && !options.some((row) => row.customer_id === customerId) ? (
+            <option value={customerId}>Cliente seleccionado no disponible</option>
+          ) : null}
+          {options.map((customer) => (
             <option key={customer.customer_id} value={customer.customer_id}>
               {customer.display_name}
+              {lookup?.searching || duplicateNames.has(customer.display_name)
+                ? ` · ${customer.customer_id}`
+                : ''}
             </option>
           ))}
         </select>
       </label>
-      {customers.length === 0 ? (
+      {options.length === 0 && !customerId ? (
         <p className="text-sm text-[var(--ocwp-color-muted)]">
-          Primero registra un cliente con el alta rápida de clientes.
+          {lookup?.searching
+            ? 'No hay coincidencias en esta página local.'
+            : 'Primero registra un cliente con el alta rápida de clientes.'}
         </p>
       ) : null}
       <label className="grid gap-1">
@@ -143,12 +233,27 @@ export function OrderQuickIntake({ capture, onEdit, onSubmit, customers }: Order
           </label>
         </div>
       ) : null}
-      <Button type="submit" disabled={blocked || busy || customers.length === 0}>
+      <Button type="submit" disabled={blocked || busy || lookupBlocked || options.length === 0}>
         {busy ? 'Guardando…' : 'Guardar orden'}
       </Button>
       <p id="order-intake-status" role="status" aria-live="polite" className="min-h-6 text-sm">
         {message}
       </p>
+      {lookup ? (
+        <p id="customer-lookup-status" role="status" aria-live="polite">
+          {lookup.busy
+            ? 'Consultando clientes locales…'
+            : (lookup.message ??
+              (lookup.pages
+                ? `${lookup.matches.length} coincidencias en esta página. ${lookup.pages} páginas revisadas. ${lookup.nextAfterId !== null ? 'Quedan páginas locales por revisar.' : 'Fin de los registros disponibles localmente; puede haber clientes no descargados.'} Si los datos cambiaron, reinicia la búsqueda.`
+                : 'Busca por nombre entre los registros disponibles localmente; no es una búsqueda completa del servidor.'))}
+          {selected?.status === 'pending'
+            ? ' Verificando cliente seleccionado…'
+            : selected?.status === 'unavailable' || selected?.status === 'failed'
+              ? ' El cliente seleccionado no está disponible; conserva el formulario y elige un cliente disponible.'
+              : ''}
+        </p>
+      ) : null}
       <p id="order-recovery-status" role="status">
         {capture.recoveryMessage}
       </p>

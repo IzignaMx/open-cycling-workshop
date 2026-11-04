@@ -7,6 +7,14 @@ async function fixture(kind, t) {
   const { runtime } = setup(t)
   runtime.scheduleSync = () => {}
   await login(runtime)
+  let one = 'historical-A',
+    two = ''
+  if (kind === 'order') {
+    await runtime.createCustomer({ displayName: 'Second receipt customer' })
+    two = runtime
+      .getSnapshot()
+      .customers.find((row) => row.display_name === 'Second receipt customer').customer_id
+  }
   let resolveResult, rejectResult
   const pending = new Promise((resolve, reject) => {
     resolveResult = resolve
@@ -33,8 +41,8 @@ async function fixture(kind, t) {
       : mount('../../src/features/orders/OrderQuickIntake.tsx', 'OrderQuickIntake', () => ({
           capture: runtime.getSnapshot().capture.order,
           customers: [
-            { customer_id: 'one', display_name: 'One' },
-            { customer_id: 'two', display_name: 'Two' },
+            { customer_id: one, display_name: 'One' },
+            { customer_id: two, display_name: 'Two' },
           ],
           onEdit: (field, value) => runtime.editCaptureOrder(view, field, value),
           onSubmit: () => runtime.submitCaptureOrder(view),
@@ -43,7 +51,7 @@ async function fixture(kind, t) {
     kind === 'customer'
       ? { Nombre: 'Ana', Correo: 'ana@example.test', Teléfono: '111' }
       : {
-          Cliente: 'one',
+          Cliente: one,
           'Problema reportado': 'Freno',
           'Condición al recibir': 'Sucio',
           Accesorios: 'Luz',
@@ -53,7 +61,7 @@ async function fixture(kind, t) {
           Modelo: 'Modelo',
         }
   for (const [label, value] of Object.entries(fields)) form.edit(label, value)
-  return { form, fields, calls, resolveResult, rejectResult }
+  return { form, fields, calls, resolveResult, rejectResult, one, two }
 }
 
 for (const kind of ['customer', 'order']) {
@@ -85,7 +93,7 @@ for (const kind of ['customer', 'order']) {
         label === 'Agregar bicicleta'
           ? false
           : label === 'Cliente'
-            ? 'two'
+            ? f.two
             : label === 'Prioridad'
               ? 'urgent'
               : 'newer'
@@ -130,7 +138,7 @@ for (const kind of ['customer', 'order']) {
     assert.equal(f.form.dirty(), false)
     assert.equal(f.form.value(kind === 'customer' ? 'Nombre' : 'Problema reportado'), '')
     if (kind === 'order') {
-      assert.equal(f.form.value('Cliente'), 'one')
+      assert.equal(f.form.value('Cliente'), f.one)
       assert.equal(f.form.value('Prioridad'), 'high')
     }
   })
@@ -205,7 +213,7 @@ test('order: older receipt cannot adopt submitted selection as the new clean bas
   ])
     f.form.edit(label, '')
   f.form.edit('Agregar bicicleta', false)
-  assert.equal(f.form.value('Cliente'), 'one')
+  assert.equal(f.form.value('Cliente'), f.one)
   assert.equal(f.form.value('Prioridad'), 'high')
   assert.equal(f.form.dirty(), true, 'submitted selection was not adopted by the stale receipt')
 })
