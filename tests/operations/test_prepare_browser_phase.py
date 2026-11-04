@@ -326,3 +326,130 @@ def test_valid_empty_table_and_ipv6_rows_are_parsed_without_runtime_reads():
         header + "\n 0: " + "0" * 32 + ":1538 " + "0" * 32 + ":0000 0A 0:0 0:0 0 1 0 0"
     )
     assert not phase.listener_table_clear("sl local_address rem_address st\n")
+
+
+@pytest.mark.parametrize(
+    ("raw", "reason"),
+    [
+        (b"x" * 65537, "oversized"),
+        (b"", "malformed"),
+        (b"PRIVATE-CANARY", "malformed"),
+        (b"\xff", "read_error"),
+        ((HEADER + "\n 0: 0100007F:1F40 00000000:0000 0A").encode(), "malformed"),
+        (
+            (HEADER + "\n 0: 0100007F:1F40 00000000:0000 0A 0:0 0:0 0 1 0 0").encode(),
+            "protected_listener",
+        ),
+        (None, "read_error"),
+    ],
+)
+def test_listener_diagnostic_is_closed_and_stops_before_database(monkeypatch, capsys, raw, reason):
+    import io
+
+    reads = []
+    downstream = []
+
+    class Source(io.BytesIO):
+        def read(self, size=-1):
+            reads.append(size)
+            return super().read(size)
+
+    def opened(*_args, **_kwargs):
+        if raw is None:
+            raise OSError("PRIVATE-CANARY")
+        return Source(raw)
+
+    monkeypatch.setattr(phase.Path, "open", opened)
+    original = phase.prepare_phase
+
+    def prepare(_environment):
+        return original(
+            environment(),
+            inspect=lambda *_: json.dumps(inspection()),
+            other_sessions=lambda: downstream.append("sessions") or 0,
+            prepare=lambda _: downstream.append("prepare"),
+        )
+
+    monkeypatch.setattr(phase, "prepare_phase", prepare)
+    assert phase.main() == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert json.loads(output.err) == {
+        "prepared": False,
+        "stage": "listeners",
+        "reason": "refused",
+        "listener_reason": reason,
+    }
+    assert "PRIVATE-CANARY" not in output.err
+    assert len(output.err) < 160
+    assert downstream == []
+    assert reads == ([] if raw is None else [65537])
+
+
+def test_listener_diagnostic_cannot_escape_its_stage_or_allowlist():
+    assert (
+        phase.FixtureRefused("listeners", listener_reason="PRIVATE-CANARY").listener_reason is None
+    )
+    assert phase.FixtureRefused("sessions", listener_reason="oversized").listener_reason is None
+
+
+@pytest.mark.parametrize(
+    "stage,reason",
+    [
+        ("listeners", "PRIVATE-CANARY"),
+        ("listeners", []),
+        ("sessions", "oversized"),
+        ([], "oversized"),
+    ],
+)
+def test_mutated_exception_fields_never_leak_at_output_boundary(monkeypatch, capsys, stage, reason):
+    error = phase.FixtureRefused("listeners")
+    error.stage = stage
+    error.listener_reason = reason
+    error.args = ("PRIVATE-CANARY",)
+
+    def refuse(_):
+        raise error
+
+    monkeypatch.setattr(phase, "prepare_phase", refuse)
+    assert phase.main() == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert json.loads(output.err) == {
+        "prepared": False,
+        "stage": stage if isinstance(stage, str) else "unknown",
+        "reason": "refused",
+    }
+    assert "PRIVATE-CANARY" not in output.err
+
+
+def test_large_clear_time_wait_snapshot_is_still_refused_at_unchanged_cap(monkeypatch):
+    import io
+
+    table = HEADER + "\n" + ("0: 0100007F:1F40 0100007F:C350 06 0:0 0:0 0 1 0 0\n" * 2000)
+    assert phase.listener_table_clear(table)
+    assert len(table.encode()) > 65536
+    monkeypatch.setattr(phase.Path, "open", lambda *_a, **_kw: io.BytesIO(table.encode()))
+    with pytest.raises(phase.FixtureRefused) as error:
+        phase.fixture_listeners_absent()
+    assert error.value.listener_reason == "oversized"
+
+
+def test_reader_accepts_both_clear_tables_and_preserves_first_refusal(monkeypatch):
+    import io
+
+    calls = []
+
+    def opened(path, *_a, **_kw):
+        calls.append(str(path))
+        return io.BytesIO((HEADER + "\n").encode())
+
+    monkeypatch.setattr(phase.Path, "open", opened)
+    assert phase.fixture_listeners_absent() is True
+    assert calls == ["/proc/net/tcp", "/proc/net/tcp6"]
+    listener = "0: 0100007F:1F40 00000000:0000 0A 0:0 0:0 0 1 0 0"
+    assert (
+        phase.listener_table_reason(HEADER + "\n" + listener + "\nmalformed")
+        == "protected_listener"
+    )
+    assert phase.listener_table_reason(HEADER + "\nmalformed\n" + listener) == "malformed"

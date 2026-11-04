@@ -74,7 +74,58 @@ accent-insensitive semantics and server-wide completeness remain deferred.
    test results alone grant neither. No seventh M2 run, migration or new authority
    is granted.
 
-## Current source stage: mock-only independent-phase preparation
+## Current source stage: local-only closed refusal diagnostics
+
+[CI 41885869487](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41885869487)
+on head `bdbfa0269f141349c619a3d1d6aaf90dacdf03e0`, tested merge
+`dfe4248b2abf64ad7c93c5558c0f7a613c9757df`, tree
+`f4eb60f3ee5ee0a6b4769916aac4187e38e061c0`, remains unqualified.
+The initial preparation emitted an accepted closed payload and the direct browser
+suite passed 133 cases, including completed lookup. Python: 6,243 passed + 58 exact
+expected skips; frontend: 1,296. The first additional preparation, before sync/order
+repetition, emitted `{"prepared":false,"stage":"listeners","reason":"refused"}`.
+All repetitions therefore remained unexecuted; later phases were skipped and the
+expiry evidence was incomplete. Trusted refusal propagation blocked aggregate
+browser-check build, fixture preparation and browser launch. That branch emitted
+26 entries, 24 passed and two failed as not executed due to refused handoff; it is
+not successful 27-control qualification. Non-CI evidence was accepted separately.
+
+The actual condition and owner remain UNKNOWN. The broad listeners stage does not
+prove an actual protected listener existed: malformed, oversized or unreadable
+input can also cause refusal. Do not infer a process owner or prescribe cleanup.
+Retained sanitized receipt:
+`artifacts/customer-lookup/pr89-phase-qualification/final/review.json`, SHA256
+`c344f349b249972735937c29ebba69c18f59542b247e4f4a8d624b9c67a57917`.
+The approximately 347 MB direct-browser archive was not downloaded. Artifact
+paths are retained coordinator evidence, not public repository files.
+
+### Local-only diagnostic plan and limits
+
+Add an optional `listener_reason` only to listeners-stage refusal output, with
+closed values `oversized`, `malformed`, `read_error`, or `protected_listener`.
+There are no counts, addresses, process/container IDs, raw exceptions or `/proc`
+contents in the new diagnostic fields. Invalid ASCII is classified as read_error.
+Keep the existing 64 KiB cap, read of at most 65,537 bytes, first-refusal behavior
+and boolean parser acceptance unchanged. Do not enlarge a cap, add retries,
+relax any gate, change fixture reset semantics or infer previous hosted subcodes.
+
+Use simulated inputs and bounded-output tests plus independent review. No actual
+Docker, PostgreSQL, listener intervention, cleanup, CI execution or publication is
+authorized by this local increment. The six-boundary design and prior refusal
+propagation remain unchanged. Initial diagnostic RED retained eight failing tests;
+58 wrapper tests and ten existing CI contracts subsequently passed. Independent
+review passed 271 targeted checks and 1,447 acceptance-equivalence cases. Final
+full Python: 5,645 passed, 671 environment skips, 12 warnings, 424.17 s, exit 0,
+retained in `artifacts/customer-lookup/phase-listener-diagnosis/full-python-final.log`.
+Final frontend: 1,296 passed, zero failures/skips. Source and contracts were frozen
+before full Python; this final documentation stamp followed. Post-stamp repository
+checks passed 188 tests; documentation Ruff/format, Prettier and diff checks
+passed, binding the final documentation separately. Scope is six
+repair paths, 25 overall versus accepted main. These diagnostics have not been
+demonstrated in a hosted run and identify no historical refusal subtype. Preserve all four failures and their
+historical uncertainty, plus physical/capacity/SPENT/UNKNOWN/Pages gates.
+
+## Historical source stage: mock-only independent-phase preparation
 
 [CI 41864390743](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41864390743)
 tested merge `c7e6ed692f84ac61933fa25db1541ecc09affced`, head

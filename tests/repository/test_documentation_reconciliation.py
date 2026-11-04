@@ -801,8 +801,14 @@ def test_lookup_locator_repair_preserves_two_failed_runs_and_proof_limits() -> N
 
 def test_lookup_phase_isolation_does_not_erase_failed_required_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_phase_isolation_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_phase_isolation_20261104" in state
+    assert (
+        "historical_lookup_phase_isolation_checkpoint: "
+        "local_customer_lookup_phase_isolation_20261104" in state
+    )
+    assert (
+        "historical_lookup_phase_isolation_last_checkpoint: "
+        "local_customer_lookup_phase_isolation_20261104" in state
+    )
     block = state.split("local_customer_lookup_phase_isolation_20261104:\n", 1)[1].split("\n\n", 1)[
         0
     ]
@@ -828,5 +834,42 @@ def test_lookup_phase_isolation_does_not_erase_failed_required_gates() -> None:
         "mock-only",
         "counter provenance remains UNKNOWN",
         "a5c6a0417cb80d091d1ad236280863e75d1ad0fbc61d2983b33922838acd1a7b",
+    ):
+        assert token in record
+
+
+def test_lookup_listener_diagnostics_preserve_refusal_and_unknown_condition() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_customer_lookup_listener_diagnostics_20261104" in state
+    assert "last_checkpoint: local_customer_lookup_listener_diagnostics_20261104" in state
+    block = state.split("local_customer_lookup_listener_diagnostics_20261104:\n", 1)[1].split(
+        "\n\n", 1
+    )[0]
+    for token in (
+        "fourth_CI: 41885869487",
+        "fourth_direct: 133_passed_lookup_completed",
+        "fourth_refusal: prepared_false_stage_listeners_reason_refused",
+        "actual_condition_and_owner: UNKNOWN_no_actual_listener_claim",
+        "diagnostics: optional_listener_reason_oversized_malformed_read_error_protected_listener",
+        "privacy: no_counts_addresses_IDs_raw_exceptions_or_proc_content",
+        "policy: unchanged_64KiB_cap_first_refusal_and_boolean_acceptance",
+        "authority: local_only_no_cleanup_CI_publication_or_merge",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    record = " ".join(read(BASE + "2026-11-04-local-customer-lookup.md").split())
+    for token in (
+        "41885869487",
+        "24 passed",
+        "26 entries",
+        "listener_reason",
+        "oversized",
+        "malformed",
+        "read_error",
+        "protected_listener",
+        "no counts",
+        "65,537",
+        "actual condition and owner remain UNKNOWN",
+        "c344f349b249972735937c29ebba69c18f59542b247e4f4a8d624b9c67a57917",
     ):
         assert token in record

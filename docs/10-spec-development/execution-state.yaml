@@ -1,6 +1,37 @@
 schema: 1
 
-current_checkpoint: local_customer_lookup_phase_isolation_20261104
+current_checkpoint: local_customer_lookup_listener_diagnostics_20261104
+local_customer_lookup_listener_diagnostics_20261104:
+  status: locally_validated_listener_diagnostics_hosted_unqualified
+  canonical_pair: FR-CUS-002_R02-T001_partial
+  evidence: docs/10-spec-development/2026-11-04-local-customer-lookup.md
+  fourth_head: bdbfa0269f141349c619a3d1d6aaf90dacdf03e0
+  fourth_tested_merge: dfe4248b2abf64ad7c93c5558c0f7a613c9757df
+  fourth_tree: f4eb60f3ee5ee0a6b4769916aac4187e38e061c0
+  fourth_CI: 41885869487
+  fourth_direct: 133_passed_lookup_completed
+  fourth_Python: 6243_passed_58_exact_expected_skips
+  fourth_initial_preparation: accepted_closed_payload
+  fourth_refusal: prepared_false_stage_listeners_reason_refused
+  fourth_repetitions: all_zero_later_phases_skipped_expiry_incomplete
+  fourth_aggregate: 24_passed_of26_entries_build_browser_not_executed_handoff_refused
+  actual_condition_and_owner: UNKNOWN_no_actual_listener_claim
+  diagnostics: optional_listener_reason_oversized_malformed_read_error_protected_listener
+  privacy: no_counts_addresses_IDs_raw_exceptions_or_proc_content
+  policy: unchanged_64KiB_cap_first_refusal_and_boolean_acceptance
+  final_local_validation: Python5645_passed_671_environment_skips_12_warnings_424_17s_exit0
+  final_Python_scope: frozen_source_contracts_before_documentation_stamp
+  final_frontend: 1296_passed_zero_failed_zero_skipped
+  targeted: wrapper58_plus10_CI_contracts_independent271_equivalence1447
+  diagnostic_RED: eight_failures_retained
+  final_repository: 188_passed_after_documentation_stamp
+  repair_scope: six_paths_twentyfive_overall_vs_accepted_main
+  authority: local_only_no_cleanup_CI_publication_or_merge
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+# Historical phase preparation; fourth hosted run safely refused, not qualified.
+historical_lookup_phase_isolation_checkpoint: local_customer_lookup_phase_isolation_20261104
+historical_lookup_phase_isolation_last_checkpoint: local_customer_lookup_phase_isolation_20261104
 local_customer_lookup_phase_isolation_20261104:
   status: locally_validated_phase_isolation_preparation_hosted_unqualified
   canonical_pair: FR-CUS-002_R02-T001_partial
@@ -2658,7 +2689,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_customer_lookup_phase_isolation_20261104
+last_checkpoint: local_customer_lookup_listener_diagnostics_20261104
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

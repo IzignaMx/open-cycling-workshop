@@ -1,6 +1,29 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-04 · PR89 fourth refusal; local-only diagnostics
+
+- [x] Preserve CI 41885869487: initial preparation accepted; direct browser 133
+      passed including lookup; Python 6,243 + 58 exact skips; frontend 1,296.
+- First additional preparation refused at listeners stage. No repeat executed;
+  later phases skipped and expiry incomplete. Aggregate build/browser correctly
+  not executed: 24 passed among 26 emitted entries, not complete qualification.
+- Actual condition and owner remain UNKNOWN; the stage alone proves no actual
+  listener. Do not infer an owner or perform cleanup.
+- [x] Prepare optional closed listener_reason values only: oversized, malformed,
+      read_error, protected_listener. No counts, addresses, IDs, raw errors or
+      /proc content. Preserve 64 KiB cap, first refusal and acceptance behavior.
+- Simulated local proof: eight initial RED failures, 58 wrapper + 10 CI contracts
+  passed; independent 271 targeted and 1,447 equivalence cases passed. Final Python:
+  5,645 passed, 671 environment skips, 12 warnings, 424.17 s, exit 0, before this
+  documentation stamp. Post-stamp repository: 188 passed; docs static/format clean.
+  Frontend: 1,296 passed, zero failures/skips. Six repair
+  paths, 25 overall. Historical refusal subtype remains UNKNOWN. No Docker/PG/reset,
+  cleanup, publication, hosted CI or merge. Physical T1–T8/R01-T035, capacity,
+  SPENT/UNKNOWN and Pages remain unchanged.
+
 ## 2026-11-04 · PR89 third failure; local phase-isolation preparation
+
+Historical phase-preparation snapshot; fourth refusal is above.
 
 - [x] Preserve CI 41864390743: aggregate 27/27 and both browser suites 133 passed,
       lookup completed, but workflow unqualified. Python: 6,128 + 58 exact skips;

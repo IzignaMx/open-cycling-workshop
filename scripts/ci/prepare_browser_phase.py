@@ -33,15 +33,26 @@ INSPECT_FORMAT = (
 )
 
 
+LISTENER_REASONS = frozenset({"oversized", "malformed", "read_error", "protected_listener"})
+
+
+def safe_listener_reason(stage: object, reason: object) -> str | None:
+    if stage == "listeners" and isinstance(reason, str) and reason in LISTENER_REASONS:
+        return reason
+    return None
+
+
 class FixtureRefused(RuntimeError):
-    def __init__(self, stage: str = "unknown") -> None:
+    def __init__(self, stage: str = "unknown", *, listener_reason: str | None = None) -> None:
         super().__init__("Browser fixture preparation refused")
         self.stage = (
             stage
-            if stage
+            if isinstance(stage, str)
+            and stage
             in {"environment", "inspect", "service", "listeners", "sessions", "preparation"}
             else "unknown"
         )
+        self.listener_reason = safe_listener_reason(self.stage, listener_reason)
 
 
 def inspect_service(args: list[str], environment: Mapping[str, str]) -> str:
@@ -79,9 +90,13 @@ def inspect_service(args: list[str], environment: Mapping[str, str]) -> str:
 
 
 def listener_table_clear(table: str) -> bool:
+    return listener_table_reason(table) is None
+
+
+def listener_table_reason(table: str) -> str | None:
     lines = table.splitlines()
     if not lines:
-        return False
+        return "malformed"
     header = lines[0].split()
     if (
         len(header) < 4
@@ -90,7 +105,7 @@ def listener_table_clear(table: str) -> bool:
         or header[3:]
         != ["st", "tx_queue", "rx_queue", "tr", "tm->when", "retrnsmt", "uid", "timeout", "inode"]
     ):
-        return False
+        return "malformed"
     address = r"(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{32}):[0-9A-Fa-f]{4}"
     for line in lines[1:]:
         fields = line.split()
@@ -101,18 +116,28 @@ def listener_table_clear(table: str) -> bool:
             or re.fullmatch(address, fields[2]) is None
             or fields[3] not in {f"{value:02X}" for value in range(1, 13)}
         ):
-            return False
+            return "malformed"
         if fields[3] == "0A" and int(fields[1].rsplit(":", 1)[1], 16) in {8000, 5173, 5174}:
-            return False
-    return True
+            return "protected_listener"
+    return None
 
 
 def fixture_listeners_absent() -> bool:
     for path in ("/proc/net/tcp", "/proc/net/tcp6"):
-        with Path(path).open("rb") as source:
-            table = source.read(65537)
-        if len(table) > 65536 or not listener_table_clear(table.decode("ascii")):
-            return False
+        try:
+            with Path(path).open("rb") as source:
+                table = source.read(65537)
+        except Exception:
+            raise FixtureRefused("listeners", listener_reason="read_error") from None
+        if len(table) > 65536:
+            raise FixtureRefused("listeners", listener_reason="oversized")
+        try:
+            decoded = table.decode("ascii")
+        except UnicodeError:
+            raise FixtureRefused("listeners", listener_reason="read_error") from None
+        reason = listener_table_reason(decoded)
+        if reason is not None:
+            raise FixtureRefused("listeners", listener_reason=reason)
     return True
 
 
@@ -259,8 +284,9 @@ def prepare_phase(
         stage = "preparation"
         prepare(environment)
         return {"prepared": True, "container_id": cid, "image_id": detail["image_id"]}
-    except Exception:
-        raise FixtureRefused(stage) from None
+    except Exception as error:
+        reason = safe_listener_reason(stage, getattr(error, "listener_reason", None))
+        raise FixtureRefused(stage, listener_reason=reason) from None
 
 
 def main() -> int:
@@ -268,10 +294,13 @@ def main() -> int:
         print(json.dumps(prepare_phase(os.environ), sort_keys=True))
         return 0
     except FixtureRefused as error:
-        print(
-            json.dumps({"prepared": False, "stage": error.stage, "reason": "refused"}),
-            file=sys.stderr,
-        )
+        # Revalidate at emission: exception attributes are mutable and never trusted.
+        stage = FixtureRefused(error.stage).stage
+        result: dict[str, object] = {"prepared": False, "stage": stage, "reason": "refused"}
+        reason = safe_listener_reason(stage, getattr(error, "listener_reason", None))
+        if reason is not None:
+            result["listener_reason"] = reason
+        print(json.dumps(result), file=sys.stderr)
         return 1
 
 
