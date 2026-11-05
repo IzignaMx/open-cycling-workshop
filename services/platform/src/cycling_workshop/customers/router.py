@@ -15,6 +15,7 @@ from cycling_workshop.identity.domain import Principal, authorize
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.sync.projections import customer_payload
 from cycling_workshop.sync.writes import append_change, lock_writer
+from cycling_workshop.tenancy.validation import location_exists
 
 router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
 
@@ -50,6 +51,10 @@ def create_customer(
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    if not location_exists(
+        session, organization_id=principal.organization_id, location_id=payload.location_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="location not found")
     try:
         customer = Customer.create(
             customer_id=payload.customer_id or new_id(),
