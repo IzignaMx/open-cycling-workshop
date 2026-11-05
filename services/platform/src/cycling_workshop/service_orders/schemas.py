@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from cycling_workshop.shared.text import validate_storage_text
+
 TransitionAction = Literal[
     "start_diagnosis",
     "authorize",
@@ -20,6 +22,13 @@ TransitionAction = Literal[
 
 
 class ServiceOrderCreateRequest(BaseModel):
+    @field_validator("*")
+    @classmethod
+    def validate_persisted_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            validate_storage_text(value)
+        return value
+
     order_id: str | None = None
     customer_id: str = Field(min_length=1, max_length=36)
     bicycle_id: str | None = Field(default=None, max_length=36)
@@ -58,6 +67,13 @@ class ServiceOrderResponse(BaseModel):
 
 
 class OrderTransitionRequest(BaseModel):
+    @field_validator("*")
+    @classmethod
+    def validate_persisted_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            validate_storage_text(value)
+        return value
+
     action: TransitionAction
     note: str | None = Field(default=None, max_length=2000)
 

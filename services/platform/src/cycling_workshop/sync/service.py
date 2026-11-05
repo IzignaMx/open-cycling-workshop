@@ -20,6 +20,7 @@ from cycling_workshop.service_orders.domain import (
     UnknownActionError,
 )
 from cycling_workshop.service_orders.repository import SqlAlchemyServiceOrderRepository
+from cycling_workshop.shared.text import validate_storage_text
 from cycling_workshop.sync.domain import (
     ChangeItem,
     ChangePage,
@@ -209,6 +210,11 @@ class SyncService:
             mutation.location_id,
             mutation.entity_id,
         )
+        try:
+            for value in identities:
+                validate_storage_text(value)
+        except ValueError as exc:
+            raise SyncConflict("Invalid mutation identity text") from exc
         if any(
             not value or any(character.isspace() for character in value) for value in identities
         ):
@@ -361,6 +367,10 @@ class SyncService:
             customer_id = mutation.payload.get("customer_id")
             if not isinstance(customer_id, str) or not customer_id.strip():
                 raise SyncConflict("bicycle create requires customer_id")
+            try:
+                validate_storage_text(customer_id)
+            except ValueError as exc:
+                raise SyncConflict("Invalid customer reference text") from exc
             if (
                 customers.get(customer_id=customer_id, organization_id=mutation.organization_id)
                 is None
@@ -450,6 +460,10 @@ class SyncService:
             customer_id = mutation.payload.get("customer_id")
             if not isinstance(customer_id, str) or not customer_id.strip():
                 raise SyncConflict("service order create requires customer_id")
+            try:
+                validate_storage_text(customer_id)
+            except ValueError as exc:
+                raise SyncConflict("Invalid customer reference text") from exc
             if (
                 customers.get(customer_id=customer_id, organization_id=mutation.organization_id)
                 is None
@@ -459,6 +473,10 @@ class SyncService:
             if bicycle_id is not None:
                 if not isinstance(bicycle_id, str):
                     raise SyncConflict("bicycle_id must be a string")
+                try:
+                    validate_storage_text(bicycle_id)
+                except ValueError as exc:
+                    raise SyncConflict("Invalid bicycle reference text") from exc
                 if (
                     bicycles.get(bicycle_id=bicycle_id, organization_id=mutation.organization_id)
                     is None

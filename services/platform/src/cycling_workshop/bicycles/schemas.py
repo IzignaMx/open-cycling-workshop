@@ -5,8 +5,17 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from cycling_workshop.shared.text import validate_storage_text
+
 
 class BicycleCreateRequest(BaseModel):
+    @field_validator("*")
+    @classmethod
+    def validate_persisted_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            validate_storage_text(value)
+        return value
+
     bicycle_id: str | None = None
     customer_id: str = Field(min_length=1, max_length=36)
     location_id: str = Field(min_length=1, max_length=36)

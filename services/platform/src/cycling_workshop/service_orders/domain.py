@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from cycling_workshop.shared.ids import new_id
+from cycling_workshop.shared.text import validate_storage_text
 
 
 class OrderState(StrEnum):
@@ -54,13 +55,13 @@ def _now() -> datetime:
 def _required(value: str, field: str) -> str:
     if not value or not value.strip():
         raise ValueError(f"{field} must not be blank")
-    return " ".join(value.split())
+    return " ".join(validate_storage_text(value).split())
 
 
 def _optional_text(value: str | None) -> str | None:
     if value is None:
         return None
-    normalized = " ".join(value.split())
+    normalized = " ".join(validate_storage_text(value).split())
     return normalized or None
 
 
@@ -160,6 +161,7 @@ class ServiceOrder:
         now: datetime | None = None,
     ) -> TransitionResult:
         timestamp = now or _now()
+        validate_storage_text(action)
         current = OrderState(self.state)
 
         if action == "cancel":

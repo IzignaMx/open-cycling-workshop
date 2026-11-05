@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
+from cycling_workshop.shared.text import validate_storage_text
+
 _UNSET = object()
 
 
@@ -13,7 +15,7 @@ def _now() -> datetime:
 def _required(value: str, field: str) -> str:
     if not value or not value.strip():
         raise ValueError(f"{field} must not be blank")
-    return value.strip()
+    return validate_storage_text(value).strip()
 
 
 def _text(value: object, field: str, limit: int, *, required: bool = False) -> str | None:
@@ -21,7 +23,7 @@ def _text(value: object, field: str, limit: int, *, required: bool = False) -> s
         return None
     if not isinstance(value, str):
         raise ValueError(f"{field} must be a string" + ("" if required else " or null"))
-    normalized = " ".join(value.split())
+    normalized = " ".join(validate_storage_text(value).split())
     if required and not normalized:
         raise ValueError(f"{field} must not be blank")
     if len(normalized) > limit:
