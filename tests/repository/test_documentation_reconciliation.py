@@ -1047,8 +1047,8 @@ def test_location_validation_preserves_replay_authority_and_unverified_gates() -
 
 def test_backup_parser_hardening_preserves_compatibility_and_recovery_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: backup_manifest_duplicates_20261105" in state
-    assert "last_checkpoint: backup_manifest_duplicates_20261105" in state
+    assert "historical_backup_parser_checkpoint: backup_manifest_duplicates_20261105" in state
+    assert "historical_backup_parser_last_checkpoint: backup_manifest_duplicates_20261105" in state
     block = state.split("backup_manifest_duplicates_20261105:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "invariant: unique_decoded_JSON_names_before_runner_engine_or_asset_effects",
@@ -1060,7 +1060,7 @@ def test_backup_parser_hardening_preserves_compatibility_and_recovery_gates() ->
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_backup_parser_plan: " + evidence in state
     record = read(evidence)
     for token in (
         "NFR-006",
@@ -1078,3 +1078,45 @@ def test_backup_parser_hardening_preserves_compatibility_and_recovery_gates() ->
     assert "42013294946" in baseline
     assert "six_executed_passed_no_skip_exemption" in baseline
     assert "large_browser_archives: not_byte_trace_or_screenshot_reviewed" in baseline
+
+
+def test_workshop_text_admission_preserves_protocol_and_unverified_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: workshop_text_admission_20261105" in state
+    assert "last_checkpoint: workshop_text_admission_20261105" in state
+    block = state.split("workshop_text_admission_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "invariant: invalid_persisted_text_conflicts_before_binding_"
+        "and_preserves_valid_batch_items",
+        "strict_surrogate: existing_whole_request_canonical_refusal_preserved",
+        "canonicalization_schema_dependencies: unchanged",
+        "unknown_payload_metadata: not_blanket_scanned",
+        "unexpected_database_errors: not_reclassified",
+        "read_route_path_validation: outside_this_write_admission_scope",
+        "hosted_qualification: pending_not_inherited_from_PR93",
+        "physical_capacity_M2_deployment: unchanged_not_accepted",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = " ".join(read(evidence).split())
+    for token in (
+        "OFF-008",
+        "R01-T018",
+        "StrDumper",
+        "simulation",
+        "duplicate Authorization",
+        "not confirmed defects",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    baseline = state.split("pr93_fresh_main_acceptance_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "7e768ee37cb5954dbcd875a138c9dcc6464645b1",
+        "42071971585",
+        "6512",
+        "eightyfive_executed_passed_no_skip_exemption",
+        "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in baseline

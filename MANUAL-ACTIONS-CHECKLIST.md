@@ -1,5 +1,34 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · Workshop text admission
+
+- [x] Probe new boundaries: branding/blob 29 passed; session controls 16 passed.
+      Eight duplicate-Authorization policy assertions are not confirmed defects.
+- [x] Reproduce NUL admission and legacy-sync surrogate encoding failure using
+      synthetic fixtures. Offline psycopg adaptation rejects unpersistable text;
+      the pre-execute hook is simulation, not real PostgreSQL/HTTP-status proof.
+- [x] Complete local targeted correction: 169 new cases passed; independent
+      review accepted with 22 extra probes and exhaustive Unicode guard checks.
+      Static/contracts and repository 194 passed. Preserve replay/authority,
+      strict canonicalization and unknown metadata compatibility.
+- [x] Complete final Python: 6,063 passed, 685 environment skips, 12 warnings.
+      Production/tests remained frozen; repository 194 and regressions 169 are
+      rerun after the final receipt. Frontend/browser were not repeated.
+- [ ] Run new genuine PostgreSQL cases in authorized hosted CI without exemptions.
+- [ ] Obtain applicable publication authorization and fresh candidate acceptance.
+- No physical, real restore, M2/capacity or deployment acceptance follows.
+  Evidence: `docs/10-spec-development/2026-11-05-workshop-text-admission.md`.
+
+## 2026-11-05 · PR93 accepted main baseline
+
+- [x] Main 7e768ee3 / tree e5ba83b6 passed CI42071971585: Python 6,512 plus
+      58 exact skips, all 85 parser cases; frontend 1,299, API one, aggregate
+      27/27, browser 133 direct/133 aggregate, repeats 20/9/5/10, expiry ten and
+      kernel 14. All ten checks/four workflows passed on attempt one.
+- Independent source/cleanup/receipt and small artifact digests verified; large
+  browser archives remain uninspected. Historical parser pending entries below
+  are superseded only for that accepted source, not this new text correction.
+
 ## 2026-11-05 · Unambiguous backup manifests
 
 - [x] Reproduce ambiguous duplicate JSON names and add bounded rejection before

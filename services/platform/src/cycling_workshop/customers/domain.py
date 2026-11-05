@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
+from cycling_workshop.shared.text import validate_storage_text
+
 _UNSET = object()
 
 
@@ -14,7 +16,7 @@ def _now() -> datetime:
 def _normalize_name(value: object) -> str:
     if not isinstance(value, str):
         raise ValueError("display_name must be a string")
-    normalized = " ".join(value.split())
+    normalized = " ".join(validate_storage_text(value).split())
     if not normalized:
         raise ValueError("display_name must not be blank")
     if len(normalized) > 200:
@@ -27,7 +29,7 @@ def _normalize_email(value: object) -> str | None:
         return None
     if not isinstance(value, str):
         raise ValueError("email must be a string or null")
-    normalized = value.strip().lower()
+    normalized = validate_storage_text(value).strip().lower()
     if not normalized:
         return None
     if len(normalized) > 320:
@@ -42,7 +44,7 @@ def _normalize_phone(value: object) -> str | None:
         return None
     if not isinstance(value, str):
         raise ValueError("phone must be a string or null")
-    normalized = "".join(value.split())
+    normalized = "".join(validate_storage_text(value).split())
     if len(normalized) > 64:
         raise ValueError("phone must be at most 64 characters")
     return normalized or None
