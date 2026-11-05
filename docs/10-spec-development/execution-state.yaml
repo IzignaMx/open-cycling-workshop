@@ -1,6 +1,44 @@
 schema: 1
 
-current_checkpoint: location_create_validation_20261105
+current_checkpoint: backup_manifest_duplicates_20261105
+backup_manifest_duplicates_20261105:
+  status: locally_verified_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
+  canonical_pair: NFR006_R01-T033_partial_OPS-GATE-006_open
+  base_main: fb7b9ce9ad2503c67c2dc1bde7d0ffbc2f091a23
+  base_tree: 505314dabc9e292055ae12c3a2a2ac53c35c343f
+  invariant: unique_decoded_JSON_names_before_runner_engine_or_asset_effects
+  classification: ambiguous_input_parser_hardening_not_authenticity_or_exploit_proof
+  compatibility: legacy_current_writer_shape_and_unique_additive_fields_preserved
+  format_CLI_schema_dependency_workflow: unchanged
+  RED: sixty_two_failed_twentythree_passed
+  regressions: eightyfive_passed
+  nearest_operations: 195_passed_no_skips_existing_warning
+  independent_review: accepted_195_plus25_probes_96_refusal_entrypoint_checks
+  full_Python: 5893_passed_677_environment_skips_12_warnings_429_34s_exit0
+  full_Python_scope: frozen_parser_and_regressions_documentation_checked_separately
+  static_contracts: passed_including_backup_module_mypy
+  repository_operations_postreceipt: 193_plus195_rerun
+  frontend_runtime_PWA_browser: not_repeated_parser_only_change
+  actual_backup_restore: not_executed_all_new_runners_and_engines_mocked
+  publication: pending_new_authorization
+  hosted_qualification: pending_not_inherited_from_PR92
+  physical_R01_T035_OPS_GATE006_capacity_M2_Pages: unchanged_not_accepted
+
+pr92_fresh_main_acceptance_20261105:
+  status: accepted_baseline_not_backup_parser_evidence
+  main: fb7b9ce9ad2503c67c2dc1bde7d0ffbc2f091a23
+  tree: 505314dabc9e292055ae12c3a2a2ac53c35c343f
+  CI: 42013294946
+  counts: Python6426_plus58_exact_skips_frontend1299_API1
+  new_PostgreSQL_cases: six_executed_passed_no_skip_exemption
+  browser: 133_direct_133_aggregate_repeats20_9_5_10_kernel14
+  aggregate: 27_of27_expiry10_single_attempt_passed
+  ordinary_workflows: runtime42013295050_security42013294914_micro42013294883_success
+  review: bounded_receipts_and_small_artifact_digests_independently_validated
+  large_browser_archives: not_byte_trace_or_screenshot_reviewed
+
+historical_location_checkpoint: location_create_validation_20261105
 location_create_validation_20261105:
   status: locally_verified_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-05-location-create-validation.md
@@ -2843,7 +2881,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
+active_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
+historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
 active_plan_status: locally_verified_hosted_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
@@ -2855,7 +2894,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: location_create_validation_20261105
+last_checkpoint: backup_manifest_duplicates_20261105
+historical_location_last_checkpoint: location_create_validation_20261105
 historical_read_boundary_last_checkpoint: autonomous_read_boundaries_20261105
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25

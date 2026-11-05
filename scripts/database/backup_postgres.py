@@ -305,12 +305,21 @@ def _require(condition: object) -> None:
         raise ValueError("invalid manifest field")
 
 
+def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate manifest key")
+        result[key] = value
+    return result
+
+
 def _manifest(directory: Path) -> dict[str, Any]:
     path = directory / MANIFEST_NAME
     if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_MANIFEST_BYTES:
         raise BackupError("backup manifest is missing, unsafe or oversized")
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_pairs)
         _require(isinstance(value, dict))
         _require(value["format_version"] == 1 and type(value["format_version"]) is int)
         _require(value["scope"] == "postgresql-only")

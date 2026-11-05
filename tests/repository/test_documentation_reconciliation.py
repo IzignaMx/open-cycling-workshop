@@ -1009,8 +1009,8 @@ def test_autonomous_read_boundary_tests_preserve_deferred_physical_gates() -> No
 
 def test_location_validation_preserves_replay_authority_and_unverified_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: location_create_validation_20261105" in state
-    assert "last_checkpoint: location_create_validation_20261105" in state
+    assert "historical_location_checkpoint: location_create_validation_20261105" in state
+    assert "historical_location_last_checkpoint: location_create_validation_20261105" in state
     block = state.split("location_create_validation_20261105:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "invariant: invalid_location_create_is_permanent_and_preserves_independent_valid_items",
@@ -1023,7 +1023,7 @@ def test_location_validation_preserves_replay_authority_and_unverified_gates() -
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_location_plan: " + evidence in state
     record = read(evidence)
     for token in (
         "OFF-008",
@@ -1043,3 +1043,38 @@ def test_location_validation_preserves_replay_authority_and_unverified_gates() -
         "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in baseline
+
+
+def test_backup_parser_hardening_preserves_compatibility_and_recovery_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: backup_manifest_duplicates_20261105" in state
+    assert "last_checkpoint: backup_manifest_duplicates_20261105" in state
+    block = state.split("backup_manifest_duplicates_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "invariant: unique_decoded_JSON_names_before_runner_engine_or_asset_effects",
+        "classification: ambiguous_input_parser_hardening_not_authenticity_or_exploit_proof",
+        "compatibility: legacy_current_writer_shape_and_unique_additive_fields_preserved",
+        "actual_backup_restore: not_executed_all_new_runners_and_engines_mocked",
+        "hosted_qualification: pending_not_inherited_from_PR92",
+        "physical_R01_T035_OPS_GATE006_capacity_M2_Pages: unchanged_not_accepted",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = read(evidence)
+    for token in (
+        "NFR-006",
+        "R01-T033",
+        "OPS-GATE-006",
+        "b38c346",
+        "ba45f4e",
+        "not an",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    baseline = state.split("pr92_fresh_main_acceptance_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    assert "fb7b9ce9ad2503c67c2dc1bde7d0ffbc2f091a23" in baseline
+    assert "42013294946" in baseline
+    assert "six_executed_passed_no_skip_exemption" in baseline
+    assert "large_browser_archives: not_byte_trace_or_screenshot_reviewed" in baseline

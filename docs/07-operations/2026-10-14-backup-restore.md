@@ -54,6 +54,14 @@ aunque el checksum coincida.
 El manifiesto conserva `restore_tested: false`; no se reescribe al verificar o
 restaurar. Guarda el JSON del ensayo por separado, asociado al SHA256 que contiene.
 
+El lector rechaza nombres de claves JSON duplicados en cualquier objeto, incluso
+si los valores coinciden o una clave usa escapes equivalentes. Los generadores
+version-1 antiguos y actuales producen claves únicas; no cambia su formato ni
+su CLI. Por compatibilidad, los campos adicionales no interpretados siguen
+admitidos en el manifiesto PostgreSQL, con nombres únicos también dentro de sus
+objetos anidados. Esto elimina ambigüedad de lectura, no autentica el archivo ni
+prueba una restauración.
+
 ## Preparar el destino de backups
 
 La imagen `infra/docker/operations.Dockerfile` incluye Python 3.13 y clientes
