@@ -103,12 +103,15 @@ def get_bicycle(
     bicycle = repository.get(bicycle_id=bicycle_id, organization_id=principal.organization_id)
     if bicycle is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="bicycle not found")
-    authorize(
-        principal,
-        capability="bicycles.read",
-        organization_id=bicycle.organization_id,
-        location_id=bicycle.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="bicycles.read",
+            organization_id=bicycle.organization_id,
+            location_id=bicycle.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return _response(bicycle)
 
 
@@ -122,14 +125,19 @@ def list_customer_bicycles(
     customer = customers.get(customer_id=customer_id, organization_id=principal.organization_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer not found")
-    authorize(
-        principal,
-        capability="bicycles.read",
-        organization_id=customer.organization_id,
-        location_id=customer.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="bicycles.read",
+            organization_id=customer.organization_id,
+            location_id=customer.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     repository = SqlAlchemyBicycleRepository(session)
     bicycles = repository.list_by_customer(
-        customer_id=customer_id, organization_id=principal.organization_id
+        customer_id=customer_id,
+        organization_id=principal.organization_id,
+        location_id=principal.location_id,
     )
     return [_response(bicycle) for bicycle in bicycles]

@@ -217,7 +217,7 @@ def test_admin_family_not_found_responses_are_no_store(path):
         f"{ADMIN}-extra/users",
         f"{LOCATIONS}-extra",
         f"{LOCATIONS}/nested",
-        "/api/v1/customers/absent",
+        "/api/v1/customers-extra/absent",
         "/health/live",
     ],
 )

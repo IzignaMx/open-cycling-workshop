@@ -46,7 +46,12 @@ class SqlAlchemyBicycleRepository:
         return self._to_domain(record) if record is not None else None
 
     def list_by_customer(
-        self, *, customer_id: str, organization_id: str, limit: int = 100
+        self,
+        *,
+        customer_id: str,
+        organization_id: str,
+        location_id: str | None = None,
+        limit: int = 100,
     ) -> list[Bicycle]:
         statement = (
             select(BicycleRecord)
@@ -57,6 +62,8 @@ class SqlAlchemyBicycleRepository:
             .order_by(BicycleRecord.brand, BicycleRecord.id)
             .limit(limit)
         )
+        if location_id is not None:
+            statement = statement.where(BicycleRecord.location_id == location_id)
         return [self._to_domain(record) for record in self._session.scalars(statement)]
 
     @staticmethod

@@ -1,5 +1,35 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · Autonomous testing and workshop read boundaries
+
+- [x] Reproduce and locally correct nested bicycle cross-location disclosure,
+      five expected read denials returned as 500, and missing HTTP no-store.
+      Tests-first: authorization seven RED failures; privacy 52 RED failures.
+      Final focused matrices 25 and 59 passed; independent review 175 plus 18
+      ASGI probes passed. No schema, role, session or persistence change.
+- [x] Run 36 additional seeded offline/capture transaction tests. Fake IndexedDB
+      and in-process reopen only, not native disk or power-loss evidence.
+- [x] Complete local verification: Python 5,765 plus 671 environment skips and
+      12 warnings; frontend 1,299, API one; static/contracts/PWA build passed.
+      Repository 191 and focused 84 rerun after final receipt. Native Chromium
+      launch was blocked by socket permissions; interrupted, no native pass.
+- [ ] Obtain authorized publication and fresh hosted acceptance before integration.
+- Physical T1–T8 are deferred for this autonomous testing pass by current request,
+  not passed or waived. R01-T035, actual installation/recovery, capacity, M2,
+  SPENT40927223929, UNKNOWN41011497919 and Pages remain unchanged.
+- Evidence: `docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md`.
+
+## 2026-11-05 · PR90 accepted main baseline
+
+- [x] Main 9356d467 / tree ed606d59 passed CI41969020058: aggregate 27/27,
+      Python 6,293 plus 58 exact skips, frontend 1,299, browser 133 direct/133
+      aggregate, repeats 20/9/5/10, expiry ten single attempts and kernel 14.
+      Runtime, Security and microfixture also passed that exact source.
+- Independent bounded receipt review completed; large browser archives remain
+  uninspected. This is not acceptance for the new read-boundary changes.
+- Earlier PR90 source-stage pending entries below are historical, superseded for
+  that source only. Preserve initial failed CI41958483575 and its limits.
+
 ## 2026-11-05 · PR90 initial native locator failure
 
 - Preserve CI 41958483575: direct and aggregate 132 passed / 1 failed; lookup

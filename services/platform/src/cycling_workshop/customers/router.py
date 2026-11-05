@@ -88,10 +88,13 @@ def get_customer(
     customer = repository.get(customer_id=customer_id, organization_id=principal.organization_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer not found")
-    authorize(
-        principal,
-        capability="customers.read",
-        organization_id=customer.organization_id,
-        location_id=customer.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="customers.read",
+            organization_id=customer.organization_id,
+            location_id=customer.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return _response(customer)
