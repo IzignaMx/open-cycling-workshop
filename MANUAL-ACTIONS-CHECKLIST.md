@@ -1,5 +1,33 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · Create-location validation
+
+- [x] Reproduce 12 invalid-location REST/sync failures with real signed sessions.
+      No cross-organization writes. Add a shared tenant-qualified location check
+      after writer admission and authorization; preserve unexpected DB failures.
+- [x] Complete final local verification: Python 5,807 plus 677 environment skips,
+      frontend 1,299, API one; static/contracts/build passed. Independent 382 plus
+      five probes passed. Final regressions 41 plus six explicit PostgreSQL skips;
+      these six must run in hosted shard a, with no skip-ledger exemption.
+      Repository 192 and final regressions are rerun after the receipt.
+- [ ] Obtain new publication authorization and fresh hosted qualification before
+      integration. Local PostgreSQL/browser availability is not implied.
+- Physical T1–T8 remain deferred, not accepted. Capacity, M2, deployment,
+  R01-T035, SPENT40927223929, UNKNOWN41011497919 and Pages remain unchanged.
+- Separate backup parser duplicate-key observation is not fixed by this change;
+  unknown-field compatibility is ambiguous. No real restore/exploit demonstrated.
+- Evidence: `docs/10-spec-development/2026-11-05-location-create-validation.md`.
+
+## 2026-11-05 · PR91 accepted main baseline
+
+- [x] Main 79994caf / tree 1de52d45 passed CI41995029739: aggregate 27/27,
+      Python 6,378 plus 58 exact skips, frontend 1,299, API one, browser 133
+      direct/133 aggregate, repeats 20/9/5/10, expiry ten and kernel 14.
+      Runtime, Security and microfixture passed that exact source.
+- Independent bounded receipts and small artifact digests passed. Large browser
+  archives remain uninspected. Prior PR91 pending snapshots below are superseded
+  for that source only, not acceptance for the new location-validation change.
+
 ## 2026-11-05 · Autonomous testing and workshop read boundaries
 
 - [x] Reproduce and locally correct nested bicycle cross-location disclosure,

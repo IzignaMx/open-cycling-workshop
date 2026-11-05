@@ -1,6 +1,48 @@
 schema: 1
 
-current_checkpoint: autonomous_read_boundaries_20261105
+current_checkpoint: location_create_validation_20261105
+location_create_validation_20261105:
+  status: locally_verified_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-05-location-create-validation.md
+  canonical_pair: OFF005_OFF008_R01-T018_partial
+  base_main: 79994caf716b0ad5e41b2401075be5a1ca3f618f
+  base_tree: 1de52d45b0d17f6332fb74216b9a71ec1f143629
+  invariant: invalid_location_create_is_permanent_and_preserves_independent_valid_items
+  correction: tenant_location_check_after_admission_authority_and_sync_replay
+  REST: nondisclosing404_no_effects
+  legacy_sync: per_item_sync_conflict_with_exact_replay
+  strict_protocol: existing_authorization_context_boundary_unchanged
+  unexpected_database_failure: sanitized503_not_reclassified
+  relationship_policy: same_tenant_different_parent_location_and_responsible_preserved
+  RED: twelve_failed_twentythree_passed
+  regressions: fortyone_passed_six_explicit_local_PostgreSQL_skips
+  independent_review: accepted_382_tests_plus5_independent_probes
+  hosted_test_selection: existing_shard_a_no_skip_ledger_exemption
+  full_Python: 5807_passed_677_environment_skips_12_warnings_412_03s_exit0
+  full_Python_scope: frozen_source_and_tests_before_final_documentation_receipt
+  frontend_API: 1299_plus1_passed_zero_failures_or_skips
+  static_contracts_build: passed_existing_chunk_warning
+  repository: 192_passed_rerun_after_receipt
+  backup_probe: separate_duplicate_key_observation_unknown_field_contract_ambiguous
+  backup_scope: 23_controls_passed_no_real_restore_or_exploit_proof
+  publication: pending_new_authorization
+  hosted_qualification: pending_not_inherited_from_PR91
+  physical_T1_T8: deferred_not_accepted
+  R01_T035_capacity_M2_deployment: pending_unchanged_not_authorized
+
+pr91_fresh_main_acceptance_20261105:
+  status: accepted_baseline_not_location_candidate_evidence
+  main: 79994caf716b0ad5e41b2401075be5a1ca3f618f
+  tree: 1de52d45b0d17f6332fb74216b9a71ec1f143629
+  CI: 41995029739
+  counts: Python6378_plus58_exact_skips_frontend1299_API1
+  browser: 133_direct_133_aggregate_repeats20_9_5_10_kernel14
+  aggregate: 27_of27_expiry10_single_attempt_passed
+  ordinary_workflows: runtime_security_microfixture_success
+  review: bounded_receipts_and_small_artifact_digests_independently_validated
+  large_browser_archives: not_byte_trace_or_screenshot_reviewed
+
+historical_read_boundary_checkpoint: autonomous_read_boundaries_20261105
 autonomous_read_boundaries_20261105:
   status: locally_verified_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
@@ -2801,7 +2843,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
+active_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
+historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
 active_plan_status: locally_verified_hosted_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
@@ -2812,7 +2855,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: autonomous_read_boundaries_20261105
+last_checkpoint: location_create_validation_20261105
+historical_read_boundary_last_checkpoint: autonomous_read_boundaries_20261105
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01

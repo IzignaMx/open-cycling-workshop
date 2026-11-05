@@ -1,4 +1,6 @@
 requirement_id,requirement_source,release,epic,task_id,test_id,status,evidence
+OFF-005,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E03,R01-T018,services/platform/tests/customers/test_create_location_validation.py,partial,docs/10-spec-development/2026-11-05-location-create-validation.md
+OFF-008,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E03,R01-T018,services/platform/tests/customers/test_create_location_validation.py,partial,docs/10-spec-development/2026-11-05-location-create-validation.md
 SEC-002,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E02,R01-T029,services/platform/tests/bicycles/test_read_scope_boundaries.py,partial,docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
 FR-IAM-004,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E02,R01-T029,services/platform/tests/customers/test_workshop_http_cache.py,partial,docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
 ADR-016,docs/00-foundation/open-cycling-workshop-platform-foundation-v0.2.md,V0.1,E00,R01-T002,tests/repository/test_repository_contract.py,verified,docs/10-spec-development/2026-11-01-documentation-reconciliation.md

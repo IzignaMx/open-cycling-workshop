@@ -28,6 +28,7 @@ from cycling_workshop.service_orders.schemas import (
 from cycling_workshop.shared.ids import new_id
 from cycling_workshop.sync.projections import order_payload
 from cycling_workshop.sync.writes import append_change, lock_writer
+from cycling_workshop.tenancy.validation import location_exists
 
 router = APIRouter(prefix="/api/v1/service-orders", tags=["service-orders"])
 
@@ -68,6 +69,10 @@ def create_service_order(
         )
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    if not location_exists(
+        session, organization_id=principal.organization_id, location_id=payload.location_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="location not found")
     customers = SqlAlchemyCustomerRepository(session)
     if (
         customers.get(customer_id=payload.customer_id, organization_id=principal.organization_id)

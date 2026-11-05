@@ -38,6 +38,7 @@ from cycling_workshop.sync.proof import (
     valid_digest,
 )
 from cycling_workshop.sync.writes import append_change, lock_organization
+from cycling_workshop.tenancy.validation import location_exists
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -221,6 +222,13 @@ class SyncService:
 
         strict = context is not None and context.write_protocol == 1
         digest = self._incoming_digest(mutation, context) if strict else None
+
+        if mutation.operation == "create" and not location_exists(
+            self._session,
+            organization_id=mutation.organization_id,
+            location_id=mutation.location_id,
+        ):
+            raise SyncConflict("location not found")
 
         if mutation.entity_type == "customer":
             applied = self._apply_customer(mutation)

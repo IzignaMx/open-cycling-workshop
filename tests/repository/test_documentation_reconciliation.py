@@ -972,8 +972,8 @@ def test_lookup_composition_preserves_keyboard_and_acceptance_boundaries() -> No
 
 def test_autonomous_read_boundary_tests_preserve_deferred_physical_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: autonomous_read_boundaries_20261105" in state
-    assert "last_checkpoint: autonomous_read_boundaries_20261105" in state
+    assert "historical_read_boundary_checkpoint: autonomous_read_boundaries_20261105" in state
+    assert "historical_read_boundary_last_checkpoint: autonomous_read_boundaries_20261105" in state
     block = state.split("autonomous_read_boundaries_20261105:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "invariant: every_nested_bicycle_obeys_effective_location_before_limit",
@@ -985,7 +985,7 @@ def test_autonomous_read_boundary_tests_preserve_deferred_physical_gates() -> No
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_read_boundary_plan: " + evidence in state
     record = read(evidence)
     for token in (
         "SEC-002",
@@ -1003,5 +1003,43 @@ def test_autonomous_read_boundary_tests_preserve_deferred_physical_gates() -> No
         "6293",
         "1299",
         "41958483575_preserved",
+    ):
+        assert token in baseline
+
+
+def test_location_validation_preserves_replay_authority_and_unverified_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: location_create_validation_20261105" in state
+    assert "last_checkpoint: location_create_validation_20261105" in state
+    block = state.split("location_create_validation_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "invariant: invalid_location_create_is_permanent_and_preserves_independent_valid_items",
+        "correction: tenant_location_check_after_admission_authority_and_sync_replay",
+        "strict_protocol: existing_authorization_context_boundary_unchanged",
+        "unexpected_database_failure: sanitized503_not_reclassified",
+        "hosted_qualification: pending_not_inherited_from_PR91",
+        "physical_T1_T8: deferred_not_accepted",
+        "R01_T035_capacity_M2_deployment: pending_unchanged_not_authorized",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = read(evidence)
+    for token in (
+        "OFF-008",
+        "R01-T018",
+        "R01-T035",
+        "BR-002",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    baseline = state.split("pr91_fresh_main_acceptance_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "79994caf716b0ad5e41b2401075be5a1ca3f618f",
+        "41995029739",
+        "6378",
+        "1299",
+        "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in baseline
