@@ -153,6 +153,62 @@ test('actual order form does not submit a pending lookup selection', async (t) =
   assert.equal(submitted, 0)
 })
 
+for (const nativeEvent of [
+  { isComposing: true, keyCode: 13 },
+  { isComposing: false, keyCode: 229 },
+  { isComposing: true, keyCode: 229 },
+]) {
+  test(`lookup leaves composition Enter to the input method ${JSON.stringify(nativeEvent)}`, async (t) => {
+    const f = await ready(t)
+    const { mount } = await import('./capture-component-host.mjs')
+    const capture = f.runtime.getSnapshot().capture.order
+    let searches = 0,
+      submits = 0,
+      edits = 0
+    let lookup = { ...state(f), query: '山田' }
+    const props = () => ({
+      capture,
+      customers: [],
+      lookup,
+      onEdit() {
+        edits++
+      },
+      onQuery() {
+        edits++
+      },
+      onSearch: async (action) => {
+        assert.equal(action, 'restart')
+        searches++
+      },
+      onSubmit: async () => {
+        submits++
+      },
+    })
+    const form = mount('../../src/features/orders/OrderQuickIntake.tsx', 'OrderQuickIntake', props)
+    for (const busy of [false, true]) {
+      lookup = { ...lookup, busy }
+      form.setProps(props)
+      assert.equal(form.press('Buscar cliente por nombre', 'Enter', nativeEvent), false)
+      assert.equal(searches, 0)
+      assert.equal(submits, 0)
+      assert.equal(edits, 0)
+      assert.equal(form.value('Buscar cliente por nombre'), '山田')
+      assert.equal(form.value('Cliente'), capture.draft.customerId)
+      assert.equal(form.value('Problema reportado'), capture.draft.reportedProblem)
+    }
+    assert.equal(form.press('Buscar cliente por nombre', 'Enter'), true)
+    assert.equal(searches, 0, 'ordinary Enter while busy still suppresses form submission')
+    lookup = { ...lookup, busy: false }
+    form.setProps(props)
+    assert.equal(form.press('Buscar cliente por nombre', 'ArrowDown'), false)
+    assert.equal(searches, 0)
+    assert.equal(form.press('Buscar cliente por nombre', 'Enter'), true)
+    assert.equal(searches, 1, 'ordinary Enter after composition starts one explicit lookup')
+    assert.equal(submits, 0)
+    assert.equal(edits, 0)
+  })
+}
+
 test('busy subscriber masking prevents even starting the captured page read', async (t) => {
   const f = await ready(t)
   let notifications = 0

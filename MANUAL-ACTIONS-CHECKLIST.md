@@ -1,5 +1,52 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · PR90 initial native locator failure
+
+- Preserve CI 41958483575: direct and aggregate 132 passed / 1 failed; lookup
+  retried once. Aggregate 26/27 is not qualification. All repetitions skipped;
+  expiry guard correctly failed. Python 6,293 + 58 exact skips independently
+  verified; runtime/security/micro/DCO passed only for that initial source.
+- [x] Reproduce exact-label mismatch using actual rendered component and installed
+      Playwright selector/name functions. Controlled textarea content joins raw
+      label text; exact textbox accessible name stays stable. This is simulation,
+      not local native browser or physical IME proof.
+- [x] Repair only the test locator with exact role/name and positive count-one.
+      Assert the final draft value instead of re-filling it. Keep all composition,
+      selection, journal, normal-Enter and submission assertions and product guard.
+- [x] Revalidate corrected local source: Python 5,680 + 671 environment skips,
+      12 warnings; frontend 1,299; repository 190, rerun after final stamp.
+      Static/native types/collection and independent review passed.
+- [ ] Obtain fresh corrected-source hosted qualification before merge.
+      Large browser archives remain uninspected; physical/capacity/M2/Pages gates
+      remain unchanged.
+
+## 2026-11-05 · Customer lookup composition correction
+
+- [x] Reproduce three composition-confirmation Enter failures in the actual picker
+      handler, then pass 24 focused lookup tests with the bounded keyboard guard.
+- [x] Complete local checks and independent review: Python 5,680 passed with
+      671 environment skips and 12 warnings; frontend 1,299 passed; focused 24
+      and independent event matrix eight passed. Static/types/contracts/build passed.
+- [ ] Obtain exact-source hosted qualification. One native PWA case collected and
+      typechecked, zero executed locally; Chromium socket creation was blocked.
+      Docker was unavailable for local security/runtime qualification. Synthetic
+      DOM events are not physical OS IME acceptance. Existing chunk warning remains.
+- Preserve ordinary Enter search without order submission, busy behavior, selected
+  customer and intake draft. No schema/API/storage/authority change.
+- R01-T035/T1–T8, capacity, SPENT40927223929, UNKNOWN41011497919 and Pages remain
+  unchanged. No seventh M2 run, deployment or physical acceptance follows.
+
+## 2026-11-05 · PR89 accepted main baseline
+
+- [x] Verify main d39128b in CI 41925254203: Python 6,292 + 58 exact skips,
+      frontend 1,296, API 1, browser 133 direct / 133 aggregate, repetitions
+      20/9/5/10, isolated kernel 14; expiry guard and aggregate passed.
+- The exact-source checkout and job logs were inspected. Browser archives were
+  not downloaded or byte/trace/screenshot reviewed. This does not qualify the
+  changed composition handler or close physical/operational release gates.
+- The earlier PR89 sections below are historical source-stage snapshots. Their
+  five failed runs and unknown facts remain preserved, not current merge blockers.
+
 ## 2026-11-04 · PR89 fifth oversized refusal; local bounded streaming
 
 - [x] Preserve CI 41901853638: fifth listeners subtype oversized observed; fourth

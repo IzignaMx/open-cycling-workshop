@@ -103,7 +103,9 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     const form = page.locator('form[aria-describedby~="order-intake-status"]')
     const query = form.getByLabel('Buscar cliente por nombre', { exact: true })
     const selected = form.getByRole('combobox', { name: 'Cliente', exact: true })
+    const reportedProblem = form.getByRole('textbox', { name: 'Problema reportado', exact: true })
     await expect(selected).toHaveCount(1)
+    await expect(reportedProblem).toHaveCount(1)
     await query.fill(target.display_name)
     stage = 'page_one'
     await query.press('Enter')
@@ -126,15 +128,48 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     await expect(
       form.getByRole('button', { name: 'Verificar cliente seleccionado', exact: true }),
     ).toBeEnabled()
+    await reportedProblem.fill('Revisión mediante selección explícita')
+    await query.fill('山田')
+    const statusBeforeComposition = await form.locator('#customer-lookup-status').textContent()
+    // Synthetic native DOM event coverage, not physical OS IME qualification.
+    for (const composition of [
+      { isComposing: true, keyCode: 13 },
+      { isComposing: false, keyCode: 229 },
+      { isComposing: true, keyCode: 229 },
+    ]) {
+      const prevented = await query.evaluate((element, composition) => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          bubbles: true,
+          cancelable: true,
+          ...composition,
+        })
+        element.dispatchEvent(event)
+        return event.defaultPrevented
+      }, composition)
+      expect(prevented, 'composition confirmation must remain available to the input method').toBe(
+        false,
+      )
+      await expect(query).toHaveValue('山田')
+      await expect(selected).toHaveValue(target.customer_id)
+      await expect(reportedProblem).toHaveValue('Revisión mediante selección explícita')
+      expect(await form.locator('#customer-lookup-status').textContent()).toBe(
+        statusBeforeComposition,
+      )
+      expect((await kernelSnapshot(page)).journal).toEqual(before)
+    }
+    await query.press('Enter')
+    await expect(form.locator('#customer-lookup-status')).toContainText('1 página')
+    await expect(selected).toHaveValue(target.customer_id)
+    expect((await kernelSnapshot(page)).journal).toEqual(before)
     await query.fill('no local match')
     await form.getByRole('button', { name: 'Buscar clientes locales', exact: true }).click()
     await expect(selected).toHaveValue(target.customer_id)
     await expect(selected.locator(`option[value="${target.customer_id}"]`)).toContainText(
       target.display_name,
     )
-    await form
-      .getByLabel('Problema reportado', { exact: true })
-      .fill('Revisión mediante selección explícita')
+    await expect(reportedProblem).toHaveValue('Revisión mediante selección explícita')
     await expect(form.locator('button[type="submit"]')).toBeEnabled()
     await form.locator('button[type="submit"]').click()
     await expect
