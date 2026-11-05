@@ -680,7 +680,7 @@ def test_local_customer_lookup_is_bounded_partial_prerequisite() -> None:
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_local_customer_lookup_plan: " + evidence in state
     assert (ROOT / evidence).is_file()
 
 
@@ -883,8 +883,14 @@ def test_lookup_listener_diagnostics_preserve_refusal_and_unknown_condition() ->
 
 def test_lookup_streaming_budget_is_explicit_and_not_hosted_qualification() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
-    assert "last_checkpoint: local_customer_lookup_listener_streaming_20261104" in state
+    assert (
+        "historical_listener_streaming_checkpoint: "
+        "local_customer_lookup_listener_streaming_20261104" in state
+    )
+    assert (
+        "historical_listener_streaming_last_checkpoint: "
+        "local_customer_lookup_listener_streaming_20261104" in state
+    )
     block = state.split("local_customer_lookup_listener_streaming_20261104:\n", 1)[1].split(
         "\n\n", 1
     )[0]
@@ -913,3 +919,46 @@ def test_lookup_streaming_budget_is_explicit_and_not_hosted_qualification() -> N
         "57a533470fda391c1ea008ef69684c1ee97f1fb1ef145224f46b69c776734d81",
     ):
         assert token in record
+
+
+def test_lookup_composition_preserves_keyboard_and_acceptance_boundaries() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: customer_lookup_composition_20261105" in state
+    assert "last_checkpoint: customer_lookup_composition_20261105" in state
+    block = state.split("customer_lookup_composition_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "canonical_pair: FR-CUS-002_R02-T001_partial_ACC-002",
+        "invariant: composition_Enter_neither_canceled_nor_explicit_lookup_or_order_submission",
+        "guard: native_isComposing_or_legacy_keyCode229",
+        "ordinary_Enter: prevent_form_submit_search_once_only_when_not_busy",
+        "physical_IME_Safari_Android: not_executed_not_claimed",
+        "schema_API_storage_dependency_authority: unchanged",
+        "physical_capacity_SPENT_UNKNOWN_Pages: unchanged",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = " ".join(read(evidence).split())
+    for token in (
+        "ACC-002",
+        "R02-T001",
+        "R01-T035",
+        "composition",
+        "229",
+        "ordinary Enter",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+        "physical",
+        "synthetic",
+    ):
+        assert token in record
+    baseline = state.split("pr89_fresh_main_acceptance_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "accepted_baseline_not_composition_candidate_evidence",
+        "d39128b820b5d94b26a8d4c0cda1670957141c40",
+        "41925254203",
+        "6292",
+        "1296",
+        "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in baseline

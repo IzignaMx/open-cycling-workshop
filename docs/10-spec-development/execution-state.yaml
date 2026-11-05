@@ -1,6 +1,40 @@
 schema: 1
 
-current_checkpoint: local_customer_lookup_listener_streaming_20261104
+current_checkpoint: customer_lookup_composition_20261105
+customer_lookup_composition_20261105:
+  status: locally_validated_independently_reviewed_hosted_pending
+  canonical_pair: FR-CUS-002_R02-T001_partial_ACC-002
+  evidence: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
+  admission: shipped_picker_keyboard_integrity_independent_prerequisite
+  invariant: composition_Enter_neither_canceled_nor_explicit_lookup_or_order_submission
+  guard: native_isComposing_or_legacy_keyCode229
+  ordinary_Enter: prevent_form_submit_search_once_only_when_not_busy
+  RED: three_real_component_handler_failures
+  local_Python: 5680_passed_671_environment_skips_12_warnings_358_80s_exit0
+  local_Python_scope: product_and_contracts_before_final_documentation_stamp
+  local_frontend: 1299_passed_zero_failed_zero_skipped
+  focused_review: 24_lookup_tests_plus8_independent_event_cases_passed
+  static_contracts_build: passed_existing_chunk_size_warning
+  native_browser: one_case_collected_typechecked_zero_executed_local_launch_blocked
+  security_runtime: local_Docker_unavailable_hosted_pending
+  physical_IME_Safari_Android: not_executed_not_claimed
+  schema_API_storage_dependency_authority: unchanged
+  physical_capacity_SPENT_UNKNOWN_Pages: unchanged
+
+pr89_fresh_main_acceptance_20261105:
+  status: accepted_baseline_not_composition_candidate_evidence
+  main: d39128b820b5d94b26a8d4c0cda1670957141c40
+  CI: 41925254203
+  counts: Python6292_plus58_exact_skips_frontend1296_API1
+  browser: 133_direct_log_133_aggregate_repeats20_9_5_10_kernel14
+  gates: Python_verify_repetitions_expiry_guard_aggregate_passed
+  evidence: exact_source_checkout_and_job_log_inspected
+  large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed
+  M2: no_seventh_authority
+
+# Historical local streaming checkpoint; PR89 main acceptance is recorded above.
+historical_listener_streaming_checkpoint: local_customer_lookup_listener_streaming_20261104
+historical_listener_streaming_last_checkpoint: local_customer_lookup_listener_streaming_20261104
 local_customer_lookup_listener_streaming_20261104:
   status: locally_validated_bounded_streaming_hosted_unqualified
   canonical_pair: FR-CUS-002_R02-T001_partial
@@ -2711,8 +2745,9 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
-active_plan_status: locally_validated_hosted_pending_publication_not_authorized
+active_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
+active_plan_status: locally_validated_independently_reviewed_hosted_pending
+historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
 previous_capture_reload_plan: docs/superpowers/plans/2026-11-02-capture-reload-recovery.md
@@ -2720,7 +2755,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_customer_lookup_listener_streaming_20261104
+last_checkpoint: customer_lookup_composition_20261105
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
@@ -2985,7 +3020,8 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - preserve accepted PR81 final Library v2 receipt and qualify the bounded host-only M1 reference without inheriting publication authority
+  - qualify the bounded customer lookup composition correction on its exact source without inheriting PR89 baseline evidence
+  - preserve accepted PR89 main evidence and all historical failed receipts without reopening already qualified prerequisites
   - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
   - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
   - preserve PR59 source-qualified full-history validation and complete actual-installation inventory and recovery acceptance before activation

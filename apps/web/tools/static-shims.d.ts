@@ -33,6 +33,7 @@ declare module 'react' {
   export type FormEvent<T = Element> = { preventDefault(): void; currentTarget: T }
   export type KeyboardEvent<T = Element> = {
     key: string
+    nativeEvent: { isComposing: boolean; keyCode: number }
     currentTarget: T
     preventDefault(): void
     stopPropagation(): void

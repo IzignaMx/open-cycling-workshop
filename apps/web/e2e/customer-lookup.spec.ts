@@ -126,6 +126,45 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     await expect(
       form.getByRole('button', { name: 'Verificar cliente seleccionado', exact: true }),
     ).toBeEnabled()
+    await form
+      .getByLabel('Problema reportado', { exact: true })
+      .fill('Revisión mediante selección explícita')
+    await query.fill('山田')
+    const statusBeforeComposition = await form.locator('#customer-lookup-status').textContent()
+    // Synthetic native DOM event coverage, not physical OS IME qualification.
+    for (const composition of [
+      { isComposing: true, keyCode: 13 },
+      { isComposing: false, keyCode: 229 },
+      { isComposing: true, keyCode: 229 },
+    ]) {
+      const prevented = await query.evaluate((element, composition) => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          bubbles: true,
+          cancelable: true,
+          ...composition,
+        })
+        element.dispatchEvent(event)
+        return event.defaultPrevented
+      }, composition)
+      expect(prevented, 'composition confirmation must remain available to the input method').toBe(
+        false,
+      )
+      await expect(query).toHaveValue('山田')
+      await expect(selected).toHaveValue(target.customer_id)
+      await expect(form.getByLabel('Problema reportado', { exact: true })).toHaveValue(
+        'Revisión mediante selección explícita',
+      )
+      expect(await form.locator('#customer-lookup-status').textContent()).toBe(
+        statusBeforeComposition,
+      )
+      expect((await kernelSnapshot(page)).journal).toEqual(before)
+    }
+    await query.press('Enter')
+    await expect(form.locator('#customer-lookup-status')).toContainText('1 página')
+    await expect(selected).toHaveValue(target.customer_id)
+    expect((await kernelSnapshot(page)).journal).toEqual(before)
     await query.fill('no local match')
     await form.getByRole('button', { name: 'Buscar clientes locales', exact: true }).click()
     await expect(selected).toHaveValue(target.customer_id)

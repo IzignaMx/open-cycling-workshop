@@ -84,6 +84,8 @@ export function OrderQuickIntake({
               }
               onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
                 if (event.key === 'Enter') {
+                  // Composition confirmation belongs to the input method, not lookup.
+                  if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
                   event.preventDefault()
                   if (!lookup.busy) void onSearch?.('restart')
                 }

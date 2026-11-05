@@ -106,10 +106,11 @@ export function mount(componentPath, exportName, props) {
       }
       return text(tree)
     },
-    press(label, key) {
+    press(label, key, nativeEvent = {}) {
       let prevented = false
       control(label).props.onKeyDown({
         key,
+        nativeEvent: { isComposing: false, keyCode: key === 'Enter' ? 13 : 0, ...nativeEvent },
         preventDefault() {
           prevented = true
         },
