@@ -58,6 +58,51 @@ physical keyboard, OS IME, Safari or Android behavior.
 
 ## Current verification
 
+### Initial hosted failure and bounded test-only repair
+
+[CI 41958483575](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/41958483575)
+tested head `52c60c207b2ce03acf49157a392c5fac4bdfc741`, merge
+`5019ef5aeb877e3b7f7556164ff19a26a75552a5`, tree
+`54b836192af9289e1f26ae91ffdf344f879487bf`. Direct and aggregate browser suites
+each reported 132 passed / 1 failed, with one retry of the lookup case. Its first
+composition-event default-prevention, retained query and selected-customer
+assertions passed; then the exact reported-problem label locator found no element.
+That partial path does not qualify all composition cases or prove physical IME.
+Aggregate 26/27 is not acceptance: all required repetitions were skipped and the
+always-run expiry guard correctly failed. Preserve this failed receipt.
+
+Independent deterministic reproduction rendered the actual component with React
+and ran the installed Playwright 1.62 label/role/name functions. With controlled
+textarea content, raw label text becomes `Problema reportado` followed by the
+draft value; the old exact label no longer matches. The textbox accessible name
+remains exactly `Problema reportado` for both empty and nonempty content. DOM/CSS
+simulation is explicit; this is not local native browser acceptance.
+
+Repair only this test: use an exact named textbox locator, positively require one
+match before filling, and reuse it for preservation assertions. Replace the final
+redundant re-fill with a value assertion so the test cannot repair lost input.
+All composition shapes, busy/unit coverage, selection/journal checks, ordinary
+Enter, explicit button search and final explicit submission remain required.
+The production guard is unchanged; no product IME defect is established here.
+
+Initial hosted Python receipt pair independently passed 6,293 tests plus 58 exact
+intentional skips, with zero unrun and both cleanups verified. Runtime, security,
+microfixture and DCO passed for this same initial source, not the corrected source.
+Only bounded receipts were inspected; the two large browser archives were not
+downloaded or byte/trace/screenshot reviewed. Corrected-source checks and fresh
+hosted qualification remain pending; no blind retry or weakened gate is admitted.
+
+Corrected local source was then revalidated: Python 5,680 passed, 671 environment
+skips, 12 warnings in 384.33 seconds, exit zero; frontend 1,299 passed with no
+failures/skips. Test and contract changes preceded that full run; only this final
+documentation stamp followed. Repository 190 passed, rerun after the stamp;
+full lint/format, native test types and one-case collection passed. Independent
+review accepted the selector reproduction and five-path repair without gate
+weakening. No local browser retry or new native pass is claimed. Fresh hosted
+qualification of the corrected source remains required.
+
+### Initial local product and contract verification
+
 Three focused behavioral RED failures are retained locally under
 `artifacts/lookup-composition/red.log`. Final local Python passed 5,680 tests with
 671 environment-dependent skips and 12 warnings in 358.80 seconds, exit zero.

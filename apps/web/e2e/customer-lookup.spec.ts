@@ -103,7 +103,9 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     const form = page.locator('form[aria-describedby~="order-intake-status"]')
     const query = form.getByLabel('Buscar cliente por nombre', { exact: true })
     const selected = form.getByRole('combobox', { name: 'Cliente', exact: true })
+    const reportedProblem = form.getByRole('textbox', { name: 'Problema reportado', exact: true })
     await expect(selected).toHaveCount(1)
+    await expect(reportedProblem).toHaveCount(1)
     await query.fill(target.display_name)
     stage = 'page_one'
     await query.press('Enter')
@@ -126,9 +128,7 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     await expect(
       form.getByRole('button', { name: 'Verificar cliente seleccionado', exact: true }),
     ).toBeEnabled()
-    await form
-      .getByLabel('Problema reportado', { exact: true })
-      .fill('Revisión mediante selección explícita')
+    await reportedProblem.fill('Revisión mediante selección explícita')
     await query.fill('山田')
     const statusBeforeComposition = await form.locator('#customer-lookup-status').textContent()
     // Synthetic native DOM event coverage, not physical OS IME qualification.
@@ -153,9 +153,7 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
       )
       await expect(query).toHaveValue('山田')
       await expect(selected).toHaveValue(target.customer_id)
-      await expect(form.getByLabel('Problema reportado', { exact: true })).toHaveValue(
-        'Revisión mediante selección explícita',
-      )
+      await expect(reportedProblem).toHaveValue('Revisión mediante selección explícita')
       expect(await form.locator('#customer-lookup-status').textContent()).toBe(
         statusBeforeComposition,
       )
@@ -171,9 +169,7 @@ test('offline name lookup continues beyond one local page and keeps explicit sel
     await expect(selected.locator(`option[value="${target.customer_id}"]`)).toContainText(
       target.display_name,
     )
-    await form
-      .getByLabel('Problema reportado', { exact: true })
-      .fill('Revisión mediante selección explícita')
+    await expect(reportedProblem).toHaveValue('Revisión mediante selección explícita')
     await expect(form.locator('button[type="submit"]')).toBeEnabled()
     await form.locator('button[type="submit"]').click()
     await expect

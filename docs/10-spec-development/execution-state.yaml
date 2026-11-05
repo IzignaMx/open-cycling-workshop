@@ -2,7 +2,7 @@ schema: 1
 
 current_checkpoint: customer_lookup_composition_20261105
 customer_lookup_composition_20261105:
-  status: locally_validated_independently_reviewed_hosted_pending
+  status: test_locator_repair_locally_validated_pending_fresh_hosted_qualification
   canonical_pair: FR-CUS-002_R02-T001_partial_ACC-002
   evidence: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
   admission: shipped_picker_keyboard_integrity_independent_prerequisite
@@ -17,6 +17,22 @@ customer_lookup_composition_20261105:
   static_contracts_build: passed_existing_chunk_size_warning
   native_browser: one_case_collected_typechecked_zero_executed_local_launch_blocked
   security_runtime: local_Docker_unavailable_hosted_pending
+  initial_CI: 41958483575
+  initial_head: 52c60c207b2ce03acf49157a392c5fac4bdfc741
+  initial_tested_merge: 5019ef5aeb877e3b7f7556164ff19a26a75552a5
+  initial_tree: 54b836192af9289e1f26ae91ffdf344f879487bf
+  initial_browser: direct132_passed1_failed_aggregate132_passed1_failed
+  initial_aggregate: 26_of27_not_qualified_repetitions_skipped_expiry_guard_failed
+  initial_Python: 6293_passed_58_exact_skips_receipts_independently_validated
+  initial_non_CI: runtime_security_micro_DCO_passed_exact_initial_source
+  diagnosis: exact_label_includes_controlled_textarea_text_role_name_remains_stable
+  repair: test_only_exact_named_textbox_count1_and_final_value_assertion_no_refill
+  production_guard: unchanged_no_new_product_defect_established
+  repair_local_Python: 5680_passed_671_environment_skips_12_warnings_384_33s_exit0
+  repair_Python_scope: frozen_test_and_contracts_before_final_documentation_stamp
+  repair_frontend: 1299_passed_zero_failed_zero_skipped
+  repair_repository: 190_passed_poststamp_rerun
+  repair_review: independent_accepted_selector_reproduction_and_no_gate_weakening
   physical_IME_Safari_Android: not_executed_not_claimed
   schema_API_storage_dependency_authority: unchanged
   physical_capacity_SPENT_UNKNOWN_Pages: unchanged
@@ -2746,7 +2762,7 @@ quote_service_candidate_20261016:
 project: open-cycling-workshop-platform
 active_release: V0.1
 active_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
-active_plan_status: locally_validated_independently_reviewed_hosted_pending
+active_plan_status: test_locator_repair_locally_validated_pending_fresh_hosted_qualification
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md

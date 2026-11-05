@@ -1,5 +1,25 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · PR90 initial native locator failure
+
+- Preserve CI 41958483575: direct and aggregate 132 passed / 1 failed; lookup
+  retried once. Aggregate 26/27 is not qualification. All repetitions skipped;
+  expiry guard correctly failed. Python 6,293 + 58 exact skips independently
+  verified; runtime/security/micro/DCO passed only for that initial source.
+- [x] Reproduce exact-label mismatch using actual rendered component and installed
+      Playwright selector/name functions. Controlled textarea content joins raw
+      label text; exact textbox accessible name stays stable. This is simulation,
+      not local native browser or physical IME proof.
+- [x] Repair only the test locator with exact role/name and positive count-one.
+      Assert the final draft value instead of re-filling it. Keep all composition,
+      selection, journal, normal-Enter and submission assertions and product guard.
+- [x] Revalidate corrected local source: Python 5,680 + 671 environment skips,
+      12 warnings; frontend 1,299; repository 190, rerun after final stamp.
+      Static/native types/collection and independent review passed.
+- [ ] Obtain fresh corrected-source hosted qualification before merge.
+      Large browser archives remain uninspected; physical/capacity/M2/Pages gates
+      remain unchanged.
+
 ## 2026-11-05 · Customer lookup composition correction
 
 - [x] Reproduce three composition-confirmation Enter failures in the actual picker
