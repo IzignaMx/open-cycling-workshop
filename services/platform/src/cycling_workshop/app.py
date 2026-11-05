@@ -81,6 +81,7 @@ def create_app(
     @app.middleware("http")
     async def private_no_store(request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path.rstrip("/")
+        workshop_path = request.scope["path"]
         is_context = path == "/api/v1/auth/context" or baseline_path(request.url.path)
         is_private = (
             is_context
@@ -99,10 +100,9 @@ def create_app(
             or path.startswith("/api/v1/admin/")
             or path.startswith("/api/v2/admin/")
             or branding_path(request.url.path)
-            or (
-                path.startswith("/api/v1/service-orders/")
-                and len(path.split("/")) == 6
-                and path.endswith("/events")
+            or any(
+                workshop_path == root or workshop_path.startswith(root + "/")
+                for root in ("/api/v1/customers", "/api/v1/bicycles", "/api/v1/service-orders")
             )
         )
         try:

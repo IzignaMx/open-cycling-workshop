@@ -122,12 +122,15 @@ def get_service_order(
     order = repository.get(order_id=order_id, organization_id=principal.organization_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
-    authorize(
-        principal,
-        capability="orders.read",
-        organization_id=order.organization_id,
-        location_id=order.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="orders.read",
+            organization_id=order.organization_id,
+            location_id=order.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return _response(order)
 
 
@@ -194,12 +197,15 @@ def list_service_order_events(
     order = repository.get(order_id=order_id, organization_id=principal.organization_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
-    authorize(
-        principal,
-        capability="orders.read",
-        organization_id=order.organization_id,
-        location_id=order.location_id,
-    )
+    try:
+        authorize(
+            principal,
+            capability="orders.read",
+            organization_id=order.organization_id,
+            location_id=order.location_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return [
         ServiceOrderEventResponse(
             event_id=event.event_id,

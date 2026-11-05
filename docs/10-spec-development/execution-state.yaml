@@ -1,6 +1,46 @@
 schema: 1
 
-current_checkpoint: customer_lookup_composition_20261105
+current_checkpoint: autonomous_read_boundaries_20261105
+autonomous_read_boundaries_20261105:
+  status: locally_verified_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
+  requirements: SEC-002_FR-IAM-004_R01-T029_ADR-013
+  base_main: 9356d467bde4750b57bb2115d2c56c9944f7188e
+  base_tree: ed606d591f1f9153264f8f4993064904f2ad5ee1
+  invariant: every_nested_bicycle_obeys_effective_location_before_limit
+  expected_read_denials: explicit403_not500_tenant404_preserved
+  HTTP_privacy: decoded_workshop_namespace_no_store_success_errors_redirects
+  authorization_RED: seven_failed_eleven_passed
+  privacy_RED: fiftytwo_failed_seven_passed
+  regressions: authorization25_privacy59_passed
+  independent_review: cache_authorization_identity175_plus18_ASGI_probes_passed
+  full_Python: 5765_passed_671_environment_skips_12_warnings_361_44s_exit0
+  full_Python_scope: final_source_and_regressions_before_documentation_receipt
+  frontend_API: 1299_plus1_passed_zero_failures_or_skips
+  repository: 191_passed_postreceipt_rerun
+  static_contracts_build: passed_existing_chunk_warning
+  native_browser: launch_socket_denied_interrupted_exit130_no_pass_no_retry
+  additional_offline: 36_seeded_sync_and_capture_tests_passed
+  offline_limit: fake_IndexedDB_inprocess_reopen_not_native_durability
+  new_hosted_qualification: pending_not_inherited_from_PR90
+  physical_T1_T8: deferred_by_current_request_not_accepted
+  R01_T035_capacity_M2_deployment: pending_unchanged_not_authorized
+
+pr90_fresh_main_acceptance_20261105:
+  status: accepted_baseline_not_new_read_boundary_evidence
+  main: 9356d467bde4750b57bb2115d2c56c9944f7188e
+  tree: ed606d591f1f9153264f8f4993064904f2ad5ee1
+  CI: 41969020058
+  counts: Python6293_plus58_exact_skips_frontend1299_API1
+  browser: 133_direct_133_aggregate_repeats20_9_5_10_kernel14
+  aggregate: 27_of27_expiry10_single_attempt_passed
+  ordinary_workflows: runtime_security_microfixture_success
+  review: bounded_receipts_independently_validated
+  large_browser_archives: not_byte_trace_or_screenshot_reviewed
+  initial_failed_CI: 41958483575_preserved
+
+historical_customer_lookup_checkpoint: customer_lookup_composition_20261105
+historical_customer_lookup_last_checkpoint: customer_lookup_composition_20261105
 customer_lookup_composition_20261105:
   status: test_locator_repair_locally_validated_pending_fresh_hosted_qualification
   canonical_pair: FR-CUS-002_R02-T001_partial_ACC-002
@@ -2761,8 +2801,9 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
-active_plan_status: test_locator_repair_locally_validated_pending_fresh_hosted_qualification
+active_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
+active_plan_status: locally_verified_hosted_qualification_pending
+historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
 previous_module_reference_plan: docs/superpowers/plans/2026-11-02-official-module-reference.md
@@ -2771,7 +2812,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: customer_lookup_composition_20261105
+last_checkpoint: autonomous_read_boundaries_20261105
 previous_module_reference_checkpoint: official_module_reference_20261102
 historical_last_checkpoint: pr58-source-bound-hosted-qualification-2026-10-25
 historical_baseline_checkpoint: v02-increment-1-complete-tasks-1-11-2026-09-01
@@ -3036,9 +3077,9 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify the bounded customer lookup composition correction on its exact source without inheriting PR89 baseline evidence
-  - preserve accepted PR89 main evidence and all historical failed receipts without reopening already qualified prerequisites
-  - close R01-T035 physical Windows and Android Tier 1 evidence using the existing protocol and results template
+  - finish exact-source autonomous read-boundary verification without inheriting PR90 acceptance
+  - preserve accepted PR89 and PR90 main evidence and all historical failed receipts
+  - defer physical Windows and Android Tier 1 execution per current request while retaining open R01-T035 and required evidence
   - qualify the actual laptop runtime and then physical Raspberry storage power recovery and trusted LAN clients
   - preserve PR59 source-qualified full-history validation and complete actual-installation inventory and recovery acceptance before activation
   - obtain a separately reviewed authorized capacity and latency plan without repeating consumed PR51 or PR56 trials

@@ -96,17 +96,19 @@ def test_quote_api_error_never_reflects_arbitrary_internal_context(root: str) ->
 
 
 @pytest.mark.parametrize(
-    "path",
+    "path,cache_control",
     [
-        "/api/v1/quotes-other",
-        "/api/v1/quotesish/x",
-        "/api/v1/service-orders/a/quotes-other",
-        "/api/v1/service-orders/a/quote",
-        "/api/v1/service-orders/a/b/quotes",
-        "/other",
+        ("/api/v1/quotes-other", None),
+        ("/api/v1/quotesish/x", None),
+        ("/api/v1/service-orders/a/quotes-other", "no-store"),
+        ("/api/v1/service-orders/a/quote", "no-store"),
+        ("/api/v1/service-orders/a/b/quotes", "no-store"),
+        ("/other", None),
     ],
 )
-def test_unrelated_namespaces_keep_existing_behavior(path: str) -> None:
+def test_nonquote_namespaces_preserve_payload_and_correlation(
+    path: str, cache_control: str | None
+) -> None:
     app = create_app()
 
     @app.get(path)
@@ -116,7 +118,8 @@ def test_unrelated_namespaces_keep_existing_behavior(path: str) -> None:
     response = TestClient(app).get(path + "?note=" + CANARY, headers={"X-Request-ID": CANARY})
     assert response.json() == {"query": "note=" + CANARY}
     assert response.headers["x-request-id"] == CANARY
-    assert "cache-control" not in response.headers
+    # These are not quote routes, but service-order descendants are still private.
+    assert response.headers.get("cache-control") == cache_control
 
 
 def test_quote_routes_are_absent_from_production_openapi() -> None:

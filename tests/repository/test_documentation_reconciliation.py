@@ -923,8 +923,10 @@ def test_lookup_streaming_budget_is_explicit_and_not_hosted_qualification() -> N
 
 def test_lookup_composition_preserves_keyboard_and_acceptance_boundaries() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: customer_lookup_composition_20261105" in state
-    assert "last_checkpoint: customer_lookup_composition_20261105" in state
+    assert "historical_customer_lookup_checkpoint: customer_lookup_composition_20261105" in state
+    assert (
+        "historical_customer_lookup_last_checkpoint: customer_lookup_composition_20261105" in state
+    )
     block = state.split("customer_lookup_composition_20261105:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "canonical_pair: FR-CUS-002_R02-T001_partial_ACC-002",
@@ -941,7 +943,7 @@ def test_lookup_composition_preserves_keyboard_and_acceptance_boundaries() -> No
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_composition_plan: " + evidence in state
     record = " ".join(read(evidence).split())
     for token in (
         "ACC-002",
@@ -964,5 +966,42 @@ def test_lookup_composition_preserves_keyboard_and_acceptance_boundaries() -> No
         "6292",
         "1296",
         "large_browser_archives: not_downloaded_not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in baseline
+
+
+def test_autonomous_read_boundary_tests_preserve_deferred_physical_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: autonomous_read_boundaries_20261105" in state
+    assert "last_checkpoint: autonomous_read_boundaries_20261105" in state
+    block = state.split("autonomous_read_boundaries_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "invariant: every_nested_bicycle_obeys_effective_location_before_limit",
+        "expected_read_denials: explicit403_not500_tenant404_preserved",
+        "HTTP_privacy: decoded_workshop_namespace_no_store_success_errors_redirects",
+        "new_hosted_qualification: pending_not_inherited_from_PR90",
+        "physical_T1_T8: deferred_by_current_request_not_accepted",
+        "R01_T035_capacity_M2_deployment: pending_unchanged_not_authorized",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = read(evidence)
+    for token in (
+        "SEC-002",
+        "R01-T029",
+        "R01-T035",
+        "fake-indexeddb",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    baseline = state.split("pr90_fresh_main_acceptance_20261105:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "9356d467bde4750b57bb2115d2c56c9944f7188e",
+        "41969020058",
+        "6293",
+        "1299",
+        "41958483575_preserved",
     ):
         assert token in baseline
