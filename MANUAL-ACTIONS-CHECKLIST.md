@@ -1,5 +1,32 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-05 · Unambiguous backup manifests
+
+- [x] Reproduce ambiguous duplicate JSON names and add bounded rejection before
+      runner/engine/asset effects. RED 62 failures / 23 controls; GREEN 85 cases.
+      Nearest operations 195 and independent 25 probes passed. Preserve version-1
+      writer compatibility, CLI and unique additive PostgreSQL metadata.
+- [x] Complete local Python: 5,893 passed, 677 environment skips, 12 warnings;
+      static/types/contracts passed. Independent code and wording review accepted.
+      Repository 193 and nearest operations 195 are rerun after the final receipt.
+      Frontend runtime/build/browser are not repeated for this parser-only change.
+- [ ] Obtain applicable publication authorization and fresh hosted evidence.
+- No actual backup/restore or PostgreSQL command was executed in these probes.
+  Mocks do not close OPS-GATE-006. Physical T1–T8/R01-T035, capacity, M2,
+  SPENT40927223929, UNKNOWN41011497919 and Pages remain unchanged.
+- Evidence: `docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md`.
+
+## 2026-11-05 · PR92 accepted main baseline
+
+- [x] Main fb7b9ce9 / tree 505314da passed CI42013294946: aggregate 27/27,
+      Python 6,426 plus 58 exact skips, including six new PostgreSQL cases;
+      frontend 1,299, API one, browser 133 direct/133 aggregate, repeats20/9/5/10,
+      expiry ten and kernel 14 single-attempt passes. All ten main checks passed.
+- Runtime, Security and microfixture also passed. Bounded receipts and small
+  artifact digests were independently checked; large browser archives remain
+  uninspected. Earlier PR92 pending entries are superseded for that source only,
+  not acceptance for this new parser hardening.
+
 ## 2026-11-05 · Create-location validation
 
 - [x] Reproduce 12 invalid-location REST/sync failures with real signed sessions.

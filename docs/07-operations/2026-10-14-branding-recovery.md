@@ -52,9 +52,12 @@ dump deben ser archivos regulares de un propietario confiable (operador/root),
 sin escritura de grupo/otros. Así se rechaza también un archivo modificable por
 otro UID dentro de una carpeta no escribible. Procesos maliciosos del mismo UID y
 administradores privilegiados permanecen dentro del límite de confianza. Se
-rechazan symlinks en cualquier componente, manifiestos duplicados/desconocidos y referencias
-que no coincidan con la clave derivada del digest. El destino padre debe existir;
-la herramienta no prepara permisos del host ni sobrescribe generaciones.
+rechazan symlinks en cualquier componente, claves JSON duplicadas en ambos
+manifiestos y referencias que no coincidan con la clave derivada del digest.
+El manifiesto exterior de branding rechaza campos desconocidos; el PostgreSQL
+anidado conserva la admisión de campos adicionales no interpretados, con claves
+únicas en todos sus objetos. El destino padre debe existir; la herramienta no
+prepara permisos del host ni sobrescribe generaciones.
 
 Los manifiestos contienen nombres de taller e identidades; el dump también
 incluye cuentas y hashes de contraseña. Mantener **toda la carpeta restringida**

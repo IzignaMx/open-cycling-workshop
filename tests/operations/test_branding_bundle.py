@@ -1136,3 +1136,130 @@ def test_explicit_legacy_transition_refuses_old_sessions_checkpoints_and_clients
         )
     finally:
         engine.dispose()
+
+
+@pytest.mark.parametrize("level", ["root", "application", "archive", "database", "table"])
+@pytest.mark.parametrize("duplicate", ["identical", "invalid-first", "invalid-last", "escaped"])
+@pytest.mark.parametrize(
+    "operation", ["postgres-verify", "postgres-restore", "branding-verify", "branding-restore"]
+)
+def test_nested_postgres_duplicate_keys_fail_before_effects(
+    bundle: Path, tmp_path: Path, level: str, duplicate: str, operation: str
+) -> None:
+    path = bundle / "postgres" / postgres.MANIFEST_NAME
+    manifest = json.loads(path.read_text())
+    obj, key = {
+        "root": (manifest, "format_version"),
+        "application": (manifest["application"], "name"),
+        "archive": (manifest["archive"], "file"),
+        "database": (manifest["database"], "postgres_version_num"),
+        "table": (manifest["database"]["tables"][0], "rows"),
+    }[level]
+    member = f"{json.dumps(key)}: {json.dumps(obj[key])}"
+    other = f"{json.dumps(key)}: null"
+    if duplicate == "identical":
+        replacement = f"{member}, {member}"
+    elif duplicate == "invalid-first":
+        replacement = f"{other}, {member}"
+    elif duplicate == "invalid-last":
+        replacement = f"{member}, {other}"
+    else:
+        # JSON escape spelling must not evade decoded-name equality.
+        escaped = f'"\\u{ord(key[0]):04x}{key[1:]}"'
+        replacement = f"{escaped}: {json.dumps(obj[key])}, {member}"
+    raw = json.dumps(manifest)
+    assert member in raw
+    raw = raw.replace(member, replacement, 1)
+    path.write_text(raw)
+    outer = bundle / branding.MANIFEST_NAME
+    value = json.loads(outer.read_text())
+    # Bind the synthetic edit deliberately: SHA256 is integrity, not authenticity.
+    value["postgres_manifest_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    outer.write_text(json.dumps(value))
+    before = {p: p.read_bytes() for p in bundle.rglob("*") if p.is_file()}
+    runner = Runner()
+    factory = MagicMock(side_effect=AssertionError("unexpected engine creation"))
+    target = tmp_path / "restore-assets"
+    with pytest.raises(postgres.BackupError, match=r"^backup manifest is invalid or unsupported$"):
+        if operation == "postgres-verify":
+            postgres.verify_backup_bundle(bundle / "postgres", runner=runner)
+        elif operation == "postgres-restore":
+            postgres.restore_backup_bundle(
+                bundle / "postgres",
+                "postgresql://user@localhost/synthetic",
+                confirm_empty_target=True,
+                runner=runner,
+                engine_factory=factory,
+            )
+        elif operation == "branding-verify":
+            branding.verify_branding_bundle(bundle, runner=runner)
+        else:
+            branding.restore_branding_bundle(
+                bundle,
+                "postgresql://user@localhost/synthetic",
+                asset_root=target,
+                confirm_empty_target=True,
+                runner=runner,
+                engine_factory=factory,
+            )
+    assert runner.calls == []
+    factory.assert_not_called()
+    assert not target.exists()
+    assert before == {p: p.read_bytes() for p in bundle.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("generation", ["current", "legacy", "additive-fields"])
+def test_postgres_manifest_compatible_generations_stay_verifiable(
+    bundle: Path, generation: str
+) -> None:
+    path = bundle / "postgres" / postgres.MANIFEST_NAME
+    manifest = json.loads(path.read_text())
+    if generation == "legacy":
+        # Version-1 writer shape from b38c346; integrity verification is independent
+        # of the installed recovery release's schema/application version.
+        manifest["application"]["version"] = "0.1.0.dev0"
+        manifest["database"]["schema_revisions"] = ["0001"]
+        manifest["database"]["tables"] = [
+            {"schema": "public", "name": "alembic_version", "rows": 1}
+        ]
+    elif generation == "additive-fields":
+        for obj in (
+            manifest,
+            manifest["application"],
+            manifest["archive"],
+            manifest["database"],
+            manifest["database"]["tables"][0],
+        ):
+            obj["future_metadata"] = {"nested": [{"value": "synthetic"}]}
+    path.write_text(json.dumps(manifest))
+    outer = bundle / branding.MANIFEST_NAME
+    value = json.loads(outer.read_text())
+    value["postgres_manifest_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    outer.write_text(json.dumps(value))
+    runner = Runner()
+    direct = postgres.verify_backup_bundle(bundle / "postgres", runner=runner)
+    composed = branding.verify_branding_bundle(bundle, runner=runner)
+    assert direct["manifest"] == manifest == composed["postgres_manifest"]
+    assert direct["status"] == "integrity_checked_not_restored"
+    assert composed["status"] == "branding_integrity_checked_not_restored"
+    assert len(runner.calls) == 2
+    assert all(command[0] == "pg_restore" and "--list" in command for command in runner.calls)
+
+
+@pytest.mark.parametrize("container", ["object", "array"])
+def test_postgres_duplicate_keys_in_additive_metadata_are_rejected(
+    bundle: Path, container: str
+) -> None:
+    path = bundle / "postgres" / postgres.MANIFEST_NAME
+    manifest = json.loads(path.read_text())
+    marker = '"future_metadata": null'
+    manifest["future_metadata"] = None
+    duplicate = '{"private-synthetic-key": 1, "private-synthetic-key": 2}'
+    if container == "array":
+        duplicate = f"[{duplicate}]"
+    path.write_text(json.dumps(manifest).replace(marker, f'"future_metadata": {duplicate}'))
+    runner = Runner()
+    with pytest.raises(postgres.BackupError) as caught:
+        postgres.verify_backup_bundle(bundle / "postgres", runner=runner)
+    assert str(caught.value) == "backup manifest is invalid or unsupported"
+    assert runner.calls == []
