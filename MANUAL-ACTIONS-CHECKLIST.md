@@ -1,5 +1,31 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-07 · Retained inventory pagination tests
+
+- [x] Retain a bounded deterministic selection under normal pytest discovery,
+      validate scope/order/cursor and read-only snapshots, and demonstrate test
+      sensitivity using temporary fault injection without production edits.
+- [x] Complete current local verification: four new inventory tests, nearest
+      inventory 456 passed plus 64 environment skips, full Python 6,068 passed
+      plus 685 environment skips; independent source review and 199 checks passed.
+- [ ] Obtain applicable publication authorization and qualify any published
+      candidate separately. PR94 acceptance does not qualify these new tests.
+- Physical T1–T8/R01-T035 remain deferred, not accepted. No capacity/M2,
+  deployment, real-data restore or complete V0.1 acceptance follows.
+  Evidence: `docs/10-spec-development/2026-11-07-inventory-regression-retention.md`.
+
+## 2026-11-07 · PR94 accepted main baseline
+
+- [x] Main 6930675b / tree ef4feabd passed CI42096624558: Python 6,690 plus
+      58 exact skips, all 169 text and eight PostgreSQL cases; frontend 1,299,
+      API one, aggregate 27/27, browser 133 direct/133 aggregate, repetitions
+      20/9/5/10, expiry ten and kernel 14. All ten checks/four workflows passed
+      on attempt one.
+- Historical independent source/cleanup/receipt and small artifact digests were
+  checked. Large browser archives remain uninspected. The [PR94 receipt](https://github.com/IzignaMx/open-cycling-workshop/pull/94)
+  supersedes its source-stage pending entries below only for that exact accepted
+  main. It does not qualify this new test-retention candidate or physical gates.
+
 ## 2026-11-05 · Workshop text admission
 
 - [x] Probe new boundaries: branding/blob 29 passed; session controls 16 passed.
