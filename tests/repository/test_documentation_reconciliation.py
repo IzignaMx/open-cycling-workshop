@@ -1082,8 +1082,8 @@ def test_backup_parser_hardening_preserves_compatibility_and_recovery_gates() ->
 
 def test_workshop_text_admission_preserves_protocol_and_unverified_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: workshop_text_admission_20261105" in state
-    assert "last_checkpoint: workshop_text_admission_20261105" in state
+    assert "historical_workshop_text_checkpoint: workshop_text_admission_20261105" in state
+    assert "historical_workshop_text_last_checkpoint: workshop_text_admission_20261105" in state
     block = state.split("workshop_text_admission_20261105:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "invariant: invalid_persisted_text_conflicts_before_binding_"
@@ -1098,7 +1098,7 @@ def test_workshop_text_admission_preserves_protocol_and_unverified_gates() -> No
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_workshop_text_plan: " + evidence in state
     record = " ".join(read(evidence).split())
     for token in (
         "OFF-008",
@@ -1117,6 +1117,44 @@ def test_workshop_text_admission_preserves_protocol_and_unverified_gates() -> No
         "42071971585",
         "6512",
         "eightyfive_executed_passed_no_skip_exemption",
+        "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
+    ):
+        assert token in baseline
+
+
+def test_inventory_regression_retention_preserves_source_acceptance_boundaries() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: inventory_regression_retention_20261107" in state
+    assert "last_checkpoint: inventory_regression_retention_20261107" in state
+    block = state.split("inventory_regression_retention_20261107:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "scope: retained_tests_and_evidence_only",
+        "production_schema_dependencies_workflows: unchanged",
+        "physical_T1_T8_R01_T035: deferred_not_accepted",
+        "capacity_M2_deployment_real_restore: unchanged_not_authorized",
+        "hosted_qualification: pending_not_inherited_from_PR94",
+    ):
+        assert token in block
+    evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
+    assert "active_plan: " + evidence in state
+    record = " ".join(read(evidence).split())
+    for token in (
+        "FR-INV-002",
+        "SEC-002",
+        "R01-T035",
+        "synthetic SQLite",
+        "normal pytest discovery",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    baseline = state.split("pr94_fresh_main_acceptance_20261107:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "6930675bbdd0bd45cfb853be7721fcfab82baf9c",
+        "ef4feabd7a4ec383bf968a702ecfab48e589321a",
+        "42096624558",
+        "6690",
+        "new_PostgreSQL_cases: eight_executed_passed_no_skip_exemption",
         "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in baseline

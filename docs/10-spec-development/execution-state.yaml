@@ -1,6 +1,46 @@
 schema: 1
 
-current_checkpoint: workshop_text_admission_20261105
+current_checkpoint: inventory_regression_retention_20261107
+inventory_regression_retention_20261107:
+  status: locally_verified_publication_and_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
+  base_main: 6930675bbdd0bd45cfb853be7721fcfab82baf9c
+  base_tree: ef4feabd7a4ec383bf968a702ecfab48e589321a
+  scope: retained_tests_and_evidence_only
+  invariant: complete_unchanged_data_traversal_strict_live_cursor_order_no_read_effects
+  production_schema_dependencies_workflows: unchanged
+  discovery: normal_pytest_services_platform_tests_inventory
+  new_tests: four_passed_zero_skips_synthetic_SQLite
+  nearest_inventory: 456_passed_64_existing_PostgreSQL_environment_skips
+  fault_sensitivity: ascending_order_four_fail_missing_location_three_fail_one_control_inclusive_cursor_four_fail
+  independent_review: accepted_source_and_final_evidence_199_postreceipt_passed
+  static_contracts: passed_mypy126_Ruff395_repository_and_generated_API
+  full_Python: 6068_passed_685_environment_skips_12_warnings_359_89s_exit0
+  full_Python_scope: frozen_production_and_tests_before_final_documentation_stamp
+  new_full_suite_cases: four_inventory_and_one_repository_contract_executed_passed
+  publication: pending_new_authorization
+  hosted_qualification: pending_not_inherited_from_PR94
+  physical_T1_T8_R01_T035: deferred_not_accepted
+  capacity_M2_deployment_real_restore: unchanged_not_authorized
+
+pr94_fresh_main_acceptance_20261107:
+  status: accepted_baseline_not_inventory_test_candidate_evidence
+  receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/94
+  main: 6930675bbdd0bd45cfb853be7721fcfab82baf9c
+  tree: ef4feabd7a4ec383bf968a702ecfab48e589321a
+  CI: 42096624558
+  counts: Python6690_plus58_exact_skips_frontend1299_API1
+  new_text_cases: 169_executed_passed
+  new_PostgreSQL_cases: eight_executed_passed_no_skip_exemption
+  aggregate: 27_of27_expiry10_single_attempt_passed
+  browser: 133_direct_133_aggregate_repeats20_9_5_10_kernel14
+  ordinary_workflows: runtime42096624637_security42096624676_micro42096624560_success
+  review: historical_independent_source_cleanup_and_small_artifact_digests_verified
+  main_checks: ten_success_four_workflows_attempt1
+  large_browser_archives: not_byte_trace_or_screenshot_reviewed
+  source_stage_pending: historical_superseded_only_for_accepted_main
+
+historical_workshop_text_checkpoint: workshop_text_admission_20261105
 workshop_text_admission_20261105:
   status: locally_verified_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-05-workshop-text-admission.md
@@ -2929,11 +2969,12 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-05-workshop-text-admission.md
+active_plan: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
+historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text-admission.md
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: locally_verified_hosted_qualification_pending
+active_plan_status: locally_verified_publication_and_hosted_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -2943,7 +2984,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: workshop_text_admission_20261105
+last_checkpoint: inventory_regression_retention_20261107
+historical_workshop_text_last_checkpoint: workshop_text_admission_20261105
 historical_backup_parser_last_checkpoint: backup_manifest_duplicates_20261105
 historical_location_last_checkpoint: location_create_validation_20261105
 historical_read_boundary_last_checkpoint: autonomous_read_boundaries_20261105
