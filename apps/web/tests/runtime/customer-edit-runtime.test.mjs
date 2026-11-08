@@ -179,6 +179,28 @@ test('customer list preserves exact standalone name text beside its accessible e
   const { appHarness } = await import('./capture-component-host.mjs')
   const React = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')
+  const { readFileSync } = await import('node:fs')
+  const { createRequire } = await import('node:module')
+  const { default: ts } = await import('typescript')
+  const require = createRequire(import.meta.url)
+  const buttonModule = { exports: {} }
+  const buttonSource = readFileSync(
+    new URL('../../../../packages/ui/src/Button.tsx', import.meta.url),
+    'utf8',
+  )
+  const buttonCode = ts.transpileModule(buttonSource, {
+    compilerOptions: {
+      jsx: ts.JsxEmit.ReactJSX,
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText
+  new Function('require', 'module', 'exports', buttonCode)(
+    require,
+    buttonModule,
+    buttonModule.exports,
+  )
+  const { Button } = buttonModule.exports
   const nodes = (node) =>
     !node || typeof node !== 'object'
       ? []
@@ -193,7 +215,7 @@ test('customer list preserves exact standalone name text beside its accessible e
     if (Array.isArray(node)) return node.map(native)
     const { children, ...props } = node.props
     return React.createElement(
-      typeof node.type === 'string' ? node.type : 'button',
+      typeof node.type === 'string' ? node.type : Button,
       props,
       native(children),
     )
@@ -202,6 +224,21 @@ test('customer list preserves exact standalone name text beside its accessible e
   // Exact text locators need a distinct element containing only the customer name,
   // not the enclosing list item's combined "Private AEditar" text.
   assert.match(html, /<([a-z][a-z0-9]*)[^>]*>Private A<\/\1>/)
+  assert.match(html, /<button[^>]*aria-label="Editar cliente Private A"[^>]*>Editar<\/button>/)
+  const plain = renderToStaticMarkup(
+    React.createElement(Button, { disabled: true, type: 'submit' }, 'Guardar'),
+  )
+  assert.match(plain, /type="submit"/)
+  assert.match(plain, /disabled=""/)
+  assert.doesNotMatch(plain, /aria-label/)
+  let clicked = false
+  Button({
+    children: 'Default',
+    onClick: () => {
+      clicked = true
+    },
+  }).props.onClick()
+  assert.equal(clicked, true)
   const edit = nodes(list).find((node) => node.props?.['aria-label'] === 'Editar cliente Private A')
   assert.ok(edit)
   assert.equal(edit.props.children, 'Editar')
