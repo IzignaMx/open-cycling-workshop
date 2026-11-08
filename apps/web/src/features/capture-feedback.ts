@@ -13,6 +13,7 @@ const unknown = (): CaptureFeedback => ({
   blockSubmission: true,
 })
 const validationMessages: Record<CaptureValidationCode, string> = {
+  customer_text_invalid: 'Los datos del cliente contienen caracteres no válidos',
   customer_name_required: 'El nombre es obligatorio',
   customer_name_too_long: 'El nombre no puede superar 200 caracteres',
   customer_email_too_long: 'El correo no puede superar 320 caracteres',

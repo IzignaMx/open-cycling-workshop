@@ -56,6 +56,7 @@ test('capture submission guard is synchronous and unknown remains latched indepe
 test('capture fixed validation messages and hostile result objects do not expose input', () => {
   assert.equal(typeof feedback.captureFeedback, 'function')
   const codes = [
+    'customer_text_invalid',
     'customer_name_required',
     'customer_name_too_long',
     'customer_email_too_long',

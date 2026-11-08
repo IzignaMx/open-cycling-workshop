@@ -1,3 +1,4 @@
+import { CustomerEdit } from './features/customers/CustomerEdit.js'
 import { ModuleInformation } from './features/module-information/ModuleInformation.js'
 import { officialModuleReference } from './features/module-information/reference.js'
 import './features/module-information/module-information.css'
@@ -65,6 +66,17 @@ export function App({ runtime }: { runtime: WorkshopController }) {
       window.removeEventListener('pageshow', check)
       document.removeEventListener('visibilitychange', check)
     }
+  }, [runtime])
+  useEffect(() => {
+    const warnUnsavedEdit = (event: BeforeUnloadEvent) => {
+      const edit = runtime.getSnapshot().customerEdit
+      if (edit && (edit.dirty || edit.busy || edit.blocked)) {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', warnUnsavedEdit)
+    return () => window.removeEventListener('beforeunload', warnUnsavedEdit)
   }, [runtime])
   const recoveryNotice = state.captureRecoveryNotice ? (
     <p role="status" className="workshop-notice" id="capture-recovery-notice">
@@ -303,10 +315,31 @@ export function App({ runtime }: { runtime: WorkshopController }) {
             )}
             {readCustomers ? (
               <>
+                {state.customerEdit ? (
+                  <CustomerEdit
+                    edit={state.customerEdit}
+                    onEdit={(field, value) => runtime.editExistingCustomer(viewToken, field, value)}
+                    onSubmit={() => runtime.submitCustomerEdit(viewToken)}
+                    onCancel={(discard) => runtime.cancelCustomerEdit(viewToken, discard)}
+                  />
+                ) : null}
                 <h3>Clientes locales</h3>
                 <ul aria-label="Clientes locales">
                   {state.customers.map((customer) => (
-                    <li key={customer.customer_id}>{customer.display_name}</li>
+                    <li key={customer.customer_id}>
+                      <span>{customer.display_name}</span>
+                      {writeCustomers ? (
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            void runtime.openCustomerEdit(viewToken, customer.customer_id)
+                          }
+                          aria-label={`Editar cliente ${customer.display_name}`}
+                        >
+                          Editar
+                        </Button>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
                 <div className="session-actions">

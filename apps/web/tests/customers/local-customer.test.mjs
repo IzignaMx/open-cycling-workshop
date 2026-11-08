@@ -138,3 +138,114 @@ test('customer admissibility checks backend projection without rewriting prepare
     }
   }
 })
+
+test('customer update preserves identity, advances one version and captures the exact base', async () => {
+  const { buildLocalCustomerUpdate } =
+    await import('../../.tmp-customer/src/features/customers/local-customer.js')
+  assert.equal(typeof buildLocalCustomerUpdate, 'function')
+  const original = prepare({ displayName: 'Before', email: 'old@example.test' }).customer
+  const snapshot = structuredClone(original)
+  let ids = 0
+  const result = buildLocalCustomerUpdate(
+    original,
+    {
+      displayName: ' After ',
+      email: '',
+      phone: ' 123 ',
+    },
+    { now: () => '2026-11-08T00:00:00Z', newId: () => `mutation-${++ids}` },
+  )
+  assert.deepEqual(original, snapshot)
+  assert.equal(result.customer.customer_id, original.customer_id)
+  assert.equal(result.customer.created_at, original.created_at)
+  assert.equal(result.customer.version, 2)
+  assert.equal(result.customer.display_name, 'After')
+  assert.equal(result.customer.email, null)
+  assert.equal(result.customer.phone, '123')
+  assert.equal(result.mutation.operation, 'update')
+  assert.equal(result.mutation.base_version, 1)
+  assert.equal(result.mutation.entity_id, original.customer_id)
+  assert.equal(ids, 1)
+})
+
+for (const [label, input] of [
+  ['empty name', { displayName: '' }],
+  ['Python blank name', { displayName: '\u0085' }],
+  ['name cap', { displayName: '😀'.repeat(201) }],
+  ['email cap', { email: 'İ'.repeat(158) + '@x.co' }],
+  ['email grammar', { email: 'x@local' }],
+  ['phone cap', { phone: '1'.repeat(65) }],
+]) {
+  test(`customer update rejects ${label} before allocating an operation`, async () => {
+    const { buildLocalCustomerUpdate } =
+      await import('../../.tmp-customer/src/features/customers/local-customer.js')
+    const previous = prepare({ displayName: 'Original' }).customer
+    let allocations = 0
+    assert.throws(() =>
+      buildLocalCustomerUpdate(
+        previous,
+        { displayName: 'New', ...input },
+        {
+          now: () => '2026-11-08T00:00:00Z',
+          newId: () => {
+            allocations++
+            return 'must-not-allocate'
+          },
+        },
+      ),
+    )
+    assert.equal(allocations, 0)
+    assert.equal(previous.version, 1)
+    assert.equal(previous.display_name, 'Original')
+  })
+}
+
+test('customer update rejects exhausted or invalid base versions before operation allocation', async () => {
+  const { buildLocalCustomerUpdate } =
+    await import('../../.tmp-customer/src/features/customers/local-customer.js')
+  for (const version of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER]) {
+    let allocations = 0
+    const previous = { ...prepare({}).customer, version }
+    assert.throws(() =>
+      buildLocalCustomerUpdate(
+        previous,
+        { displayName: 'New' },
+        {
+          now: () => '2026-11-08T00:00:00Z',
+          newId: () => {
+            allocations++
+            return 'must-not-allocate'
+          },
+        },
+      ),
+    )
+    assert.equal(allocations, 0)
+  }
+})
+
+for (const field of ['displayName', 'email', 'phone']) {
+  for (const value of ['\0', '\ud800', '\udfff']) {
+    test(`customer create and edit reject unrepresentable text in ${field} ${value.charCodeAt(0)}`, async () => {
+      const { buildLocalCustomerUpdate } =
+        await import('../../.tmp-customer/src/features/customers/local-customer.js')
+      let allocations = 0
+      const deps = {
+        now: () => '2026-11-08T00:00:00Z',
+        newId: () => {
+          allocations++
+          return 'unexpected'
+        },
+      }
+      const input = {
+        displayName: 'Valid',
+        [field]: field === 'email' ? `a${value}@b.test` : `a${value}`,
+      }
+      assert.throws(() => prepare(input, deps), /caracteres no válidos/)
+      assert.throws(
+        () => buildLocalCustomerUpdate(prepare({}).customer, input, deps),
+        /caracteres no válidos/,
+      )
+      assert.equal(allocations, 0)
+    })
+  }
+}

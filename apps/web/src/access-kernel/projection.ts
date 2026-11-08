@@ -229,6 +229,11 @@ export async function readProjection(
     }
   }
   return confirmed || optimistic
-    ? { confirmed: confirmed?.payload, optimistic, optimisticStatus }
+    ? {
+        confirmed: confirmed?.payload,
+        optimistic,
+        optimisticStatus,
+        ...(blocked ? { blocked: true as const } : {}),
+      }
     : undefined
 }

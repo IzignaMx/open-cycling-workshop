@@ -2,14 +2,22 @@ import type { ReactNode } from 'react'
 
 export interface ButtonProps {
   children: ReactNode
+  'aria-label'?: string
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
   onClick?: () => void
 }
 
-export function Button({ children, disabled = false, type = 'button', onClick }: ButtonProps) {
+export function Button({
+  children,
+  disabled = false,
+  type = 'button',
+  onClick,
+  'aria-label': ariaLabel,
+}: ButtonProps) {
   return (
     <button
+      aria-label={ariaLabel}
       type={type}
       disabled={disabled}
       onClick={onClick}
