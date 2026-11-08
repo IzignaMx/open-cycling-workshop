@@ -1,6 +1,50 @@
 schema: 1
 
-current_checkpoint: inventory_regression_retention_20261107
+current_checkpoint: customer_editing_20261108
+customer_editing_20261108:
+  status: locally_verified_memory_only_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-08-customer-editing.md
+  design: docs/superpowers/specs/2026-11-08-customer-editing-design.md
+  base_main: 463ac45d39812f3b4d92e5066b9e40ee6c598e67
+  base_tree: 6b289f20f7561decdf66be49a2258dafe43a5678
+  authorization: explicit_independent_customer_edit_exception
+  scope: existing_customer_name_email_phone_only
+  canonical_pair: FR-CUS-003_R02-T001_partial
+  invariant: preserve_identity_scope_opening_version_and_unknown_attempt_fences
+  unsent_edit_draft: memory_only_explicit_user_choice
+  saved_updates: existing_durable_mutation_journal
+  local_schema_and_creation_order_recovery: unchanged_from_463ac45d
+  user_context: no_prior_versions_installed_or_in_production
+  old_version_enforcement: separate_research_not_this_implementation
+  historical_durable_experiment: rejected_unpublished_removed
+  backend_schema_and_wire: unchanged
+  full_Python: 6069_passed_685_environment_skips_12_warnings_379_48s
+  full_frontend: 1355_passed_zero_skips_API1
+  local_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  independent_review: accepted_39_focused_plus_four_probes
+  native_browser: three_journeys_collected_not_executed
+  local_browser: blocked_socket_EPERM_before_app_loading
+  PostgreSQL: unavailable_locally
+  publication: not_authorized
+  hosted_qualification: pending_not_inherited_from_PR95
+  physical_T1_T8_R01_T035: deferred_not_accepted
+  capacity_M2_deployment_real_restore: unchanged_not_authorized
+
+pr95_fresh_main_acceptance_20261108:
+  status: accepted_baseline_not_customer_edit_candidate_evidence
+  receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/95
+  main: 463ac45d39812f3b4d92e5066b9e40ee6c598e67
+  tree: 6b289f20f7561decdf66be49a2258dafe43a5678
+  CI: 42424473619
+  counts: Python6695_plus58_exact_skips_frontend1299_API1
+  new_inventory_cases: four_passed_plus_one_repository_contract
+  aggregate: 27_of27_single_attempt
+  main_checks: ten_success_four_workflows_attempt1
+  review: source_cleanup_and_small_artifact_digests_verified
+  large_browser_archives: not_byte_trace_or_screenshot_reviewed
+  source_stage_pending: historical_superseded_only_for_accepted_main
+
+historical_inventory_current_checkpoint: inventory_regression_retention_20261107
 inventory_regression_retention_20261107:
   status: locally_verified_publication_and_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
@@ -2969,12 +3013,13 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
+active_plan: docs/10-spec-development/2026-11-08-customer-editing.md
+historical_inventory_plan: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
 historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text-admission.md
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: locally_verified_publication_and_hosted_qualification_pending
+active_plan_status: locally_verified_memory_only_hosted_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -2984,7 +3029,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: inventory_regression_retention_20261107
+last_checkpoint: customer_editing_20261108
+historical_inventory_last_checkpoint: inventory_regression_retention_20261107
 historical_workshop_text_last_checkpoint: workshop_text_admission_20261105
 historical_backup_parser_last_checkpoint: backup_manifest_duplicates_20261105
 historical_location_last_checkpoint: location_create_validation_20261105

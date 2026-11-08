@@ -1124,8 +1124,10 @@ def test_workshop_text_admission_preserves_protocol_and_unverified_gates() -> No
 
 def test_inventory_regression_retention_preserves_source_acceptance_boundaries() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: inventory_regression_retention_20261107" in state
-    assert "last_checkpoint: inventory_regression_retention_20261107" in state
+    assert (
+        "historical_inventory_current_checkpoint: inventory_regression_retention_20261107" in state
+    )
+    assert "historical_inventory_last_checkpoint: inventory_regression_retention_20261107" in state
     block = state.split("inventory_regression_retention_20261107:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "scope: retained_tests_and_evidence_only",
@@ -1136,7 +1138,7 @@ def test_inventory_regression_retention_preserves_source_acceptance_boundaries()
     ):
         assert token in block
     evidence = block.split("  evidence: ", 1)[1].splitlines()[0]
-    assert "active_plan: " + evidence in state
+    assert "historical_inventory_plan: " + evidence in state
     record = " ".join(read(evidence).split())
     for token in (
         "FR-INV-002",
@@ -1158,3 +1160,36 @@ def test_inventory_regression_retention_preserves_source_acceptance_boundaries()
         "large_browser_archives: not_byte_trace_or_screenshot_reviewed",
     ):
         assert token in baseline
+
+
+def test_customer_editing_is_a_bounded_independent_prerequisite() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: customer_editing_20261108" in state
+    assert "active_plan: " + BASE + "2026-11-08-customer-editing.md" in state
+    block = state.split("customer_editing_20261108:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "authorization: explicit_independent_customer_edit_exception",
+        "scope: existing_customer_name_email_phone_only",
+        "canonical_pair: FR-CUS-003_R02-T001_partial",
+        "unsent_edit_draft: memory_only_explicit_user_choice",
+        "local_schema_and_creation_order_recovery: unchanged_from_463ac45d",
+        "publication: not_authorized",
+        "physical_T1_T8_R01_T035: deferred_not_accepted",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-08-customer-editing.md")
+    design = read("docs/superpowers/specs/2026-11-08-customer-editing-design.md")
+    for token in (
+        "463ac45d39812f3b4d92e5066b9e40ee6c598e67",
+        "FR-CUS-003/R02-T001",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+        "Operation not permitted",
+    ):
+        assert token in record
+    for token in ("customerEdit", "base_version", "24-hour", "No automatic"):
+        assert token.lower() in design.lower()
+    rows = list(csv.DictReader(read(BASE + "traceability.csv").splitlines()))
+    row = next(row for row in rows if row["requirement_id"] == "FR-CUS-003")
+    assert row["task_id"] == "R02-T001" and row["status"] == "partial"
+    assert row["evidence"] == BASE + "2026-11-08-customer-editing.md"

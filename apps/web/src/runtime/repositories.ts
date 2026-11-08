@@ -7,6 +7,8 @@ import type { LocalCustomer, QueuedMutation } from '../local/types.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../local/service-order-types.js'
 import {
   buildLocalCustomerCreate,
+  buildLocalCustomerUpdate,
+  type CustomerFieldsInput,
   type CreateCustomerInput,
 } from '../features/customers/local-customer.js'
 import { buildLocalBicycleCreate } from '../features/bicycles/local-bicycle.js'
@@ -39,6 +41,14 @@ export function wireEnvelope(value: QueuedMutation): MutationEnvelope {
     payload: structuredClone(payload),
   }
 }
+export interface CustomerUpdateInput extends CustomerFieldsInput {
+  customerId: string
+  baseVersion: number
+}
+export type CustomerUpdateResult =
+  | CaptureRepositoryResult<LocalCustomer>
+  | { status: 'not_saved'; reason: 'changed' | 'unavailable' }
+
 export interface IntakeInput {
   customerId: string
   reportedProblem: string
@@ -100,6 +110,57 @@ export class WorkshopRepositories {
     )
     if (outcome.status === 'not_committed') return { status: 'not_saved', reason: outcome.reason }
     return { status: 'committed', entity: customer }
+  }
+  async editableCustomer(
+    source: BaselineSession,
+    customerId: string,
+  ): Promise<LocalCustomer | null> {
+    const c = this.capture(source)
+    const projection = await this.kernel.readEntity(c.ticket, 'customer', customerId, c.current)
+    const row = projection?.optimistic ?? projection?.confirmed
+    if (
+      projection?.blocked ||
+      !row ||
+      row.customer_id !== customerId ||
+      row.organization_id !== c.scope.organizationId ||
+      row.location_id !== c.scope.locationId
+    )
+      return null
+    return structuredClone(row) as unknown as LocalCustomer
+  }
+  async updateCustomer(
+    source: BaselineSession,
+    input: CustomerUpdateInput,
+  ): Promise<CustomerUpdateResult> {
+    const c = this.capture(source)
+    // Freeze caller-owned values before the first asynchronous read.
+    const requested = structuredClone(input)
+    const previous = await this.editableCustomer(source, requested.customerId)
+    if (!previous) return { status: 'not_saved', reason: 'unavailable' }
+    if (previous.version !== requested.baseVersion)
+      return { status: 'not_saved', reason: 'changed' }
+    let prepared
+    try {
+      prepared = buildLocalCustomerUpdate(previous, requested, c.dependencies)
+    } catch (error) {
+      const validation = captureValidation(error)
+      if (validation) return validation
+      throw error
+    }
+    const outcome = await this.kernel.commitLocalCommandsOutcome(
+      c.ticket,
+      [
+        {
+          envelope: wireEnvelope(prepared.mutation),
+          optimistic: { ...prepared.customer },
+          dependsOn: [],
+          localEvents: [],
+        },
+      ],
+      c.current,
+    )
+    if (outcome.status === 'not_committed') return { status: 'not_saved', reason: outcome.reason }
+    return { status: 'committed', entity: prepared.customer }
   }
   async createOrder(
     source: BaselineSession,

@@ -1,5 +1,33 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-08 · Independent existing-customer editing
+
+- [x] Explicit user decision permits name/email/phone editing as a bounded
+      prerequisite while V0.1 remains partial; FR-CUS-003/R02-T001 stays partial.
+- [x] User selected memory-only unsaved edits; restore original creation/order
+      recovery and remove the unpublished experimental schema/channel extension.
+      User confirms no versions are installed or in production.
+- [x] Complete chosen memory-only local validation: Python 6,069 plus 685 environment
+      skips; frontend 1,355/API one; 21 aggregate checks pass and five environment
+      blockers remain. Independent review 39+4 passed; saved updates stay durable.
+- [ ] Execute the affected genuine browser/PostgreSQL journeys in separately
+      authorized CI. Native Chromium fails before app loading with socket EPERM,
+      even through the permitted escalated path; no bypass is used.
+- [ ] Obtain new publication authorization before pushing/opening a PR. PR95's
+      authorization and accepted main do not qualify or authorize this candidate.
+- Physical T1–T8/R01-T035, M2/capacity, deployment and real-data restore stay
+  deferred/unapproved. Evidence: [bounded record](docs/10-spec-development/2026-11-08-customer-editing.md).
+
+## 2026-11-08 · PR95 accepted main baseline
+
+- [x] Fresh main 463ac45d/tree 6b289f20 passed CI 42424473619, Python 6,695 plus 58
+      exact skips, frontend 1,299/API one and aggregate 27/27. All ten checks in
+      four workflows passed on attempt one. The [PR95 receipt](https://github.com/IzignaMx/open-cycling-workshop/pull/95)
+      supersedes the historical inventory publication/qualification entries below
+      only for that exact source. Large browser archives remain uninspected.
+- This baseline is not evidence for the new customer-edit candidate or physical
+  acceptance.
+
 ## 2026-11-07 · Retained inventory pagination tests
 
 - [x] Retain a bounded deterministic selection under normal pytest discovery,

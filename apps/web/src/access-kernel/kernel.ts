@@ -911,6 +911,12 @@ export class AccessKernel {
         command.envelope.entity_type,
         command.envelope.entity_id,
       )
+      // A remote version can equal the former optimistic version when a local
+      // predecessor becomes blocked. Version equality alone does not admit a
+      // new customer edit; recheck its conflict boundary in this transaction.
+      // Exact operation-ID replay above remains a no-op, not a new mutation.
+      if (command.envelope.entity_type === 'customer' && projection?.blocked)
+        throw new Error('Customer aggregate has blocked work')
       const current = projection?.optimistic ?? projection?.confirmed
       if (!current || current.version !== command.envelope.base_version)
         throw new Error('Local aggregate version changed')

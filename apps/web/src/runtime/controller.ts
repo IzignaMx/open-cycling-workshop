@@ -1,3 +1,4 @@
+import { CustomerEditVisit, type CustomerEditSnapshot } from './customer-edit-visit.js'
 import { CustomerLookup, type CustomerLookupSnapshot } from './customer-lookup.js'
 import { CaptureRecovery, type RecoveryAttempt } from './capture-recovery.js'
 import { CaptureVisit, type CaptureVisitSnapshot, type CaptureVisitScope } from './capture-visit.js'
@@ -63,6 +64,7 @@ export interface WorkshopSnapshot {
   selectedLocationId: string | null
   message: string | null
   sync: 'local' | 'offline' | 'syncing' | 'synced' | 'conflict' | 'error'
+  customerEdit: CustomerEditSnapshot | null
   customerLookup: CustomerLookupSnapshot | null
   customers: LocalCustomer[]
   orders: LocalServiceOrder[]
@@ -85,6 +87,7 @@ export interface WorkshopSnapshot {
 }
 const empty = (): WorkshopSnapshot => ({
   phase: 'locked',
+  customerEdit: null,
   capture: null,
   captureRecoveryNotice: null,
   user: null,
@@ -163,6 +166,8 @@ export class WorkshopController {
   #disposed = false
   #sequence = 0
   readonly #customerLookup = new CustomerLookup(() => this.publish({}))
+  readonly #customerEdit = new CustomerEditVisit()
+  #customerEditRead = 0
   readonly #captureVisit = new CaptureVisit()
   #captureSource: BaselineSession | null = null
   readonly #captureRecovery: CaptureRecovery
@@ -696,6 +701,9 @@ export class WorkshopController {
       this.#customerLookup.clear()
       next.customerLookup = null
       next.capture = null
+      this.#customerEdit.reset()
+      this.#customerEditRead++
+      next.customerEdit = null
     } else {
       const capture = this.#captureVisit.getSnapshot()
       if (capture && source.context.capabilities.includes('customers.read')) {
@@ -707,6 +715,13 @@ export class WorkshopController {
         next.customerLookup = null
       }
       const recovery = this.#captureRecovery.snapshot()
+      const edit = this.#customerEdit.snapshot()
+      next.customerEdit =
+        capture &&
+        source.context.capabilities.includes('customers.read') &&
+        source.context.capabilities.includes('customers.write')
+          ? edit
+          : null
       next.capture = capture
         ? Object.freeze({
             ...capture,
@@ -728,10 +743,17 @@ export class WorkshopController {
     for (const listener of this.#listeners) listener()
   }
   private maskCapture(): void {
+    this.#customerEditRead++
+    this.#customerEdit.reset()
     this.#customerLookup.clear()
     this.#captureVisit.suspendView()
     this.#captureSource = null
-    this.#snapshot = Object.freeze({ ...this.#snapshot, capture: null, customerLookup: null })
+    this.#snapshot = Object.freeze({
+      ...this.#snapshot,
+      capture: null,
+      customerLookup: null,
+      customerEdit: null,
+    })
   }
   private cancel() {
     this.maskCapture()
@@ -957,6 +979,7 @@ export class WorkshopController {
     this.#captureRecovery.close()
     this.#captureRecovery.startVisit()
     this.#captureEnrollmentBinding = null
+    this.#customerEdit.reset()
     this.#captureVisit.startVisit()
     this.#transitionProtection.startVisit()
     const previous = this.#active ?? this.#working
@@ -1216,6 +1239,7 @@ export class WorkshopController {
     if (!current()) return
     const connected = online && this.#verifiedOnline
     this.observeTransitionScope(source)
+    this.#customerEdit.observeScope(JSON.stringify(this.captureScope(source)))
     this.#captureVisit.observeScope(this.captureScope(source))
     this.#captureSource = source
     const hydration = this.#captureVisit.hydrationToken()
@@ -1406,6 +1430,7 @@ export class WorkshopController {
       return
     const saved = this.sessionStore.getSnapshot()
     if (saved) {
+      this.#customerEdit.reset()
       this.#captureVisit.startVisit()
       this.#transitionProtection.startVisit()
       await this.verifyStored(saved, locationId)
@@ -1416,6 +1441,7 @@ export class WorkshopController {
     if (saved?.user?.location_id === null) {
       this.maskCapture()
       const retirement = this.#captureRecovery.retireVisit()
+      this.#customerEdit.reset()
       this.#captureVisit.endVisit()
       this.#transitionProtection.endVisit()
       const source = this.#active
@@ -1475,6 +1501,7 @@ export class WorkshopController {
   async logout() {
     this.maskCapture()
     this.#captureRecovery.close()
+    this.#customerEdit.reset()
     this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     const source = this.#active ?? this.#working
@@ -1594,7 +1621,11 @@ export class WorkshopController {
     })
   }
   hasUnsentCaptures(): boolean {
-    return this.#captureVisit.hasUnsent() || this.#captureRecovery.hasUnsent()
+    return (
+      this.#customerEdit.hasUnsent() ||
+      this.#captureVisit.hasUnsent() ||
+      this.#captureRecovery.hasUnsent()
+    )
   }
   private captureSource(view: object): BaselineSession | null {
     const source = this.#captureSource
@@ -1605,6 +1636,104 @@ export class WorkshopController {
       this.#captureVisit.isCurrentView(view)
       ? source
       : null
+  }
+  async openCustomerEdit(view: object, customerId: string): Promise<void> {
+    const source = this.captureSource(view)
+    if (
+      !source ||
+      !source.context.capabilities.includes('customers.read') ||
+      !source.context.capabilities.includes('customers.write')
+    )
+      return
+    if (this.#customerEdit.hasUnsent()) {
+      this.#customerEdit.notice(
+        'Conserva o cancela la edición actual antes de abrir otro cliente. Si hay un envío sin confirmar, no lo repitas.',
+      )
+      this.publish({})
+      return
+    }
+    const read = ++this.#customerEditRead
+    const revision = this.#customerEdit.revisionToken()
+    try {
+      const customer = await this.repositories.editableCustomer(source, customerId)
+      if (
+        read !== this.#customerEditRead ||
+        this.captureSource(view) !== source ||
+        revision !== this.#customerEdit.revisionToken()
+      )
+        return
+      if (!customer)
+        this.#customerEdit.notice(
+          'El cliente no está disponible para editar en este taller. Actualiza la lista y revisa las incidencias.',
+        )
+      else this.#customerEdit.open(customer)
+    } catch {
+      if (read !== this.#customerEditRead || this.captureSource(view) !== source) return
+      this.#customerEdit.notice('No se pudo abrir el cliente. Vuelve a consultar la lista local.')
+    }
+    this.publish({})
+  }
+  editExistingCustomer<K extends keyof CustomerDraftState>(
+    view: object,
+    field: K,
+    value: CustomerDraftState[K],
+  ): void {
+    if (this.captureSource(view) && this.#customerEdit.edit(field, value)) {
+      this.publish({})
+    }
+  }
+  cancelCustomerEdit(view: object, discard = false): void {
+    if (!this.captureSource(view) || !this.#customerEdit.cancel(discard)) return
+    this.#customerEditRead++
+    this.publish({})
+  }
+  async submitCustomerEdit(view: object): Promise<void> {
+    const source = this.captureSource(view)
+    if (!source) return
+    const attempt = this.#customerEdit.begin()
+    if (!attempt) return
+    this.publish({})
+    let feedback
+    let committed = false
+    const networkSequence = this.#networkSequence
+    try {
+      if (this.captureSource(view) !== source) {
+        feedback = captureFeedback({
+          kind: 'resolved',
+          value: { status: 'not_saved', reason: 'write_failure' },
+        })
+      } else {
+        const { customerId, baseVersion, displayName, email, phone } = attempt.input
+        const result = await this.repositories.updateCustomer(source, {
+          customerId,
+          baseVersion,
+          displayName,
+          email: email || null,
+          phone: phone || null,
+        })
+        committed = result.status === 'committed'
+        feedback =
+          result.status === 'not_saved' &&
+          (result.reason === 'changed' || result.reason === 'unavailable')
+            ? {
+                status: 'not_saved' as const,
+                blockSubmission: false,
+                message:
+                  'El cliente cambió o ya no está disponible. Tus cambios siguen aquí. Consérvalos antes de cancelar y volver a abrir el cliente; revisa las incidencias.',
+              }
+            : captureFeedback({ kind: 'resolved', value: committed ? { status: 'saved' } : result })
+      }
+    } catch (error) {
+      feedback = captureFeedback({ kind: 'rejected', error })
+    }
+    const finished = this.#customerEdit.finish(attempt.token, feedback)
+    if (finished && this.captureSource(view) === source) {
+      this.publish({})
+      if (committed) {
+        this.wakeLocalSync(source, networkSequence)
+        await this.refresh()
+      }
+    }
   }
   editCaptureCustomer<K extends keyof CustomerDraftState>(
     view: object,
@@ -2109,6 +2238,7 @@ export class WorkshopController {
   }
   dispose() {
     this.#captureRecovery.dispose()
+    this.#customerEdit.reset()
     this.#captureVisit.endVisit()
     this.#transitionProtection.endVisit()
     this.#disposed = true

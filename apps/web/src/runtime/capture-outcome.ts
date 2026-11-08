@@ -1,4 +1,5 @@
 export type CaptureValidationCode =
+  | 'customer_text_invalid'
   | 'customer_name_required'
   | 'customer_name_too_long'
   | 'customer_email_too_long'
@@ -27,6 +28,8 @@ export type CaptureRepositoryResult<T> = { status: 'committed'; entity: T } | Ca
 export function captureValidation(error: unknown): CaptureNotSaved | null {
   if (!(error instanceof Error)) return null
   switch (error.message) {
+    case 'Los datos del cliente contienen caracteres no válidos':
+      return { status: 'not_saved', reason: 'validation', code: 'customer_text_invalid' }
     case 'El nombre es obligatorio':
       return { status: 'not_saved', reason: 'validation', code: 'customer_name_required' }
     case 'El nombre no puede superar 200 caracteres':
