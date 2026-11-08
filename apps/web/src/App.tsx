@@ -327,7 +327,7 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 <ul aria-label="Clientes locales">
                   {state.customers.map((customer) => (
                     <li key={customer.customer_id}>
-                      {customer.display_name}
+                      <span>{customer.display_name}</span>
                       {writeCustomers ? (
                         <Button
                           type="button"

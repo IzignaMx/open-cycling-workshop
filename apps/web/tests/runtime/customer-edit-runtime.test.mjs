@@ -173,3 +173,42 @@ test('network re-admission clears memory-only edit and rejects stale handlers', 
   await f.runtime.submitCustomerEdit(oldView)
   assert.equal((await f.database.operationJournal.toArray()).length, 0)
 })
+
+test('customer list preserves exact standalone name text beside its accessible edit action', async (t) => {
+  const f = await ready(t)
+  const { appHarness } = await import('./capture-component-host.mjs')
+  const React = await import('react')
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const nodes = (node) =>
+    !node || typeof node !== 'object'
+      ? []
+      : [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]
+  const tree = appHarness(f.runtime).render()
+  const list = nodes(tree).find(
+    (node) => node.type === 'ul' && node.props['aria-label'] === 'Clientes locales',
+  )
+  assert.ok(list)
+  function native(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return node
+    if (Array.isArray(node)) return node.map(native)
+    const { children, ...props } = node.props
+    return React.createElement(
+      typeof node.type === 'string' ? node.type : 'button',
+      props,
+      native(children),
+    )
+  }
+  const html = renderToStaticMarkup(native(list))
+  // Exact text locators need a distinct element containing only the customer name,
+  // not the enclosing list item's combined "Private AEditar" text.
+  assert.match(html, /<([a-z][a-z0-9]*)[^>]*>Private A<\/\1>/)
+  const edit = nodes(list).find((node) => node.props?.['aria-label'] === 'Editar cliente Private A')
+  assert.ok(edit)
+  assert.equal(edit.props.children, 'Editar')
+  const calls = []
+  f.runtime.openCustomerEdit = async (...args) => {
+    calls.push(args)
+  }
+  edit.props.onClick()
+  assert.deepEqual(calls, [[view(f), CUSTOMER_ID]])
+})
