@@ -93,7 +93,7 @@ test('unsaved edit is discarded on reload while saved offline update persists an
   ).toEqual([operation])
   await page.context().setOffline(false)
   await waitForApplied(page, operation.mutationId)
-  await waitForConfirmed(page, operation)
+  await waitForConfirmed(page, operation, customer.version + 1)
 })
 
 test('cancel refuses silent discard and read-only users have no editing controls', async ({
