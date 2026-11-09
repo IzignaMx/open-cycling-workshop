@@ -1,6 +1,51 @@
 schema: 1
 
-current_checkpoint: customer_editing_20261108
+current_checkpoint: order_transition_attribution_20261108
+order_transition_attribution_20261108:
+  status: locally_verified_unpublished_hosted_qualification_pending
+  evidence: docs/10-spec-development/2026-11-08-order-transition-attribution.md
+  design: docs/superpowers/specs/2026-11-08-order-transition-attribution-design.md
+  base_main: 3534fdd59f219bdcd4943aded4b86f7883b0d382
+  base_tree: 5c6491a66fc4df029f57edb17cd46f2cf269db75
+  authorization: user_directed_bounded_multiuser_attribution_increment
+  canonical_pair: FR-SVC-016_R02-T013_partial
+  actor_display: full_recorded_identifier_not_assignment
+  timestamp: recorded_time_not_server_clock_proof
+  local_record: not_equivalent_to_pending_or_accepted
+  source_projection: ephemeral_after_admitted_read_not_persisted
+  storage_schema_wire_permissions: unchanged
+  assignment_and_directory_lookup: excluded
+  publication: not_authorized_for_this_increment
+  local_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  local_Python: 6070_passed_685_environment_skips_12_warnings_377_83s
+  local_frontend: 1403_passed_zero_skips_API1
+  full_run_scope: frozen_production_tests_before_evidence_only_documentation_stamp
+  post_stamp_repository: 197_passed
+  aggregate_git_metadata: base_HEAD_uncommitted_candidate_worktree_not_base_acceptance
+  focused_tests: rendered39_runtime8_all_passed
+  independent_review: accepted_64_focused_plus_TypeScript_and_diff_check
+  native_browser: two_affected_journeys_collected_not_executed
+  hosted_qualification: pending_not_inherited_from_PR96
+  physical_T1_T8_R01_T035: deferred_not_accepted
+  capacity_M2_deployment_real_restore: unchanged_not_authorized
+
+pr96_fresh_main_acceptance_20261108:
+  status: accepted_baseline_not_attribution_candidate_evidence
+  receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/96
+  main: 3534fdd59f219bdcd4943aded4b86f7883b0d382
+  tree: 5c6491a66fc4df029f57edb17cd46f2cf269db75
+  CI: 42459836502
+  counts: Python6696_plus58_exact_skips_frontend1356_API1
+  aggregate: 27_of27_single_attempt
+  browser: 136_direct_136_aggregate_all_three_edit_journeys_first_attempt
+  repetitions: sync20_cutover9_administration5_inventory10_kernel14
+  main_checks: ten_success_four_workflows_attempt1
+  review: source_coverage_container_cleanup_and_artifact_digests_verified
+  browser_artifacts: structured_reports_inspected_not_screenshots_videos_traces
+  build_resource_cleanup: not_assessed
+  source_stage_pending: historical_superseded_only_for_accepted_main
+
+historical_customer_editing_current_checkpoint: customer_editing_20261108
 customer_editing_20261108:
   status: locally_verified_memory_only_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-08-customer-editing.md
@@ -3013,7 +3058,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-08-customer-editing.md
+active_plan: docs/10-spec-development/2026-11-08-order-transition-attribution.md
+historical_customer_editing_plan: docs/10-spec-development/2026-11-08-customer-editing.md
 historical_inventory_plan: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
 historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text-admission.md
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
@@ -3029,7 +3075,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: customer_editing_20261108
+last_checkpoint: order_transition_attribution_20261108
+historical_customer_editing_last_checkpoint: customer_editing_20261108
 historical_inventory_last_checkpoint: inventory_regression_retention_20261107
 historical_workshop_text_last_checkpoint: workshop_text_admission_20261105
 historical_backup_parser_last_checkpoint: backup_manifest_duplicates_20261105

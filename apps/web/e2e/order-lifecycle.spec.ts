@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  apiLogin,
   createCaseIdentity,
   createCustomer,
   holdJournalCompletion,
@@ -76,15 +77,35 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   await expect(page.locator('.order-actions button:disabled')).toHaveCount(0)
   await revealOrder(page, problem)
   await expect(card.getByText('En diagnóstico', { exact: true })).toBeVisible()
+  const localTransition = (await kernelSnapshot(page)).events.find(
+    (event) => event.kind === 'local' && event.details.order_id === originalOrder.entityId,
+  )!
+  expect(localTransition.details.actor_id).toBe(identity.userId)
+  const recordedTime = localTransition.details.occurred_at as string
+  const history = card.locator('.order-history')
+  await history.locator('summary').click()
+  await expect(history.getByText(`Autor (ID): ${identity.userId}`, { exact: true })).toBeVisible()
+  await expect(history.locator('time')).toHaveAttribute('datetime', recordedTime)
+  await expect(history.locator('time')).toHaveText(recordedTime)
+  await expect(history.getByText('Registro local', { exact: true })).toBeVisible()
+  await expect(history).toContainText('no implica aceptación del servidor')
   await page.reload({ waitUntil: 'domcontentloaded' })
   await waitForReady(page)
   await revealOrder(page, problem)
   await expect(card.getByText('En diagnóstico', { exact: true })).toBeVisible()
+  await card.getByRole('button', { name: 'Ver historial', exact: true }).click()
+  await history.locator('summary').click()
+  await expect(history.getByText(`Autor (ID): ${identity.userId}`, { exact: true })).toBeVisible()
+  await expect(history.locator('time')).toHaveAttribute('datetime', recordedTime)
+  await expect(history.locator('time')).toHaveText(recordedTime)
+  await expect(history.getByText('Registro local', { exact: true })).toBeVisible()
+  const remoteIdentity = await createCaseIdentity(request)
+  const remoteToken = await apiLogin(request, remoteIdentity.username)
   for (const action of ['start_diagnosis', 'authorize']) {
     const remote = await request.post(
       `/api/v1/service-orders/${originalOrder.entityId}/transitions`,
       {
-        headers: await writeHeaders(request, token),
+        headers: await writeHeaders(request, remoteToken),
         data: { action },
       },
     )
@@ -133,6 +154,26 @@ test('order lifecycle: offline intake, transitions, conflict and convergence', a
   )
   await card.getByRole('button', { name: 'Ver historial', exact: true }).click()
   await expect(card.locator('.order-history')).toBeVisible()
+  if (!(await history.evaluate((element) => (element as HTMLDetailsElement).open)))
+    await history.locator('summary').click()
+  // Different IDs remain distinct; local rejected attempts are not server acceptance.
+  await expect(history.locator('ol > li')).toHaveCount(4)
+  await expect(history.getByText('Registro local', { exact: true })).toHaveCount(2)
+  await expect(history.getByText('Registro del servidor', { exact: true })).toHaveCount(2)
+  await expect(history).toContainText('puede incluir intentos rechazados o en conflicto')
+  await expect(history.getByText(`Autor (ID): ${identity.userId}`, { exact: true })).toHaveCount(2)
+  await expect(
+    history.getByText(`Autor (ID): ${remoteIdentity.userId}`, { exact: true }),
+  ).toHaveCount(2)
+  await expect(history.locator('time').filter({ hasText: recordedTime })).toHaveCount(1)
+  for (const author of [identity.userId, remoteIdentity.userId]) {
+    for (const label of await history.getByText(`Autor (ID): ${author}`, { exact: true }).all())
+      await expect(label).toBeVisible()
+  }
+  for (const source of ['Registro local', 'Registro del servidor']) {
+    for (const label of await history.getByText(source, { exact: true }).all())
+      await expect(label).toBeVisible()
+  }
 
   const second = await browser.newContext()
   try {

@@ -82,6 +82,8 @@ try {
     'tests/runtime/capture-visit-continuity.test.mjs',
     'tests/runtime/capture-leave.test.mjs',
     'tests/runtime/order-transition-feedback.test.mjs',
+    'tests/runtime/order-history.test.mjs',
+    'tests/orders/order-history.test.mjs',
     'tests/runtime/transition-protection.test.mjs',
     'tests/runtime/account-access.test.mjs',
     'tests/runtime/connected-read.test.mjs',

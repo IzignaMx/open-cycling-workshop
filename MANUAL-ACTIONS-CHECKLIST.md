@@ -1,5 +1,35 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-08 · Order transition attribution
+
+- [x] Reconcile accepted PR96 main and select bounded author/date/source display
+      under the user's multi-user workshop request; FR-SVC-016/R02-T013 stays partial.
+- [x] Inspect timestamp/actor provenance and existing scoped history. Local records
+      include attempts, not necessarily pending or server-accepted transitions.
+- [x] Complete RED/GREEN, final local checks and independent review: Python 6,070
+      plus 685 environment skips; frontend 1,403/API one; 21 aggregate checks pass,
+      five environment blockers. Independent 64 focused checks pass. Baseline
+      results are not candidate proof; browser/PostgreSQL remain unqualified.
+- [ ] Obtain specific publication authorization before opening a new PR, then
+      qualify the candidate in its own hosted/browser environment.
+- Author identifiers are not mechanic assignment or resolved names. No IAM lookup,
+  new permission, schema, API, notification dispatch or deployment is included.
+  Physical T1–T8/R01-T035, M2/capacity and real-data restore remain unqualified.
+  Evidence: [bounded record](docs/10-spec-development/2026-11-08-order-transition-attribution.md).
+
+## 2026-11-08 · PR96 accepted main baseline
+
+- [x] Fresh main 3534fdd5/tree 5c6491a6 passed CI42459836502: Python 6,696 plus
+      58 intentional skips, frontend 1,356/API one, aggregate 27/27; direct and
+      aggregate browser 136/136 each, all single-attempt. Repetitions 20/9/5/10 and
+      kernel 14 passed; all ten checks/four workflows passed on attempt one.
+- [x] Independently check source, complete coverage, container cleanup and artifact
+      sizes/digests. Browser structured reports were inspected, not pixels/videos/
+      traces; build-resource cleanup was not assessed.
+- The [PR96 receipt](https://github.com/IzignaMx/open-cycling-workshop/pull/96)
+  supersedes historical customer-edit publication/CI blockers below only for that
+  accepted main. It does not qualify the new attribution candidate or physical gates.
+
 ## 2026-11-08 · Independent existing-customer editing
 
 - [x] Explicit user decision permits name/email/phone editing as a bounded

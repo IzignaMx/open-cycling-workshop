@@ -46,7 +46,8 @@ import {
 } from './account-access.js'
 import { WorkshopRepositories, type IntakeInput } from './repositories.js'
 import type { LocalCustomer } from '../local/types.js'
-import type { LocalServiceOrder, LocalServiceOrderEvent } from '../local/service-order-types.js'
+import type { LocalServiceOrder } from '../local/service-order-types.js'
+import type { OrderHistoryEvent } from '../features/orders/order-history.js'
 import type { OrderAction } from '../features/orders/state-machine.js'
 
 export interface RuntimeIssue {
@@ -68,7 +69,7 @@ export interface WorkshopSnapshot {
   customerLookup: CustomerLookupSnapshot | null
   customers: LocalCustomer[]
   orders: LocalServiceOrder[]
-  events: LocalServiceOrderEvent[]
+  events: OrderHistoryEvent[]
   issues: RuntimeIssue[]
   locations: WorkshopLocation[]
   nextLocation: string | null
@@ -2101,7 +2102,10 @@ export class WorkshopController {
     if (!authorizedOrder || !current()) return false
     const local = await this.repositories.localTimeline(source, orderId)
     if (!current()) return false
-    let events = local.events,
+    let events: OrderHistoryEvent[] = local.events.map((row) => ({
+        ...row,
+        recordSource: 'local',
+      })),
       message = local.partial
         ? 'Historial local parcial.'
         : 'Historial local de esta sesión; la copia inicial no incluye todo el historial.'
@@ -2112,7 +2116,9 @@ export class WorkshopController {
           source.context.principal.organizationId,
           orderId,
         )
-        const merged = new Map(remote.map((row) => [row.event_id, row]))
+        const merged = new Map<string, OrderHistoryEvent>(
+          remote.map((row) => [row.event_id, { ...row, recordSource: 'server' }]),
+        )
         for (const row of events) merged.set(row.event_id, row)
         events = [...merged.values()]
         message = local.partial
@@ -2126,7 +2132,12 @@ export class WorkshopController {
       message = 'Sin conexión: el historial remoto no está disponible. Se muestran cambios locales.'
     if (!current()) return false
     this.publish({
-      events: events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)),
+      // Preserve lexical ordering for source strings; malformed local dates must not crash history.
+      events: events.sort((a, b) =>
+        (typeof a.occurred_at === 'string' ? a.occurred_at : '').localeCompare(
+          typeof b.occurred_at === 'string' ? b.occurred_at : '',
+        ),
+      ),
       timelineMessage: message,
     })
     return current()
