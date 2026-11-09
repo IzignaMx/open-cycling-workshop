@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type ChangeEvent } from 'react'
-import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
+import type { LocalServiceOrder } from '../../local/service-order-types.js'
+import { historyActorId, historyOccurrence, type OrderHistoryEvent } from './order-history.js'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
 import { orderActionsFor, type OrderAction } from './state-machine.js'
 import type { OrderTransitionResult } from '../../runtime/order-transition-outcome.js'
@@ -8,7 +9,7 @@ import type { TransitionProtectionSnapshot } from '../../runtime/transition-prot
 
 export interface OrderListProps {
   orders: readonly LocalServiceOrder[]
-  events: readonly LocalServiceOrderEvent[]
+  events: readonly OrderHistoryEvent[]
   canTransition: boolean
   protection: TransitionProtectionSnapshot
   canReadBicycleInfo: boolean
@@ -27,7 +28,7 @@ function OrderRecord({
   transitionDisabled,
 }: {
   order: LocalServiceOrder
-  events: readonly LocalServiceOrderEvent[]
+  events: readonly OrderHistoryEvent[]
   canTransition: boolean
   canReadBicycleInfo: boolean
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
@@ -98,14 +99,41 @@ function OrderRecord({
       {events.length > 0 ? (
         <details className="order-history">
           <summary>Historial ({events.length})</summary>
+          <p>
+            El registro local no implica aceptación del servidor; puede incluir intentos rechazados
+            o en conflicto.
+          </p>
           <ol>
-            {events.map((event) => (
-              <li key={event.event_id}>
-                {TRANSITION_ACTION_LABELS[event.action] ?? event.action} ·{' '}
-                {ORDER_STATE_LABELS[event.from_state] ?? event.from_state} →{' '}
-                {ORDER_STATE_LABELS[event.to_state] ?? event.to_state}
-              </li>
-            ))}
+            {events.map((event) => {
+              const occurredAt = historyOccurrence(event.occurred_at)
+              return (
+                <li key={event.event_id}>
+                  {TRANSITION_ACTION_LABELS[event.action] ?? event.action} ·{' '}
+                  {ORDER_STATE_LABELS[event.from_state] ?? event.from_state} →{' '}
+                  {ORDER_STATE_LABELS[event.to_state] ?? event.to_state}
+                  <div className="order-history-metadata">
+                    <span>
+                      Autor (ID): <bdi dir="auto">{historyActorId(event.actor_id)}</bdi>
+                    </span>
+                    <span>
+                      Fecha registrada:{' '}
+                      {occurredAt ? (
+                        <time dateTime={occurredAt}>{occurredAt}</time>
+                      ) : (
+                        'No disponible o sin zona horaria verificable'
+                      )}
+                    </span>
+                    <span>
+                      {event.recordSource === 'local'
+                        ? 'Registro local'
+                        : event.recordSource === 'server'
+                          ? 'Registro del servidor'
+                          : 'Origen no disponible'}
+                    </span>
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         </details>
       ) : null}

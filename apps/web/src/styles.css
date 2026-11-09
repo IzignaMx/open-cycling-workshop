@@ -448,6 +448,10 @@ body {
   display: grid;
   gap: 8px;
 }
+.order-history-metadata {
+  display: grid;
+  overflow-wrap: anywhere;
+}
 .order-error {
   color: #8d3028;
   background: #fce9e7;

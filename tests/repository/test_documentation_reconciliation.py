@@ -1164,8 +1164,8 @@ def test_inventory_regression_retention_preserves_source_acceptance_boundaries()
 
 def test_customer_editing_is_a_bounded_independent_prerequisite() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: customer_editing_20261108" in state
-    assert "active_plan: " + BASE + "2026-11-08-customer-editing.md" in state
+    assert "historical_customer_editing_current_checkpoint: customer_editing_20261108" in state
+    assert "historical_customer_editing_plan: " + BASE + "2026-11-08-customer-editing.md" in state
     block = state.split("customer_editing_20261108:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "authorization: explicit_independent_customer_edit_exception",
@@ -1193,3 +1193,40 @@ def test_customer_editing_is_a_bounded_independent_prerequisite() -> None:
     row = next(row for row in rows if row["requirement_id"] == "FR-CUS-003")
     assert row["task_id"] == "R02-T001" and row["status"] == "partial"
     assert row["evidence"] == BASE + "2026-11-08-customer-editing.md"
+
+
+def test_order_attribution_keeps_authorship_provenance_and_release_limits() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: order_transition_attribution_20261108" in state
+    block = state.split("order_transition_attribution_20261108:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "canonical_pair: FR-SVC-016_R02-T013_partial",
+        "actor_display: full_recorded_identifier_not_assignment",
+        "timestamp: recorded_time_not_server_clock_proof",
+        "local_record: not_equivalent_to_pending_or_accepted",
+        "storage_schema_wire_permissions: unchanged",
+        "publication: not_authorized_for_this_increment",
+        "physical_T1_T8_R01_T035: deferred_not_accepted",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-08-order-transition-attribution.md")
+    design = read("docs/superpowers/specs/2026-11-08-order-transition-attribution-design.md")
+    for token in (
+        "3534fdd59f219bdcd4943aded4b86f7883b0d382",
+        "FR-SVC-016/R02-T013",
+        "FR-SVC-004",
+        "FR-STF-003",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+    for token in ("recordSource", "actor_id", "occurred_at", "No IAM lookup", "event_id"):
+        assert token in design
+    baseline = state.split("pr96_fresh_main_acceptance_20261108:\n", 1)[1].split("\n\n", 1)[0]
+    assert "3534fdd59f219bdcd4943aded4b86f7883b0d382" in baseline
+    assert "CI: 42459836502" in baseline
+    assert "accepted_baseline_not_attribution_candidate_evidence" in baseline
+    rows = list(csv.DictReader(read(BASE + "traceability.csv").splitlines()))
+    row = next(row for row in rows if row["requirement_id"] == "FR-SVC-016")
+    assert row["task_id"] == "R02-T013" and row["status"] == "partial"
+    assert row["evidence"] == BASE + "2026-11-08-order-transition-attribution.md"
