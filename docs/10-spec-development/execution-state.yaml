@@ -1,6 +1,55 @@
 schema: 1
 
-current_checkpoint: order_transition_attribution_20261108
+current_checkpoint: frontend_diagnostic_retention_20261109
+frontend_diagnostic_retention_20261109:
+  status: locally_verified_unpublished_original_main_failure_unresolved
+  evidence: docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md
+  base_main: ba831f84575cfb04ce325ad72c1b4f7a28f3bebe
+  base_tree: f91656894aabf7f504735f430efce32817167964
+  scope: bounded_frontend_failure_diagnostics_only
+  process_exit: unchanged_authoritative_pass_fail
+  original_hosted_case: unknown_not_recovered
+  original_hosted_cause: unknown_not_resolved
+  raw_output_and_sensitive_values: not_new_public_diagnostics
+  publication: not_authorized_for_this_increment
+  main_CI: remains_failed_42556226651_attempt1
+  diagnostics: structured_Node_events_private_transport_not_authenticated_qualification
+  bounds: eight_failure_events_200_character_paths_report_below8192_detail_below4000
+  raw_compiler_and_test_output: discarded_in_frontend_aggregate_only
+  unsupported_secure_open: unavailable_diagnostics_preserve_exit_status
+  focused_checks: new27_plus_existing203_passed
+  independent_review: accepted279_including_documentation49
+  real_frontend: 1403_passed_final_frozen_candidate_zero_skips_API1
+  local_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  local_Python: 6098_passed_685_environment_skips_12_warnings_384_01s
+  local_python_version: 3_13_5_not_hosted_pinned3_13_14
+  full_run_scope: frozen_implementation_tests_before_evidence_only_stamp
+  post_stamp_repository: 198_passed
+  aggregate_git_metadata: base_HEAD_uncommitted_candidate_not_base_acceptance
+  physical_capacity_deployment: unchanged_not_accepted
+
+pr97_integration_main_failure_20261109:
+  status: integrated_main_qualification_failed
+  receipt: https://github.com/IzignaMx/open-cycling-workshop/pull/97
+  main: ba831f84575cfb04ce325ad72c1b4f7a28f3bebe
+  tree: f91656894aabf7f504735f430efce32817167964
+  published_head: d0638c8c4cf73a4175bcb9b43e7e70927c61f064
+  PR_CI: 42551780338_passed_attempt1
+  main_CI: 42556226651_failed_attempt1
+  aggregate: 26_passed_one_failed_frontend_core_tests
+  frontend_second_run: 1402_passed_one_failed_case_unidentified
+  diagnostic_loss: only_last4000_characters_retained
+  local_reproduction: two_runs_1403_passed_each_does_not_resolve_hosted_failure
+  main_Python: 6697_passed_plus58_exact_skips_zero_unrun
+  main_browser: direct136_aggregate136_all_first_attempt
+  main_repetitions: sync_order20_cutover9_administration5_inventory10_kernel14
+  browser_artifacts: bytes_digests_and_structured_details_verified_not_visual_review
+  build_resource_cleanup_and_proxy_error_correlation: not_assessed_or_unqualified
+  post_failure_workflow_reruns: none
+  release_physical_capacity: unchanged_partial_not_accepted
+  historical_publication_pending: superseded_only_for_integrated_PR97_not_main_acceptance
+
+historical_order_attribution_current_checkpoint: order_transition_attribution_20261108
 order_transition_attribution_20261108:
   status: locally_verified_unpublished_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-08-order-transition-attribution.md
@@ -3058,14 +3107,15 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-08-order-transition-attribution.md
+active_plan: docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md
+historical_order_attribution_plan: docs/10-spec-development/2026-11-08-order-transition-attribution.md
 historical_customer_editing_plan: docs/10-spec-development/2026-11-08-customer-editing.md
 historical_inventory_plan: docs/10-spec-development/2026-11-07-inventory-regression-retention.md
 historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text-admission.md
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: locally_verified_memory_only_hosted_qualification_pending
+active_plan_status: local_diagnostic_verified_unpublished_main_failure_unresolved
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3075,7 +3125,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: order_transition_attribution_20261108
+last_checkpoint: frontend_diagnostic_retention_20261109
+historical_order_attribution_last_checkpoint: order_transition_attribution_20261108
 historical_customer_editing_last_checkpoint: customer_editing_20261108
 historical_inventory_last_checkpoint: inventory_regression_retention_20261107
 historical_workshop_text_last_checkpoint: workshop_text_admission_20261105

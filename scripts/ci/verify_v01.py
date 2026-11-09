@@ -1536,6 +1536,121 @@ def pytest_configure(config: Any) -> None:
         config.pluginmanager.register(_FullPythonPlugin(config), "ocwp-full-python-proof")
 
 
+# Frontend diagnostics are deliberately separate from ordinary stdout/stderr.
+# The same-user report is troubleshooting metadata, not authenticated evidence.
+FRONTEND_REPORT_LIMIT = 8192
+FRONTEND_MAXIMUM = 9_999_999
+FRONTEND_COUNTS = {"tests", "suites", "passed", "failed", "cancelled", "skipped", "todo"}
+
+
+def _frontend_inventory() -> set[str]:
+    runner = ROOT / "apps/web/tools/run-core-tests.mjs"
+    with runner.open("r", encoding="utf-8") as source:
+        text = source.read(65537)
+    if len(text) > 65536:
+        raise ValueError("inventory_size")
+    paths = re.findall(r"'((?:tests/|\.\./\.\./tests/)[a-z0-9/-]+\.test\.mjs)'", text)
+    return {
+        relative
+        for path in paths
+        if (relative := path[6:] if path.startswith("../../") else f"apps/web/{path}")
+        and len(relative) <= 200
+        and all(part not in {"", ".", ".."} for part in relative.split("/"))
+    }
+
+
+def _frontend_report(path: Path) -> dict[str, Any]:
+    def integer(value: object) -> bool:
+        return type(value) is int and 0 <= value <= FRONTEND_MAXIMUM
+
+    # Never follow a replaced final symlink or block on a FIFO; read at most 8 KiB.
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    nonblock = getattr(os, "O_NONBLOCK", None)
+    if nofollow is None or nonblock is None:
+        raise ValueError("safe_report_read_unavailable")
+    descriptor = os.open(path, os.O_RDONLY | nofollow | nonblock)
+    with os.fdopen(descriptor, "rb") as source:
+        if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+            raise ValueError("report_type")
+        raw = source.read(FRONTEND_REPORT_LIMIT)
+    if len(raw) >= FRONTEND_REPORT_LIMIT:
+        raise ValueError("report_size")
+    value = json.loads(raw, object_pairs_hook=_full_pairs, parse_constant=_full_constant)
+    if type(value) is not dict or set(value) != {
+        "version",
+        "failures",
+        "omitted",
+        "overflow",
+        "counts",
+    }:
+        raise ValueError("report_fields")
+    if type(value["version"]) is not int or value["version"] != 1:
+        raise ValueError("report_version")
+    failures = value["failures"]
+    if type(failures) is not list or len(failures) > 8:
+        raise ValueError("report_failures")
+    inventory = _frontend_inventory()
+    for failure in failures:
+        if type(failure) is not dict or set(failure) != {"file", "line", "column"}:
+            raise ValueError("failure_fields")
+        filename = failure["file"]
+        if filename is not None and (type(filename) is not str or filename not in inventory):
+            raise ValueError("failure_file")
+        for key in ("line", "column"):
+            number = failure[key]
+            if number is not None and (not integer(number) or number == 0 or filename is None):
+                raise ValueError("failure_position")
+    if not integer(value["omitted"]) or type(value["overflow"]) is not bool:
+        raise ValueError("report_omission")
+    if value["omitted"] and len(failures) != 8:
+        raise ValueError("report_omission")
+    if value["overflow"] and value["omitted"] != FRONTEND_MAXIMUM:
+        raise ValueError("report_overflow")
+    counts = value["counts"]
+    if counts is not None and (
+        type(counts) is not dict
+        or set(counts) != FRONTEND_COUNTS
+        or not all(integer(number) for number in counts.values())
+    ):
+        raise ValueError("report_counts")
+    return value
+
+
+def _frontend_check(command: list[str], *, env: dict[str, str] | None, cwd: Path | None) -> Check:
+    # Discard untrusted compiler/test output rather than retaining arbitrary blobs
+    # in memory, artifacts or the public aggregate. The reporter emits one bounded
+    # record; stdout text can never impersonate its structural events.
+    with tempfile.TemporaryDirectory(prefix="ocwp-frontend-") as directory:
+        path = Path(directory) / "diagnostics.json"
+        child_env = dict(os.environ if env is None else env)
+        child_env["OCWP_FRONTEND_DIAGNOSTIC_FILE"] = str(path)
+        result = subprocess.run(
+            command,
+            cwd=cwd or ROOT,
+            env=child_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        detail: dict[str, Any] = {
+            "diagnostics": "unavailable",
+            "counts": None,
+            "raw_output": "omitted",
+            "authority": "process_exit_only",
+        }
+        try:
+            report = _frontend_report(path)
+        except (OSError, ValueError, UnicodeError, RecursionError):
+            pass
+        else:
+            detail.update(report)
+            detail["diagnostics"] = "available"
+        return Check(
+            "frontend_core_tests",
+            "pass" if result.returncode == 0 else "fail",
+            json.dumps(detail, ensure_ascii=True, sort_keys=True, separators=(",", ":")),
+        )
+
+
 def run_check(
     name: str,
     command: list[str],
@@ -1543,6 +1658,8 @@ def run_check(
     env: dict[str, str] | None = None,
     cwd: Path | None = None,
 ) -> Check:
+    if name == "frontend_core_tests":
+        return _frontend_check(command, env=env, cwd=cwd)
     result = subprocess.run(command, cwd=cwd or ROOT, env=env, text=True, capture_output=True)
     detail = (result.stdout + result.stderr).strip()
     return Check(

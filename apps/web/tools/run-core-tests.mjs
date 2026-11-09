@@ -46,6 +46,12 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.inventory-test.json', '--pretty', 'false'])
   run(process.execPath, [
     '--test',
+    ...(process.env.OCWP_FRONTEND_DIAGNOSTIC_FILE
+      ? [
+          `--test-reporter=${fileURLToPath(new URL('./aggregate-test-reporter.mjs', import.meta.url))}`,
+          `--test-reporter-destination=${process.env.OCWP_FRONTEND_DIAGNOSTIC_FILE}`,
+        ]
+      : []),
     'tests/module-information/reference.test.mjs',
     'tests/access-kernel/context.test.mjs',
     'tests/access-kernel/cutover-context.test.mjs',

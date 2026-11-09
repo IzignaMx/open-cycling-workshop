@@ -1,5 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-09 · Frontend diagnostics and unresolved main failure
+
+- [x] Integrate PR97 only after review and all PR checks passed. Its exact reviewed
+      tree is now main ba831f8; this supersedes historical publication-pending
+      entries only for that integration, not main qualification.
+- [x] Preserve failed main CI42556226651 attempt one: aggregate 26/27; second
+      frontend invocation 1,402 passed/one failed. The 4,000-character output tail
+      lost the failing case. Two local 1,403/1,403 passes do not resolve its cause.
+- [x] Prepare and validate bounded private-data-safe frontend diagnostics: Python
+      6,098 plus 685 environment skips; frontend 1,403/API one; 21 checks pass,
+      five environment blockers. Independent review accepted; process pass/fail
+      remains authoritative. Original main failure is not resolved.
+- [ ] Obtain specific authorization before publishing a new diagnostic candidate.
+      Main remains failed; no workflow rerun or new acceptance is inferred.
+- Physical T1–T8/R01-T035, M2/capacity, deployment and real-data restore remain
+  unqualified. Evidence: [bounded record](docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md).
+
 ## 2026-11-08 · Order transition attribution
 
 - [x] Reconcile accepted PR96 main and select bounded author/date/source display

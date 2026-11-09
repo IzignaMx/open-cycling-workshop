@@ -1197,7 +1197,10 @@ def test_customer_editing_is_a_bounded_independent_prerequisite() -> None:
 
 def test_order_attribution_keeps_authorship_provenance_and_release_limits() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: order_transition_attribution_20261108" in state
+    assert (
+        "historical_order_attribution_current_checkpoint: order_transition_attribution_20261108"
+        in state
+    )
     block = state.split("order_transition_attribution_20261108:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "canonical_pair: FR-SVC-016_R02-T013_partial",
@@ -1230,3 +1233,42 @@ def test_order_attribution_keeps_authorship_provenance_and_release_limits() -> N
     row = next(row for row in rows if row["requirement_id"] == "FR-SVC-016")
     assert row["task_id"] == "R02-T013" and row["status"] == "partial"
     assert row["evidence"] == BASE + "2026-11-08-order-transition-attribution.md"
+
+
+def test_frontend_diagnostics_preserves_unresolved_main_failure_and_privacy() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: frontend_diagnostic_retention_20261109" in state
+    block = state.split("frontend_diagnostic_retention_20261109:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "scope: bounded_frontend_failure_diagnostics_only",
+        "process_exit: unchanged_authoritative_pass_fail",
+        "original_hosted_case: unknown_not_recovered",
+        "original_hosted_cause: unknown_not_resolved",
+        "raw_output_and_sensitive_values: not_new_public_diagnostics",
+        "publication: not_authorized_for_this_increment",
+        "main_CI: remains_failed_42556226651_attempt1",
+        "physical_capacity_deployment: unchanged_not_accepted",
+    ):
+        assert token in block
+    receipt = state.split("pr97_integration_main_failure_20261109:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "main: ba831f84575cfb04ce325ad72c1b4f7a28f3bebe",
+        "tree: f91656894aabf7f504735f430efce32817167964",
+        "PR_CI: 42551780338_passed_attempt1",
+        "main_CI: 42556226651_failed_attempt1",
+        "aggregate: 26_passed_one_failed_frontend_core_tests",
+        "frontend_second_run: 1402_passed_one_failed_case_unidentified",
+        "local_reproduction: two_runs_1403_passed_each_does_not_resolve_hosted_failure",
+    ):
+        assert token in receipt
+    record = read(BASE + "2026-11-09-frontend-diagnostic-retention.md")
+    for token in (
+        "42556226651",
+        "4,000",
+        "unknown",
+        "not resolved",
+        "No workflow rerun",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
