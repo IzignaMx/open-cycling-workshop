@@ -1,5 +1,15 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-10 · PR99 browser assertion follow-up
+
+- [x] Preserve CI42894474317 direct-browser failure: 133 passes, four structural
+      theme failures from a page-wide selector matching filter option plus badge.
+- [x] Scope only the unchanged state-visibility assertion to the named order list;
+      preserve all touch, color, reflow, screenshot and keyboard assertions.
+- [ ] Qualify the corrected source in its own hosted CI before integration.
+- Inventory expiry repetition was skipped; its incomplete evidence is downstream,
+  not an independently reproduced inventory defect. No failed workflow rerun.
+
 ## 2026-11-10 · Local order filters
 
 - [x] Add exact state and priority filters to the existing local queue with reset,

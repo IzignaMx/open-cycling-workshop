@@ -89,3 +89,44 @@ with the 200 repository contracts and formatting. Aggregate git metadata records
 base HEAD plus uncommitted candidate, not acceptance of the base or a future SHA.
 Publication is authorized; exact-candidate hosted/browser qualification and any
 integration are still pending. No deployment or physical acceptance follows.
+
+## Retained initial PR99 failure and scoped browser assertion
+
+Initial PR99 CI42894474317 attempt one failed its direct browser stage. Actual
+392,359,704-byte artifact13802836256 has SHA256
+`e314b53ccdaf983381c9bd600b1de431ca588f00b6f7d2fecea0a3bbc23f31b6`.
+Decoded structured report: 137 cases, 133 expected passes, four unexpected,
+zero flaky/skipped and no report-level errors. Each failing theme's original
+attempt and retry records the same strict-selector ambiguity: page-wide exact
+text “En trabajo” now matches both the new filter option and the order badge.
+The new filter journey passed once at retry zero; that does not cancel the four
+failed structural-theme journeys.
+
+The corrective test scopes that unchanged visible-state assertion to the
+semantically named order list. It does not use first/nth, remove an assertion,
+change a timeout/retry, alter fixtures, or change production behavior. Every
+original theme, touch target, protected-state color, narrow-reflow, screenshot
+and keyboard assertion remains. The genuine hosted failures provide observed
+RED; corrected genuine browser GREEN requires the new candidate's own CI.
+
+Inventory expiry repetition was skipped after the direct-browser failure; its
+always-run guard intentionally rejected the skipped outcome and produced only
+`{"status":"incomplete"}`. This is not evidence of an independently executed
+inventory defect. The earlier full-Python archive independently passed 6,727
+plus 58 exact skips with source/run/cleanup binding, but does not qualify the
+corrected source. No failed workflow was rerun. No merge/deployment occurred.
+
+A separate strict TypeScript command explicitly including the new browser test
+passed after review found that ordinary web tsconfig excludes e2e files. Thus
+browser-test typechecking is supported by that separate check, not collection
+or the ordinary web build. Structured reports were inspected; screenshot pixels,
+video and trace playback were not reviewed.
+
+Corrective local validation: frontend 1,418 passed with zero skips; repository
+contracts 200 passed; touched ESLint, Prettier and clean diff passed. Independent
+review accepted the exact selector correction and verified all four hosted
+failures against the shared report. An explicit standalone TypeScript check of
+structural-themes.spec.ts is blocked by its pre-existing Buffer references and
+missing @types/node in this checkout; it is not reported as passed. No shim,
+dependency, retry, timeout or production change was made. Corrected browser
+execution and publication remain pending.

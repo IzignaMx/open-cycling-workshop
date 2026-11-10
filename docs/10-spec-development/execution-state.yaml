@@ -2,9 +2,12 @@ schema: 1
 
 current_checkpoint: local_order_filters_20261110
 local_order_filters_20261110:
-  status: local_partial_hosted_qualification_pending
+  status: browser_assertion_followup_pending_new_hosted_qualification
   evidence: docs/10-spec-development/2026-11-10-local-order-filters.md
   base_main: 039669c5c9c9c0987922f72ee9d54c51ce80cf93
+  retained_initial_PR99_CI: 42894474317_direct_browser_failed_not_rerun
+  initial_browser: 133_passed_four_structural_theme_strict_selector_failures
+  browser_correction: scope_visible_state_assertion_to_named_order_list
   scope: transient_exact_state_priority_filters_existing_local_queue
   red: five_expected_failures_four_controls
   focused: 48_passed
