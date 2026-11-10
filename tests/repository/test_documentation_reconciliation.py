@@ -1237,7 +1237,9 @@ def test_order_attribution_keeps_authorship_provenance_and_release_limits() -> N
 
 def test_frontend_diagnostics_preserves_unresolved_main_failure_and_privacy() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: frontend_diagnostic_retention_20261109" in state
+    assert (
+        "historical_frontend_diagnostic_checkpoint: frontend_diagnostic_retention_20261109" in state
+    )
     block = state.split("frontend_diagnostic_retention_20261109:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "scope: bounded_frontend_failure_diagnostics_only",
@@ -1268,6 +1270,34 @@ def test_frontend_diagnostics_preserves_unresolved_main_failure_and_privacy() ->
         "unknown",
         "not resolved",
         "No workflow rerun",
+        "SPENT40927223929",
+        "UNKNOWN41011497919",
+    ):
+        assert token in record
+
+
+def test_frontend_completion_followup_preserves_failed_attempt_and_scope() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: frontend_sync_completion_followup_20261110" in state
+    block = state.split("frontend_sync_completion_followup_20261110:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "scope: test_completion_and_regressions_only",
+        "production_and_diagnostic_runtime: unchanged",
+        "publication: authorized_necessary_PR98_correction_conditional_merge",
+        "first_PR98_CI: 42572334394_failed_attempt1_not_rerun",
+        "first_PR98_browser_repetitions_kernel: unrun_not_qualified",
+        "original_main_case_and_cause: unknown_not_resolved",
+        "physical_capacity_deployment: unchanged_not_accepted",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-10-frontend-sync-completion.md")
+    for token in (
+        "42572334394",
+        "42556226651",
+        "synced",
+        "syncing",
+        "unknown",
+        "not resolved",
         "SPENT40927223929",
         "UNKNOWN41011497919",
     ):
