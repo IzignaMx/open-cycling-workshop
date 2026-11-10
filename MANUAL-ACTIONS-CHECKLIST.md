@@ -1,5 +1,43 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-10 · PR98 automatic-sync test completion
+
+- [x] Preserve PR98 CI42572334394 attempt one as failed. Its direct frontend
+      invocation identified `controller.test.mjs:1066`, expected `synced`, observed
+      `syncing`; 1,402 passed and one failed. The later 1,403-pass aggregate frontend
+      result does not cancel that failure. Browser, kernel and repetitions were skipped.
+- [x] Verify full source-bound Python/PostgreSQL 6,725 plus 58 exact skips and both
+      shard cleanups; auxiliary runtime/security/microfixture passed within scope.
+- [x] Reproduce delayed completion, preserve all assertions and correct waiter
+      cleanup. Eight focused and 1,409 frontend cases pass; deliberate old-wait,
+      early-failure and timeout controls fail as expected without unhandled activity.
+- [x] Finish independent review (161 controller cases) and full local aggregate:
+      Python 6,099 plus 685 environment skips, frontend 1,409/API one, 21 checks
+      pass and five environment blockers. Final repository contracts: 199 passed.
+- [ ] Publish the necessary correction in the already authorized PR98, qualify
+      its new source, and integrate only after review and all checks pass. Fresh
+      main verification remains separate; no rerun or acceptance is inferred.
+- Original main CI42556226651 has an unknown case/cause, still not resolved.
+  Physical T1–T8/R01-T035, M2/capacity, deployment and real-data restore remain
+  unqualified. [Follow-up record](docs/10-spec-development/2026-11-10-frontend-sync-completion.md).
+
+## 2026-11-09 · Frontend diagnostics and unresolved main failure
+
+- [x] Integrate PR97 only after review and all PR checks passed. Its exact reviewed
+      tree is now main ba831f8; this supersedes historical publication-pending
+      entries only for that integration, not main qualification.
+- [x] Preserve failed main CI42556226651 attempt one: aggregate 26/27; second
+      frontend invocation 1,402 passed/one failed. The 4,000-character output tail
+      lost the failing case. Two local 1,403/1,403 passes do not resolve its cause.
+- [x] Prepare and validate bounded private-data-safe frontend diagnostics: Python
+      6,098 plus 685 environment skips; frontend 1,403/API one; 21 checks pass,
+      five environment blockers. Independent review accepted; process pass/fail
+      remains authoritative. Original main failure is not resolved.
+- [ ] Obtain specific authorization before publishing a new diagnostic candidate.
+      Main remains failed; no workflow rerun or new acceptance is inferred.
+- Physical T1–T8/R01-T035, M2/capacity, deployment and real-data restore remain
+  unqualified. Evidence: [bounded record](docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md).
+
 ## 2026-11-08 · Order transition attribution
 
 - [x] Reconcile accepted PR96 main and select bounded author/date/source display

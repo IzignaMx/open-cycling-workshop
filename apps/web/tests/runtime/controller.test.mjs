@@ -1021,54 +1021,151 @@ for (const change of ['logout', 'metadata', 'takeover', 'expiry', 'rollback'])
     if (change === 'logout') assert.equal(signal.aborted, true)
   })
 
-for (const changedAuthority of [false, true])
-  test(`successful automatic verification overrides stale false hint before ${changedAuthority ? 'new baseline' : 'equivalent context'} dispatch`, async (t) => {
-    const { first, evidence } = await retainedReload(t)
-    const calls = []
-    t.mock.timers.enable({ apis: ['setTimeout'] })
-    const second = setup(t, {
-      name: first.name,
-      storage: first.storage,
-      online: false,
-      server: {
-        fetch: async (url, init) => {
-          const path = new URL(url).pathname
-          calls.push(path)
-          if (path.endsWith('/sync/mutations'))
-            return response(url, {
-              results: JSON.parse(init.body).mutations.map((row) => ({
-                mutation_id: row.mutation_id,
-                entity_id: row.entity_id,
-                status: 'applied',
-                entity_version: 1,
-                error_code: null,
-                error_message: null,
-              })),
-            })
-          const original = await first.server.fetch(url, init)
-          if (!changedAuthority) return original
-          const body = JSON.stringify(await original.json())
-            .replaceAll(epoch, 'b'.repeat(43))
-            .replaceAll(baselineId, '0199ba00-0000-7000-8000-000000000003')
-          return response(url, JSON.parse(body))
+// Mock time controls scheduling, not completion of IndexedDB/WebCrypto/network work.
+// Advance only already-due timers until the requested condition actually holds.
+async function waitForAutomaticWork(t, ready, description, { signal, timeout = 5000 } = {}) {
+  const deadline = performance.now() + timeout
+  while (!ready()) {
+    signal?.throwIfAborted()
+    assert.ok(performance.now() < deadline, description())
+    await new Promise(setImmediate)
+    signal?.throwIfAborted()
+    t.mock.timers.tick(0)
+  }
+}
+
+test('automatic completion wait cancels before touching timers after teardown', async () => {
+  const controller = new AbortController()
+  let ticks = 0
+  const timerContext = {
+    mock: {
+      timers: {
+        tick() {
+          ticks++
+          throw new Error('timer touched after teardown')
         },
       },
+    },
+  }
+  const completion = waitForAutomaticWork(
+    timerContext,
+    () => false,
+    () => 'pending',
+    {
+      signal: controller.signal,
+    },
+  )
+  const rejected = assert.rejects(completion, { name: 'AbortError' })
+  controller.abort()
+  await rejected
+  assert.equal(ticks, 0)
+})
+
+test('automatic completion wait reports timeout instead of successful completion', async () => {
+  await assert.rejects(
+    waitForAutomaticWork(
+      null,
+      () => false,
+      () => 'automatic work did not complete',
+      { timeout: 0 },
+    ),
+    { code: 'ERR_ASSERTION', message: 'automatic work did not complete' },
+  )
+})
+
+for (const changedAuthority of [false, true])
+  for (const delayedDeltaNumber of [0, 1, 2])
+    test(`successful automatic verification overrides stale false hint before ${changedAuthority ? 'new baseline' : 'equivalent context'} dispatch${delayedDeltaNumber ? ` with delayed post-mutation delta ${delayedDeltaNumber}` : ''}`, async (t) => {
+      const { first, evidence } = await retainedReload(t)
+      const calls = []
+      const delayedDelta = Promise.withResolvers()
+      let mutationDispatched = false,
+        postMutationDeltas = 0,
+        deltaWaiting = false
+      t.after(() => delayedDelta.resolve())
+      t.mock.timers.enable({ apis: ['setTimeout'] })
+      const second = setup(t, {
+        name: first.name,
+        storage: first.storage,
+        online: false,
+        server: {
+          fetch: async (url, init) => {
+            const path = new URL(url).pathname
+            calls.push(path)
+            if (path.endsWith('/sync/deltas/page') && mutationDispatched) {
+              postMutationDeltas++
+              if (postMutationDeltas === delayedDeltaNumber) {
+                deltaWaiting = true
+                await delayedDelta.promise
+              }
+            }
+            if (path.endsWith('/sync/mutations')) {
+              mutationDispatched = true
+              return response(url, {
+                results: JSON.parse(init.body).mutations.map((row) => ({
+                  mutation_id: row.mutation_id,
+                  entity_id: row.entity_id,
+                  status: 'applied',
+                  entity_version: 1,
+                  error_code: null,
+                  error_message: null,
+                })),
+              })
+            }
+            const original = await first.server.fetch(url, init)
+            if (!changedAuthority) return original
+            const body = JSON.stringify(await original.json())
+              .replaceAll(epoch, 'b'.repeat(43))
+              .replaceAll(baselineId, '0199ba00-0000-7000-8000-000000000003')
+            return response(url, JSON.parse(body))
+          },
+        },
+      })
+      await second.runtime.start()
+      t.mock.timers.tick(2000)
+      const diagnostic = () => JSON.stringify({ sync: second.runtime.getSnapshot().sync, calls })
+      let completed = false
+      const completionController = new AbortController()
+      const completion = waitForAutomaticWork(
+        t,
+        () => second.runtime.getSnapshot().sync === 'synced',
+        diagnostic,
+        { signal: completionController.signal },
+      ).then(() => {
+        completed = true
+      })
+      // Observe rejection immediately, but propagate it through the explicit await.
+      // Always stop and drain the waiter if a gated assertion fails first.
+      const settled = completion.catch(() => {})
+      try {
+        if (delayedDeltaNumber) {
+          await waitForAutomaticWork(t, () => deltaWaiting, diagnostic)
+          // Reproduce the old finite drain with genuine async work still pending.
+          // Neither this drain nor ticking zero proves the scheduled pass completed.
+          for (let i = 0; i < 20; i++) {
+            await settleProbe()
+            t.mock.timers.tick(0)
+          }
+          assert.equal(completed, false, 'completion must wait for the held delta response')
+          assert.equal(second.runtime.getSnapshot().sync, 'syncing')
+          assert.equal((await second.database.operationDelivery.toArray())[0].state, 'applied')
+          delayedDelta.resolve()
+        }
+        await completion
+      } finally {
+        completionController.abort()
+        delayedDelta.resolve()
+        await settled
+      }
+      assert.ok(postMutationDeltas >= 2, 'the APPLIED pass must be followed by its idle pass')
+      assert.equal(second.env.online, false)
+      assert.equal(second.runtime.getSnapshot().phase, 'ready')
+      assert.equal(second.runtime.getSnapshot().sync, 'synced', JSON.stringify(calls))
+      assert.equal((await second.database.operationDelivery.toArray())[0].state, 'applied')
+      assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
+      assert.ok(calls.indexOf('/api/v1/auth/context') < calls.indexOf('/api/v1/sync/mutations'))
+      assert.equal(calls.includes('/api/v1/sync/baselines/start'), changedAuthority)
     })
-    await second.runtime.start()
-    t.mock.timers.tick(2000)
-    for (let i = 0; i < 20; i++) {
-      await settleProbe()
-      t.mock.timers.tick(0)
-      if (second.runtime.getSnapshot().sync === 'synced') break
-    }
-    assert.equal(second.env.online, false)
-    assert.equal(second.runtime.getSnapshot().phase, 'ready')
-    assert.equal(second.runtime.getSnapshot().sync, 'synced', JSON.stringify(calls))
-    assert.equal((await second.database.operationDelivery.toArray())[0].state, 'applied')
-    assert.deepEqual(await second.database.operationJournal.toArray(), evidence.journal)
-    assert.ok(calls.indexOf('/api/v1/auth/context') < calls.indexOf('/api/v1/sync/mutations'))
-    assert.equal(calls.includes('/api/v1/sync/baselines/start'), changedAuthority)
-  })
 
 test('duplicate offline notifications preserve the probe backoff and original admission', async (t) => {
   const { first } = await retainedReload(t)
