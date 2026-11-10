@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-10 · Local order queue filters
+
+- Add exact state and priority filters, combined text search and a clear action
+  to the existing local order queue. Filters preserve ordering and do not write
+  data or change transition admission, permissions or inventory.
+- Add focused regression coverage and a browser journey. Exact-candidate browser
+  and hosted qualification remain separate from local unit/static evidence.
+
 ## 2026-10-27 · Inactive quote HTTP privacy prerequisite (pending hosted proof)
 
 - Prepare exact quote-namespace private responses, generated request IDs and

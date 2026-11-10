@@ -1,3 +1,4 @@
+import { filterOrders } from './order-filter.js'
 import { useState, type CSSProperties, type ChangeEvent } from 'react'
 import type { LocalServiceOrder } from '../../local/service-order-types.js'
 import { historyActorId, historyOccurrence, type OrderHistoryEvent } from './order-history.js'
@@ -156,6 +157,9 @@ export function OrderList({
   protection,
 }: OrderListProps) {
   const [query, setQuery] = useState('')
+  const [state, setState] = useState('')
+  const [priority, setPriority] = useState('')
+  const hasFilters = Boolean(query.trim() || state || priority)
   async function transition(order: LocalServiceOrder, action: OrderAction) {
     if (!canTransition || protection.notice || protection.states.has(order.order_id)) return
     // Admission and outcome ownership live in the host, not this replaceable view.
@@ -165,11 +169,7 @@ export function OrderList({
       /* Never echo arbitrary errors. */
     }
   }
-  const filtered = orders.filter((order) =>
-    `${order.reported_problem} ${order.order_id} ${ORDER_STATE_LABELS[order.state] ?? order.state}`
-      .toLocaleLowerCase()
-      .includes(query.trim().toLocaleLowerCase()),
-  )
+  const filtered = filterOrders(orders, { query, state, priority })
   return (
     <>
       {protection.notice ? (
@@ -187,14 +187,57 @@ export function OrderList({
             placeholder="Problema, identificador o estado"
           />
         </label>
+        <label>
+          Estado de la orden
+          <select
+            value={state}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setState(event.currentTarget.value)
+            }
+          >
+            <option value="">Todos los estados</option>
+            {Object.entries(ORDER_STATE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Prioridad de la orden
+          <select
+            value={priority}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setPriority(event.currentTarget.value)
+            }
+          >
+            <option value="">Todas las prioridades</option>
+            <option value="low">Baja</option>
+            <option value="normal">Normal</option>
+            <option value="high">Alta</option>
+            <option value="urgent">Urgente</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={!hasFilters}
+          onClick={() => {
+            setQuery('')
+            setState('')
+            setPriority('')
+          }}
+        >
+          Limpiar filtros
+        </button>
         <p className="muted" role="status">
-          {query ? `${filtered.length} resultados locales` : 'Ordenadas por fecha de registro'}
+          {hasFilters ? `${filtered.length} resultados locales` : 'Ordenadas por fecha de registro'}
         </p>
       </div>
       {orders.length === 0 ? (
         <p className="empty-state">Aún no hay órdenes de servicio registradas.</p>
       ) : filtered.length === 0 ? (
-        <p className="empty-state">No hay órdenes que coincidan. Prueba otra búsqueda.</p>
+        <p className="empty-state">No hay órdenes que coincidan. Cambia o limpia los filtros.</p>
       ) : (
         <>
           <div className="order-column-labels" aria-hidden="true">

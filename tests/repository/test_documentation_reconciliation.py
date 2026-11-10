@@ -1278,7 +1278,9 @@ def test_frontend_diagnostics_preserves_unresolved_main_failure_and_privacy() ->
 
 def test_frontend_completion_followup_preserves_failed_attempt_and_scope() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: frontend_sync_completion_followup_20261110" in state
+    assert (
+        "historical_frontend_sync_checkpoint: frontend_sync_completion_followup_20261110" in state
+    )
     block = state.split("frontend_sync_completion_followup_20261110:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "scope: test_completion_and_regressions_only",
@@ -1302,3 +1304,15 @@ def test_frontend_completion_followup_preserves_failed_attempt_and_scope() -> No
         "UNKNOWN41011497919",
     ):
         assert token in record
+
+
+def test_local_order_filters_keep_view_only_scope_and_retained_regressions() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: local_order_filters_20261110" in state
+    assert "permissions_schema_sync_inventory_writes: unchanged" in state
+    record = read(BASE + "2026-11-10-local-order-filters.md")
+    for token in ("FR-SVC-004", "not persisted", "No schema", "unknown case/cause"):
+        assert token in record
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "tests/orders/order-filter.test.mjs" in runner
+    assert (ROOT / "apps/web/e2e/order-filters.spec.ts").is_file()
