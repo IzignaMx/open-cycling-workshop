@@ -1,6 +1,26 @@
 schema: 1
 
-current_checkpoint: frontend_sync_completion_followup_20261110
+current_checkpoint: local_order_filters_20261110
+local_order_filters_20261110:
+  status: browser_assertion_followup_pending_new_hosted_qualification
+  evidence: docs/10-spec-development/2026-11-10-local-order-filters.md
+  base_main: 039669c5c9c9c0987922f72ee9d54c51ce80cf93
+  retained_initial_PR99_CI: 42894474317_direct_browser_failed_not_rerun
+  initial_browser: 133_passed_four_structural_theme_strict_selector_failures
+  browser_correction: scope_visible_state_assertion_to_named_order_list
+  scope: transient_exact_state_priority_filters_existing_local_queue
+  red: five_expected_failures_four_controls
+  focused: 48_passed
+  frontend: 1418_passed_zero_failed_zero_skipped
+  repository: 200_passed
+  final_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  python: 6100_passed_685_environment_skips_12_warnings
+  independent_review: accepted_including_offline_TypeScript_correction
+  browser: new_journey_collected_not_executed_missing_Chromium
+  permissions_schema_sync_inventory_writes: unchanged
+  acceptance: no_hosted_physical_capacity_or_deployment_claim
+
+historical_frontend_sync_checkpoint: frontend_sync_completion_followup_20261110
 frontend_sync_completion_followup_20261110:
   status: locally_verified_publication_and_new_hosted_qualification_pending
   evidence: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
@@ -3137,7 +3157,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
+active_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
+historical_frontend_sync_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
 historical_frontend_diagnostic_plan: docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md
 historical_order_attribution_plan: docs/10-spec-development/2026-11-08-order-transition-attribution.md
 historical_customer_editing_plan: docs/10-spec-development/2026-11-08-customer-editing.md
@@ -3146,7 +3167,7 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: PR98_test_completion_locally_verified_new_hosted_qualification_pending
+active_plan_status: local_order_filters_local_partial_hosted_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3156,7 +3177,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: frontend_sync_completion_followup_20261110
+last_checkpoint: local_order_filters_20261110
 historical_frontend_diagnostic_last_checkpoint: frontend_diagnostic_retention_20261109
 historical_order_attribution_last_checkpoint: order_transition_attribution_20261108
 historical_customer_editing_last_checkpoint: customer_editing_20261108

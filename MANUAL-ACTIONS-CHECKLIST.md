@@ -1,5 +1,31 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-10 · PR99 browser assertion follow-up
+
+- [x] Preserve CI42894474317 direct-browser failure: 133 passes, four structural
+      theme failures from a page-wide selector matching filter option plus badge.
+- [x] Scope only the unchanged state-visibility assertion to the named order list;
+      preserve all touch, color, reflow, screenshot and keyboard assertions.
+- [ ] Qualify the corrected source in its own hosted CI before integration.
+- Inventory expiry repetition was skipped; its incomplete evidence is downstream,
+  not an independently reproduced inventory defect. No failed workflow rerun.
+
+## 2026-11-10 · Local order filters
+
+- [x] Add exact state and priority filters to the existing local queue with reset,
+      combined search and unchanged runtime protection. RED: five failures/four
+      controls; focused 48 and frontend 1,418 pass; repository contracts 200 pass.
+- [x] Complete independent source review without blocking findings.
+- [x] Complete corrected aggregate: 21 passed, zero failed, five environment blockers;
+      Python 6,100 passed and 685 environment skips.
+- [ ] Qualify the new browser journey against this candidate. It is collected/typechecked, not
+      executed; local Playwright Chromium executable is missing.
+- [ ] Obtain exact-candidate hosted qualification before any integration claim.
+- PR98 is integrated and its fresh-main receipt supersedes the historical pending
+  items below only for that baseline. Original main failure remains unexplained.
+  Physical T1–T8/R01-T035, capacity/M2, real-data restore and deployment remain
+  unqualified. [Evidence](docs/10-spec-development/2026-11-10-local-order-filters.md).
+
 ## 2026-11-10 · PR98 automatic-sync test completion
 
 - [x] Preserve PR98 CI42572334394 attempt one as failed. Its direct frontend

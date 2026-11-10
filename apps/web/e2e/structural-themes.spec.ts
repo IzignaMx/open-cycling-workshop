@@ -202,7 +202,11 @@ test.describe('touch and narrow reflow', () => {
         expect(box!.height).toBeGreaterThanOrEqual(56)
         expect(box!.width).toBeGreaterThanOrEqual(56)
       }
-      await expect(page.getByText('En trabajo', { exact: true })).toBeVisible()
+      await expect(
+        page
+          .getByRole('list', { name: 'Órdenes de servicio', exact: true })
+          .getByText('En trabajo', { exact: true }),
+      ).toBeVisible()
       const semantic = await page
         .locator('.state-badge[data-tone="success"]')
         .first()
