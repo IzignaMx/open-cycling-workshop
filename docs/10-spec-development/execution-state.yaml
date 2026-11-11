@@ -1,6 +1,28 @@
 schema: 1
 
-current_checkpoint: local_order_filters_20261110
+current_checkpoint: inventory_page_filter_rebuilt_20261111
+inventory_page_filter_rebuilt_20261111:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-11-inventory-page-filter.md
+  base_main: 6a81c90c9cb2b1ae6d7e406a7bea29519c944660
+  lost_prior_commit: 25684a583d7c617f7c20b47998175b0a14149546
+  prior_checks: do_not_qualify_reconstructed_tree
+  scope: transient_name_SKU_filter_current_connected_catalog_page_only
+  red: two_expected_behavior_failures_two_passing_controls
+  focused: 54_passed_zero_skips
+  frontend: 1425_passed_zero_failed_zero_skipped
+  repository: 201_passed
+  initial_aggregate: failed_missing_pinned_legacy_git_object_downstream_browser_failure_retained
+  final_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  python: 6101_passed_685_environment_skips_12_warnings
+  aggregate_metadata: base_HEAD_uncommitted_candidate_not_base_acceptance
+  independent_review: no_blocking_findings_11_focused_passed_browser_lifecycle_unverified
+  publication: authorized_pending_coordinator
+  authority_schema_sync_writes: unchanged
+  browser: authored_not_executed_lifecycle_pending
+  acceptance: no_hosted_physical_capacity_or_deployment_claim
+
+historical_local_order_filter_checkpoint: local_order_filters_20261110
 local_order_filters_20261110:
   status: browser_assertion_followup_pending_new_hosted_qualification
   evidence: docs/10-spec-development/2026-11-10-local-order-filters.md

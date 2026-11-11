@@ -1,4 +1,5 @@
 requirement_id,requirement_source,release,epic,task_id,test_id,status,evidence
+FR-INV-001,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.3,E09,R03-T001,apps/web/tests/inventory/catalog-filter.test.mjs,partial,docs/10-spec-development/2026-11-11-inventory-page-filter.md
 OFF-005,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E03,R01-T018,services/platform/tests/sync/test_workshop_text_admission.py,partial,docs/10-spec-development/2026-11-05-workshop-text-admission.md
 OFF-008,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E03,R01-T018,services/platform/tests/sync/test_workshop_text_admission.py,partial,docs/10-spec-development/2026-11-05-workshop-text-admission.md
 NFR-006,docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md,V0.1,E23,R01-T033,tests/operations/test_branding_bundle.py,partial,docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md

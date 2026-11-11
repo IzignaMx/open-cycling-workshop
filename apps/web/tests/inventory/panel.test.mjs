@@ -46,3 +46,12 @@ test('organization-wide account without directory has an explicit authorized-sco
     /Tu cuenta no tiene acceso al directorio de talleres/,
   )
 })
+
+test('inventory search shares density-scoped input targets without changing normal select height', () => {
+  const css = source('features/inventory/inventory.css')
+  assert.match(css, /\.inventory-panel input,[\s\S]*?min-height: 44px/)
+  assert.match(
+    css,
+    /\[data-density='workshop'\] \.inventory-panel button,\s*\[data-density='workshop'\] \.inventory-panel input,\s*\[data-density='workshop'\] \.inventory-panel select\s*\{\s*min-height: 56px/,
+  )
+})

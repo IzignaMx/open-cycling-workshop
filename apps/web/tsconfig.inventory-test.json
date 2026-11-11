@@ -8,7 +8,8 @@
     "exactOptionalPropertyTypes": true,
     "outDir": ".tmp-inventory",
     "rootDir": ".",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src/features/inventory/**/*.ts"]
+  "include": ["src/features/inventory/**/*.ts", "src/features/inventory/CatalogPage.tsx"]
 }

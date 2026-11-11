@@ -159,8 +159,47 @@ for (const floor of ['floor-zero', 'floor-one'] as const) {
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
     await expect(region).not.toContainText(PRIVATE_CANARY)
     await expect(region).not.toContainText('private-order-canary')
+    const filter = region.getByRole('searchbox', {
+      name: 'Filtrar esta página por nombre o SKU',
+      exact: true,
+    })
+    const readsBeforeFilter = requests.inventory.length
+    await filter.fill('  CADENA SINTÉTICA ')
+    await expect(
+      region
+        .getByRole('list', { name: 'Productos de inventario', exact: true })
+        .getByRole('listitem'),
+    ).toHaveCount(1)
+    await expect(region).toContainText('1 de 50 productos en esta página')
+    await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
+    await region.getByRole('button', { name: 'Actualizar cantidad', exact: true }).click()
+    await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
+    await expect(filter).toHaveValue('  CADENA SINTÉTICA ')
+    await filter.fill('no-product-matches-this-page')
+    await expect(region).toContainText('No hay coincidencias en esta página')
+    await expect(region.getByRole('button', { name: 'Más productos', exact: true })).toBeEnabled()
+    await region.getByRole('button', { name: 'Limpiar filtro', exact: true }).focus()
+    await page.keyboard.press('Enter')
+    await expect(filter).toHaveValue('')
+    await expect(
+      region
+        .getByRole('list', { name: 'Productos de inventario', exact: true })
+        .getByRole('listitem'),
+    ).toHaveCount(50)
+    await filter.fill(' sku-001 ')
+    await expect(
+      region
+        .getByRole('list', { name: 'Productos de inventario', exact: true })
+        .getByRole('listitem'),
+    ).toHaveCount(1)
+    await expect(
+      region.getByRole('button', { name: 'Consultar P001 Saldo negativo', exact: true }),
+    ).toBeVisible()
+    expect(requests.inventory.length).toBe(readsBeforeFilter + 1)
+    await filter.fill('no-product-matches-this-page')
     await region.getByRole('button', { name: 'Más productos', exact: true }).click()
     await expect(region.getByRole('button', { name: /^Consultar P/ })).toHaveCount(2)
+    await expect(filter).toHaveValue('')
     await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
     await expect(region).not.toContainText(PRODUCT)
     await region.getByRole('button', { name: 'Productos anteriores', exact: true }).click()
@@ -273,10 +312,12 @@ test('inventory navigation retains unsent forms and pre-existing local-only pend
   await selectMain(page)
   await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Borrador local sin enviar')
   await expectPreserved()
+  await panel(page).getByRole('searchbox').fill('private-query-before-offline')
   await context.setOffline(true)
   await page.evaluate(() => window.dispatchEvent(new Event('offline')))
   await expect(panel(page)).toContainText('Inventario no disponible sin conexión')
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+  await expect(panel(page).getByRole('searchbox')).toHaveCount(0)
   await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Borrador local sin enviar')
   await expectPreserved()
   await page.reload()
