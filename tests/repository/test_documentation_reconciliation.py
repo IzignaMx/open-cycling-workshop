@@ -1320,7 +1320,10 @@ def test_local_order_filters_keep_view_only_scope_and_retained_regressions() -> 
 
 def test_rebuilt_inventory_filter_keeps_scope_and_fresh_evidence_boundary() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: inventory_page_filter_rebuilt_20261111" in state
+    assert (
+        "historical_inventory_page_filter_checkpoint: inventory_page_filter_rebuilt_20261111"
+        in state
+    )
     block = state.split("inventory_page_filter_rebuilt_20261111:\n", 1)[1].split("\n\n", 1)[0]
     for token in (
         "evidence: docs/10-spec-development/2026-11-11-inventory-page-filter.md",
@@ -1343,3 +1346,15 @@ def test_rebuilt_inventory_filter_keeps_scope_and_fresh_evidence_boundary() -> N
     assert "tests/inventory/catalog-filter.test.mjs" in read("apps/web/tools/run-core-tests.mjs")
     assert "2026-11-11-inventory-page-filter.md" in read(BASE + "traceability.csv")
     assert "2026-11-11-inventory-page-filter.md" in read("MANUAL-ACTIONS-CHECKLIST.md")
+
+
+def test_intake_readback_preserves_authority_and_qualification_boundaries() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: order_intake_readback_20261112" in state
+    record = " ".join(read(BASE + "2026-11-12-order-intake-readback.md").split())
+    for token in ("FR-SVC-003", "R02-T005", "orders.read", "No schema", "remains unresolved"):
+        assert token in record
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "tests/orders/order-intake-details.test.mjs" in runner
+    assert "tests/runtime/order-intake-readback.test.mjs" in runner
+    assert "2026-11-12-order-intake-readback.md" in read(BASE + "traceability.csv")
