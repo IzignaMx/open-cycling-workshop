@@ -84,6 +84,17 @@ function OrderRecord({
           </p>
         )}
       </div>
+      <details className="order-intake-details">
+        <summary>Datos de recepción</summary>
+        <dl>
+          <dt>Condición al recibir</dt>
+          <dd dir="auto">
+            {order.intake_condition?.trim() ? order.intake_condition : 'No registrada'}
+          </dd>
+          <dt>Accesorios</dt>
+          <dd dir="auto">{order.accessories?.trim() ? order.accessories : 'No registrados'}</dd>
+        </dl>
+      </details>
       {onTimeline ? (
         <button
           type="button"

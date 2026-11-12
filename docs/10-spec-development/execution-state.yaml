@@ -1,6 +1,30 @@
 schema: 1
 
-current_checkpoint: inventory_page_filter_rebuilt_20261111
+current_checkpoint: order_intake_readback_20261112
+order_intake_readback_20261112:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-12-order-intake-readback.md
+  base_main: 4e130a2f6565405e90fb725eb7116ce128cd0abf
+  scope: existing_admitted_order_intake_condition_and_accessories_readback
+  canonical_pair: FR-SVC-003_R02-T005_partial
+  red: six_expected_component_failures
+  layout_red: one_expected_action_column_order_failure
+  focused: 56_passed
+  frontend: 1433_passed_zero_failed_zero_skipped
+  repository: 202_passed
+  final_aggregate: partial_21_passed_zero_failed_five_environment_blockers
+  python: 6102_passed_685_environment_skips_12_warnings
+  aggregate_metadata: base_HEAD_uncommitted_candidate_not_fresh_main_acceptance
+  independent_review: no_remaining_source_blocker_after_action_column_correction
+  native_browser: launch_blocked_socket_operation_not_permitted_no_workaround
+  offline_reload: one_fake_IDB_runtime_case_passed_no_network_journal_unchanged
+  authority_schema_sync_writes: unchanged
+  original_branding_timeout: unresolved_not_fixed
+  browser: offline_lifecycle_assertions_authored_pending_backend_execution
+  publication: not_authorized
+  acceptance: no_hosted_physical_capacity_or_deployment_claim
+
+historical_inventory_page_filter_checkpoint: inventory_page_filter_rebuilt_20261111
 inventory_page_filter_rebuilt_20261111:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-11-inventory-page-filter.md
@@ -3179,7 +3203,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
+active_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
+historical_local_order_filter_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
 historical_frontend_sync_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
 historical_frontend_diagnostic_plan: docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md
 historical_order_attribution_plan: docs/10-spec-development/2026-11-08-order-transition-attribution.md
@@ -3189,7 +3214,7 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: local_order_filters_local_partial_hosted_qualification_pending
+active_plan_status: intake_readback_local_partial_hosted_browser_qualification_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3199,7 +3224,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: local_order_filters_20261110
+last_checkpoint: order_intake_readback_20261112
+historical_local_order_filter_last_checkpoint: local_order_filters_20261110
 historical_frontend_diagnostic_last_checkpoint: frontend_diagnostic_retention_20261109
 historical_order_attribution_last_checkpoint: order_transition_attribution_20261108
 historical_customer_editing_last_checkpoint: customer_editing_20261108

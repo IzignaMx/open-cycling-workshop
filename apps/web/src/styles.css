@@ -438,10 +438,25 @@ body {
 .order-actions .secondary-button {
   font-size: 0.875rem;
 }
+.order-intake-details,
 .order-history,
 .order-error {
   grid-column: 1 / -1;
   font-size: 0.875rem;
+}
+.order-intake-details dl {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.order-intake-details dt {
+  font-weight: 650;
+}
+.order-intake-details dd {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 .order-history ol {
   padding-left: 20px;

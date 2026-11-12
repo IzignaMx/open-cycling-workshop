@@ -152,6 +152,25 @@ for (const theme of THEMES) {
       second = await cards.nth(1).boundingBox()
     if (theme.id === 'ritmo' || theme.id === 'noche') expect(second!.x).toBeGreaterThan(first!.x)
     else expect(second!.y).toBeGreaterThan(first!.y)
+    // Intake details must not displace the actions column in the Plano layout.
+    const intakeDetails = cards.nth(0).locator('.order-intake-details')
+    const summary = intakeDetails.locator('summary')
+    const actionBox = await cards.nth(0).locator('.order-actions').boundingBox()
+    const intakeBox = await intakeDetails.boundingBox()
+    expect(intakeBox!.y).toBeGreaterThanOrEqual(actionBox!.y + actionBox!.height)
+    if (theme.id === 'plano') {
+      const summaryBox = await cards.nth(0).locator('.order-summary').boundingBox()
+      const stateBox = await cards.nth(0).locator('.order-state').boundingBox()
+      expect(actionBox!.y).toBe(summaryBox!.y)
+      expect(actionBox!.y).toBe(stateBox!.y)
+    }
+    await summary.focus()
+    await page.keyboard.press('Enter')
+    await expect(intakeDetails).toHaveAttribute('open', '')
+    await expect(cards.nth(1).locator('.order-intake-details')).not.toHaveAttribute('open', '')
+    expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await page.keyboard.press('Space')
+    await expect(intakeDetails).not.toHaveAttribute('open', '')
     const accessibility = await new AxeBuilder({ page }).analyze()
     expect(
       accessibility.violations.filter((item) =>

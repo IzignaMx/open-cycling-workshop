@@ -1,5 +1,21 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-12 · Saved order intake readback
+
+- [x] Reproduce missing intake readback with six failing component cases, then
+      pass 54 focused cases and a full-runtime fake-IDB offline reload case.
+- [x] Complete local aggregate: 21 passed, zero failed, five environment blockers;
+      Python 6,102 plus 685 environment skips, frontend 1,433, focused 56 and
+      repository 202. Independent source review accepted after correcting the
+      desktop actions-column placement; native layout remains unverified.
+- [ ] Obtain specific publication authorization and exact-source hosted/backend
+      browser evidence before integration. The offline lifecycle assertions are
+      authored, not native-browser persistence proof.
+- PR100 main acceptance belongs only to the baseline. The original administration
+  identity timeout remains unresolved. Physical T1–T8/R01-T035, M2/capacity, real
+  restore and quote activation remain open. No new operator action is required by
+  the read-only UI. See [scope and evidence](docs/10-spec-development/2026-11-12-order-intake-readback.md).
+
 ## 2026-11-11 · Rebuilt inventory catalog page filter
 
 - [x] Verify fresh clone against PR99 main6a81c90; preserve original failed runs.
