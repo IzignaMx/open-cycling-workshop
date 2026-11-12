@@ -1,6 +1,25 @@
 schema: 1
 
-current_checkpoint: transition_notes_20261112
+current_checkpoint: order_associations_20261112
+order_associations_20261112:
+  status: locally_verified_hosted_native_pending
+  aggregate: 21_passed_zero_failed_five_environment_blockers
+  frontend: 1483_passed_zero_failed_zero_skipped
+  python: 6112_passed_685_environment_skips_12_warnings
+  repository: 204_passed
+  browser: 139_collected_not_executed
+  independent_review: accepted_with_explicit_close_and_focus_return
+  evidence: docs/10-spec-development/2026-11-12-order-associations.md
+  base_main: f09441c5dcd9aee721af92471ed836528c595668
+  scope: read_only_saved_order_customer_and_bicycle_identity
+  authority: independent_orders_customers_bicycles_read_unchanged
+  draft_schema_journal_sync: unchanged
+  future_existing_bicycle_selection: blocked_mixed_version_recovery_design
+  original_branding_timeout: unresolved_not_fixed
+  publication: not_authorized
+  acceptance: no_hosted_native_physical_capacity_or_deployment_claim
+
+historical_transition_notes_checkpoint: transition_notes_20261112
 transition_notes_20261112:
   status: locally_verified_hosted_native_pending
   evidence: docs/10-spec-development/2026-11-12-transition-notes.md
@@ -3225,7 +3244,7 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-12-transition-notes.md
+active_plan: docs/10-spec-development/2026-11-12-order-associations.md
 historical_order_intake_readback_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
 historical_local_order_filter_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
 historical_frontend_sync_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
@@ -3237,7 +3256,7 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: transition_notes_local_qualification_in_progress
+active_plan_status: order_associations_locally_verified_hosted_native_pending
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3247,7 +3266,7 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: transition_notes_20261112
+last_checkpoint: order_associations_20261112
 historical_order_intake_readback_last_checkpoint: order_intake_readback_20261112
 historical_local_order_filter_last_checkpoint: local_order_filters_20261110
 historical_frontend_diagnostic_last_checkpoint: frontend_diagnostic_retention_20261109

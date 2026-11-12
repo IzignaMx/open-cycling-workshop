@@ -1,4 +1,8 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["e2e/transition-notes.spec.ts", "e2e/order-lifecycle.spec.ts"]
+  "include": [
+    "e2e/transition-notes.spec.ts",
+    "e2e/order-lifecycle.spec.ts",
+    "e2e/order-associations.spec.ts"
+  ]
 }

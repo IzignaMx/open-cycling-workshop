@@ -1067,3 +1067,23 @@ body {
     text-decoration: underline;
   }
 }
+
+.order-associations {
+  grid-column: 1 / -1;
+  min-width: 0;
+  font-size: 0.875rem;
+}
+.order-associations dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.order-associations dt {
+  font-weight: 650;
+}
+.order-associations dd {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  margin: 0 0 8px;
+}

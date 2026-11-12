@@ -1362,7 +1362,7 @@ def test_intake_readback_preserves_authority_and_qualification_boundaries() -> N
 
 def test_transition_notes_keep_existing_authority_and_volatile_draft_boundary() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: transition_notes_20261112" in state
+    assert "historical_transition_notes_checkpoint: transition_notes_20261112" in state
     record = " ".join(read(BASE + "2026-11-12-transition-notes.md").split())
     for token in (
         "FR-SVC-012/R02-T011",
@@ -1381,3 +1381,23 @@ def test_transition_notes_keep_existing_authority_and_volatile_draft_boundary() 
     ):
         assert name in runner
     assert "2026-11-12-transition-notes.md" in read(BASE + "traceability.csv")
+
+
+def test_order_associations_keep_read_scope_and_recovery_compatibility_boundary() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: order_associations_20261112" in state
+    design = " ".join(
+        read("docs/superpowers/specs/2026-11-12-order-associations-design.md").split()
+    )
+    for token in (
+        "customers.read",
+        "bicycles.read",
+        "VersionError",
+        "not a downgrade fence",
+        "No schema",
+    ):
+        assert token in design
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "order-associations.test.mjs" in runner
+    assert "order-associations-view.test.mjs" in runner
+    assert "2026-11-12-order-associations.md" in read(BASE + "traceability.csv")

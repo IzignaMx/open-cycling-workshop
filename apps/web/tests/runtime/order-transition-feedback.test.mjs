@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import ts from 'typescript'
 import * as module from '../../.tmp-runtime/src/features/orders/transition-feedback.js'
 const resolved = (value) => ({ kind: 'resolved', value })
 const updated = () => {
@@ -131,7 +132,38 @@ test('transition UI presents host protection without a second component gate or 
     new URL('../../src/features/orders/OrderList.tsx', import.meta.url),
     'utf8',
   )
-  assert.doesNotMatch(source, /OrderTransitionGate|useRef|mounted/)
+  assert.doesNotMatch(source, /OrderTransitionGate|mounted/)
+  // Focus restoration needs DOM refs, but transition admission must stay in the host.
+  const ast = ts.createSourceFile(
+    'OrderList.tsx',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  )
+  const refs = []
+  let transition
+  function visit(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      node.initializer.expression.getText(ast) === 'useRef'
+    )
+      refs.push(node.name.getText(ast))
+    if (ts.isFunctionDeclaration(node) && node.name?.text === 'transition')
+      transition = node.getText(ast)
+    ts.forEachChild(node, visit)
+  }
+  visit(ast)
+  assert.deepEqual(refs.sort(), ['associationTrigger', 'returnAssociationFocus'])
+  assert.ok(transition)
+  assert.doesNotMatch(
+    transition,
+    /useRef|associationTrigger|returnAssociationFocus|OrderTransitionGate/,
+  )
+  assert.match(transition, /protection\.states\.has/)
+  assert.match(transition, /await onTransition\(order, action\)/)
   assert.doesNotMatch(source, /error\.message/)
   assert.match(source, /protection\.states\.get/)
   assert.match(source, /protection\.notice/)

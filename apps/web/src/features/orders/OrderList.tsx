@@ -1,6 +1,14 @@
+import type { OrderAssociations } from './order-associations.js'
 import { transitionNoteError } from './transition-note.js'
 import { filterOrders } from './order-filter.js'
-import { useId, useState, type CSSProperties, type ChangeEvent } from 'react'
+import {
+  useId,
+  useState,
+  useRef,
+  useLayoutEffect,
+  type CSSProperties,
+  type ChangeEvent,
+} from 'react'
 import type { LocalServiceOrder } from '../../local/service-order-types.js'
 import { historyActorId, historyOccurrence, type OrderHistoryEvent } from './order-history.js'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
@@ -15,6 +23,10 @@ export interface OrderListProps {
   canTransition: boolean
   protection: TransitionProtectionSnapshot
   canReadBicycleInfo: boolean
+  canReadCustomerInfo?: boolean
+  associations?: OrderAssociations | null
+  onAssociations?(orderId: string): Promise<void>
+  onCloseAssociations?(orderId: string): void
   onNote?(orderId: string, value: string): void
   onTimeline?(orderId: string): Promise<void>
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<OrderTransitionResult>
@@ -26,6 +38,10 @@ function OrderRecord({
   onTransition,
   canTransition,
   canReadBicycleInfo,
+  canReadCustomerInfo,
+  associations,
+  onAssociations,
+  onCloseAssociations,
   onTimeline,
   transitionState,
   transitionDisabled,
@@ -37,6 +53,10 @@ function OrderRecord({
   events: readonly OrderHistoryEvent[]
   canTransition: boolean
   canReadBicycleInfo: boolean
+  canReadCustomerInfo: boolean
+  associations: OrderListProps['associations']
+  onAssociations: OrderListProps['onAssociations']
+  onCloseAssociations: OrderListProps['onCloseAssociations']
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<void>
   onTimeline: OrderListProps['onTimeline']
   transitionState: OrderTransitionState | undefined
@@ -46,6 +66,21 @@ function OrderRecord({
   noteCapacity: boolean
 }) {
   const noteId = useId()
+  const associationsId = `${noteId}-associations`
+  const associationTrigger = useRef<HTMLButtonElement>(null)
+  const returnAssociationFocus = useRef(false)
+  useLayoutEffect(() => {
+    if (!returnAssociationFocus.current) return
+    returnAssociationFocus.current = false
+    if (
+      associations === null &&
+      (canReadCustomerInfo || canReadBicycleInfo) &&
+      associationTrigger.current &&
+      !associationTrigger.current.disabled
+    ) {
+      associationTrigger.current.focus()
+    }
+  }, [associations, canReadCustomerInfo, canReadBicycleInfo])
   const noteError = transitionNoteError(note)
   const [historyMessage, setHistoryMessage] = useState<string | null>(null)
   const message = transitionState?.feedback?.message ?? historyMessage
@@ -94,6 +129,90 @@ function OrderRecord({
           </p>
         )}
       </div>
+      {onAssociations && (canReadCustomerInfo || canReadBicycleInfo) ? (
+        <div className="order-associations">
+          <button
+            type="button"
+            className="secondary-button"
+            aria-expanded={associations?.orderId === order.order_id}
+            aria-controls={associationsId}
+            ref={associationTrigger}
+            disabled={associations?.status === 'loading'}
+            onClick={() => {
+              void onAssociations(order.order_id).catch(() => {
+                /* The host owns the generic failure snapshot; never echo raw errors. */
+              })
+            }}
+          >
+            Ver cliente y bicicleta
+          </button>
+          <div id={associationsId} hidden={associations?.orderId !== order.order_id}>
+            {associations?.orderId === order.order_id && onCloseAssociations ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  returnAssociationFocus.current = true
+                  onCloseAssociations(order.order_id)
+                }}
+              >
+                Cerrar datos de cliente y bicicleta
+              </button>
+            ) : null}
+            {associations?.orderId === order.order_id ? (
+              associations.status === 'loading' ? (
+                <p role="status">Cargando cliente y bicicleta locales.</p>
+              ) : associations.status === 'failed' ? (
+                <p role="alert">
+                  No se pudo cargar el cliente y la bicicleta locales. Vuelve a intentarlo.
+                </p>
+              ) : associations.status === 'ready' ? (
+                <>
+                  <p>Instantánea local: no confirma el estado actual del servidor.</p>
+                  <dl>
+                    <dt>Cliente de la orden</dt>
+                    <dd>
+                      {!canReadCustomerInfo || associations.customer.status === 'restricted' ? (
+                        'Cliente: acceso restringido'
+                      ) : associations.customer.status === 'available' ? (
+                        <>
+                          <bdi dir="auto">{associations.customer.name}</bdi>
+                          <br />
+                          ID: <bdi dir="auto">{associations.customer.id}</bdi>
+                        </>
+                      ) : (
+                        'Cliente no disponible localmente'
+                      )}
+                    </dd>
+                    <dt>Bicicleta de la orden</dt>
+                    <dd>
+                      {!canReadBicycleInfo || associations.bicycle.status === 'restricted' ? (
+                        'Bicicleta: acceso restringido'
+                      ) : associations.bicycle.status === 'available' ? (
+                        <>
+                          <bdi dir="auto">{associations.bicycle.brand}</bdi>
+                          <br />
+                          {associations.bicycle.model?.trim() ? (
+                            <bdi dir="auto">{associations.bicycle.model}</bdi>
+                          ) : (
+                            'Modelo no registrado'
+                          )}
+                          <br />
+                          ID: <bdi dir="auto">{associations.bicycle.id}</bdi>
+                        </>
+                      ) : associations.bicycle.status === 'none' ? (
+                        'Sin bicicleta asociada en esta instantánea local'
+                      ) : (
+                        'Bicicleta no disponible localmente'
+                      )}
+                    </dd>
+                  </dl>
+                </>
+              ) : null
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {canTransition && onNote && (actions.length > 0 || note !== '') ? (
         <div className="order-transition-note">
           <label htmlFor={noteId}>
@@ -208,6 +327,10 @@ export function OrderList({
   onTransition,
   canTransition,
   canReadBicycleInfo,
+  canReadCustomerInfo,
+  associations,
+  onAssociations,
+  onCloseAssociations,
   onTimeline,
   onNote,
   protection,
@@ -316,6 +439,10 @@ export function OrderList({
                 transitionDisabled={protection.notice !== null}
                 canTransition={canTransition}
                 canReadBicycleInfo={canReadBicycleInfo}
+                canReadCustomerInfo={canReadCustomerInfo ?? false}
+                associations={associations}
+                onAssociations={onAssociations}
+                onCloseAssociations={onCloseAssociations}
                 onTimeline={onTimeline}
                 onNote={onNote}
                 note={protection.notes?.get(order.order_id) ?? ''}
