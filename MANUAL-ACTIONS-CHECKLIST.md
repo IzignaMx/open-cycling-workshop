@@ -1,5 +1,21 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-12 · Preventive draft compatibility baseline
+
+- [x] Pin actual historical reader bytes and reproduce the unsafe v8/v9 reopen
+      and unknown-payload deletion counterexamples. No version-bump shortcut.
+- [x] Observe five preservation/refusal/TTL/clock/leave RED regressions, then implement
+      the bounded reader; all production draft writes remain exact v1.
+- [x] Finish local aggregate and independent review: 21 passed, zero failed,
+      five environment blockers; frontend 1,505; Python 6,113 plus 685 environment
+      skips. Preserve exact source and receipts in the durable review archive.
+- [ ] Obtain exact-source native/browser evidence and publication authority.
+- [ ] Before any future payload/selector activation, prove exclusion of readers
+      older than this compatibility baseline and document the minimum rollback
+      version. This is not solved by this preventive reader change alone.
+- Existing physical/restore/capacity/quote gates remain open; no operator action
+  is requested now. See [evidence](docs/10-spec-development/2026-11-12-capture-format-compatibility.md).
+
 ## 2026-11-12 · Saved-order associated identities
 
 - [x] Verify PR102 main and reproduce missing readback with runtime/UI RED cases.

@@ -1,3 +1,4 @@
+import { canonicalJson } from './operations.js'
 import type { CaptureWriter, DeviceControl } from './types.js'
 import type {
   CaptureCheckpoint,
@@ -141,6 +142,43 @@ export function validContent(v: unknown): v is CaptureDraftContent {
       ? { channel: v.channel, draft: v.draft, retainedSelection: v.retainedSelection }
       : { channel: v.channel, draft: v.draft }
   return validProjection(projection) && projectionBytes(projection) <= MAX_CONTENT_UTF8_BYTES
+}
+/** Fixed lifecycle envelope only; future payload meaning is never interpreted. */
+export function preservableUnsupportedContent(v: unknown): boolean {
+  if (
+    !record(v) ||
+    !validInteger(v.format) ||
+    v.format <= 1 ||
+    (v.channel !== 'customer' && v.channel !== 'order') ||
+    !exact(v, [
+      'format',
+      'checkpointId',
+      'generation',
+      'channel',
+      'revision',
+      'firstPersistedAt',
+      'expiresAt',
+      'draft',
+      ...(v.channel === 'order' ? ['retainedSelection'] : []),
+    ]) ||
+    !validUUID(v.checkpointId) ||
+    !validUUID(v.generation) ||
+    !validInteger(v.revision) ||
+    !validInteger(v.firstPersistedAt) ||
+    !validInteger(v.expiresAt) ||
+    !Number.isSafeInteger(v.firstPersistedAt + CAPTURE_TTL_MS) ||
+    v.expiresAt !== v.firstPersistedAt + CAPTURE_TTL_MS
+  )
+    return false
+  const projection =
+    v.channel === 'order'
+      ? { channel: v.channel, draft: v.draft, retainedSelection: v.retainedSelection }
+      : { channel: v.channel, draft: v.draft }
+  try {
+    return new TextEncoder().encode(canonicalJson(projection)).length <= MAX_CONTENT_UTF8_BYTES
+  } catch {
+    return false
+  }
 }
 export function frozenCopy<T>(value: T): T {
   const copy = structuredClone(value)

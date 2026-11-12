@@ -1385,7 +1385,7 @@ def test_transition_notes_keep_existing_authority_and_volatile_draft_boundary() 
 
 def test_order_associations_keep_read_scope_and_recovery_compatibility_boundary() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: order_associations_20261112" in state
+    assert "historical_order_associations_checkpoint: order_associations_20261112" in state
     design = " ".join(
         read("docs/superpowers/specs/2026-11-12-order-associations-design.md").split()
     )
@@ -1401,3 +1401,23 @@ def test_order_associations_keep_read_scope_and_recovery_compatibility_boundary(
     assert "order-associations.test.mjs" in runner
     assert "order-associations-view.test.mjs" in runner
     assert "2026-11-12-order-associations.md" in read(BASE + "traceability.csv")
+
+
+def test_capture_format_compatibility_preserves_activation_and_rollback_gates() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_format_compatibility_20261112" in state
+    design = " ".join(
+        read("docs/superpowers/specs/2026-11-12-capture-format-compatibility-design.md").split()
+    )
+    for token in (
+        "All production writes remain exact format 1",
+        "minimum rollback target",
+        "unresolved release gate",
+        "65,536-byte",
+        "Unsupported but preservable",
+    ):
+        assert token in design
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "tests/access-kernel/capture-format-compatibility.test.mjs" in runner
+    assert "tests/runtime/capture-format-compatibility.test.mjs" in runner
+    assert "tsconfig.e2e-capture.json" in runner

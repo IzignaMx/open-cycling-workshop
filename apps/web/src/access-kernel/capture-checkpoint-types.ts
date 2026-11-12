@@ -58,6 +58,7 @@ export type CaptureCheckpointResult =
       checkpoint: CaptureCheckpoint
       contents: Partial<Record<Channel, CaptureDraftContent>>
     }
+  | { kind: 'refused'; reason: 'unsupported_format'; checkpoint: CaptureCheckpoint }
   | {
       kind: 'refused'
       reason:
