@@ -1,3 +1,4 @@
+import type { OrderAssociations } from '../features/orders/order-associations.js'
 import { CustomerEditVisit, type CustomerEditSnapshot } from './customer-edit-visit.js'
 import { CustomerLookup, type CustomerLookupSnapshot } from './customer-lookup.js'
 import { CaptureRecovery, type RecoveryAttempt } from './capture-recovery.js'
@@ -66,6 +67,7 @@ export interface WorkshopSnapshot {
   message: string | null
   sync: 'local' | 'offline' | 'syncing' | 'synced' | 'conflict' | 'error'
   customerEdit: CustomerEditSnapshot | null
+  orderAssociations: OrderAssociations | null
   customerLookup: CustomerLookupSnapshot | null
   customers: LocalCustomer[]
   orders: LocalServiceOrder[]
@@ -88,6 +90,7 @@ export interface WorkshopSnapshot {
 }
 const empty = (): WorkshopSnapshot => ({
   phase: 'locked',
+  orderAssociations: null,
   customerEdit: null,
   capture: null,
   captureRecoveryNotice: null,
@@ -173,6 +176,8 @@ export class WorkshopController {
   #sequence = 0
   readonly #customerLookup = new CustomerLookup(() => this.publish({}))
   readonly #customerEdit = new CustomerEditVisit()
+  #associationRead = 0
+  #associationSource: BaselineSession | null = null
   #customerEditRead = 0
   readonly #captureVisit = new CaptureVisit()
   #captureSource: BaselineSession | null = null
@@ -699,6 +704,17 @@ export class WorkshopController {
     const source = this.#captureSource
     if (
       next.phase !== 'ready' ||
+      !this.#active ||
+      this.#associationSource !== this.#active ||
+      !this.#active.isCurrent(this.#active.identity) ||
+      !this.#active.context.capabilities.includes('orders.read')
+    ) {
+      next.orderAssociations = null
+      this.#associationRead++
+      this.#associationSource = null
+    }
+    if (
+      next.phase !== 'ready' ||
       !source ||
       this.#active !== source ||
       !source.isCurrent(source.identity)
@@ -749,6 +765,8 @@ export class WorkshopController {
     for (const listener of this.#listeners) listener()
   }
   private maskCapture(): void {
+    this.#associationRead++
+    this.#associationSource = null
     this.#customerEditRead++
     this.#customerEdit.reset()
     this.#customerLookup.clear()
@@ -757,6 +775,7 @@ export class WorkshopController {
     this.#snapshot = Object.freeze({
       ...this.#snapshot,
       capture: null,
+      orderAssociations: null,
       customerLookup: null,
       customerEdit: null,
     })
@@ -1541,6 +1560,8 @@ export class WorkshopController {
     return source
   }
   async refresh(type?: 'customer' | 'service_order', afterId?: string): Promise<boolean> {
+    this.#associationRead++
+    this.publish({ orderAssociations: null })
     const source = this.requireActive(),
       current = () => this.#active === source && source.isCurrent(source.identity)
     try {
@@ -2112,6 +2133,47 @@ export class WorkshopController {
       return { status: 'committed', view: 'updated' }
     } catch {
       return unavailable
+    }
+  }
+  closeOrderAssociations(orderId: string): void {
+    if (this.#snapshot.orderAssociations?.orderId !== orderId) return
+    this.#associationRead++
+    this.#associationSource = null
+    this.publish({ orderAssociations: null })
+  }
+  async loadOrderAssociations(orderId: string): Promise<void> {
+    const source = this.#active
+    if (
+      !source ||
+      this.#snapshot.phase !== 'ready' ||
+      !source.isCurrent(source.identity) ||
+      !source.context.capabilities.includes('orders.read') ||
+      !['customers.read', 'bicycles.read'].some((capability) =>
+        source.context.capabilities.includes(capability),
+      ) ||
+      !this.#snapshot.orders.some((order) => order.order_id === orderId)
+    )
+      return
+    if (
+      this.#snapshot.orderAssociations?.orderId === orderId &&
+      this.#snapshot.orderAssociations.status === 'loading'
+    )
+      return
+    const revision = ++this.#associationRead
+    this.#associationSource = source
+    const current = () =>
+      this.#associationRead === revision &&
+      this.#active === source &&
+      source.isCurrent(source.identity)
+    this.publish({ orderAssociations: { orderId, status: 'loading' } })
+    try {
+      const result = await this.repositories.orderAssociations(source, orderId)
+      if (current()) this.publish({ orderAssociations: result ?? { orderId, status: 'failed' } })
+    } catch {
+      if (current()) this.publish({ orderAssociations: { orderId, status: 'failed' } })
+    } finally {
+      if (this.#active === source && source.isCurrent(source.identity))
+        this.branding.refreshOfflineAfterLocalActivity()
     }
   }
   async timeline(orderId: string) {

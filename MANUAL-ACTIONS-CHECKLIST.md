@@ -1,5 +1,18 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-12 · Saved-order associated identities
+
+- [x] Verify PR102 main and reproduce missing readback with runtime/UI RED cases.
+- [x] Finish local aggregate and independent source review: 21 checks passed,
+      zero failed, five environment blockers; frontend 1,483; Python 6,112 passed
+      and 685 environment skips. Preserve source-bound commit/bundle/receipts.
+- [ ] Obtain exact-candidate native/browser evidence and publication authority.
+- Existing-bicycle intake remains blocked on safe mixed-version draft recovery:
+  Dexie v8 can reopen v9, and the old sweeper rejects unfamiliar draft shapes.
+  This is not solved by a database version bump; no operator action is requested.
+- Physical, restore, capacity and quote gates stay open. The historical branding
+  timeout remains unresolved. See [scope/evidence](docs/10-spec-development/2026-11-12-order-associations.md).
+
 ## 2026-11-12 · Optional transition notes
 
 - [x] Verify fresh PR101 main source, select existing optional-note handoff, and

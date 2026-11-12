@@ -1,3 +1,4 @@
+import type { OrderAssociations } from '../features/orders/order-associations.js'
 import { captureValidation, type CaptureRepositoryResult } from './capture-outcome.js'
 import type { AccessKernel } from '../access-kernel/kernel.js'
 import type { BaselineSession } from '../access-kernel/baseline-coordinator.js'
@@ -276,6 +277,62 @@ export class WorkshopRepositories {
     )
       return null
     return { customer_id: customerId, display_name: customer.display_name }
+  }
+  async orderAssociations(
+    source: BaselineSession,
+    orderId: string,
+  ): Promise<Extract<OrderAssociations, { status: 'ready' }> | null> {
+    const c = this.capture(source)
+    const read = async (type: EntityType, id: string) => {
+      const projection = await this.kernel.readEntity(c.ticket, type, id, c.current)
+      return projection?.blocked ? null : (projection?.optimistic ?? projection?.confirmed ?? null)
+    }
+    const order = await read('service_order', orderId)
+    if (!order || order.order_id !== orderId || typeof order.customer_id !== 'string') return null
+    const result: Extract<OrderAssociations, { status: 'ready' }> = {
+      orderId,
+      status: 'ready',
+      customer: { status: 'restricted' },
+      bicycle: { status: 'restricted' },
+    }
+    if (c.context.capabilities.includes('customers.read')) {
+      const customer = await read('customer', order.customer_id)
+      result.customer =
+        customer &&
+        customer.customer_id === order.customer_id &&
+        typeof customer.display_name === 'string'
+          ? { status: 'available', id: order.customer_id, name: customer.display_name }
+          : { status: 'unavailable' }
+    }
+    if (c.context.capabilities.includes('bicycles.read')) {
+      if (order.bicycle_id === null) result.bicycle = { status: 'none' }
+      else if (typeof order.bicycle_id === 'string') {
+        const bicycle = await read('bicycle', order.bicycle_id)
+        result.bicycle =
+          bicycle &&
+          bicycle.bicycle_id === order.bicycle_id &&
+          typeof bicycle.brand === 'string' &&
+          (bicycle.model === null || typeof bicycle.model === 'string')
+            ? {
+                status: 'available',
+                id: order.bicycle_id,
+                brand: bicycle.brand,
+                model: bicycle.model,
+              }
+            : { status: 'unavailable' }
+      } else result.bicycle = { status: 'unavailable' }
+    }
+    // A changed relationship cannot publish data read for the previous order version.
+    const latest = await read('service_order', orderId)
+    if (
+      !c.current() ||
+      !latest ||
+      latest.version !== order.version ||
+      latest.customer_id !== order.customer_id ||
+      latest.bicycle_id !== order.bicycle_id
+    )
+      return null
+    return result
   }
   async issues(source: BaselineSession, afterSequence?: number) {
     const c = this.capture(source)

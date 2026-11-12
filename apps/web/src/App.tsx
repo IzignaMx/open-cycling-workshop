@@ -276,6 +276,10 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 events={state.events}
                 canTransition={writeOrders}
                 canReadBicycleInfo={readBicycles}
+                canReadCustomerInfo={readCustomers}
+                associations={state.orderAssociations}
+                onAssociations={(orderId) => runtime.loadOrderAssociations(orderId)}
+                onCloseAssociations={(orderId) => runtime.closeOrderAssociations(orderId)}
                 onTransition={(order, action) => runtime.transition(order.order_id, action)}
                 onNote={(orderId, value) =>
                   runtime.editTransitionNote(orderId, value, state.transitionProtection.noteToken)

@@ -97,6 +97,8 @@ try {
     'tests/runtime/transition-protection.test.mjs',
     'tests/runtime/transition-notes.test.mjs',
     'tests/runtime/transition-notes-runtime.test.mjs',
+    'tests/runtime/order-associations.test.mjs',
+    'tests/orders/order-associations-view.test.mjs',
     'tests/orders/transition-note-view.test.mjs',
     'tests/runtime/account-access.test.mjs',
     'tests/runtime/connected-read.test.mjs',
