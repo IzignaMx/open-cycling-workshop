@@ -438,11 +438,32 @@ body {
 .order-actions .secondary-button {
   font-size: 0.875rem;
 }
+.order-transition-note,
 .order-intake-details,
 .order-history,
 .order-error {
   grid-column: 1 / -1;
   font-size: 0.875rem;
+}
+.order-transition-note {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.order-transition-note label {
+  font-weight: 650;
+}
+.order-transition-note textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 8px 12px;
+}
+.order-transition-note p {
+  margin: 0;
+}
+.order-history-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .order-intake-details dl {
   margin: 0;

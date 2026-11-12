@@ -1,3 +1,4 @@
+import { normalizeTransitionNote } from './transition-note.js'
 import { hasPythonText } from '../../shared/python-whitespace.js'
 import type { LocalServiceOrder, LocalServiceOrderEvent } from '../../local/service-order-types.js'
 import type { QueuedMutation } from '../../local/types.js'
@@ -99,7 +100,7 @@ export function buildLocalOrderTransition(
     throw new Error(`Acción inválida: ${action} no es posible desde ${order.state}`)
   }
   const now = dependencies.now()
-  const normalizedNote = note?.trim() || null
+  const normalizedNote = normalizeTransitionNote(note)
   const nextOrder: LocalServiceOrder = {
     ...order,
     state: target,

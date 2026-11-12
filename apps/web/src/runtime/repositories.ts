@@ -227,15 +227,21 @@ export class WorkshopRepositories {
     source: BaselineSession,
     orderId: string,
     action: OrderAction,
+    note?: string,
   ): Promise<LocalServiceOrder> {
     const c = this.capture(source),
       projection = await this.kernel.readEntity(c.ticket, 'service_order', orderId, c.current)
     const row = projection?.optimistic ?? projection?.confirmed
     if (!row) throw new Error('La orden no está disponible en este taller.')
-    const result = buildLocalOrderTransition(row as unknown as LocalServiceOrder, action, {
-      ...c.dependencies,
-      actorId: c.context.principal.userId,
-    })
+    const result = buildLocalOrderTransition(
+      row as unknown as LocalServiceOrder,
+      action,
+      {
+        ...c.dependencies,
+        actorId: c.context.principal.userId,
+      },
+      note,
+    )
     await this.kernel.commitLocalCommands(
       c.ticket,
       [

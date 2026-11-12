@@ -1,3 +1,4 @@
+import { transitionNoteError } from '../features/orders/transition-note.js'
 import {
   OrderTransitionGate,
   type OrderTransitionFeedback,
@@ -16,6 +17,8 @@ export interface TransitionProtectionScope {
   sessionBindingId: string
 }
 export interface TransitionProtectionSnapshot {
+  readonly notes: ReadonlyMap<string, string>
+  readonly noteToken: object
   readonly states: ReadonlyMap<string, OrderTransitionState>
   readonly notice: string | null
 }
@@ -40,12 +43,20 @@ function scopeKey(scope: TransitionProtectionScope): string {
 
 /** Volatile protection only. Scope comparison never grants authority or proves replay safety. */
 export class TransitionProtection {
+  private notes = new Map<string, string>()
+  private noteToken: object = {}
   private gate = new OrderTransitionGate()
   private scope: string | null = null
   private closed = true
   private denied = false
 
+  private clearNotes(): void {
+    this.notes.clear()
+    this.noteToken = {}
+  }
+
   startVisit(): void {
+    this.clearNotes()
     this.gate = new OrderTransitionGate()
     this.scope = null
     this.denied = false
@@ -53,6 +64,7 @@ export class TransitionProtection {
   }
 
   endVisit(): void {
+    this.clearNotes()
     this.gate = new OrderTransitionGate()
     this.scope = null
     this.closed = true
@@ -61,6 +73,7 @@ export class TransitionProtection {
   observeScope(scope: TransitionProtectionScope): void {
     if (this.closed || this.denied) return
     const key = scopeKey(scope)
+    if (this.scope !== null && this.scope !== key) this.clearNotes()
     if (this.scope !== null && this.scope !== key && this.gate.size > 0) {
       this.denied = true
       this.gate = new OrderTransitionGate()
@@ -70,19 +83,49 @@ export class TransitionProtection {
     this.scope = key
   }
 
+  hasUnsentNotes(): boolean {
+    return this.notes.size > 0
+  }
+
+  editNote(orderId: string, value: string, token: object): boolean {
+    if (
+      this.closed ||
+      this.denied ||
+      this.scope === null ||
+      token !== this.noteToken ||
+      this.gate.get(orderId) ||
+      value.length > 4000 ||
+      (value !== '' && !this.notes.has(orderId) && this.notes.size >= 50)
+    )
+      return false
+    if (value === '') this.notes.delete(orderId)
+    else this.notes.set(orderId, value)
+    return true
+  }
+
   begin(orderId: string): object | null {
     if (this.closed || this.denied || this.scope === null || this.gate.size >= 50) return null
+    if (transitionNoteError(this.notes.get(orderId) ?? '')) return null
     return this.gate.begin(orderId)
   }
 
-  finish(orderId: string, token: object, feedback: OrderTransitionFeedback): boolean {
+  finish(
+    orderId: string,
+    token: object,
+    feedback: OrderTransitionFeedback,
+    committed = false,
+  ): boolean {
     if (this.closed || this.denied) return false
-    return this.gate.finish(orderId, token, feedback)
+    const finished = this.gate.finish(orderId, token, feedback)
+    if (finished && committed) this.notes.delete(orderId)
+    return finished
   }
 
   getSnapshot(): TransitionProtectionSnapshot {
     return Object.freeze({
       states: this.gate.snapshot(),
+      notes: new Map(this.notes),
+      noteToken: this.noteToken,
       notice:
         this.closed || this.denied ? scopeNotice : this.gate.size >= 50 ? capacityNotice : null,
     })

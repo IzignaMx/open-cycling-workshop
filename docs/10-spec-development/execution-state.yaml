@@ -1,6 +1,28 @@
 schema: 1
 
-current_checkpoint: order_intake_readback_20261112
+current_checkpoint: transition_notes_20261112
+transition_notes_20261112:
+  status: locally_verified_hosted_native_pending
+  evidence: docs/10-spec-development/2026-11-12-transition-notes.md
+  base_main: f1ead7e1dfe83c3ce7e740027ec4ff4d29183f47
+  scope: optional_notes_on_existing_order_transitions_and_history
+  canonical_pairs: FR-SVC-012_R02-T011_and_FR-SVC-016_R02-T013_partial
+  aggregate: 21_passed_zero_failed_five_environment_blockers
+  frontend: 1455_passed_zero_failed_zero_skipped
+  python: 6111_passed_685_environment_skips_12_warnings
+  focused: 38_passed
+  repository: 203_passed
+  browser: 138_collected_not_executed
+  independent_review: no_blocking_findings_shim_correction_reviewed
+  owner_red: seven_expected_failures
+  view_red: four_expected_failures_one_read_only_control
+  draft_lifetime: volatile_per_order_exact_scope_no_reload_persistence
+  authority_schema_sync_entities: unchanged
+  original_branding_timeout: unresolved_not_fixed
+  publication: not_authorized
+  acceptance: no_hosted_physical_capacity_or_deployment_claim
+
+historical_order_intake_readback_checkpoint: order_intake_readback_20261112
 order_intake_readback_20261112:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-12-order-intake-readback.md
@@ -3203,7 +3225,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
+active_plan: docs/10-spec-development/2026-11-12-transition-notes.md
+historical_order_intake_readback_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
 historical_local_order_filter_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
 historical_frontend_sync_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
 historical_frontend_diagnostic_plan: docs/10-spec-development/2026-11-09-frontend-diagnostic-retention.md
@@ -3214,7 +3237,7 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: intake_readback_local_partial_hosted_browser_qualification_pending
+active_plan_status: transition_notes_local_qualification_in_progress
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3224,7 +3247,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: order_intake_readback_20261112
+last_checkpoint: transition_notes_20261112
+historical_order_intake_readback_last_checkpoint: order_intake_readback_20261112
 historical_local_order_filter_last_checkpoint: local_order_filters_20261110
 historical_frontend_diagnostic_last_checkpoint: frontend_diagnostic_retention_20261109
 historical_order_attribution_last_checkpoint: order_transition_attribution_20261108

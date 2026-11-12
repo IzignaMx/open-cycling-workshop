@@ -112,7 +112,12 @@ const empty = (): WorkshopSnapshot => ({
   legacyPresent: false,
   timelineMessage: null,
   identityKey: '',
-  transitionProtection: Object.freeze({ states: new Map(), notice: null }),
+  transitionProtection: Object.freeze({
+    states: new Map(),
+    notice: null,
+    notes: new Map(),
+    noteToken: {},
+  }),
 })
 const safeMessage = (reason: string) =>
   reason === 'client_upgrade_required'
@@ -1623,6 +1628,7 @@ export class WorkshopController {
   }
   hasUnsentCaptures(): boolean {
     return (
+      this.#transitionProtection.hasUnsentNotes() ||
       this.#customerEdit.hasUnsent() ||
       this.#captureVisit.hasUnsent() ||
       this.#captureRecovery.hasUnsent()
@@ -2026,6 +2032,24 @@ export class WorkshopController {
   private observeTransitionScope(source: BaselineSession): void {
     this.#transitionProtection.observeScope(this.captureScope(source))
   }
+  hasUnsentTransitionNotes(): boolean {
+    return this.#transitionProtection.hasUnsentNotes()
+  }
+  editTransitionNote(orderId: string, value: string, token: object): void {
+    const source = this.#active
+    if (
+      !source ||
+      this.#snapshot.phase !== 'ready' ||
+      !source.isCurrent(source.identity) ||
+      !source.context.capabilities.includes('orders.write') ||
+      !source.context.capabilities.includes('orders.read') ||
+      !this.#snapshot.orders.some((order) => order.order_id === orderId)
+    )
+      return
+    this.observeTransitionScope(source)
+    if (this.#transitionProtection.editNote(orderId, value, token))
+      this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
+  }
   async transition(orderId: string, action: OrderAction): Promise<OrderTransitionResult> {
     let source: BaselineSession
     try {
@@ -2034,6 +2058,7 @@ export class WorkshopController {
       return { status: 'unknown' }
     }
     this.observeTransitionScope(source)
+    const note = this.#transitionProtection.getSnapshot().notes.get(orderId)
     const token = this.#transitionProtection.begin(orderId)
     if (!token) {
       this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
@@ -2042,7 +2067,7 @@ export class WorkshopController {
     this.publish({ transitionProtection: this.#transitionProtection.getSnapshot() })
     let result: OrderTransitionResult
     try {
-      result = await this.executeTransition(source, orderId, action)
+      result = await this.executeTransition(source, orderId, action, note)
     } catch {
       result = { status: 'unknown' }
     }
@@ -2050,6 +2075,7 @@ export class WorkshopController {
       orderId,
       token,
       orderTransitionFeedback({ kind: 'resolved', value: result }),
+      result.status === 'committed',
     )
     const active = this.#active
     if (settled && active?.isCurrent(active.identity) && this.#snapshot.phase === 'ready') {
@@ -2062,10 +2088,11 @@ export class WorkshopController {
     source: BaselineSession,
     orderId: string,
     action: OrderAction,
+    note?: string,
   ): Promise<OrderTransitionResult> {
     const networkSequence = this.#networkSequence
     try {
-      await this.repositories.transition(source, orderId, action)
+      await this.repositories.transition(source, orderId, action, note)
     } catch {
       // Rejection can follow a native commit. Never infer rollback or replay.
       return { status: 'unknown' }

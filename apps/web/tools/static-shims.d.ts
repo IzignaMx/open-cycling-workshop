@@ -14,6 +14,7 @@ declare module 'react' {
     state: Readonly<S>
     render(): ReactNode
   }
+  export function useId(): string
   export type ReactNode = any
   export type CSSProperties = Record<string, string | number | undefined>
   export function useSyncExternalStore<T>(
