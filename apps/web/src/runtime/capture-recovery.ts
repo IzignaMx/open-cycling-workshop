@@ -49,6 +49,8 @@ interface Options {
 const hintKey = 'ocwp.capture-checkpoint.v1',
   cleanupKey = 'ocwp.capture-cleanup.v1'
 const messages = {
+  unsupported:
+    'Este borrador requiere una versión compatible de la aplicación. Se conserva en este dispositivo, pero no se puede recuperar ni enviar con esta versión.',
   persisting: 'Guardando el borrador en este dispositivo…',
   saved: 'Borrador guardado para recuperar al recargar esta sesión.',
   failed:
@@ -111,6 +113,7 @@ export class CaptureRecovery {
   private sequence = 0
   private lifetime = 0
   private clean = true
+  private unsupported = false
   private cleanupFailures = new Set<string>()
   private forms: Record<Channel, LocalChannel> = { customer: local(), order: local() }
   constructor(private readonly options: Options) {}
@@ -135,11 +138,14 @@ export class CaptureRecovery {
   }
   hasUnsent(): boolean {
     if (this.closed) return false
-    return channels.some(
-      (ch) =>
-        !!this.forms[ch].attempt ||
-        this.head?.[ch].state === 'PROTECTED' ||
-        this.head?.[ch].state === 'UNAVAILABLE',
+    return (
+      this.unsupported ||
+      channels.some(
+        (ch) =>
+          !!this.forms[ch].attempt ||
+          this.head?.[ch].state === 'PROTECTED' ||
+          this.head?.[ch].state === 'UNAVAILABLE',
+      )
     )
   }
   canSubmit(channel: Channel): boolean {
@@ -177,6 +183,7 @@ export class CaptureRecovery {
     }
   }
   private fail(channel: Channel, message: string = messages.failed): void {
+    if (message === messages.unsupported) this.unsupported = true
     this.forms[channel].presentation = { blocked: true, busy: false, message }
     this.notify()
   }
@@ -246,10 +253,24 @@ export class CaptureRecovery {
         nextGeneration: crypto.randomUUID(),
       })
     if (!this.valid(c) || seq !== this.sequence) return {}
+    if (result.kind === 'refused' && result.reason === 'unsupported_format') {
+      // Validated metadata is retained only for exact-generation discard/leave protection.
+      // Opaque payload never enters the runtime projection and admission stays inactive.
+      this.head = result.checkpoint
+      this.scope = structuredClone(c.scope)
+    }
     if ((result.kind !== 'ack' && result.kind !== 'loaded') || result.checkpoint.closed) {
-      channels.forEach((ch) => this.fail(ch, messages.unavailable))
+      channels.forEach((ch) =>
+        this.fail(
+          ch,
+          result.kind === 'refused' && result.reason === 'unsupported_format'
+            ? messages.unsupported
+            : messages.unavailable,
+        ),
+      )
       return {}
     }
+    this.unsupported = false
     const continued =
       prior?.generation === result.checkpoint.generation &&
       this.scope !== null &&
@@ -365,9 +386,11 @@ export class CaptureRecovery {
       if (result.kind !== 'ack' || !this.valid(c)) {
         this.fail(
           channel,
-          result.kind === 'refused' && result.reason === 'oversize'
-            ? messages.oversize
-            : messages.failed,
+          result.kind === 'refused' && result.reason === 'unsupported_format'
+            ? messages.unsupported
+            : result.kind === 'refused' && result.reason === 'oversize'
+              ? messages.oversize
+              : messages.failed,
         )
         f.queued = null
         this.localAdmissionCompleted(c, result)
@@ -424,7 +447,12 @@ export class CaptureRecovery {
     f.reserving = false
     if (life !== this.lifetime) return null
     if (result.kind !== 'ack' || !this.valid(c) || !this.active) {
-      this.fail(channel)
+      this.fail(
+        channel,
+        result.kind === 'refused' && result.reason === 'unsupported_format'
+          ? messages.unsupported
+          : messages.failed,
+      )
       this.localAdmissionCompleted(c, result)
       return null
     }
@@ -528,12 +556,14 @@ export class CaptureRecovery {
           sessionBindingId: scope.sessionBindingId,
         }),
       )
+      this.unsupported = false
       this.cleanupCompleted(failureKey)
     } catch {
       if (life === this.lifetime && !this.closed) this.cleanupFailed(failureKey)
     }
   }
   startVisit(): void {
+    this.unsupported = false
     this.lifetime++
     this.sequence++
     this.closed = false
@@ -544,6 +574,7 @@ export class CaptureRecovery {
     this.notify()
   }
   dispose(): void {
+    this.unsupported = false
     this.lifetime++
     this.closed = true
     this.active = false

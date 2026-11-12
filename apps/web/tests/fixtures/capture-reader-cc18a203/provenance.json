@@ -1,0 +1,8 @@
+{
+  "commit": "cc18a203a8c754284fc14ef3570d94d7d98fac23",
+  "dexie": "4.4.4",
+  "files": {
+    "capture-checkpoint-store.ts": "301fe2b313e1f8fdc059fd8b885c187afa3c654221b08d1322c37cdabad12a75",
+    "capture-checkpoint.ts": "07ea37dfc0dbb72572d2d002d7890cf4040de321da7031b34ed1988fba9b2003"
+  }
+}

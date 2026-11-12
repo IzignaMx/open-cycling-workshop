@@ -20,6 +20,7 @@ import {
   validCheckpoint,
   validCommandShape,
   validContent,
+  preservableUnsupportedContent,
   validHash,
   validInteger,
   validProjection,
@@ -27,8 +28,13 @@ import {
 } from './capture-checkpoint.js'
 const channels: Channel[] = ['customer', 'order']
 const refused = (
-  reason: Extract<CaptureCheckpointResult, { kind: 'refused' }>['reason'],
+  reason: Exclude<
+    Extract<CaptureCheckpointResult, { kind: 'refused' }>['reason'],
+    'unsupported_format'
+  >,
 ): CaptureCheckpointResult => ({ kind: 'refused', reason })
+const unsupported = (checkpoint: CaptureCheckpoint): CaptureCheckpointResult =>
+  frozenCopy({ kind: 'refused', reason: 'unsupported_format', checkpoint })
 const keys = (id: string): [string, string][] => channels.map((channel) => [id, channel])
 function matches(
   row: CaptureDraftContent,
@@ -108,6 +114,8 @@ export async function applyCaptureCheckpoint(
       const state = checkpoint[channel]
       if (state.state !== 'UNSENT') continue
       const row = await db.captureDraftContents.get([checkpoint.checkpointId, channel])
+      if (row && preservableUnsupportedContent(row) && matches(row, checkpoint, channel))
+        return unsupported(checkpoint)
       if (!validContent(row) || !matches(row, checkpoint, channel)) return refused('invalid')
       if (now < row.firstPersistedAt) return refused('clock')
       if (now >= row.expiresAt) return refused('expired')
@@ -150,6 +158,8 @@ export async function applyCaptureCheckpoint(
     if (state.state === 'UNAVAILABLE') return refused('protected')
     if (state.state === 'UNSENT') {
       const row = await db.captureDraftContents.get([checkpoint.checkpointId, command.channel])
+      if (row && preservableUnsupportedContent(row) && matches(row, checkpoint, command.channel))
+        return unsupported(checkpoint)
       if (!validContent(row) || !matches(row, checkpoint, command.channel))
         return refused('invalid')
     }
@@ -266,6 +276,7 @@ export async function sweepExpiredCaptureContents(
   if (!validInteger(now)) return { kind: 'unavailable' }
   try {
     let after: [string, string] | undefined
+    let unresolvedClock = false
     for (;;) {
       const page = await db.transaction(
         'rw',
@@ -279,8 +290,20 @@ export async function sweepExpiredCaptureContents(
             const checkpoint = await db.captureCheckpoints.get(row.checkpointId)
             const channel = row.channel
             const usable = validCheckpoint(checkpoint) && channels.includes(channel)
-            const wellFormed = validContent(row) && usable && matches(row, checkpoint, channel)
+            const unsupported = preservableUnsupportedContent(row)
+            const wellFormed =
+              (validContent(row) || unsupported) && usable && matches(row, checkpoint, channel)
             const rollback = usable && now < checkpoint.observedAt
+            if (
+              unsupported &&
+              wellFormed &&
+              !checkpoint.closed &&
+              checkpoint[channel].state === 'UNSENT' &&
+              (rollback || now < row.firstPersistedAt)
+            ) {
+              unresolvedClock = true
+              continue
+            }
             if (
               wellFormed &&
               !rollback &&
@@ -317,7 +340,8 @@ export async function sweepExpiredCaptureContents(
           }
         },
       )
-      if (page.count < MAINTENANCE_PAGE_SIZE) return { kind: 'complete' }
+      if (page.count < MAINTENANCE_PAGE_SIZE)
+        return { kind: unresolvedClock ? 'unavailable' : 'complete' }
       after = page.last
     }
   } catch {

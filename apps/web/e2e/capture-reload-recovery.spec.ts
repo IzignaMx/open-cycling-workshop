@@ -1003,3 +1003,54 @@ for (const invalid of [
     expect(order.dependsOn).toEqual([bicycle.mutationId])
   })
 }
+
+test('unsupported future capture stays byte-exact and blocked on reload until explicit logout cleanup', async ({
+  page,
+  request,
+}) => {
+  const seeded = await seedWorkshop(page, request)
+  await prepare(page, 'order', seeded.customerId)
+  const original = await recovery(page)
+  const row = original.contents.find((value) => value.channel === 'order')!
+  const future = {
+    ...row,
+    format: 2,
+    draft: { ...row.draft, existingBicycleId: 'synthetic-future-association' },
+  }
+  await page.evaluate(
+    async ({ name, row }) => {
+      const request = indexedDB.open(name)
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('captureDraftContents', 'readwrite')
+          tx.objectStore('captureDraftContents').put(row)
+          tx.oncomplete = () => resolve()
+          tx.onabort = () => reject(tx.error)
+        })
+      } finally {
+        db.close()
+      }
+    },
+    { name: DATABASE, row: future },
+  )
+  const before = (await kernelSnapshot(page)).journal
+  await page.reload()
+  await waitForReady(page)
+  await expect(form(page, 'order').getByText(/requiere una versión compatible/)).toBeVisible()
+  await expect(submit(page, 'order')).toBeDisabled()
+  await expect(form(page, 'order').getByLabel('Problema reportado')).toHaveValue('')
+  expect((await recovery(page)).contents.find((value) => value.channel === 'order')).toEqual(future)
+  expect((await kernelSnapshot(page)).journal).toEqual(before)
+  page.once('dialog', (dialog) => dialog.dismiss())
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await expect(form(page, 'order').getByText(/requiere una versión compatible/)).toBeVisible()
+  expect((await recovery(page)).contents.find((value) => value.channel === 'order')).toEqual(future)
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await expect.poll(async () => (await recovery(page, row.checkpointId)).contents.length).toBe(0)
+  expect((await recovery(page, row.checkpointId)).checkpoint?.closed).toBe(true)
+})

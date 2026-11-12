@@ -38,6 +38,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.auth-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.e2e-orders.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.e2e-capture.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
@@ -82,6 +83,8 @@ try {
     'tests/runtime/capture-reload-recovery.test.mjs',
     'tests/runtime/capture-reload-failures.test.mjs',
     'tests/access-kernel/capture-checkpoint-store.test.mjs',
+    'tests/access-kernel/capture-format-compatibility.test.mjs',
+    'tests/runtime/capture-format-compatibility.test.mjs',
     'tests/access-kernel/capture-checkpoint-authority.test.mjs',
     'tests/runtime/capture-draft-receipts.test.mjs',
     'tests/runtime/capture-visit.test.mjs',
