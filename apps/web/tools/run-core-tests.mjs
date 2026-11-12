@@ -37,6 +37,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.conflict-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.auth-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.order-test.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.e2e-orders.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
@@ -94,6 +95,9 @@ try {
     'tests/orders/order-intake-details.test.mjs',
     'tests/orders/order-filter.test.mjs',
     'tests/runtime/transition-protection.test.mjs',
+    'tests/runtime/transition-notes.test.mjs',
+    'tests/runtime/transition-notes-runtime.test.mjs',
+    'tests/orders/transition-note-view.test.mjs',
     'tests/runtime/account-access.test.mjs',
     'tests/runtime/connected-read.test.mjs',
     'tests/inventory/fixture-http.test.mjs',

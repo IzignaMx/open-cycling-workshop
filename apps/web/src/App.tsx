@@ -70,7 +70,10 @@ export function App({ runtime }: { runtime: WorkshopController }) {
   useEffect(() => {
     const warnUnsavedEdit = (event: BeforeUnloadEvent) => {
       const edit = runtime.getSnapshot().customerEdit
-      if (edit && (edit.dirty || edit.busy || edit.blocked)) {
+      if (
+        (edit && (edit.dirty || edit.busy || edit.blocked)) ||
+        runtime.hasUnsentTransitionNotes()
+      ) {
         event.preventDefault()
         event.returnValue = ''
       }
@@ -274,6 +277,9 @@ export function App({ runtime }: { runtime: WorkshopController }) {
                 canTransition={writeOrders}
                 canReadBicycleInfo={readBicycles}
                 onTransition={(order, action) => runtime.transition(order.order_id, action)}
+                onNote={(orderId, value) =>
+                  runtime.editTransitionNote(orderId, value, state.transitionProtection.noteToken)
+                }
                 onTimeline={(orderId) => runtime.timeline(orderId)}
               />
               <div className="session-actions">

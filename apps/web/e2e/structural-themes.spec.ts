@@ -112,6 +112,10 @@ for (const theme of THEMES) {
     await page.getByLabel('Marca', { exact: true }).fill('Bicicleta en borrador')
     await page.getByLabel('Buscar órdenes').fill('Caso')
     await page.getByText('Historial (3)', { exact: true }).click()
+    const transitionNote = page.getByLabel('Nota para el próximo cambio (opcional)').first()
+    await transitionNote.fill('Nota pendiente de taller')
+    const noteNode = await transitionNote.elementHandle()
+
     const draft = await page.getByLabel('Problema reportado').elementHandle()
     await draft!.evaluate((element) => (element as HTMLTextAreaElement).setSelectionRange(3, 8))
     await openSettings(page)
@@ -133,6 +137,11 @@ for (const theme of THEMES) {
     await expect(page.getByLabel('Marca', { exact: true })).toHaveValue('Bicicleta en borrador')
     await expect(page.getByLabel('Buscar órdenes')).toHaveValue('Caso')
     await expect(page.locator('.order-history')).toHaveAttribute('open', '')
+    expect(await noteNode!.evaluate((element) => element.isConnected)).toBe(true)
+    await expect(transitionNote).toHaveValue('Nota pendiente de taller')
+    // These notes are deliberately volatile; clear before this unrelated reload.
+    await transitionNote.fill('')
+
     expect(await operationalSnapshot(page)).toEqual(before)
     await choice.press('Escape')
     await expect(page.getByRole('button', { name: 'Personalización', exact: true })).toBeFocused()
@@ -234,6 +243,9 @@ test.describe('touch and narrow reflow', () => {
           background: getComputedStyle(element).backgroundColor,
         }))
       expect(semantic).toEqual({ foreground: 'rgb(34, 89, 59)', background: 'rgb(227, 243, 232)' })
+      const transitionNote = page.getByLabel('Nota para el próximo cambio (opcional)').first()
+      await transitionNote.fill('Línea uno\n' + 'R'.repeat(400))
+      expect((await transitionNote.boundingBox())!.height).toBeGreaterThanOrEqual(56)
       await attachScreenshot(page, info, `${theme.id}-tablet-touch`)
       await attachScreenshot(page, info, `${theme.id}-tablet-touch-full`, true)
       for (const width of [390, 320]) {

@@ -1350,7 +1350,7 @@ def test_rebuilt_inventory_filter_keeps_scope_and_fresh_evidence_boundary() -> N
 
 def test_intake_readback_preserves_authority_and_qualification_boundaries() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: order_intake_readback_20261112" in state
+    assert "historical_order_intake_readback_checkpoint: order_intake_readback_20261112" in state
     record = " ".join(read(BASE + "2026-11-12-order-intake-readback.md").split())
     for token in ("FR-SVC-003", "R02-T005", "orders.read", "No schema", "remains unresolved"):
         assert token in record
@@ -1358,3 +1358,26 @@ def test_intake_readback_preserves_authority_and_qualification_boundaries() -> N
     assert "tests/orders/order-intake-details.test.mjs" in runner
     assert "tests/runtime/order-intake-readback.test.mjs" in runner
     assert "2026-11-12-order-intake-readback.md" in read(BASE + "traceability.csv")
+
+
+def test_transition_notes_keep_existing_authority_and_volatile_draft_boundary() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: transition_notes_20261112" in state
+    record = " ".join(read(BASE + "2026-11-12-transition-notes.md").split())
+    for token in (
+        "FR-SVC-012/R02-T011",
+        "FR-SVC-016/R02-T013",
+        "not persisted",
+        "No schema",
+        "unresolved",
+    ):
+        assert token in record
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    for name in (
+        "transition-notes.test.mjs",
+        "transition-notes-runtime.test.mjs",
+        "transition-note-view.test.mjs",
+        "tsconfig.e2e-orders.json",
+    ):
+        assert name in runner
+    assert "2026-11-12-transition-notes.md" in read(BASE + "traceability.csv")

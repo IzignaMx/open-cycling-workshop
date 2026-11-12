@@ -1,5 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-12 · Optional transition notes
+
+- [x] Verify fresh PR101 main source, select existing optional-note handoff, and
+      reproduce seven owner/normalization plus four view failures before the fix.
+- [x] Prove bounded draft ownership, actual App wiring, navigation/unload guards,
+      local commit/unknown handling, duplicate exclusion and saved offline reload
+      with fake-IDB. This does not qualify native browser persistence.
+- [x] Finish exact-candidate local qualification and final independent review:
+      aggregate 21 passed, zero failed, five environment blockers; frontend 1,455;
+      Python 6,111 passed with 685 environment skips. Native evidence is pending.
+- [ ] Obtain specific publication authorization and exact-source hosted/native
+      browser evidence before integration. Physical T1–T8/R01-T035, M2/capacity,
+      actual restore and quote activation remain open. No new operator action is
+      required. The original branding timeout remains unresolved.
+- PR101 main CI43167845835 qualifies the baseline only, not this new source.
+  See [scope and evidence](docs/10-spec-development/2026-11-12-transition-notes.md).
+
 ## 2026-11-12 · Saved order intake readback
 
 - [x] Reproduce missing intake readback with six failing component cases, then

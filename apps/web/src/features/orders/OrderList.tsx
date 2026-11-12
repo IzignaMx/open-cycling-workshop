@@ -1,5 +1,6 @@
+import { transitionNoteError } from './transition-note.js'
 import { filterOrders } from './order-filter.js'
-import { useState, type CSSProperties, type ChangeEvent } from 'react'
+import { useId, useState, type CSSProperties, type ChangeEvent } from 'react'
 import type { LocalServiceOrder } from '../../local/service-order-types.js'
 import { historyActorId, historyOccurrence, type OrderHistoryEvent } from './order-history.js'
 import { ORDER_STATE_LABELS, TRANSITION_ACTION_LABELS } from './order-model.js'
@@ -14,6 +15,7 @@ export interface OrderListProps {
   canTransition: boolean
   protection: TransitionProtectionSnapshot
   canReadBicycleInfo: boolean
+  onNote?(orderId: string, value: string): void
   onTimeline?(orderId: string): Promise<void>
   onTransition(order: LocalServiceOrder, action: OrderAction): Promise<OrderTransitionResult>
 }
@@ -27,6 +29,9 @@ function OrderRecord({
   onTimeline,
   transitionState,
   transitionDisabled,
+  note,
+  onNote,
+  noteCapacity,
 }: {
   order: LocalServiceOrder
   events: readonly OrderHistoryEvent[]
@@ -36,7 +41,12 @@ function OrderRecord({
   onTimeline: OrderListProps['onTimeline']
   transitionState: OrderTransitionState | undefined
   transitionDisabled: boolean
+  note: string
+  onNote: OrderListProps['onNote']
+  noteCapacity: boolean
 }) {
+  const noteId = useId()
+  const noteError = transitionNoteError(note)
   const [historyMessage, setHistoryMessage] = useState<string | null>(null)
   const message = transitionState?.feedback?.message ?? historyMessage
   const actions = canTransition ? orderActionsFor(order.state) : []
@@ -70,7 +80,7 @@ function OrderRecord({
               key={action}
               type="button"
               className="secondary-button"
-              disabled={transitionState !== undefined || transitionDisabled}
+              disabled={transitionState !== undefined || transitionDisabled || noteError !== null}
               onClick={() => void onTransition(order, action)}
             >
               {TRANSITION_ACTION_LABELS[action] ?? action}
@@ -84,6 +94,35 @@ function OrderRecord({
           </p>
         )}
       </div>
+      {canTransition && onNote && (actions.length > 0 || note !== '') ? (
+        <div className="order-transition-note">
+          <label htmlFor={noteId}>
+            {actions.length
+              ? 'Nota para el próximo cambio (opcional)'
+              : 'Nota sin enviar (orden final)'}
+          </label>
+          <textarea
+            id={noteId}
+            rows={2}
+            maxLength={4000}
+            value={note}
+            disabled={transitionState !== undefined || transitionDisabled || noteCapacity}
+            aria-invalid={noteError !== null}
+            aria-describedby={`${noteId}-help ${noteId}-error`}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+              onNote(order.order_id, event.currentTarget.value)
+            }
+          />
+          <p id={`${noteId}-help`}>
+            La nota acompaña al próximo cambio y se muestra en su historial. Máximo 2000 caracteres.
+            Las notas sin enviar se pierden al recargar. Puedes borrar el texto para descartarlo.
+            {noteCapacity ? ' Ya hay 50 notas sin enviar; borra una antes de añadir otra.' : ''}
+          </p>
+          <p id={`${noteId}-error`} role="status">
+            {noteError}
+          </p>
+        </div>
+      ) : null}
       <details className="order-intake-details">
         <summary>Datos de recepción</summary>
         <dl>
@@ -123,6 +162,11 @@ function OrderRecord({
                   {TRANSITION_ACTION_LABELS[event.action] ?? event.action} ·{' '}
                   {ORDER_STATE_LABELS[event.from_state] ?? event.from_state} →{' '}
                   {ORDER_STATE_LABELS[event.to_state] ?? event.to_state}
+                  {event.note ? (
+                    <div className="order-history-note">
+                      Nota del cambio: <span dir="auto">{event.note}</span>
+                    </div>
+                  ) : null}
                   <div className="order-history-metadata">
                     <span>
                       Autor (ID): <bdi dir="auto">{historyActorId(event.actor_id)}</bdi>
@@ -165,6 +209,7 @@ export function OrderList({
   canTransition,
   canReadBicycleInfo,
   onTimeline,
+  onNote,
   protection,
 }: OrderListProps) {
   const [query, setQuery] = useState('')
@@ -272,6 +317,13 @@ export function OrderList({
                 canTransition={canTransition}
                 canReadBicycleInfo={canReadBicycleInfo}
                 onTimeline={onTimeline}
+                onNote={onNote}
+                note={protection.notes?.get(order.order_id) ?? ''}
+                noteCapacity={
+                  !!protection.notes &&
+                  protection.notes.size >= 50 &&
+                  !protection.notes.has(order.order_id)
+                }
               />
             ))}
           </ul>
