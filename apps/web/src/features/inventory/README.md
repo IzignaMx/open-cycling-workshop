@@ -35,3 +35,10 @@ actual HTML report ZIP, without launching a browser. The preservation fixture us
 an explicitly local-only operational writer so pending work exists before inventory
 entry and stays unchanged through disconnect/reload. These are authored journey
 assertions; report privacy execution alone does not qualify the browser journey.
+
+The catalog has a transient, page-local name/SKU substring filter. It never queries
+other pages or stock; original page size still controls pagination. New page,
+refresh or access loss resets the query, while stock/history updates retain it.
+No matching rows is distinct from an empty server page. See the
+[bounded evidence](../../../../../docs/10-spec-development/2026-11-11-inventory-page-filter.md)
+for browser and physical acceptance limits.

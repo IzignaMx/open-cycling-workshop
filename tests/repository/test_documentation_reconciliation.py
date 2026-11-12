@@ -1308,7 +1308,7 @@ def test_frontend_completion_followup_preserves_failed_attempt_and_scope() -> No
 
 def test_local_order_filters_keep_view_only_scope_and_retained_regressions() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: local_order_filters_20261110" in state
+    assert "historical_local_order_filter_checkpoint: local_order_filters_20261110" in state
     assert "permissions_schema_sync_inventory_writes: unchanged" in state
     record = read(BASE + "2026-11-10-local-order-filters.md")
     for token in ("FR-SVC-004", "not persisted", "No schema", "unknown case/cause"):
@@ -1316,3 +1316,30 @@ def test_local_order_filters_keep_view_only_scope_and_retained_regressions() -> 
     runner = read("apps/web/tools/run-core-tests.mjs")
     assert "tests/orders/order-filter.test.mjs" in runner
     assert (ROOT / "apps/web/e2e/order-filters.spec.ts").is_file()
+
+
+def test_rebuilt_inventory_filter_keeps_scope_and_fresh_evidence_boundary() -> None:
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: inventory_page_filter_rebuilt_20261111" in state
+    block = state.split("inventory_page_filter_rebuilt_20261111:\n", 1)[1].split("\n\n", 1)[0]
+    for token in (
+        "evidence: docs/10-spec-development/2026-11-11-inventory-page-filter.md",
+        "prior_checks: do_not_qualify_reconstructed_tree",
+        "scope: transient_name_SKU_filter_current_connected_catalog_page_only",
+        "authority_schema_sync_writes: unchanged",
+        "browser: authored_not_executed_lifecycle_pending",
+        "acceptance: no_hosted_physical_capacity_or_deployment_claim",
+    ):
+        assert token in block
+    record = read(BASE + "2026-11-11-inventory-page-filter.md")
+    for token in (
+        "FR-INV-001 remains partial",
+        "not persisted or synced",
+        "Old checks do not qualify reconstructed source",
+        "CI42556226651 unknown case/cause",
+        "not executed hook lifecycle or browser evidence",
+    ):
+        assert token in record
+    assert "tests/inventory/catalog-filter.test.mjs" in read("apps/web/tools/run-core-tests.mjs")
+    assert "2026-11-11-inventory-page-filter.md" in read(BASE + "traceability.csv")
+    assert "2026-11-11-inventory-page-filter.md" in read("MANUAL-ACTIONS-CHECKLIST.md")

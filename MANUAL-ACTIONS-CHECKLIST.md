@@ -1,5 +1,20 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-11 · Rebuilt inventory catalog page filter
+
+- [x] Verify fresh clone against PR99 main6a81c90; preserve original failed runs.
+- [x] Reconstruct the bounded page-local name/SKU filter after loss of unpublished
+      commit25684a5. Old checks do not qualify this new source.
+- [x] Complete fresh local qualification: aggregate 21 passed, zero failed, five
+      blockers; Python 6,101 plus 685 environment skips, frontend 1,425, inventory
+      54 and repository 201. Independent review plus 11 focused tests passed.
+- [ ] Obtain exact-candidate hosted/browser evidence before conditional integration
+      authorized by the user. Retain initial shallow-clone legacy-build failure.
+- [ ] Prove actual filter lifecycle and four-theme accessibility in a permitted
+      browser environment with a dedicated E2E database. Do not bypass restrictions.
+- Physical T1–T8/R01-T035, M2/capacity and real restore remain open. See
+  [scope/evidence](docs/10-spec-development/2026-11-11-inventory-page-filter.md).
+
 ## 2026-11-10 · PR99 browser assertion follow-up
 
 - [x] Preserve CI42894474317 direct-browser failure: 133 passes, four structural

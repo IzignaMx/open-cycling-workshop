@@ -8,8 +8,10 @@ import {
 } from 'react'
 import { hasCapability } from '../../auth/capabilities.js'
 import type { InventoryController, InventoryRead } from './controller.js'
-import type { InventoryErrorCode } from './contracts.js'
+import type { InventoryErrorCode, InventoryProduct } from './contracts.js'
+import { CatalogPage } from './CatalogPage.js'
 import './inventory.css'
+const emptyCatalog: readonly InventoryProduct[] = []
 const errors: Record<InventoryErrorCode, string> = {
   stale_request: 'La lectura dejó de estar vigente. Verifica el acceso y vuelve a consultar.',
   invalid_session: 'La sesión ya no es válida. Inicia sesión de nuevo.',
@@ -171,38 +173,12 @@ export function InventoryPanel({ controller }: { controller: InventoryController
             <ReadStatus value={state.catalog} loading="Consultando productos…" />
             {state.catalog.phase === 'ready' && (
               <>
-                <p role="status">
-                  {state.catalog.value?.length ?? 0} productos en esta página. Página{' '}
-                  {Math.floor(state.offset / 50) + 1}.
-                </p>
-                {state.catalog.value?.length === 0 ? (
-                  <p>No hay productos en esta página.</p>
-                ) : (
-                  <ul className="inventory-products" aria-label="Productos de inventario">
-                    {state.catalog.value?.map((product) => (
-                      <li key={product.product_id}>
-                        <div>
-                          <strong>{product.name}</strong>
-                          <span>SKU: {product.sku}</span>
-                          <span>Unidad: {product.unit}</span>
-                        </div>
-                        <button
-                          type="button"
-                          aria-label={`Consultar ${product.name}`}
-                          aria-pressed={state.product?.product_id === product.product_id}
-                          onClick={() =>
-                            void focusAfter(
-                              controller.selectProduct(product.product_id),
-                              productHeading,
-                            )
-                          }
-                        >
-                          Consultar producto
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <CatalogPage
+                  products={state.catalog.value ?? emptyCatalog}
+                  offset={state.offset}
+                  selectedProductId={state.product?.product_id ?? null}
+                  onSelect={(id) => void focusAfter(controller.selectProduct(id), productHeading)}
+                />
               </>
             )}
             <div className="inventory-actions">

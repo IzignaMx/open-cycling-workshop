@@ -100,6 +100,7 @@ try {
     'tests/inventory/transport.test.mjs',
     'tests/inventory/controller.test.mjs',
     'tests/inventory/panel.test.mjs',
+    'tests/inventory/catalog-filter.test.mjs',
     'tests/administration/model.test.mjs',
     'tests/administration/branding-compatibility.test.mjs',
     'tests/branding/contracts.test.mjs',
