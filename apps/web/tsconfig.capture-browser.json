@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "tools/capture-browser/**/*.ts",
+    "tests/access-kernel/capture-native.spec.ts",
+    "playwright.capture.config.ts"
+  ]
+}

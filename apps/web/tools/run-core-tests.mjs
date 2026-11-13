@@ -42,6 +42,8 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.personalization-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
+  run(process.execPath, ['tools/capture-browser/prepare.mjs'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.capture-browser.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.runtime-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.administration-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.branding-test.json', '--pretty', 'false'])
@@ -54,6 +56,8 @@ try {
           `--test-reporter-destination=${process.env.OCWP_FRONTEND_DIAGNOSTIC_FILE}`,
         ]
       : []),
+    'tools/capture-browser/prepare.test.mjs',
+    'tools/capture-browser/harness.test.mjs',
     'tests/module-information/reference.test.mjs',
     'tests/access-kernel/context.test.mjs',
     'tests/access-kernel/cutover-context.test.mjs',

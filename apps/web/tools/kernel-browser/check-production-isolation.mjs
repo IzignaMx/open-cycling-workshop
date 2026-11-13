@@ -16,7 +16,7 @@ async function files(directory) {
   ).flat()
 }
 const markers =
-  /kernel-browser|openBaselineQualification|isolated-baseline-test-|Synthetic qualified fixture only|Qualification requires actual null advertisement/
+  /captureBoundaryHarness|capture-native-|opaqueFuture|capture-browser|kernel-browser|openBaselineQualification|isolated-baseline-test-|Synthetic qualified fixture only|Qualification requires actual null advertisement/
 
 test('production source has no harness admission import or helper', async () => {
   for (const path of await files(new URL('src/', web))) {

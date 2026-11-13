@@ -1,5 +1,16 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-13 · Isolated native capture boundary harness
+
+- [x] Complete harness/source validation and independent review: frontend 1,527,
+      harness controls 16, repository 207 and production isolation 2 pass;
+      lint/format/types and both builds pass. Three native cases collected only.
+- [ ] Execute three native reducer/storage scenarios on an authorized runner.
+      Local Chromium launch failed with socket Operation not permitted; no bypass.
+- [ ] Independently qualify actual cc18a203 App/SW and G1–G6. Reducer plus current
+      database class is not the historical application. No format/selector or
+      origin migration is activated. See [scope](docs/10-spec-development/2026-11-13-capture-native-harness.md).
+
 ## 2026-11-13 · Historical reader exclusion and rollback boundary
 
 - [x] Keep exact-v1 production writes; record why epochs, revocation, new markers,
