@@ -350,3 +350,81 @@ test('concurrent explicit cleanup and v1 overwrite cannot revive an unsupported 
   assert.equal(await f.db.captureDraftContents.count(), 0)
   assert.equal((await f.db.captureCheckpoints.get(id)).closed, true)
 })
+
+for (const purportedFence of ['locked_owner', 'rotated_writer_epoch', 'new_reader_marker'])
+  test(`historical maintenance ignores ${purportedFence}: not an offline reader exclusion fence`, async (t) => {
+    const f = await fixture(t)
+    const row = await future(f)
+    const control = await f.db.deviceControl.get('device')
+    if (purportedFence === 'locked_owner')
+      await f.db.deviceControl.put({
+        ...control,
+        state: 'LOCKED',
+        generation: control.generation + 1,
+        activePartitionId: null,
+        tabAttemptId: null,
+      })
+    else if (purportedFence === 'rotated_writer_epoch')
+      await f.db.deviceControl.put({
+        ...control,
+        captureWriter: { ...control.captureWriter, epoch: attempt },
+      })
+    else
+      // Synthetic marker tests only this historical reader's non-participation.
+      // It is not a proposed production schema, attestation or release permission.
+      await f.db.deviceControl.put({ ...control, minimumCaptureReader: 'synthetic-new-reader' })
+    const fenced = await f.db.deviceControl.get('device')
+    assert.deepEqual(await current.sweepExpiredCaptureContents(f.db, now), { kind: 'complete' })
+    assert.deepEqual(await f.db.captureDraftContents.get([id, 'order']), row)
+    if (purportedFence === 'rotated_writer_epoch')
+      assert.deepEqual(await f.call({ kind: 'load' }, now, legacy), {
+        kind: 'refused',
+        reason: 'unavailable',
+      })
+    // No ticket, server, network or deviceControl table is passed to this exact old sweep.
+    assert.deepEqual(await legacy.sweepExpiredCaptureContents(f.db, now), { kind: 'complete' })
+    assert.equal(await f.db.captureDraftContents.get([id, 'order']), undefined)
+    assert.equal((await f.db.captureCheckpoints.get(id)).order.state, 'UNAVAILABLE')
+    assert.deepEqual(await f.db.deviceControl.get('device'), fenced)
+  })
+
+test('compatible reader use and v9 upgrade do not prevent subsequent historical v8 maintenance', async (t) => {
+  const f = await fixture(t)
+  const row = await future(f)
+  assert.equal((await f.call({ kind: 'load' })).reason, 'unsupported_format')
+  assert.deepEqual(await current.sweepExpiredCaptureContents(f.db, now), { kind: 'complete' })
+  const upgraded = createKernelDatabase(f.db.name)
+  upgraded.version(9).stores({})
+  await upgraded.open()
+  assert.equal(upgraded.backendDB().version, 90)
+  assert.deepEqual(await upgraded.captureDraftContents.get([id, 'order']), row)
+  upgraded.close()
+  await f.db.open()
+  assert.equal(f.db.backendDB().version, 90)
+  assert.deepEqual(await legacy.sweepExpiredCaptureContents(f.db, now), { kind: 'complete' })
+  assert.equal(await f.db.captureDraftContents.get([id, 'order']), undefined)
+})
+
+test('two database connections allow historical maintenance after compatible preservation', async (t) => {
+  const f = await fixture(t)
+  const row = await future(f)
+  const oldConnection = createKernelDatabase(f.db.name)
+  t.after(() => oldConnection.close())
+  await oldConnection.open()
+  assert.deepEqual(await current.sweepExpiredCaptureContents(f.db, now), { kind: 'complete' })
+  assert.deepEqual(await oldConnection.captureDraftContents.get([id, 'order']), row)
+  await legacy.sweepExpiredCaptureContents(oldConnection, now)
+  assert.equal(await f.db.captureDraftContents.get([id, 'order']), undefined)
+})
+
+test('same-origin exact v1 remains readable across compatible to historical reopen', async (t) => {
+  const f = await fixture(t)
+  const before = await f.db.captureCheckpoints.get(id)
+  assert.deepEqual((await f.call({ kind: 'load' })).contents.order, f.row)
+  await current.sweepExpiredCaptureContents(f.db, now)
+  f.db.close()
+  await f.db.open()
+  await legacy.sweepExpiredCaptureContents(f.db, now)
+  assert.deepEqual((await f.call({ kind: 'load' }, now, legacy)).contents.order, f.row)
+  assert.deepEqual(await f.db.captureCheckpoints.get(id), before)
+})

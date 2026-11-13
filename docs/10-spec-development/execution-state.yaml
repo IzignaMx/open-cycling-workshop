@@ -1,6 +1,27 @@
 schema: 1
 
-current_checkpoint: capture_format_compatibility_20261112
+current_checkpoint: capture_rollout_boundary_20261113
+capture_rollout_boundary_20261113:
+  status: partial
+  strategy_and_counterexamples: locally_verified
+  technical_exclusion: blocked_not_implemented
+  frontend: 1511_passed_zero_failed_zero_skipped
+  focused_kernel: 25_passed
+  repository: 206_passed
+  lint_format_typecheck: passed
+  aggregate_backend_native: not_rerun_docs_tests_only_scope
+  independent_review: accepted_bounded_claims_and_gates
+  evidence: docs/10-spec-development/2026-11-13-capture-rollout-boundary.md
+  base_main: 3c43843d7da0535db53612efbba2e0563b542e40
+  scope: decision_and_historical_reader_counterexamples_only
+  production_runtime_schema: unchanged
+  production_writes: exact_format_1_unchanged
+  future_format_activation: blocked_prebaseline_reader_exclusion
+  existing_bicycle_selector: blocked_not_implemented
+  origin_isolation: proposed_not_approved_or_implemented
+  publication: not_authorized
+
+historical_capture_format_checkpoint: capture_format_compatibility_20261112
 capture_format_compatibility_20261112:
   status: locally_verified_hosted_native_pending
   aggregate: 21_passed_zero_failed_five_environment_blockers

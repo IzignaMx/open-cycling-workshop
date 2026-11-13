@@ -1405,7 +1405,7 @@ def test_order_associations_keep_read_scope_and_recovery_compatibility_boundary(
 
 def test_capture_format_compatibility_preserves_activation_and_rollback_gates() -> None:
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_format_compatibility_20261112" in state
+    assert "historical_capture_format_checkpoint: capture_format_compatibility_20261112" in state
     design = " ".join(
         read("docs/superpowers/specs/2026-11-12-capture-format-compatibility-design.md").split()
     )
@@ -1421,3 +1421,32 @@ def test_capture_format_compatibility_preserves_activation_and_rollback_gates() 
     assert "tests/access-kernel/capture-format-compatibility.test.mjs" in runner
     assert "tests/runtime/capture-format-compatibility.test.mjs" in runner
     assert "tsconfig.e2e-capture.json" in runner
+
+
+def test_capture_rollout_boundary_retains_measurable_unresolved_gates() -> None:
+    text = read(BASE + "2026-11-13-capture-rollout-boundary.md")
+    for token in (
+        "exact v1",
+        "same-origin",
+        "not an exclusion mechanism",
+        "offline historical client",
+        "multiple tabs",
+        "partial update",
+        "rollback floor",
+        "714342",
+        "cc18a203",
+        "proposed, not approved",
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "No production runtime",
+        "No payload deletion",
+    ):
+        assert token in text
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_rollout_boundary_20261113" in state
+    assert "future_format_activation: blocked_prebaseline_reader_exclusion" in state
+    assert "existing_bicycle_selector: blocked_not_implemented" in state
