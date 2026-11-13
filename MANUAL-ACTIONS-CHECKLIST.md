@@ -1,5 +1,19 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-13 · Historical reader exclusion and rollback boundary
+
+- [x] Keep exact-v1 production writes; record why epochs, revocation, new markers,
+      SW updates and schema bumps do not exclude historical same-origin code.
+- [x] Complete local decision/counterexample checks and independent review:
+      frontend 1,511, kernel 25 and repository 206 pass; lint/format/types pass.
+      Strategy is delivered; technical reader exclusion remains unresolved.
+- [ ] Close G1–G6 with an accepted transition ADR, actual cc18a203 App/SW native
+      rehearsal, lossless handover/restore, privacy/cleanup and rollback-floor proof.
+      New-origin isolation is proposed, not approved or implemented. Do not purge
+      drafts, reset TTL, force reload or activate the selector to bypass this gate.
+- Current safe action is v1/shared-origin operation. No operator migration or
+  deployment is requested. See [decision and measurable gates](docs/10-spec-development/2026-11-13-capture-rollout-boundary.md).
+
 ## 2026-11-12 · Preventive draft compatibility baseline
 
 - [x] Pin actual historical reader bytes and reproduce the unsafe v8/v9 reopen
