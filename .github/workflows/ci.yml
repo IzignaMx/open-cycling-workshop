@@ -353,6 +353,8 @@ jobs:
         run: pnpm --filter @ocwp/web exec playwright install --with-deps chromium
       - name: Run isolated offline kernel browser tests
         run: pnpm --filter @ocwp/web test:kernel-browser
+      - name: Run isolated native capture boundary tests
+        run: pnpm --filter @ocwp/web test:capture-browser
       - name: Prepare browser E2E database
         id: browser_fixture_initial
         shell: bash
@@ -528,6 +530,16 @@ jobs:
         with:
           name: isolated-kernel-browser-${{ github.sha }}
           path: apps/web/.tmp-kernel-browser-results/
+          include-hidden-files: true
+          if-no-files-found: warn
+      - name: Upload native capture boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-capture-boundary-${{ github.sha }}
+          path: |
+            apps/web/.tmp-capture-browser-results/
+            apps/web/.tmp-capture-browser/provenance.json
           include-hidden-files: true
           if-no-files-found: warn
       - name: Upload pinned legacy App and SW provenance

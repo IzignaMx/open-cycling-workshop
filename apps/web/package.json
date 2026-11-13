@@ -11,7 +11,8 @@
     "test": "node tools/run-core-tests.mjs",
     "test:e2e": "playwright test",
     "test:core": "node tools/run-core-tests.mjs",
-    "test:kernel-browser": "vite build --config tools/kernel-browser/vite.config.ts && playwright test --config playwright.kernel.config.ts"
+    "test:kernel-browser": "vite build --config tools/kernel-browser/vite.config.ts && playwright test --config playwright.kernel.config.ts",
+    "test:capture-browser": "node tools/capture-browser/prepare.mjs --build && tsc -p tsconfig.capture-browser.json && playwright test --config playwright.capture.config.ts"
   },
   "dependencies": {
     "@ocwp/branding": "workspace:*",

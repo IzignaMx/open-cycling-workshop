@@ -1,6 +1,27 @@
 schema: 1
 
-current_checkpoint: capture_rollout_boundary_20261113
+current_checkpoint: capture_native_harness_20261113
+capture_native_harness_20261113:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-13-capture-native-harness.md
+  base_main: 698420be10043afa2c237cbfe255e46490cf1f88
+  scope: isolated_native_reducer_harness_not_historical_app
+  frontend: 1527_passed_zero_failed_zero_skipped
+  harness_controls: 16_passed
+  repository: 207_passed
+  production_isolation: 2_passed
+  lint_format_typecheck_builds: passed
+  native_collection: 3_collected_zero_executed
+  independent_review: accepted_pin_and_both_origin_provenance_delta
+  full_aggregate_backend: not_rerun_test_harness_only_scope
+  local_native: launch_blocked_socket_operation_not_permitted
+  hosted_native: pending_not_executed
+  production_runtime_schema: unchanged
+  future_format_activation: blocked_prebaseline_reader_exclusion
+  existing_bicycle_selector: blocked_not_implemented
+  publication: not_authorized
+
+historical_capture_rollout_checkpoint: capture_rollout_boundary_20261113
 capture_rollout_boundary_20261113:
   status: partial
   strategy_and_counterexamples: locally_verified

@@ -1447,6 +1447,26 @@ def test_capture_rollout_boundary_retains_measurable_unresolved_gates() -> None:
     ):
         assert token in text
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_rollout_boundary_20261113" in state
+    assert "historical_capture_rollout_checkpoint: capture_rollout_boundary_20261113" in state
     assert "future_format_activation: blocked_prebaseline_reader_exclusion" in state
     assert "existing_bicycle_selector: blocked_not_implemented" in state
+
+
+def test_capture_native_harness_keeps_actual_app_and_activation_gates_open() -> None:
+    text = read(BASE + "2026-11-13-capture-native-harness.md")
+    for token in (
+        "not the historical App/SW",
+        "No browser test ran",
+        "G1\u2013G6 stay open",
+        "not approved or implemented",
+        "Retries are",
+        "zero",
+    ):
+        assert token in text
+    assert "test:capture-browser" in read(".github/workflows/ci.yml")
+    assert "current_checkpoint: capture_native_harness_20261113" in read(
+        BASE + "execution-state.yaml"
+    )
+    assert "captureBoundaryHarness" in read(
+        "apps/web/tools/kernel-browser/check-production-isolation.mjs"
+    )
