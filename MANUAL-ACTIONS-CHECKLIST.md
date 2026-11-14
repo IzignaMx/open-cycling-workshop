@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-13 · Actual capture App/SW offline reload
+
+- [x] Keep v1 writes and scope the next proof to exact historical/current App builds.
+- [ ] Qualify native offline page reload, SW navigation, draft and journal controls
+      on this exact candidate. Local browser launch remains unavailable, not bypassed.
+- [ ] Complete G1–G6 separately. No process restart, migration, old-client exclusion
+      or selector activation is established by this bounded test. See
+      [scope and evidence](docs/10-spec-development/2026-11-13-capture-app-reload.md).
+
 ## 2026-11-13 · Isolated native capture boundary harness
 
 - [x] Complete harness/source validation and independent review: frontend 1,527,
