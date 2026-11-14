@@ -1,6 +1,15 @@
 schema: 1
 
-current_checkpoint: capture_native_harness_20261113
+current_checkpoint: capture_app_reload_20261113
+capture_app_reload_20261113:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-13-capture-app-reload.md
+  base_main: bf61d4508e52cfc5299c6b65f0c4437502413475
+  scope: actual_app_sw_offline_page_reload_not_process_restart
+  native_execution: pending
+  rollout_gates: G1_G6_open
+  production_changes: none
+
 capture_native_harness_20261113:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-13-capture-native-harness.md

@@ -1464,9 +1464,24 @@ def test_capture_native_harness_keeps_actual_app_and_activation_gates_open() -> 
     ):
         assert token in text
     assert "test:capture-browser" in read(".github/workflows/ci.yml")
-    assert "current_checkpoint: capture_native_harness_20261113" in read(
-        BASE + "execution-state.yaml"
-    )
+    assert "\ncapture_native_harness_20261113:" in read(BASE + "execution-state.yaml")
     assert "captureBoundaryHarness" in read(
         "apps/web/tools/kernel-browser/check-production-isolation.mjs"
     )
+
+
+def test_capture_app_reload_keeps_exclusion_and_native_gates_open() -> None:
+    text = read(BASE + "2026-11-13-capture-app-reload.md")
+    for token in (
+        "page reload",
+        "not browser-process restart",
+        "Native execution is pending",
+        "G1\u2013G6",
+        "No application",
+        "before seeding",
+    ):
+        assert token in text
+    assert "current_checkpoint: capture_app_reload_20261113" in read(BASE + "execution-state.yaml")
+    workflow = read(".github/workflows/ci.yml")
+    assert "build_capture_app.mjs --current --verify-reproducible" in workflow
+    assert "test:capture-app" in workflow

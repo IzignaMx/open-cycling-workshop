@@ -347,6 +347,10 @@ jobs:
         run: pnpm --filter @ocwp/web build
       - name: Reproduce pinned old App and service worker
         run: node scripts/e2e/build_legacy_client.mjs artifacts/legacy-client --verify-reproducible
+      - name: Reproduce historical and current capture App and service workers
+        run: |
+          node scripts/e2e/build_capture_app.mjs --verify-reproducible
+          node scripts/e2e/build_capture_app.mjs --current --verify-reproducible
       - name: Verify isolated qualification helpers stay outside production
         run: node --test apps/web/tools/kernel-browser/check-production-isolation.mjs
       - name: Install Playwright Chromium
@@ -355,6 +359,8 @@ jobs:
         run: pnpm --filter @ocwp/web test:kernel-browser
       - name: Run isolated native capture boundary tests
         run: pnpm --filter @ocwp/web test:capture-browser
+      - name: Run actual capture App service worker offline reload controls
+        run: pnpm --filter @ocwp/web test:capture-app
       - name: Prepare browser E2E database
         id: browser_fixture_initial
         shell: bash
@@ -538,6 +544,9 @@ jobs:
         with:
           name: native-capture-boundary-${{ github.sha }}
           path: |
+            apps/web/.tmp-capture-app-results/
+            artifacts/capture-app-old/
+            artifacts/capture-app-current/
             apps/web/.tmp-capture-browser-results/
             apps/web/.tmp-capture-browser/provenance.json
           include-hidden-files: true

@@ -44,6 +44,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.kernel-browser.json', '--pretty', 'false'])
   run(process.execPath, ['tools/capture-browser/prepare.mjs'])
   run(process.execPath, [tsc, '-p', 'tsconfig.capture-browser.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.capture-app.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.runtime-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.administration-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.branding-test.json', '--pretty', 'false'])
@@ -57,6 +58,8 @@ try {
         ]
       : []),
     'tools/capture-browser/prepare.test.mjs',
+    'tools/capture-app/provenance.test.mjs',
+    'tools/capture-app/fixture.test.mjs',
     'tools/capture-browser/harness.test.mjs',
     'tests/module-information/reference.test.mjs',
     'tests/access-kernel/context.test.mjs',
@@ -141,6 +144,8 @@ try {
     'tests/runtime/legacy-preservation.test.mjs',
     'tests/pwa/navigation-policy.test.mjs',
     'tests/pwa/legacy-fixture.test.mjs',
+    'tests/pwa/capture-app-fixture.test.mjs',
+    '../../scripts/e2e/capture_app_server.test.mjs',
     'tests/pwa/upgrade-fixture.test.mjs',
     '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',

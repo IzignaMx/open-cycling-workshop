@@ -76,7 +76,15 @@ export function legacyBuildEnvironment(environment, nodeVersion = process.versio
     (Number(match[1]) === 22 && Number(match[2]) < 16)
   )
     throw new Error('Legacy builder requires the archived supported Node range >=22.16 <25')
-  return { ...environment, NODE_ENV: 'production', VITE_API_BASE_URL: '' }
+  return {
+    ...Object.fromEntries(
+      Object.entries(environment).filter(
+        ([name]) => !name.startsWith('VITE_') && name !== 'NODE_OPTIONS',
+      ),
+    ),
+    NODE_ENV: 'production',
+    VITE_API_BASE_URL: '',
+  }
 }
 function files(directory, base = directory) {
   return new Map(
@@ -108,16 +116,38 @@ export function buildLegacyClient(output = join(root, 'artifacts/legacy-client')
   const pin = validateLegacyPin(
     JSON.parse(readFileSync(join(root, 'fixtures/legacy-client/manifest.json'), 'utf8')),
   )
+  return buildArchivedClient(pin, output)
+}
+/** Check resolved Git identity and frozen lock, not just manifest self-consistency. */
+export function validateArchivedInputs(pin, actual) {
+  if (actual.source_commit !== pin.source_commit || actual.source_tree !== pin.source_tree)
+    throw new Error('Pinned archive source identity mismatch')
+  if (hash(actual.lock) !== pin.lock_sha256)
+    throw new Error('Build archive fixture with the exact pinned frozen dependency lock')
+}
+export function verifyArchivedSources(source, trackedBefore) {
+  for (const row of trackedBefore.split('\n')) {
+    const [metadata, name] = row.split('\t')
+    const [, kind, expected] = metadata.split(' ')
+    if (kind !== 'blob') continue
+    const bytes = readFileSync(join(source, name))
+    const actual = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
+    if (actual !== expected) throw new Error('Archived legacy source changed during build')
+  }
+}
+/** Internal archive primitive: callers must establish their own exact pin policy. */
+export function buildArchivedClient(pin, output) {
   const git = (...args) =>
     execFileSync('git', args, {
       cwd: root,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim()
-  if (git('rev-parse', `${pin.source_commit}^{tree}`) !== pin.source_tree)
-    throw new Error('Pinned legacy source tree mismatch')
-  if (hash(readFileSync(join(root, 'pnpm-lock.yaml'))) !== pin.lock_sha256)
-    throw new Error('Build legacy fixture with the exact pinned frozen dependency lock')
+  validateArchivedInputs(pin, {
+    source_commit: git('rev-parse', `${pin.source_commit}^{commit}`),
+    source_tree: git('rev-parse', `${pin.source_commit}^{tree}`),
+    lock: readFileSync(join(root, 'pnpm-lock.yaml')),
+  })
   const dependencyEvidence = validateInstalledLock(
     readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8'),
     readFileSync(join(root, 'node_modules/.pnpm/lock.yaml'), 'utf8'),
@@ -150,19 +180,7 @@ export function buildLegacyClient(output = join(root, 'artifacts/legacy-client')
         externalDependencies(join(root, path), join(source, path), source)
     }
     const trackedBefore = git('ls-tree', '-r', pin.source_commit)
-    const verifySource = () => {
-      for (const row of trackedBefore.split('\n')) {
-        const [metadata, name] = row.split('\t')
-        const [, kind, expected] = metadata.split(' ')
-        if (kind !== 'blob') continue
-        const bytes = readFileSync(join(source, name))
-        const actual = createHash('sha1')
-          .update(`blob ${bytes.length}\0`)
-          .update(bytes)
-          .digest('hex')
-        if (actual !== expected) throw new Error('Archived legacy source changed during build')
-      }
-    }
+    const verifySource = () => verifyArchivedSources(source, trackedBefore)
     verifySource()
     const env = {
       ...legacyBuildEnvironment(process.env),
