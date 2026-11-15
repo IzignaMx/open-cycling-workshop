@@ -6,7 +6,10 @@ capture_process_restart_20261115:
   evidence: docs/10-spec-development/2026-11-15-capture-process-restart.md
   base_main: 15d6dd23135b6571f1770e70279fb9abb673a3f3
   scope: linux_chromium_graceful_process_restart_not_crash_or_handover
-  native_execution: pending
+  native_execution: corrected_engine_candidate_pending
+  hosted_attempts: CI43682997245_trace_collision_CI43685591892_offline_navigation_failed
+  toolchain_correction: Playwright1_64_0_Chromium156_0_8078_4_revision1248
+  local_native: five_collected_zero_executed
   rollout_gates: G1_G6_open
   production_changes: none
 

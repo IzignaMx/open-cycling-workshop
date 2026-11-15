@@ -3,6 +3,7 @@
   "include": [
     "tests/access-kernel/capture-app-native.spec.ts",
     "tests/access-kernel/capture-app-process-restart.spec.ts",
+    "tests/access-kernel/capture-offline-emulation.spec.ts",
     "playwright.capture-app.config.ts"
   ]
 }

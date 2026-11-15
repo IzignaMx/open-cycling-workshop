@@ -66,11 +66,11 @@ test('capture archived build rejects dependency drift and ambient build override
   assert.throws(() => legacyBuildEnvironment({}, 'v20.19.0'))
 })
 
-test('archive identity independently verifies actual Git commit/tree and current frozen lock', async () => {
+test('archive identity independently verifies actual Git commit/tree and archived frozen lock', async () => {
   const { execFileSync } = await import('node:child_process')
   const { validateArchivedInputs } = await import('../../../../scripts/e2e/build_legacy_client.mjs')
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
-  const lock = readFileSync(resolve(root, 'pnpm-lock.yaml'))
+  const lock = execFileSync('git', ['show', `${pin.source_commit}:pnpm-lock.yaml`], { cwd: root })
   const actual = {
     source_commit: git('rev-parse', `${pin.source_commit}^{commit}`),
     source_tree: git('rev-parse', `${pin.source_commit}^{tree}`),
@@ -112,6 +112,42 @@ test('archived tracked source verification rejects build-time source modificatio
     verifyArchivedSources(temporary, listing)
     writeFileSync(resolve(temporary, 'App.tsx'), 'changed source')
     assert.throws(() => verifyArchivedSources(temporary, listing))
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('current capture pin hashes committed HEAD lock bytes, never the historical pin or dirty lock', async () => {
+  const { execFileSync } = await import('node:child_process')
+  const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { createHash } = await import('node:crypto')
+  const { currentCaptureAppPin } = await import('../../../../scripts/e2e/build_capture_app.mjs')
+  const temporary = mkdtempSync(resolve(tmpdir(), 'current-capture-pin-'))
+  const git = (...args) => execFileSync('git', args, { cwd: temporary, encoding: 'utf8' }).trim()
+  try {
+    git('init', '--quiet')
+    const committed = 'new committed lock\n'
+    writeFileSync(resolve(temporary, 'pnpm-lock.yaml'), committed)
+    git('add', 'pnpm-lock.yaml')
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'commit.gpgsign=false',
+      'commit',
+      '--quiet',
+      '-m',
+      'fixture',
+    )
+    writeFileSync(resolve(temporary, 'pnpm-lock.yaml'), 'dirty working lock')
+    const current = currentCaptureAppPin(temporary)
+    assert.equal(current.source_commit, git('rev-parse', 'HEAD'))
+    assert.equal(current.source_tree, git('rev-parse', 'HEAD^{tree}'))
+    assert.equal(current.lock_sha256, createHash('sha256').update(committed).digest('hex'))
+    assert.notEqual(current.lock_sha256, pin.lock_sha256)
   } finally {
     rmSync(temporary, { recursive: true, force: true })
   }

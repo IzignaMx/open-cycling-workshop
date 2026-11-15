@@ -286,6 +286,7 @@ test('restart suite opts out of runner tracing while reload keeps global tracing
   }
   const global = declarations('../../playwright.capture-app.config.ts')
   assert.equal(global.config.use.trace, 'on')
+  assert.ok(global.config.testMatch.includes('capture-offline-emulation.spec.ts'))
   const restart = declarations('../../tests/access-kernel/capture-app-process-restart.spec.ts')
   const reload = declarations('../../tests/access-kernel/capture-app-native.spec.ts')
   assert.equal(restart.registered.length, 2)
@@ -295,4 +296,23 @@ test('restart suite opts out of runner tracing while reload keeps global tracing
   assert.match(restart.source, /context\.tracing\.start\(/)
   assert.match(restart.source, /context\.tracing\.stop\(\{ path \}\)/)
   assert.match(restart.source, /process-phase-\$\{phase\}\.zip/)
+})
+
+// Package metadata is not a browser launch or proof of native emulation behavior.
+test('offline navigation qualification uses the exact corrected Chromium bundle', async () => {
+  const { createRequire } = await import('node:module')
+  const { readFileSync } = await import('node:fs')
+  const { dirname, join } = await import('node:path')
+  const require = createRequire(new URL('../../package.json', import.meta.url))
+  const runner = require('@playwright/test/package.json')
+  assert.equal(runner.version, '1.64.0')
+  const fromRunner = createRequire(require.resolve('@playwright/test/package.json'))
+  const fromPlaywright = createRequire(fromRunner.resolve('playwright/package.json'))
+  const core = fromPlaywright.resolve('playwright-core/package.json')
+  const manifest = JSON.parse(readFileSync(join(dirname(core), 'browsers.json'), 'utf8'))
+  for (const name of ['chromium', 'chromium-headless-shell']) {
+    const browser = manifest.browsers.find((entry) => entry.name === name)
+    assert.equal(browser?.revision, '1248')
+    assert.equal(browser?.browserVersion, '156.0.8078.4')
+  }
 })

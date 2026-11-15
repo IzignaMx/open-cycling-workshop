@@ -3,7 +3,9 @@
 ## 2026-11-15 · Persistent-profile capture process restart
 
 - [x] Distinguish hosted PR107 page reload evidence from real process restart.
-- [ ] Execute the two new graceful restart scenarios on an authorized runner,
+- [x] Preserve failed tracing and offline-navigation CI evidence; pin corrected
+      engine and isolate historical frozen dependencies without relaxing hashes.
+- [ ] Execute the engine diagnostic plus two graceful restart scenarios on an authorized runner,
       with verified process exit, same profile and offline-from-launch evidence.
 - [ ] Complete G1–G6 separately. No crash, handover, migration, rollback-floor or
       selector activation is established by these independent artifact controls.

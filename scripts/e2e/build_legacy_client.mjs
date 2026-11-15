@@ -135,6 +135,54 @@ export function verifyArchivedSources(source, trackedBefore) {
     if (actual !== expected) throw new Error('Archived legacy source changed during build')
   }
 }
+/** Reuse only an identical root lock; otherwise own an exact frozen archive install. */
+export function prepareArchivedDependencies(
+  source,
+  installationRoot,
+  trackedBefore,
+  run = execFileSync,
+) {
+  const verifySource = () => verifyArchivedSources(source, trackedBefore)
+  verifySource()
+  const pinned = readFileSync(join(source, 'pnpm-lock.yaml'), 'utf8')
+  if (readFileSync(join(installationRoot, 'pnpm-lock.yaml'), 'utf8') === pinned) {
+    const dependencies = validateInstalledLock(
+      pinned,
+      readFileSync(join(installationRoot, 'node_modules/.pnpm/lock.yaml'), 'utf8'),
+    )
+    // Registry dependencies alone are reused; workspace packages always resolve
+    // inside the archive, never to current production sources.
+    for (const path of [
+      'node_modules',
+      'apps/web/node_modules',
+      'packages/api-client/node_modules',
+      'packages/ui/node_modules',
+      'packages/branding/node_modules',
+    ]) {
+      if (existsSync(join(installationRoot, path)))
+        externalDependencies(join(installationRoot, path), join(source, path), source)
+    }
+    verifySource()
+    return { dependency_source: 'validated-existing-installation', dependencies }
+  }
+  const packageManager = JSON.parse(
+    readFileSync(join(source, 'package.json'), 'utf8'),
+  ).packageManager
+  const match = /^pnpm@(\d+\.\d+\.\d+)$/.exec(packageManager ?? '')
+  if (!match) throw new Error('Archive requires an exact pinned pnpm package manager')
+  const options = { cwd: source, env: legacyBuildEnvironment(process.env), encoding: 'utf8' }
+  if (run('pnpm', ['--version'], options).trim() !== match[1])
+    throw new Error('Installed package manager does not match archived pin')
+  run('pnpm', ['install', '--frozen-lockfile', '--prod=false'], { ...options, stdio: 'inherit' })
+  verifySource()
+  const installed = readFileSync(join(source, 'node_modules/.pnpm/lock.yaml'), 'utf8')
+  // The historical test-emulator omission applies only to the old reuse path.
+  if (installed !== pinned) throw new Error('Frozen installation must match exact archived lock')
+  return {
+    dependency_source: 'isolated-frozen-archive-installation',
+    dependencies: validateInstalledLock(pinned, installed),
+  }
+}
 /** Internal archive primitive: callers must establish their own exact pin policy. */
 export function buildArchivedClient(pin, output) {
   const git = (...args) =>
@@ -146,12 +194,8 @@ export function buildArchivedClient(pin, output) {
   validateArchivedInputs(pin, {
     source_commit: git('rev-parse', `${pin.source_commit}^{commit}`),
     source_tree: git('rev-parse', `${pin.source_commit}^{tree}`),
-    lock: readFileSync(join(root, 'pnpm-lock.yaml')),
+    lock: execFileSync('git', ['show', `${pin.source_commit}:pnpm-lock.yaml`], { cwd: root }),
   })
-  const dependencyEvidence = validateInstalledLock(
-    readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8'),
-    readFileSync(join(root, 'node_modules/.pnpm/lock.yaml'), 'utf8'),
-  )
   const temporary = mkdtempSync(join(root, '.tmp-legacy-source-'))
   try {
     const archive = join(temporary, 'source.zip'),
@@ -167,20 +211,9 @@ export function buildArchivedClient(pin, output) {
     ])
     if (hash(readFileSync(join(source, 'pnpm-lock.yaml'))) !== pin.lock_sha256)
       throw new Error('Archived legacy lock mismatch')
-    // Only external registry dependencies are reused. Every workspace package
-    // resolves to this archived source, never the current production source.
-    for (const path of [
-      'node_modules',
-      'apps/web/node_modules',
-      'packages/api-client/node_modules',
-      'packages/ui/node_modules',
-      'packages/branding/node_modules',
-    ]) {
-      if (existsSync(join(root, path)))
-        externalDependencies(join(root, path), join(source, path), source)
-    }
     const trackedBefore = git('ls-tree', '-r', pin.source_commit)
     const verifySource = () => verifyArchivedSources(source, trackedBefore)
+    const dependencyEvidence = prepareArchivedDependencies(source, root, trackedBefore)
     verifySource()
     const env = {
       ...legacyBuildEnvironment(process.env),
@@ -213,6 +246,9 @@ export function buildArchivedClient(pin, output) {
       stdio: 'inherit',
     })
     verifySource()
+    const installedLock = readFileSync(join(source, 'node_modules/.pnpm/lock.yaml'), 'utf8')
+    if (hash(installedLock) !== dependencyEvidence.dependencies.installed_lock_sha256)
+      throw new Error('Installed dependency lock changed during build')
     const manifest = manifestForAssets(files(join(web, 'dist')))
     mkdirSync(output, { recursive: true })
     rmSync(join(output, 'dist'), { recursive: true, force: true })
@@ -221,8 +257,7 @@ export function buildArchivedClient(pin, output) {
       ...pin,
       node: process.version,
       preferred_node: readFileSync(join(source, '.nvmrc'), 'utf8').trim(),
-      dependency_source: 'validated-existing-installation',
-      dependencies: dependencyEvidence,
+      ...dependencyEvidence,
       tools: toolVersions,
       source_date_epoch: env.SOURCE_DATE_EPOCH,
       build: ['tsc -b', 'vite build'],

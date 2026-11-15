@@ -122,7 +122,7 @@ FULL_PREFLIGHT = {
     "python": "3.13.14",
     "node": "22.16.0",
     "pnpm": "11.17.0",
-    "playwright": "1.62.0",
+    "playwright": "1.64.0",
     "pg_dump": "18.4",
     "pg_restore": "18.4",
     "psql": "18.4",

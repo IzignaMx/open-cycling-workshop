@@ -103,7 +103,7 @@ jobs:
           RUN set -eu; printf '%s\n' 'OCWP build: pnpm version assertion'; version="$(pnpm --version)"; \
               printf 'OCWP build: pnpm version: %s\n' "$version"; test "$version" = 11.17.0
           RUN set -eu; printf '%s\n' 'OCWP build: Playwright package assertion'; version="$(node -p 'require("./apps/web/node_modules/@playwright/test/package.json").version')"; \
-              printf 'OCWP build: Playwright package version: %s\n' "$version"; test "$version" = 1.62.0
+              printf 'OCWP build: Playwright package version: %s\n' "$version"; test "$version" = 1.64.0
           ARG SOURCE_TREE
           LABEL ocwp.source-tree=$SOURCE_TREE
           DOCKERFILE

@@ -108,3 +108,55 @@ passed**, **24 process/configuration controls passed**; types, lint, formatting
 and four-case collection pass. Zero native cases executed locally. These results
 do not turn the failed hosted attempt into a pass; the corrected head needs its
 own native CI evidence.
+
+## Second hosted attempt: offline navigation and pinned engine correction
+
+CI 43685591892 attempt 1 resolved tracing startup but failed both restart cases
+at the post-navigation `navigator.onLine === false` assertion. Verified artifact
+14150183753 has SHA-256
+`112788e011aca80c31e351312c7e313a208aa3fc9a6ef05bd86b972d6e8b1edc`.
+Both phase-two traces show `false` on the blank page, successful App navigation,
+then `true`; diagnostics identify Chromium 151.0.7922.34. SW navigation, index
+hash and the post-cleanup legacy notice passed, but the network probe and final
+snapshot were not reached. The two reload controls passed; downstream direct
+browser/completeness stages did not qualify this head. This is not a completed
+restart proof or a demonstrated product defect.
+
+The failure matches the upstream Chromium emulation regression documented in
+[Playwright issue 42174](https://github.com/microsoft/playwright/issues/42174) and
+[PR 42925](https://github.com/microsoft/playwright/pull/42925/files): its
+cross-navigation offline test requires Chromium 155 or newer. The toolchain is
+therefore pinned to Playwright 1.64.0 and its official Chromium 156.0.8078.4,
+revision 1248. Package metadata is checked locally; hosted native execution must
+still establish whether this correction resolves our exact persistent-profile
+case. No claim is inferred from an upstream test alone.
+
+A separate native emulation control starts offline before creating its page,
+checks the blank page, then navigates synthetic documents on localhost and
+127.0.0.1. It checks the first document script and later evaluation, and requires
+an unhandled uncached probe to fail. Only document responses are fulfilled; this
+is an engine diagnostic, not App/SW/network-isolation evidence. Both existing
+restart assertions and probes remain unchanged. No navigator getter override,
+post-navigation offline toggle, weakened assertion, timer or retry is introduced.
+The suite now collects five cases: two reload, two restart, one engine control.
+
+The dependency delta is confined to Playwright/test/core, the existing axe adapter's
+Playwright peer resolution and removal of Playwright's obsolete optional fsevents
+2.3.2. Product/build dependencies retain their versions. Hosted tool-version
+assertions change with the pin. Historical source pins and frozen lock hashes
+remain unchanged: differing dependency locks require a separate exact frozen
+installation inside the owned archive, with tracked source and installed-lock
+checks. The current control derives its lock hash from committed source. Neither
+path permits a new dependency allowlist or shares a different lock silently.
+
+Native execution of the revised five-case suite remains pending. No local launch
+bypasses the reported environment restriction. G1–G6 remain open; no activation,
+selector, schema, runtime policy or deployment is included.
+
+Corrected-engine local checks: **1,577 frontend passed**, **209 repository
+passed**, **25 process/configuration controls passed**, and **30 PWA fixture
+controls passed**. Types, lint, formatting and two production-isolation checks
+pass. Both historical archives reproduce seven assets with isolated exact-lock
+installs; current committed archive build is verified when sealing the candidate.
+Five browser cases are collected, **zero executed locally**. Prior failed hosted
+runs are preserved, not relabeled as passes.

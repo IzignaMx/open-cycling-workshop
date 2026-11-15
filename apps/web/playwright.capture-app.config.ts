@@ -3,7 +3,11 @@ const env = (globalThis as unknown as { process: { env: Record<string, string | 
   .process.env
 export default defineConfig({
   testDir: './tests/access-kernel',
-  testMatch: ['capture-app-native.spec.ts', 'capture-app-process-restart.spec.ts'],
+  testMatch: [
+    'capture-app-native.spec.ts',
+    'capture-app-process-restart.spec.ts',
+    'capture-offline-emulation.spec.ts',
+  ],
   workers: 1,
   retries: 0,
   timeout: 60000,
