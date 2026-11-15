@@ -155,7 +155,7 @@ def test_hosted_browser_e2e_contract_is_versioned() -> None:
     import json
 
     package = json.loads((ROOT / "apps/web/package.json").read_text(encoding="utf-8"))
-    assert package["devDependencies"]["@playwright/test"] == "1.62.0"
+    assert package["devDependencies"]["@playwright/test"] == "1.64.0"
     assert package["devDependencies"]["@axe-core/playwright"] == "4.12.1"
     assert package["scripts"]["test:e2e"] == "playwright test"
     assert (ROOT / "apps/web/playwright.config.ts").is_file()

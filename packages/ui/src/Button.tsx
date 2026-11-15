@@ -21,7 +21,7 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className="min-h-11 rounded-[var(--ocwp-radius-sm)] bg-[var(--ocwp-color-accent)] px-4 py-2 font-semibold text-[var(--ocwp-color-on-accent)] transition hover:bg-[var(--ocwp-color-accent-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-focus)] disabled:opacity-50"
+      className="min-h-11 rounded-[var(--ocwp-radius-sm)] bg-[var(--ocwp-color-accent)] px-4 py-2 font-semibold text-[var(--ocwp-color-on-accent)] transition-shadow hover:bg-[var(--ocwp-color-accent-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ocwp-color-focus)] disabled:opacity-50"
     >
       {children}
     </button>

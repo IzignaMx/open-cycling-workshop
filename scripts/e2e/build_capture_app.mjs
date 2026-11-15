@@ -1,4 +1,5 @@
 /** Archived actual App/SW test artifacts only; never activation or deployment. */
+import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -44,12 +45,19 @@ export function buildCaptureApp(output = join(root, 'artifacts/capture-app-old')
   return buildArchivedClient(pin, output)
 }
 /** Current control also uses committed archive bytes, never dirty working sources. */
-export function buildCurrentCaptureApp(output = join(root, 'artifacts/capture-app-current')) {
-  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
-  const source_commit = git('rev-parse', 'HEAD')
-  const source_tree = git('rev-parse', `${source_commit}^{tree}`)
-  return buildArchivedClient({ ...expected, source_commit, source_tree }, output)
+export function currentCaptureAppPin(repository = root) {
+  const git = (...args) => execFileSync('git', args, { cwd: repository })
+  const source_commit = git('rev-parse', 'HEAD').toString().trim()
+  const source_tree = git('rev-parse', `${source_commit}^{tree}`).toString().trim()
+  const lock_sha256 = createHash('sha256')
+    .update(git('show', `${source_commit}:pnpm-lock.yaml`))
+    .digest('hex')
+  return { ...expected, source_commit, source_tree, lock_sha256 }
 }
+export function buildCurrentCaptureApp(output = join(root, 'artifacts/capture-app-current')) {
+  return buildArchivedClient(currentCaptureAppPin(), output)
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const build = process.argv.includes('--current') ? buildCurrentCaptureApp : buildCaptureApp
   const outputArg = process.argv.slice(2).find((arg) => !arg.startsWith('--'))

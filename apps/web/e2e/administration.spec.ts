@@ -641,6 +641,20 @@ test('administration preserves mounted drafts across all themes with narrow refl
     expect(await handle!.evaluate((e) => e.isConnected)).toBe(true)
     await expect(input).toHaveValue('Borrador de ubicación con texto ampliado')
     expect(await input.evaluate((e) => (e as HTMLInputElement).selectionStart)).toBe(2)
+    // Contrast-bearing colors must switch atomically, including the first frame.
+    // Checking computed transition ownership avoids masking a transient failure
+    // with a delay or reduced-motion setting. Axe remains unchanged below.
+    const sharedButtons = await page.locator('button').evaluateAll((buttons) =>
+      buttons
+        .filter((button) => button.classList.contains('bg-[var(--ocwp-color-accent)]'))
+        .map((button) => ({
+          label: button.textContent,
+          property: getComputedStyle(button).transitionProperty,
+        })),
+    )
+    expect(sharedButtons.length).toBeGreaterThan(0)
+    for (const button of sharedButtons)
+      expect(button.property, `${theme}: ${button.label} color transition`).toBe('box-shadow')
     for (const width of [1440, 834, 320]) {
       await page.setViewportSize({ width, height: 1000 })
       expect(
