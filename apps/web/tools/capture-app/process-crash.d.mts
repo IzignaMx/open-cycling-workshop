@@ -18,7 +18,7 @@ export interface CrashTermination {
 }
 export interface CrashReceipt extends CrashTermination {
   method: 'Browser.crash'
-  commandOutcome: 'resolved' | 'transport-closed'
+  commandOutcome: 'resolved' | 'transport-closed' | 'unacknowledged-terminated'
 }
 export interface CrashRecoveryIdentity {
   first: CrashProcessIdentity
@@ -37,7 +37,8 @@ export interface CrashLifecycleEvent {
   readonly crashAttempt?: Readonly<{
     method: 'Browser.crash'
     dispatched: true
-    commandOutcome: 'pending' | 'resolved' | 'transport-closed' | 'failed'
+    commandOutcome:
+      'pending' | 'resolved' | 'transport-closed' | 'unacknowledged-terminated' | 'failed'
     terminationVerified: boolean
   }>
 }

@@ -82,14 +82,44 @@ unknown-command recovery. Different historical/current profiles are independent
 controls, not a migration. G1–G6 remain open and the existing-bicycle selector
 remains inactive.
 
+## First hosted attempt and command observation correction
+
+[CI 43749770441 attempt 1](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/43749770441)
+failed both crash cases at the ten-second command wait. The five other App/SW cases passed;
+the direct-browser suite was skipped downstream. The diagnostic attachment records
+identity and dispatch, then failure, with no termination or recovery proof. Artifact
+14177030291 has SHA256 `e88d4da3d8435b6251baf77ac4f2131995676c3af98ba55dc3c15ef16103c41e`.
+Neither crash is retroactively qualified. No retry of either dispatched fault is made.
+
+Pinned [Chromium 156.0.8078.4 BrowserHandler::Crash](https://github.com/chromium/chromium/blob/156.0.8078.4/content/browser/devtools/protocol/browser_handler.cc)
+calls `base::ImmediateCrash()` without returning a normal protocol response.
+The installed Playwright 1.64 connection-close path disposes its root CDP session,
+while the browser-level public CDP API creates a child session with its own pending
+callbacks. The pipe-disconnect path separately closes browser/page objects. This
+explains a source-supported way for the command promise to remain pending; it does
+not prove what happened to the two processes in the failed run.
+
+The corrected harness observes command settlement and complete positive termination
+concurrently, rather than waiting for the command before inspecting termination.
+The explicit `unacknowledged-terminated` label is not a successful CDP response:
+it records an unsettled command alongside verified closed pages, disconnected browser,
+and absent known processes, group and session. It never accepts silence or timeout alone.
+Unsupported methods and other protocol rejections remain blocking. A late protocol rejection
+observed before recovery admission, profile deletion or final return also blocks success.
+The command monitor retains a rejection handler; it does not promise to predict arbitrary
+future callbacks after return. Existing identity/absence checks are repeated immediately
+before reopening and deleting. No deadline is increased and no kill, close or replay is
+added after dispatch. Pending commands with live or partly closed contexts, process
+visibility errors, PID reuse or surviving inventory members remain failures.
+
 ## Qualification status
 
-Native execution is pending. No local browser launch bypasses the previously
+Native execution is pending for the corrected candidate. No local browser launch bypasses the previously
 reported environment restriction. New native cases being authored or collected
 do not count as passes. Tests-first local controls exercise identity, lifecycle,
 error ordering and fixture semantics without claiming native crash behavior.
-The candidate needs independent source review and fresh source-bound CI after
-specific publication authorization. Prior baseline results are not reused.
+The correction needs independent source review and fresh source-bound CI within
+the authorized PR scope. Prior baseline results are not reused.
 
 Primary design references: [CDP Browser protocol](https://chromedevtools.github.io/devtools-protocol/tot/Browser/),
 [public browser CDP sessions](https://playwright.dev/docs/api/class-browser#browser-new-browser-cdp-session)
@@ -97,7 +127,7 @@ and [Linux process metadata](https://man7.org/linux/man-pages/man5/proc_pid_stat
 Pinned Playwright launch/exit behavior was inspected locally; a generic upstream
 reference is not qualification of the actual native candidate.
 
-Local candidate checks: **1,623 frontend tests passed**, **210 repository tests
+Initial candidate local checks (before the command-observation correction): **1,623 frontend tests passed**, **210 repository tests
 passed**, **37 crash lifecycle/identity controls passed**, and **seven crash
 fixture controls passed**. TypeScript, ESLint, prescribed formatting and diff
 checks pass. The actual production PWA builds and both isolation checks pass,
@@ -106,3 +136,11 @@ hashed assets; the current committed archive is checked when sealing the source.
 Seven native cases are collected (two reload, two graceful restart, two crash,
 one engine diagnostic), **zero executed locally**. Full backend/aggregate and
 native qualification are not claimed by this scoped local test increment.
+
+Corrected local checks: **1,636 frontend tests passed**, **211 repository tests
+passed**, and **50 crash lifecycle/identity controls passed**. Types, lint,
+formatting and seven-case native collection pass. No native case was executed
+locally. A fake-transport reproduction extracts the exact installed Playwright
+classes and demonstrates a closed connection/root with one pending child callback;
+it does not launch Chromium or qualify either failed CI process. Fresh hosted
+native execution remains required before accepting the correction.

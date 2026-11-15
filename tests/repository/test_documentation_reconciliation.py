@@ -1525,3 +1525,16 @@ def test_capture_crash_observation_remains_bounded_and_fail_closed() -> None:
     state = read(BASE + "execution-state.yaml")
     assert "current_checkpoint: capture_process_crash_20261115" in state
     assert "capture_process_restart_20261115:" in state
+
+
+def test_capture_crash_unacknowledged_command_never_substitutes_for_termination() -> None:
+    text = read(BASE + "2026-11-15-capture-process-crash.md")
+    for token in (
+        "43749770441",
+        "unacknowledged-terminated",
+        "not a successful CDP response",
+        "silence or timeout alone",
+        "late protocol rejection",
+        "five other App/SW cases passed",
+    ):
+        assert token in text

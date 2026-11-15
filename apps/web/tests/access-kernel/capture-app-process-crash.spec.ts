@@ -215,6 +215,9 @@ for (const [kind, port] of [
           expect(JSON.stringify(protectedAfter)).toBe(JSON.stringify(seeded.protectedCheckpoint))
           expect(after.contents.some((row) => row.checkpointId === protectedId)).toBe(false)
           expect(identities.crashReceipt.method).toBe('Browser.crash')
+          expect(['resolved', 'transport-closed', 'unacknowledged-terminated']).toContain(
+            identities.crashReceipt.commandOutcome,
+          )
           expect(identities.firstTermination).toMatchObject({
             pagesClosed: true,
             browserDisconnected: true,

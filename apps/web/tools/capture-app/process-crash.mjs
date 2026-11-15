@@ -3,7 +3,7 @@ import { mkdtemp, readFile, writeFile, realpath, rm, readdir } from 'node:fs/pro
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
-import { setTimeout as delay } from 'node:timers/promises'
+import { setTimeout as delay, setImmediate as nextTurn } from 'node:timers/promises'
 import { browserPid } from './process-restart.mjs'
 
 const defaults = { timeoutMs: 10000, attempts: 100, pollMs: 50 }
@@ -231,6 +231,13 @@ export async function runCrashRecovery({
     phase = 1,
     traceAttempted = false
   const errors = []
+  let commandError
+  // Drain ready transport callbacks at each admission gate. This does not promise
+  // a veto for callbacks arriving after this helper has returned.
+  const checkCommand = async () => {
+    await nextTurn()
+    if (commandError) throw commandError
+  }
   const emit = (stage) => {
     const metadata = (p) =>
       Object.freeze({ pid: p.pid, starttime: p.starttime, pgrp: p.pgrp, session: p.session })
@@ -329,19 +336,39 @@ export async function runCrashRecovery({
       commandOutcome: 'pending',
       terminationVerified: false,
     }
-    let commandOutcome = 'resolved'
-    try {
-      await call(() => cdp.send('Browser.crash'), 'Browser.crash')
-    } catch (error) {
-      if (!transportClosed(error)) {
-        crashAttempt.commandOutcome = 'failed'
-        throw error
-      }
-      commandOutcome = 'transport-closed'
-    }
-    crashAttempt.commandOutcome = commandOutcome
+    // Browser.crash has no success response in the pinned Chromium handler.
+    // An attached CDP session's callback may stay pending after root transport
+    // disconnect. Silence is not proof: observe all termination guards separately.
+    let rejectCommand
+    const commandFailure = new Promise((_, reject) => {
+      rejectCommand = reject
+    })
+    Promise.resolve()
+      .then(() => cdp.send('Browser.crash'))
+      .then(
+        () => {
+          crashAttempt.commandOutcome = 'resolved'
+        },
+        (error) => {
+          if (transportClosed(error)) crashAttempt.commandOutcome = 'transport-closed'
+          else {
+            commandError = error
+            crashAttempt.commandOutcome = 'failed'
+            rejectCommand(error)
+          }
+        },
+      )
+    // The race installs rejection handlers on both branches, including late
+    // command rejection after an observation failure. It never dispatches twice.
+    firstTermination = await Promise.race([
+      call(() => observe(browser, pages, identity), 'Crash termination observation'),
+      commandFailure,
+    ])
+    await checkCommand()
+    if (crashAttempt.commandOutcome === 'pending')
+      crashAttempt.commandOutcome = 'unacknowledged-terminated'
+    const commandOutcome = crashAttempt.commandOutcome
     emit('command-outcome')
-    firstTermination = await observe(browser, pages, identity)
     crashAttempt.terminationVerified = true
     emit('absence')
     crashReceipt = { method: 'Browser.crash', commandOutcome, ...firstTermination }
@@ -353,6 +380,7 @@ export async function runCrashRecovery({
     await profiles.verify(profile)
     uncertain = true
     await absent(firstIdentity)
+    await checkCommand()
     context = await call(
       () => launch(profile, { offline: true, serviceWorkers: 'allow' }),
       'Recovery launch',
@@ -391,10 +419,16 @@ export async function runCrashRecovery({
       await profiles.verify(profile)
       if (firstIdentity) await absent(firstIdentity)
       if (secondIdentity) await absent(secondIdentity)
+      await checkCommand()
       await profiles.remove(profile)
     } catch (error) {
       errors.push(error)
     }
+  try {
+    await checkCommand()
+  } catch (error) {
+    if (!errors.includes(error)) errors.push(error)
+  }
   if (errors.length) {
     try {
       emit('failure')

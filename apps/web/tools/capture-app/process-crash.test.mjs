@@ -415,3 +415,115 @@ test('helper never uses OS signals or command execution', async () => {
     /process\.kill|child_process|\.kill\(|SIGKILL|SIGTERM|execFile|spawn\(/,
   )
 })
+function pendingFake(mode) {
+  const f = fake(mode),
+    launch = f.options.launch
+  let rejectCommand
+  f.options.launch = async (...args) => {
+    const c = await launch(...args)
+    if (args[1].offline) return c
+    const browser = c.browser(),
+      session = await browser.newBrowserCDPSession(),
+      send = session.send
+    session.send = async (command) => {
+      const pending = new Promise((_, reject) => {
+        rejectCommand = reject
+      })
+      if (mode !== 'hang') await send(command)
+      return pending
+    }
+    c.browser = () => ({ ...browser, newBrowserCDPSession: async () => session })
+    return c
+  }
+  return {
+    ...f,
+    reject: () => rejectCommand(Error('Protocol error (Browser.crash): method not found')),
+  }
+}
+test('pending crash command qualifies only through independent complete termination', async () => {
+  const f = pendingFake()
+  const events = []
+  f.options.onEvent = (e) => events.push(e)
+  const result = await runCrashRecovery(f.options)
+  assert.equal(result.crashReceipt.commandOutcome, 'unacknowledged-terminated')
+  assert.equal(result.crashReceipt.procAbsent, true)
+  assert.equal(result.crashReceipt.browserDisconnected, true)
+  assert.equal(events.find((e) => e.stage === 'absence').crashAttempt.terminationVerified, true)
+  assert.equal(f.calls.filter((c) => c === 'Browser.crash').length, 1)
+  assert.ok(!f.calls.includes('close1'))
+  assert.ok(f.calls.includes('launch2:true'))
+  assert.ok(f.calls.includes('remove'))
+})
+for (const mode of ['hang', 'connected', 'pages', 'inventoryerror', 'survivor'])
+  test(`pending command with ${mode} never recovers`, async () => {
+    const f = pendingFake(mode)
+    await assert.rejects(runCrashRecovery(f.options))
+    assert.ok(!f.calls.includes('launch2:true'))
+    assert.ok(!f.calls.includes('remove'))
+    assert.ok(!f.calls.includes('close1'))
+  })
+test('pending command PID reuse never recovers', async () => {
+  const f = pendingFake()
+  f.options.inventory = async () => [proc(42, '999')]
+  await assert.rejects(runCrashRecovery(f.options), /reuse/)
+  assert.ok(!f.calls.includes('launch2:true'))
+  assert.ok(!f.calls.includes('remove'))
+})
+test('protocol rejection during independent observation vetoes absence', async () => {
+  const f = pendingFake()
+  f.options.inventory = async () => {
+    f.reject()
+    return []
+  }
+  await assert.rejects(runCrashRecovery(f.options), /method not found/)
+  assert.ok(!f.calls.includes('launch2:true'))
+  assert.ok(!f.calls.includes('remove'))
+})
+test('late protocol rejection at reopen gate vetoes recovery', async () => {
+  const f = pendingFake()
+  let scans = 0
+  f.options.inventory = async () => {
+    if (++scans === 2) f.reject()
+    return []
+  }
+  await assert.rejects(runCrashRecovery(f.options), /method not found/)
+  assert.ok(!f.calls.includes('launch2:true'))
+  assert.ok(!f.calls.includes('remove'))
+})
+test('late protocol rejection at deletion gate retains profile', async () => {
+  const f = pendingFake()
+  let scans = 0
+  f.options.inventory = async () => {
+    if (++scans === 4) f.reject()
+    return []
+  }
+  await assert.rejects(runCrashRecovery(f.options), /method not found/)
+  assert.ok(f.calls.includes('launch2:true'))
+  assert.ok(!f.calls.includes('remove'))
+})
+test('complete termination need not wait for the command deadline', { timeout: 1000 }, async () => {
+  const f = pendingFake()
+  f.options.limits.timeoutMs = 5000
+  assert.equal(
+    (await runCrashRecovery(f.options)).crashReceipt.commandOutcome,
+    'unacknowledged-terminated',
+  )
+})
+test('late protocol rejection at final return gate is not reported as success', async () => {
+  const f = pendingFake()
+  const remove = f.options.profiles.remove
+  f.options.profiles.remove = async () => {
+    await remove()
+    f.reject()
+  }
+  await assert.rejects(runCrashRecovery(f.options), /method not found/)
+  assert.ok(f.calls.includes('remove'))
+})
+test('command rejection after failed observation remains handled', async () => {
+  const f = pendingFake('connected')
+  await assert.rejects(runCrashRecovery(f.options))
+  f.reject()
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.ok(!f.calls.includes('launch2:true'))
+  assert.ok(!f.calls.includes('remove'))
+})
