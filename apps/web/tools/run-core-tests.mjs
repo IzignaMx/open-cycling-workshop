@@ -60,6 +60,8 @@ try {
     'tools/capture-browser/prepare.test.mjs',
     'tools/capture-app/provenance.test.mjs',
     'tools/capture-app/process-restart.test.mjs',
+    'tools/capture-app/process-crash.test.mjs',
+    'tools/capture-app/crash-fixture.test.mjs',
     'tools/capture-app/fixture.test.mjs',
     'tools/capture-browser/harness.test.mjs',
     'tests/module-information/reference.test.mjs',

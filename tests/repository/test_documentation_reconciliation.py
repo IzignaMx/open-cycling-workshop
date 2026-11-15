@@ -1502,5 +1502,26 @@ def test_capture_process_restart_is_bounded_and_not_activation() -> None:
     ):
         assert token in text
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_process_restart_20261115" in state
+    assert (
+        "historical_capture_process_restart_checkpoint: capture_process_restart_20261115" in state
+    )
     assert "capture_app_reload_20261113:" in state
+
+
+def test_capture_crash_observation_remains_bounded_and_fail_closed() -> None:
+    text = read(BASE + "2026-11-15-capture-process-crash.md")
+    for token in (
+        "4d5cc51230168ef363877d09c5d659721e9b7b9e",
+        "Browser.crash",
+        "PROTECTED",
+        "UNSENT",
+        "group and session",
+        "not absolute process containment",
+        "no kill or close fallback",
+        "Native execution is pending",
+        "G1\u2013G6 remain open",
+    ):
+        assert token in text
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_process_crash_20261115" in state
+    assert "capture_process_restart_20261115:" in state
