@@ -258,3 +258,41 @@ test('primary and cleanup errors are retained without repeating close', async ()
   assert.equal(calls.filter((x) => x === 'close').length, 1)
   assert.equal(calls.includes('remove'), false)
 })
+
+// Configuration regression only: no native browser execution is implied.
+test('restart suite opts out of runner tracing while reload keeps global tracing', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { default: ts } = await import('typescript')
+  function declarations(path) {
+    const registered = []
+    let use = { trace: 'on' }
+    const register = (name) => registered.push({ name, use: { ...use } })
+    register.use = (value) => {
+      use = { ...use, ...value }
+    }
+    const source = readFileSync(new URL(path, import.meta.url), 'utf8')
+    const output = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+    }).outputText
+    const exports = {}
+    new Function('require', 'exports', output)(
+      (name) =>
+        name === '@playwright/test'
+          ? { test: register, defineConfig: (value) => value, devices: { 'Desktop Chrome': {} } }
+          : {},
+      exports,
+    )
+    return { registered, config: exports.default, source }
+  }
+  const global = declarations('../../playwright.capture-app.config.ts')
+  assert.equal(global.config.use.trace, 'on')
+  const restart = declarations('../../tests/access-kernel/capture-app-process-restart.spec.ts')
+  const reload = declarations('../../tests/access-kernel/capture-app-native.spec.ts')
+  assert.equal(restart.registered.length, 2)
+  assert.equal(reload.registered.length, 2)
+  for (const entry of restart.registered) assert.equal(entry.use.trace, 'off')
+  for (const entry of reload.registered) assert.equal(entry.use.trace, 'on')
+  assert.match(restart.source, /context\.tracing\.start\(/)
+  assert.match(restart.source, /context\.tracing\.stop\(\{ path \}\)/)
+  assert.match(restart.source, /process-phase-\$\{phase\}\.zip/)
+})

@@ -85,3 +85,26 @@ the managed Chromium navigation policy; no browser restriction was bypassed.
 
 Final source/archive identity and all receipts are retained in the durable review
 backup. Earlier baseline CI is not reused as qualification of this candidate.
+
+## PR108 first hosted attempt and tracing correction
+
+CI 43682997245 attempt 1 failed both new restart cases at manual tracing startup:
+`Tracing has been already started`. The Playwright runner also instruments manually
+created persistent contexts. Failure occurred before process identification and
+fixture seeding, so that attempt provides **zero restart evidence**. The two reload
+controls passed. Downstream browser/completeness stages did not qualify the candidate.
+
+The correction disables runner tracing only in the restart suite, preserving its
+manual trace for each process and the global/reload tracing configuration. A
+configuration regression executes the transpiled real suite declarations against
+a registration recorder: missing override failed (`on` versus `off`), then both
+restart declarations resolved to `off` while reload remained `on`. It also checks
+the retained phase-specific manual start/stop paths. This control is not native
+execution; source-bound hosted rerun is still required. No blind rerun, production
+change, selector activation or deployment is part of this correction.
+
+Corrected-source local validation: **1,574 frontend passed**, **209 repository
+passed**, **24 process/configuration controls passed**; types, lint, formatting
+and four-case collection pass. Zero native cases executed locally. These results
+do not turn the failed hosted attempt into a pass; the corrected head needs its
+own native CI evidence.

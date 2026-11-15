@@ -11,6 +11,10 @@ import {
   installStartupBarrier,
 } from './capture-app-support.js'
 
+// Persistent contexts also receive the runner's tracing hooks. This suite owns
+// both process traces explicitly; reload cases retain the global trace setting.
+test.use({ trace: 'off' })
+
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } })
   .process.env
 for (const [kind, port] of [
@@ -33,7 +37,7 @@ for (const [kind, port] of [
               ? { executablePath: env.OCWP_CHROMIUM_EXECUTABLE }
               : {}),
           })
-          // These are manually owned contexts: the Playwright test fixture does not trace them.
+          // Runner tracing is disabled above; retain a manual trace for each process.
           try {
             await context.tracing.start({ screenshots: true, snapshots: true, sources: true })
           } catch (error) {
