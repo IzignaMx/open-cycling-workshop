@@ -6,6 +6,7 @@ export default defineConfig({
   testMatch: [
     'capture-app-native.spec.ts',
     'capture-app-process-restart.spec.ts',
+    'capture-app-process-crash.spec.ts',
     'capture-offline-emulation.spec.ts',
   ],
   workers: 1,

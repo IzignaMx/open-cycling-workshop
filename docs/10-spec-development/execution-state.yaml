@@ -1,6 +1,20 @@
 schema: 1
 
-current_checkpoint: capture_process_restart_20261115
+current_checkpoint: capture_process_crash_20261115
+capture_process_crash_20261115:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-15-capture-process-crash.md
+  base_main: 4d5cc51230168ef363877d09c5d659721e9b7b9e
+  scope: committed_synthetic_storage_after_owned_browser_main_thread_crash
+  native_execution: corrected_command_observation_pending
+  hosted_attempt: CI43749770441_both_crash_command_timeouts_termination_unproven
+  command_observation: concurrent_complete_positive_termination_required
+  process_guard: observed_inventory_group_session_not_absolute_containment
+  uncertain_termination: no_reopen_no_delete_no_kill_or_close_fallback
+  rollout_gates: G1_G6_open
+  production_changes: none
+
+historical_capture_process_restart_checkpoint: capture_process_restart_20261115
 capture_process_restart_20261115:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-15-capture-process-restart.md

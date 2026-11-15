@@ -1,5 +1,17 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-15 · Injected browser crash capture recovery
+
+- [x] Distinguish qualified graceful restart from injected main-thread crash.
+- [ ] Qualify the new old/current native crash scenarios on the exact candidate;
+      local authoring/collection is not execution. Never bypass local restrictions.
+- [ ] Require owned-process inventory/group/session absence before reopening or
+      deleting the synthetic profile. Any survivor or uncertainty retains it;
+      no post-crash kill/close fallback or process-containment claim.
+- [ ] Verify separate PROTECTED metadata and absent payload, UNSENT bytes, journal
+      and unchanged absolute TTL; keep G1–G6 and selector activation separate.
+      See [scope and limits](docs/10-spec-development/2026-11-15-capture-process-crash.md).
+
 ## 2026-11-15 · Persistent-profile capture process restart
 
 - [x] Distinguish hosted PR107 page reload evidence from real process restart.
