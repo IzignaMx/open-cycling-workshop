@@ -1481,7 +1481,26 @@ def test_capture_app_reload_keeps_exclusion_and_native_gates_open() -> None:
         "before seeding",
     ):
         assert token in text
-    assert "current_checkpoint: capture_app_reload_20261113" in read(BASE + "execution-state.yaml")
+    assert "historical_capture_app_reload_checkpoint: capture_app_reload_20261113" in read(
+        BASE + "execution-state.yaml"
+    )
     workflow = read(".github/workflows/ci.yml")
     assert "build_capture_app.mjs --current --verify-reproducible" in workflow
     assert "test:capture-app" in workflow
+
+
+def test_capture_process_restart_is_bounded_and_not_activation() -> None:
+    text = read(BASE + "2026-11-15-capture-process-restart.md")
+    for token in (
+        "graceful browser-process restart",
+        "offline: true",
+        "No reseeding",
+        "not crash consistency",
+        "G1\u2013G6 remain open",
+        "Native execution is pending",
+        "15d6dd23135b6571f1770e70279fb9abb673a3f3",
+    ):
+        assert token in text
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_process_restart_20261115" in state
+    assert "capture_app_reload_20261113:" in state

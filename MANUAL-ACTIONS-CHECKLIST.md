@@ -1,5 +1,14 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-15 · Persistent-profile capture process restart
+
+- [x] Distinguish hosted PR107 page reload evidence from real process restart.
+- [ ] Execute the two new graceful restart scenarios on an authorized runner,
+      with verified process exit, same profile and offline-from-launch evidence.
+- [ ] Complete G1–G6 separately. No crash, handover, migration, rollback-floor or
+      selector activation is established by these independent artifact controls.
+      See [scope and evidence](docs/10-spec-development/2026-11-15-capture-process-restart.md).
+
 ## 2026-11-13 · Actual capture App/SW offline reload
 
 - [x] Keep v1 writes and scope the next proof to exact historical/current App builds.

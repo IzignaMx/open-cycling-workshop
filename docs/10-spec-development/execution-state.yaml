@@ -1,6 +1,16 @@
 schema: 1
 
-current_checkpoint: capture_app_reload_20261113
+current_checkpoint: capture_process_restart_20261115
+capture_process_restart_20261115:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-15-capture-process-restart.md
+  base_main: 15d6dd23135b6571f1770e70279fb9abb673a3f3
+  scope: linux_chromium_graceful_process_restart_not_crash_or_handover
+  native_execution: pending
+  rollout_gates: G1_G6_open
+  production_changes: none
+
+historical_capture_app_reload_checkpoint: capture_app_reload_20261113
 capture_app_reload_20261113:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-13-capture-app-reload.md
