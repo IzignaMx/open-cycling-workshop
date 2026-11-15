@@ -161,6 +161,7 @@ try {
     'tests/auth/view-generation.test.mjs',
     'tests/auth/workshop-read-access.test.mjs',
     'tests/personalization/preferences.test.mjs',
+    'tests/personalization/button-transition.test.mjs',
     'tests/personalization/logo-backing.test.mjs',
     'tests/customers/local-customer.test.mjs',
     'tests/sync/conflict-center.test.mjs',

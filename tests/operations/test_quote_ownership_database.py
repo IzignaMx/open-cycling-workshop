@@ -121,7 +121,21 @@ def version_runner(argv, *, timeout):
         "pg_restore": "pg_restore (PostgreSQL) 18.4",
         "psql": "psql (PostgreSQL) 18.4",
     }
-    return "Version 1.62.0" if len(argv) > 2 else values[argv[0]]
+    return "Version 1.64.0" if len(argv) > 2 else values[argv[0]]
+
+
+@pytest.mark.parametrize("version", ["Version 1.62.0", "Version 1.64.1", "Version unknown"])
+def test_preflight_refuses_wrong_playwright_before_connect(fixture, version):
+    raw, calls, clock, connect = fixture
+
+    def mismatched_runner(argv, *, timeout):
+        return version if len(argv) > 2 else version_runner(argv, timeout=timeout)
+
+    with pytest.raises(db.DatabaseRefusal):
+        db.preflight(
+            lambda: clock[0], 65_000_000_000, connect=connect, version_runner=mismatched_runner
+        )
+    assert not calls and not raw.closed and not raw.queries
 
 
 def test_preflight_uses_fixed_ordinary_readonly_identity_and_closes(fixture):

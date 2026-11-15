@@ -11,7 +11,7 @@ capture_process_restart_20261115:
   toolchain_correction: Playwright1_64_0_Chromium156_0_8078_4_revision1248
   local_native: five_collected_zero_executed
   rollout_gates: G1_G6_open
-  production_changes: none
+  production_changes: authorized_shared_Button_shadow_only_contrast_fix
 
 historical_capture_app_reload_checkpoint: capture_app_reload_20261113
 capture_app_reload_20261113:

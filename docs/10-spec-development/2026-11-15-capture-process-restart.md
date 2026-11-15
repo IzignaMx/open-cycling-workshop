@@ -160,3 +160,64 @@ pass. Both historical archives reproduce seven assets with isolated exact-lock
 installs; current committed archive build is verified when sealing the candidate.
 Five browser cases are collected, **zero executed locally**. Prior failed hosted
 runs are preserved, not relabeled as passes.
+
+## Third hosted attempt: stale mock tool-version fixture
+
+CI 43689744807 stopped its direct Python run at 2,193 passes, five skips and one
+failure: the quote-ownership database mock still returned `Version 1.62.0`, while
+the reviewed tool preflight required 1.64.0. The preflight correctly refused the
+mismatch before connecting. This fixture oversight does not invalidate that
+fail-closed behavior; reported cleanup remained `verified_absent`. The failed
+attempt is not relabeled as successful and its native stages require separate
+inspection.
+
+The mock now returns the explicit 1.64.0 literal, independently of the expected
+constant. Additional controls reject 1.62.0, 1.64.1 and malformed versions before
+any connection or query. Existing identity/role rejection tests remain. Searching
+active tests, scripts, workflows and package declarations found no other stale
+positive 1.62.0 fixture; historical documentation assertions are retained. The
+full affected file reproduced 20 failures before correction and now passes all
+41 tests. New source-bound CI is pending; no blind retry, runtime change,
+selector activation or deployment is included.
+Affected operations suite: **1,699 passed, three PostgreSQL-environment skips**;
+repository checks: **209 passed**. These scoped local results do not substitute
+for the pending full hosted Python, aggregate or native qualification.
+
+## Explicitly authorized shared-button contrast correction
+
+The same third hosted attempt also reported 139 direct browser passes and one
+unexpected accessibility failure (reproduced on retry) in the mounted-theme
+administration case. This is distinct from the historical identity-readiness
+flake. Axe reported serious text contrast: foreground `#5e665b` on background
+`#82b095`, approximately 2.436:1, below the unchanged 4.5:1 requirement.
+
+Source inspection identifies the shared Button's generic Tailwind `transition`:
+compiled CSS includes both color and background-color. Light-to-dark Bosque
+endpoints pass (white on `#285b46`: 7.85:1; `#172314` on `#a9d5b7`: 10.01:1),
+but their intermediate colors can fail. The reported pair is consistent with
+this interpolation. The evidence does not establish that Chromium introduced a
+new product defect or explain every timing difference from the previous engine.
+Axe's package version and required threshold are unchanged.
+
+The owner explicitly authorized this small product correction in PR108: replace
+generic Button transitions with shadow-only transitions, preserving palette,
+hover colors, focus tokens, disabled state and click/submit behavior. Two tests
+execute the actual transpiled component; the transition test failed before the
+change and both pass afterward. The mounted-theme E2E also requires a nonempty
+set of shared buttons whose computed transition property is only `box-shadow`.
+Existing axe assertions remain intact, with no timer, reduced-motion override,
+rule exclusion or relaxed threshold. Native validation of this correction is
+pending on the newly published source, not inherited from prior attempts.
+
+This explicitly expands the earlier test-only scope by one Button class change.
+It changes presentation only, not capture format, selector, authority, data,
+recovery semantics or deployment. G1–G6 remain open.
+
+Local contrast-candidate checks: **1,579 frontend passed**, **209 repository
+passed**, including the two new Button controls. App and branding types, lint,
+formatting and administration collection (16 cases) pass. An additional isolated
+whole-administration typecheck finds one pre-existing TS2769 at the indexed theme
+expectation: the identical diagnostic reproduces against committed pre-fix source
+(line 1013, now 1027). That extra check is not reported as passing or repaired by
+this change. No native browser was launched locally; full hosted acceptance is
+pending for the corrected source.
