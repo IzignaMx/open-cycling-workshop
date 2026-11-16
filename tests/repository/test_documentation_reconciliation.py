@@ -1523,7 +1523,7 @@ def test_capture_crash_observation_remains_bounded_and_fail_closed() -> None:
     ):
         assert token in text
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_process_crash_20261115" in state
+    assert "historical_capture_process_crash_checkpoint: capture_process_crash_20261115" in state
     assert "capture_process_restart_20261115:" in state
 
 
@@ -1538,3 +1538,30 @@ def test_capture_crash_unacknowledged_command_never_substitutes_for_termination(
         "five other App/SW cases passed",
     ):
         assert token in text
+
+
+def test_capture_origin_admission_is_synthetic_and_does_not_authorize_handover() -> None:
+    text = read(BASE + "2026-11-16-capture-origin-admission.md")
+    for token in (
+        "2c083030fbf83285d0a46ea8f56531fa2aca5172",
+        "immutable snapshot",
+        "same browser context",
+        "not a production admission mechanism",
+        "not historical same-origin exclusion",
+        "G1\u2013G6 remain open",
+        "concurrent-writer protocol",
+        "No credentials",
+        "Native execution is pending",
+    ):
+        assert token in text
+
+
+def test_capture_origin_native_rehearsal_has_separate_sequential_ci_evidence() -> None:
+    ci = read(".github/workflows/ci.yml")
+    assert ci.index("test:capture-app") < ci.index("test:capture-origin")
+    assert "apps/web/.tmp-capture-origin-results/" in ci
+    assert "artifacts/capture-app-current-admission.json" in ci
+    assert "artifacts/capture-app-old-admission.json" in ci
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "tsconfig.capture-origin.json" in runner
+    assert "capture_app_admission.test.mjs" in runner

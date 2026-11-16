@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "tests/access-kernel/capture-app-origin-isolation.spec.ts",
+    "playwright.capture-origin.config.ts"
+  ]
+}

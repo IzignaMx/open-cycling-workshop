@@ -1,6 +1,18 @@
 schema: 1
 
-current_checkpoint: capture_process_crash_20261115
+current_checkpoint: capture_origin_admission_20261116
+capture_origin_admission_20261116:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-16-capture-origin-admission.md
+  base_main: 2c083030fbf83285d0a46ea8f56531fa2aca5172
+  scope: synthetic_actual_App_same_context_distinct_origins_exact_artifact_admission
+  native_execution: pending
+  production_admission: not_implemented
+  handover: not_implemented_concurrent_writer_protocol_required
+  rollout_gates: G1_G6_open
+  production_changes: none
+
+historical_capture_process_crash_checkpoint: capture_process_crash_20261115
 capture_process_crash_20261115:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-15-capture-process-crash.md

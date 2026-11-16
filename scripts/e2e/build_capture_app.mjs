@@ -1,7 +1,7 @@
 /** Archived actual App/SW test artifacts only; never activation or deployment. */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildArchivedClient, manifestForAssets } from './build_legacy_client.mjs'
@@ -76,6 +76,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (JSON.stringify(evidence.assets) !== JSON.stringify(repeated.assets))
       throw new Error('Capture App/SW build is not reproducible')
   }
+  // Publish policy only after all requested builds and reproducibility checks succeed.
+  // The fixed trusted receipt is separate from the candidate directory/self-manifest.
+  const kind = process.argv.includes('--current') ? 'current' : 'old'
+  const receipt = join(root, 'artifacts', `capture-app-${kind}-admission.json`)
+  mkdirSync(dirname(receipt), { recursive: true })
+  const temporary = `${receipt}.${process.pid}.tmp`
+  writeFileSync(temporary, `${JSON.stringify(evidence, null, 2)}\n`, { flag: 'wx' })
+  renameSync(temporary, receipt)
   process.stdout.write(
     `Archived capture App/SW built: ${evidence.source_commit}, ${Object.keys(evidence.assets).length} hashed assets\n`,
   )
