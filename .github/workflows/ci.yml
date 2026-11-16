@@ -361,6 +361,8 @@ jobs:
         run: pnpm --filter @ocwp/web test:capture-browser
       - name: Run actual capture App service worker offline reload controls
         run: pnpm --filter @ocwp/web test:capture-app
+      - name: Run actual same-context origin isolation and artifact admission
+        run: pnpm --filter @ocwp/web test:capture-origin
       - name: Prepare browser E2E database
         id: browser_fixture_initial
         shell: bash
@@ -545,6 +547,9 @@ jobs:
           name: native-capture-boundary-${{ github.sha }}
           path: |
             apps/web/.tmp-capture-app-results/
+            apps/web/.tmp-capture-origin-results/
+            artifacts/capture-app-old-admission.json
+            artifacts/capture-app-current-admission.json
             artifacts/capture-app-old/
             artifacts/capture-app-current/
             apps/web/.tmp-capture-browser-results/

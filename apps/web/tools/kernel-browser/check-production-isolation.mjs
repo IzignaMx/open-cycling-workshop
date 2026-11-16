@@ -16,7 +16,7 @@ async function files(directory) {
   ).flat()
 }
 const markers =
-  /runCrashRecovery|ocwp-capture-crash-|crash-fixture|captureBoundaryHarness|capture-native-|opaqueFuture|capture-browser|kernel-browser|openBaselineQualification|isolated-baseline-test-|Synthetic qualified fixture only|Qualification requires actual null advertisement/
+  /createCaptureAppAdmission|replaceCaptureApp|capture-app-origin-isolation|runCrashRecovery|ocwp-capture-crash-|crash-fixture|captureBoundaryHarness|capture-native-|opaqueFuture|capture-browser|kernel-browser|openBaselineQualification|isolated-baseline-test-|Synthetic qualified fixture only|Qualification requires actual null advertisement/
 
 test('production source has no harness admission import or helper', async () => {
   for (const path of await files(new URL('src/', web))) {

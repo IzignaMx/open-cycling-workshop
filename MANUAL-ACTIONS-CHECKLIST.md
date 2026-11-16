@@ -1,5 +1,16 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-16 · Synthetic origin and artifact admission
+
+- [ ] Qualify actual old/current App/SW in one context on distinct origins; prove
+      historical maintenance ran while current bytes, journal and TTL stayed intact.
+- [ ] Verify exact-artifact admission rejects old/mixed/corrupt replacements and
+      serves immutable bytes despite later disk changes. This is test-host evidence.
+- [ ] Approve a transition ADR and implement lossless concurrent-writer handover,
+      privacy and production artifact-floor enforcement before enabling the selector.
+      G1–G6 remain open; no deployment or new-format writes are authorized here.
+      See [scope and next steps](docs/10-spec-development/2026-11-16-capture-origin-admission.md).
+
 ## 2026-11-15 · Injected browser crash capture recovery
 
 - [x] Distinguish qualified graceful restart from injected main-thread crash.
