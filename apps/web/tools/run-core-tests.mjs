@@ -46,6 +46,7 @@ try {
   run(process.execPath, [tsc, '-p', 'tsconfig.capture-browser.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.capture-app.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.capture-origin.json', '--pretty', 'false'])
+  run(process.execPath, [tsc, '-p', 'tsconfig.capture-custody.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.runtime-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.administration-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.branding-test.json', '--pretty', 'false'])
@@ -61,6 +62,8 @@ try {
     'tools/capture-handover/staging.test.mjs',
     'tools/capture-handover/coordinator.test.mjs',
     'tools/capture-handover/source.test.mjs',
+    'tools/capture-custody-browser/prepare.test.mjs',
+    'tools/capture-custody-browser/harness.test.mjs',
     'tools/capture-handover/coordinator-integration.test.mjs',
     'tools/capture-browser/prepare.test.mjs',
     'tools/capture-app/provenance.test.mjs',

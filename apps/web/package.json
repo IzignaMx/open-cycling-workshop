@@ -14,7 +14,8 @@
     "test:kernel-browser": "vite build --config tools/kernel-browser/vite.config.ts && playwright test --config playwright.kernel.config.ts",
     "test:capture-app": "tsc -p tsconfig.capture-app.json && playwright test --config playwright.capture-app.config.ts",
     "test:capture-origin": "tsc -p tsconfig.capture-origin.json && playwright test --config playwright.capture-origin.config.ts",
-    "test:capture-browser": "node tools/capture-browser/prepare.mjs --build && tsc -p tsconfig.capture-browser.json && playwright test --config playwright.capture.config.ts"
+    "test:capture-browser": "node tools/capture-browser/prepare.mjs --build && tsc -p tsconfig.capture-browser.json && playwright test --config playwright.capture.config.ts",
+    "test:capture-custody": "node tools/capture-custody-browser/prepare.mjs --build && tsc -p tsconfig.capture-custody.json && playwright test --config playwright.capture-custody.config.ts"
   },
   "dependencies": {
     "@ocwp/branding": "workspace:*",

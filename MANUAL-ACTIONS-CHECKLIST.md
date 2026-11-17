@@ -3131,3 +3131,14 @@ Do not combine frozen service writes with schema 0013 unchanged: explicit effect
 - [ ] Qualify real browser cross-origin transfer, interruption and durable recovery;
       process-local witnesses and fake IndexedDB reopen do not prove those properties.
       Preserve original TTL and source bytes. G1–G6 remain open; selector remains off.
+
+## Native inert custody qualification · 2026-11-17
+
+- [ ] Inspect source-bound hosted native custody results for the two loopback origins:
+      exact package/TTL, reload without reseed, source second-tab edit, native transaction
+      abort and identity/corruption/collision refusals. Local collection is not execution.
+- [ ] Preserve separate limits: test-driver transfer is not authenticated handover;
+      browser page reload is not process restart or physical durability.
+      See [native custody scope](docs/10-spec-development/2026-11-17-capture-custody-native.md).
+- [ ] Retain G1–G6 and proposed-ADR gates before operational restore, real-data transfer
+      or selector activation. No production admission/retention policy is implemented here.
