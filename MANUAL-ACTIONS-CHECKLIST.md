@@ -3118,3 +3118,16 @@ Do not combine frozen service writes with schema 0013 unchanged: explicit effect
       [bounded record](docs/10-spec-development/2026-10-28-manual-public-pages.md).
 - Earlier permission checkbox is historical; this authorization does not permit
   application deployment, customer data, module execution, grants or new secrets.
+
+## Inert capture custody prototype · 2026-11-17
+
+- [ ] Accept a production transition ADR before real export/import or promotion.
+      The test-only [custody prototype](docs/10-spec-development/2026-11-17-capture-custody-prototype.md)
+      retains a complete v1 draft but cannot grant exclusive ownership, restore or submit.
+- [ ] Define authenticated identity/scope/dataset admission and retention/logout of
+      temporary copies. Synthetic owner checks are not authentication.
+- [ ] Define newer-source-edit reconciliation and pending/PROTECTED/unknown history
+      handling. This prototype refuses all history, including applied records.
+- [ ] Qualify real browser cross-origin transfer, interruption and durable recovery;
+      process-local witnesses and fake IndexedDB reopen do not prove those properties.
+      Preserve original TTL and source bytes. G1–G6 remain open; selector remains off.

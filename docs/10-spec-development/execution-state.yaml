@@ -1,6 +1,19 @@
 schema: 1
 
-current_checkpoint: capture_origin_admission_20261116
+current_checkpoint: capture_custody_prototype_20261117
+capture_custody_prototype_20261117:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-17-capture-custody-prototype.md
+  base_main: ffa51bbe42c1108da2c198379c4f97eac9ef2508
+  scope: test_only_exact_v1_inert_custody_empty_history
+  architecture_decision: proposed_not_production_authorization
+  production_handover: not_implemented
+  source_exclusivity: not_claimed
+  operational_restore: forbidden
+  rollout_gates: G1_G6_open
+  production_changes: none
+
+historical_capture_origin_admission_checkpoint: capture_origin_admission_20261116
 capture_origin_admission_20261116:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-16-capture-origin-admission.md

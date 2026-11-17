@@ -1565,3 +1565,32 @@ def test_capture_origin_native_rehearsal_has_separate_sequential_ci_evidence() -
     runner = read("apps/web/tools/run-core-tests.mjs")
     assert "tsconfig.capture-origin.json" in runner
     assert "capture_app_admission.test.mjs" in runner
+
+
+def test_capture_custody_is_inert_and_does_not_close_rollout_gates() -> None:
+    text = read(BASE + "2026-11-17-capture-custody-prototype.md")
+    for token in (
+        "ffa51bbe42c1108da2c198379c4f97eac9ef2508",
+        "G1\u2013G6 remain open",
+        "source_unchanged_at_check",
+        "no operational restore",
+        "No native browser execution",
+        "any journal",
+    ):
+        assert token in text
+    adr = read("docs/02-technical-architecture/2026-11-17-capture-custody-transition.md")
+    assert "**Proposed**" in adr
+    assert "not authentication" in adr
+    assert "immediately afterward" in adr
+
+
+def test_capture_custody_tooling_is_in_core_checks_and_not_product_source() -> None:
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    for name in ("source", "staging", "coordinator", "coordinator-integration"):
+        assert f"tools/capture-handover/{name}.test.mjs" in runner
+    isolation = read("apps/web/tools/kernel-browser/check-production-isolation.mjs")
+    assert "capture-handover" in isolation
+    assert "inert-capture-custody" in isolation
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_custody_prototype_20261117" in state
+    assert "production_handover: not_implemented" in state
