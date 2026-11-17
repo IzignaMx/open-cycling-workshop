@@ -54,7 +54,40 @@ const sourceOptions = (db, descriptor) => ({
   now: descriptor.now,
   isCurrent: () => true,
 })
+const syntheticContext = (now) => ({
+  protocol: 1,
+  principal: {
+    apiRealm: 'https://synthetic.invalid/api/v1',
+    organizationId: 'synthetic-org',
+    userId: 'synthetic-user',
+  },
+  accountLocationId: 'synthetic-location',
+  selectedLocationId: 'synthetic-location',
+  capabilities: ['customers.read', 'customers.write', 'orders.write', 'sync.push'],
+  authorizationEpoch: 'synthetic-epoch'.padEnd(43, '_'),
+  policyRevision: 'ocwp-access-baseline-2',
+  datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
+  verifiedAt: new Date(now).toISOString(),
+  offlineUntil: new Date(now + 3600000).toISOString(),
+  snapshotProtocol: 'baseline-v1',
+})
+
 const harness = {
+  async verifyEditor(descriptor) {
+    const { kernel } = await source(descriptor)
+    const accepted = await kernel.acceptVerifiedContext(
+      await kernel.beginVerification(globalThis.crypto.randomUUID(), () => true, descriptor.ticket),
+      syntheticContext(descriptor.now),
+    )
+    if (accepted.state !== 'READY') throw Error('Synthetic editor admission refused')
+    await kernel.rememberSession(accepted.ticket, 'synthetic-binding')
+    return { ...descriptor, ticket: accepted.ticket }
+  },
+  async releaseSource(descriptor) {
+    sourceName(descriptor.name)
+    sources.get(descriptor.name)?.db.close()
+    sources.delete(descriptor.name)
+  },
   async seedSource(name, now) {
     sourceName(name)
     if (await exists(name)) throw Error('Never reseed an existing database')
@@ -65,23 +98,7 @@ const harness = {
     })
     await db.open()
     sources.set(name, { db, kernel })
-    const value = {
-      protocol: 1,
-      principal: {
-        apiRealm: 'https://synthetic.invalid/api/v1',
-        organizationId: 'synthetic-org',
-        userId: 'synthetic-user',
-      },
-      accountLocationId: 'synthetic-location',
-      selectedLocationId: 'synthetic-location',
-      capabilities: ['customers.read', 'customers.write', 'orders.write', 'sync.push'],
-      authorizationEpoch: 'synthetic-epoch'.padEnd(43, '_'),
-      policyRevision: 'ocwp-access-baseline-2',
-      datasetIncarnation: '0199ba00-0000-7000-8000-000000000001',
-      verifiedAt: new Date(now).toISOString(),
-      offlineUntil: new Date(now + 3600000).toISOString(),
-      snapshotProtocol: 'baseline-v1',
-    }
+    const value = syntheticContext(now)
     const verify = async () =>
       kernel.acceptVerifiedContext(
         await kernel.beginVerification(globalThis.crypto.randomUUID()),

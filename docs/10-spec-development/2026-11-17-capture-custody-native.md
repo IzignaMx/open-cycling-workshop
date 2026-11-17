@@ -27,8 +27,8 @@ Source witness objects remain in their originating page; they are not serialized
 - Preserve exact v1 draft content and original absolute TTL through source snapshot,
   destination staging and destination reload without reseeding. Check target custody
   has no operational stores. Retry the same transfer ID without duplicating rows.
-- Edit the source from another same-origin tab during the protocol and observe
-  source_changed rather than treating the old snapshot as current. Retain both the
+- Verify a second same-origin editor during the protocol and observe the old
+  witness becoming unavailable rather than treating it as current. Retain both the
   new source edit and the earlier inert custody copy. No exclusivity is inferred.
 - Refuse altered package/owner/transfer-ID collisions. Prove both nested staging
   and reading reject an outer transaction before it can later abort, preserving
@@ -78,3 +78,33 @@ manifest-tree-key mismatch/build rejection is preserved as superseded developmen
 evidence, not candidate qualification. Source/manifest/build identities and final
 local receipts are retained with the sealed candidate; hosted native results remain
 pending. Independent functional review accepted the bounded synthetic scope.
+
+## PR112 first hosted failure and editor correction
+
+CI `44191759822/1` failed the first custody case at the second-page edit:
+`Session fenced: no matching verified session in this kernel instance`.
+The second custody case passed; this is not a custody qualification pass.
+The original harness incorrectly reused a serialized ticket in a fresh AccessKernel.
+Persistent admission is not that instance's verified volatile session.
+
+The editor now explicitly verifies the fixed synthetic context through
+beginVerification/acceptVerifiedContext, using the expected previous owner, then
+remembers its session and saves through checkpointCapture with its own new ticket.
+No fence or production authentication is bypassed, and no direct draft write is used.
+This legitimate second-tab admission changes the global generation/attempt: the
+original source witness must become unavailable, not report source_changed. The
+native case asserts missing-session refusal before admission, unchanged bytes on
+that refusal, a different editor ticket, old-ticket snapshot refusal, preserved
+TTL and retained inert custody after the editor's real kernel write. The same-kernel
+source_changed control remains separately tested in the harness suite. Neither
+unavailable nor source_changed grants operational authority.
+
+A fresh-module harness regression reproduces separate volatile kernel instances
+with shared fake IndexedDB, verifies both unverified and stale writers are fenced,
+and preserves the exact custody package. Hosted native execution of this correction
+remains pending; no local browser was launched.
+
+Correction qualification: **1,737 frontend**, **217 repository** and **75 focused**
+controls passed, including **6 harness** controls. Native spec typecheck passed.
+These supersede the local counts above for the corrected candidate, not the failed
+hosted native result; the corrected native cases still require hosted execution.

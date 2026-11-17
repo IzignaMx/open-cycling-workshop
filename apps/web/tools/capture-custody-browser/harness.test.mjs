@@ -141,3 +141,41 @@ test('fake-IDB harness refuses nested stage and read before outer abort with zer
     assert.equal(await harness.targetBytes(name), '[]')
   }
 })
+
+test('fresh editor requires its own verified kernel session and fences the prior ticket', async (t) => {
+  const { descriptor, name, bundle } = await fixture(t)
+  await import(`./main.js?editor=${crypto.randomUUID()}`)
+  const editor = window.custodyHarness
+  window.custodyHarness = harness
+  const before = await harness.sourceBytes(descriptor)
+  await assert.rejects(editor.editSource(descriptor, 'Unverified edit'), /Session fenced/)
+  assert.equal(await harness.sourceBytes(descriptor), before)
+  window.custodyTransport = async (candidate) => {
+    const staged = await harness.stage(name, 'editor-transfer', candidate, descriptor.owner, now)
+    const admitted = await editor.verifyEditor(descriptor)
+    assert.notDeepEqual(admitted.ticket, descriptor.ticket)
+    assert.deepEqual(admitted.scope, descriptor.scope)
+    assert.equal((await editor.editSource(admitted, 'Verified editor edit')).kind, 'ack')
+    const changed = await editor.snapshot(admitted)
+    assert.equal(changed.kind, 'snapshot')
+    assert.equal(changed.bundle.contents[0].draft.displayName, 'Verified editor edit')
+    assert.deepEqual(
+      changed.bundle.contents.map((r) => [r.firstPersistedAt, r.expiresAt]),
+      bundle.contents.map((r) => [r.firstPersistedAt, r.expiresAt]),
+    )
+    await assert.rejects(harness.editSource(descriptor, 'Stale edit'), /fenced/)
+    return staged
+  }
+  assert.deepEqual(await harness.run(descriptor), {
+    kind: 'custody_retained',
+    observation: 'unavailable',
+    operationalUse: 'forbidden',
+  })
+  assert.deepEqual(await harness.snapshot(descriptor), { kind: 'refused', reason: 'authority' })
+  assert.deepEqual(await harness.read(name, 'editor-transfer', descriptor.owner, now), {
+    kind: 'custody',
+    bundle,
+  })
+  // Close the extra connection before the fixture deletes its synthetic database.
+  await editor.releaseSource(descriptor)
+})

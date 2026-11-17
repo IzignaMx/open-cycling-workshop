@@ -36,6 +36,7 @@ type Result = {
   operationalUse?: string
 }
 interface Harness {
+  verifyEditor(descriptor: Descriptor): Promise<Descriptor>
   seedSource(name: string, now: number): Promise<Descriptor>
   sourceBytes(descriptor: Descriptor): Promise<string>
   snapshot(descriptor: Descriptor): Promise<Result>
@@ -153,6 +154,7 @@ test('native cross-origin custody retains exact v1 package after another-tab dri
     expiresAt: row.expiresAt,
   }))
   let editDuringStage = false
+  let editorDescriptor: Descriptor | undefined
   const transfers: { result: Result; bundle: Bundle }[] = []
   await a.exposeFunction('custodyTransport', async (bundle: Bundle) => {
     // Explicit test-driver transport: only detached bundle crosses the origins.
@@ -163,10 +165,26 @@ test('native cross-origin custody retains exact v1 package after another-tab dri
     )
     transfers.push({ result, bundle })
     if (editDuringStage) {
+      const unverified = await editor.evaluate(async (descriptor) => {
+        try {
+          await window.custodyHarness.editSource(descriptor, 'Unverified edit')
+          return 'unexpected write'
+        } catch (error) {
+          return String(error)
+        }
+      }, descriptor)
+      expect(unverified).toContain('Session fenced')
+      expect(await sourceBytes(a, descriptor)).toBe(before)
+      editorDescriptor = await editor.evaluate(
+        (descriptor) => window.custodyHarness.verifyEditor(descriptor),
+        descriptor,
+      )
+      expect(editorDescriptor.ticket).not.toEqual(descriptor.ticket)
+      expect(editorDescriptor.scope).toEqual(descriptor.scope)
       const edit = await editor.evaluate(
         (descriptor) =>
           window.custodyHarness.editSource(descriptor, 'Synthetic concurrent source edit'),
-        descriptor,
+        editorDescriptor,
       )
       expect(edit.kind).toBe('ack')
     }
@@ -188,12 +206,17 @@ test('native cross-origin custody retains exact v1 package after another-tab dri
       await a.evaluate((descriptor) => window.custodyHarness.run(descriptor), descriptor),
     ).toEqual({
       kind: 'custody_retained',
-      observation: 'source_changed',
+      observation: 'unavailable',
       operationalUse: 'forbidden',
     })
     expect(transfers[1]?.result).toEqual({ kind: 'already_staged' })
     expect(transfers.map((transfer) => transfer.bundle)).toEqual([original, original])
-    const changedSource = await bundleAt(a, descriptor),
+    expect(await a.evaluate((d) => window.custodyHarness.snapshot(d), descriptor)).toEqual({
+      kind: 'refused',
+      reason: 'authority',
+    })
+    expect(editorDescriptor).toBeDefined()
+    const changedSource = await bundleAt(editor, editorDescriptor!),
       afterEdit = await sourceBytes(a, descriptor)
     expect(afterEdit).not.toBe(before)
     expect(await sourceBytes(editor, descriptor)).toBe(afterEdit)
