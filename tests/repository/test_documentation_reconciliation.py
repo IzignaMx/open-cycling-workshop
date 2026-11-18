@@ -1658,7 +1658,7 @@ def test_native_source_diagnostic_reuses_module_and_retains_pending_execution():
         "physical acceptance",
     ):
         assert marker in text
-    assert "current_checkpoint: source_diagnostic_native_20261118" in read(
+    assert "historical_source_diagnostic_checkpoint: source_diagnostic_native_20261118" in read(
         BASE + "execution-state.yaml"
     )
     assert "../source-transition/diagnostic.mjs" in read(

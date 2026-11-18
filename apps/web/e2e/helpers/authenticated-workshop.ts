@@ -156,9 +156,10 @@ export async function login(
   identity: WorkshopIdentity | string,
   workshop?: string,
   syncExpectation: 'synced' | 'local-only' = 'synced',
+  entryPath = '/',
 ) {
   const username = typeof identity === 'string' ? identity : identity.username
-  await page.goto('/')
+  await page.goto(entryPath)
   await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
   await page.getByLabel('Usuario', { exact: true }).fill(username)
   await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD)
