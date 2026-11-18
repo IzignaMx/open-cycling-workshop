@@ -3142,3 +3142,12 @@ Do not combine frozen service writes with schema 0013 unchanged: explicit effect
       See [native custody scope](docs/10-spec-development/2026-11-17-capture-custody-native.md).
 - [ ] Retain G1–G6 and proposed-ADR gates before operational restore, real-data transfer
       or selector activation. No production admission/retention policy is implemented here.
+
+## 2026-11-18 · Source-work observation before transition
+
+- [ ] Decide protected entry point/coexistence/authentication/privacy in the proposed
+      transition ADR; the test-only bounded diagnostic does not grant readiness.
+- [ ] Rehearse resolving prior work at source and beginning genuinely new work at
+      destination without promoting custody or duplicating unknown commands.
+- [ ] Complete physical platform/backup/restore and pilot acceptance. Empty local
+      action lists never close these gates or exclude returning offline clients.
