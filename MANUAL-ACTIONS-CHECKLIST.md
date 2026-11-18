@@ -1,5 +1,17 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-18 · Source completion and genuinely new destination work
+
+- [ ] Qualify the actual App/server journey: recover UNSENT in A, confirm applied
+      outcome on server, then independently authenticate B and author distinct new
+      work with no copied local journal/capture. Native execution remains pending.
+- [ ] Review successful trace/receipt, exact source history and complete private
+      server feed; do not treat counters or source-code checks as native evidence.
+- [ ] Decide protected entry/auth/coexistence/recovery under the proposed ADR before
+      any real transition. No selector, migration, retirement or deployment here;
+      G1–G6 and physical LIBERTAD acceptance remain open.
+      See [scope](docs/10-spec-development/2026-11-18-source-completion-new-work.md).
+
 ## 2026-11-16 · Synthetic origin and artifact admission
 
 - [ ] Qualify actual old/current App/SW in one context on distinct origins; prove

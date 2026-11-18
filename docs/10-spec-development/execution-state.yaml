@@ -1,6 +1,17 @@
 schema: 1
 
-current_checkpoint: source_diagnostic_native_20261118
+current_checkpoint: source_completion_new_work_20261118
+source_completion_new_work_20261118:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-18-source-completion-new-work.md
+  base_main: e1332790885ff5b2941058d08e8dfb624403d29a
+  scope: actual_App_source_completion_and_new_destination_authoring_synthetic_server
+  native_execution: pending
+  migration: not_performed
+  production_changes: none
+  rollout_gates: G1_G6_open
+
+historical_source_diagnostic_checkpoint: source_diagnostic_native_20261118
 source_diagnostic_native_20261118:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-18-source-diagnostic-native.md
