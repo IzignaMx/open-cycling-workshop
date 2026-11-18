@@ -59,6 +59,7 @@ try {
           `--test-reporter-destination=${process.env.OCWP_FRONTEND_DIAGNOSTIC_FILE}`,
         ]
       : []),
+    'tools/source-transition/diagnostic.test.mjs',
     'tools/capture-handover/staging.test.mjs',
     'tools/capture-handover/coordinator.test.mjs',
     'tools/capture-handover/source.test.mjs',

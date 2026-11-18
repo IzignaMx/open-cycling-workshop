@@ -1,6 +1,17 @@
 schema: 1
 
-current_checkpoint: capture_custody_native_20261117
+current_checkpoint: source_transition_diagnostic_20261118
+source_transition_diagnostic_20261118:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-18-source-transition-diagnostic.md
+  base_main: ddb6bd17700f9c8e3eef76463bf32a85bc0d2eed
+  scope: test_only_bounded_readonly_source_work_observation
+  activation: not_assessed
+  migration: forbidden
+  production_changes: none
+  rollout_gates: G1_G6_open
+
+historical_capture_custody_native_checkpoint: capture_custody_native_20261117
 capture_custody_native_20261117:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-17-capture-custody-native.md

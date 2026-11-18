@@ -1611,7 +1611,7 @@ def test_custody_native_rehearsal_keeps_inert_scope_and_source_bound_provenance(
     ):
         assert token in text
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_custody_native_20261117" in state
+    assert "historical_capture_custody_native_checkpoint: capture_custody_native_20261117" in state
     assert "production_handover: not_implemented" in state
 
 
@@ -1624,3 +1624,22 @@ def test_custody_native_ci_runs_separately_and_preserves_evidence() -> None:
     assert "tsconfig.capture-custody.json" in runner
     assert "tools/capture-custody-browser/prepare.test.mjs" in runner
     assert "tools/capture-custody-browser/harness.test.mjs" in runner
+
+
+def test_source_transition_diagnostic_is_observation_not_activation():
+    root = Path(__file__).resolve().parents[2]
+    document = (
+        root / "docs/10-spec-development/2026-11-18-source-transition-diagnostic.md"
+    ).read_text()
+    state = (root / "docs/10-spec-development/execution-state.yaml").read_text()
+    assert "current_checkpoint: source_transition_diagnostic_20261118" in state
+    for marker in (
+        "activation: not_assessed",
+        "migration: forbidden",
+        "not a guarantee",
+        "Retain applied history",
+        "physical acceptance remain open",
+    ):
+        assert marker in document
+    runner = (root / "apps/web/tools/run-core-tests.mjs").read_text()
+    assert "tools/source-transition/diagnostic.test.mjs" in runner
