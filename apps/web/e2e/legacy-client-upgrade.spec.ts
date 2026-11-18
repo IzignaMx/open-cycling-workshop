@@ -8,7 +8,10 @@ const ROOT = resolve(import.meta.dirname, '../../..')
 const BASE = 'http://127.0.0.1:5174'
 const ORGANIZATION = '00000000-0000-7000-8000-000000000101'
 const PASSWORD = 'ocwp-e2e-password'
-function fixture(action: 'legacy-session' | 'activate' | 'recover', expectedIncarnation?: string) {
+function fixture(
+  action: 'legacy-session' | 'assert-offline-absent' | 'activate' | 'recover',
+  expectedIncarnation?: string,
+) {
   return JSON.parse(
     execFileSync(
       'uv',
@@ -26,7 +29,13 @@ function fixture(action: 'legacy-session' | 'activate' | 'recover', expectedInca
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     ),
-  ) as { token?: string; changed?: boolean; dataset_incarnation?: string }
+  ) as {
+    token?: string
+    changed?: boolean
+    dataset_incarnation?: string
+    offline_customer_absent?: boolean
+    minimum_write_protocol?: number
+  }
 }
 async function login(page: Page) {
   await page.getByLabel('Organización').fill(ORGANIZATION)
@@ -98,6 +107,27 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   // current floor0 login already includes di and is deliberately not mislabeled.
   const legacy = fixture('legacy-session')
   expect(typeof legacy.token).toBe('string')
+  // Browser offline errors do not prove the upstream never committed a write.
+  // Close the synthetic proxy first, drain prior requests, then establish a
+  // monotonic forwarding baseline. This does not alter the archived App/SW.
+  expect((await context.request.post(`${BASE}/__fixture/api-isolation/close`)).status()).toBe(200)
+  const isolationState = async () => {
+    const response = await context.request.get(`${BASE}/__fixture/api-isolation`)
+    expect(response.status()).toBe(200)
+    return response.json() as Promise<{
+      closed: boolean
+      forwarded: number
+      active: number
+      blocked: number
+    }>
+  }
+  await expect.poll(async () => (await isolationState()).active).toBe(0)
+  const isolatedBefore = await isolationState()
+  expect(isolatedBefore.closed).toBe(true)
+  expect(fixture('assert-offline-absent')).toEqual({
+    offline_customer_absent: true,
+    minimum_write_protocol: 0,
+  })
   await context.setOffline(true)
   await old.evaluate((token) => {
     const session = JSON.parse(sessionStorage.getItem('ocwp.session.v2')!)
@@ -110,10 +140,20 @@ test('exact old App and SW preserve offline work across floor1 upgrade and late 
   const first = await rawDatabase(old)
   await old.reload({ waitUntil: 'domcontentloaded' })
   expect(await rawDatabase(old)).toEqual(first)
+  const isolatedAfter = await isolationState()
+  expect(isolatedAfter.blocked).toBeGreaterThanOrEqual(isolatedBefore.blocked)
+  expect(isolatedAfter).toEqual({ ...isolatedBefore, blocked: isolatedAfter.blocked })
+  const absentBeforeCutover = fixture('assert-offline-absent')
+  expect(absentBeforeCutover).toEqual({ offline_customer_absent: true, minimum_write_protocol: 0 })
+  await info.attach('legacy-offline-precondition', {
+    body: JSON.stringify({ isolatedBefore, isolatedAfter, absentBeforeCutover }),
+    contentType: 'application/json',
+  })
   expect(fixture('activate').changed).toBe(true)
   const refusedLegacy = old.waitForResponse(
     (r) => r.url().includes('/api/v1/') && r.status() === 401,
   )
+  expect((await context.request.post(`${BASE}/__fixture/api-isolation/open`)).status()).toBe(200)
   await context.setOffline(false)
   await refusedLegacy
   await expect(old.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible()

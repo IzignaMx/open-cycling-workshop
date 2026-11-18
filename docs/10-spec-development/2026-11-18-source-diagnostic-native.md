@@ -65,3 +65,40 @@ locally, comprising two existing custody cases and one new diagnostic case.
 Production PWA build, both isolation checks, scoped lint/format and diff checks
 passed. The new native case requires hosted execution and independent artifact
 review; these local counts do not qualify it as passing in Chromium.
+
+## PR114 direct-suite precondition correction
+
+Hosted run 44225432628 failed the existing direct legacy-upgrade case: the global
+absence assertion found the synthetic offline customer twice (139 other direct
+cases passed, no retry). The trace confirms the current bundle and READY runtime,
+not a legacy document: its server baseline page already contained that customer.
+The legacy database preservation and empty new operation journal assertions passed.
+Two historical mutation requests were recorded as offline network failures; that
+observation alone did not prove absence of a server commit. The precise transport
+cause remains unproven. Runner logs add no request-level attribution. No product
+isolation defect or Chromium/SW root cause is claimed.
+
+The test-only loopback proxy now has an explicit API isolation interval in addition
+to browser offline emulation. Before authoring, it closes API forwarding and drains
+already forwarded requests, records monotonic forwarding counters, and uses a
+readonly CLI probe to require the fixed synthetic customer absent from the dedicated
+floor-zero tenant. After both offline reloads it requires the same forwarding count,
+zero active requests, still-closed isolation and server absence again. Only then may
+it activate the floor and reopen the proxy. It neither aborts prior upstream work
+nor deletes server data to manufacture absence. A contaminated fixture fails early.
+The minimal before/after counters and absence receipt are attached to native results.
+
+This strengthens the journey's precondition: it is browser-offline **plus explicit
+synthetic proxy isolation**, not proof that browser emulation alone isolates all
+transport. The exact historical App/SW, offline toggles, preserved DB/journal checks,
+global text absence assertions and timeouts remain unchanged. The barrier is not
+production networking/security configuration, migration authority or old-client
+exclusion. Corrected native execution remains pending; previous failure is retained.
+
+Correction qualification: frontend **1,777 pass**, repository **219 pass**, proxy
+**20 pass** (two new controls first failed), Python fixture **14 pass** (six new
+controls first failed). Scoped lint/format and official direct-case collection
+pass. An ad-hoc standalone TypeScript configuration was not a qualification: it
+lacks Node declarations and exposes existing unchecked optional database rows;
+its unsuccessful diagnostic is retained separately. No local native replay was
+performed. Corrected hosted direct execution is still required.

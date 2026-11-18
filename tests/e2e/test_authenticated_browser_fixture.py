@@ -185,3 +185,82 @@ def test_real_old_bundle_fixture_is_floor_zero_until_explicit_disposable_cutover
         assert recovered["dataset_incarnation"] != incarnation
         assert client.get("/api/v1/auth/me", headers=fresh_headers).status_code == 401
     engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "state", ["absent", "present", "other-tenant", "wrong-floor", "missing-tenant"]
+)
+def test_offline_customer_absence_probe_is_readonly_and_scoped(
+    tmp_path: Path, monkeypatch, state: str
+) -> None:
+    from datetime import UTC, datetime
+
+    from cycling_workshop.customers.models import CustomerRecord
+
+    url = f"sqlite+pysqlite:///{tmp_path / 'absence.sqlite3'}"
+    monkeypatch.setenv("OCWP_DATABASE_URL", url)
+    monkeypatch.delenv("OCWP_DATABASE_URL_FILE", raising=False)
+    # Explicit isolated functional surrogate, never an accepted CLI database.
+    monkeypatch.setattr(preparation, "validate_e2e_database_url", lambda value: None)
+    monkeypatch.setattr(legacy_fixture, "validate_e2e_database_url", lambda value: None)
+    run_migrations(url)
+    seed_browser_identity(url)
+    if state != "missing-tenant":
+        preparation.seed_legacy_upgrade_identity(url)
+    engine = create_engine(url)
+    try:
+        with Session(engine) as session:
+            if state == "wrong-floor":
+                organization = session.get(
+                    OrganizationRecord, preparation.E2E_LEGACY_ORGANIZATION_ID
+                )
+                assert organization is not None
+                organization.minimum_write_protocol = 1
+            if state in {"present", "other-tenant"}:
+                own = state == "present"
+                session.add(
+                    CustomerRecord(
+                        id="00000000-0000-7000-8000-000000000199",
+                        organization_id=(
+                            preparation.E2E_LEGACY_ORGANIZATION_ID if own else E2E_ORGANIZATION_ID
+                        ),
+                        location_id=(
+                            preparation.E2E_LEGACY_LOCATION_ID
+                            if own
+                            else preparation.E2E_LOCATION_ID
+                        ),
+                        display_name="Pending from genuine old App",
+                        created_at=datetime.now(UTC),
+                        updated_at=datetime.now(UTC),
+                        version=1,
+                    )
+                )
+            session.commit()
+            before = list(session.execute(select(CustomerRecord.__table__)))
+        settings = Settings(database_url=url)
+        if state in {"absent", "other-tenant"}:
+            assert legacy_fixture.assert_offline_customer_absent(settings) == {
+                "offline_customer_absent": True,
+                "minimum_write_protocol": 0,
+            }
+        else:
+            reason = "already exists" if state == "present" else "floor-zero synthetic tenant"
+            with pytest.raises(RuntimeError, match=reason):
+                legacy_fixture.assert_offline_customer_absent(settings)
+        with Session(engine) as session:
+            assert list(session.execute(select(CustomerRecord.__table__))) == before
+    finally:
+        engine.dispose()
+
+
+def test_offline_customer_absence_probe_rejects_unapproved_database_before_connecting(
+    monkeypatch,
+) -> None:
+    def must_not_connect(*args, **kwargs):
+        raise AssertionError("must validate before connecting")
+
+    monkeypatch.setattr(legacy_fixture, "create_engine", must_not_connect)
+    with pytest.raises(RuntimeError, match="dedicated local test database"):
+        legacy_fixture.assert_offline_customer_absent(
+            Settings(database_url="sqlite+pysqlite:///:memory:")
+        )
