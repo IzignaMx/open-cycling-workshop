@@ -1,6 +1,18 @@
 schema: 1
 
-current_checkpoint: source_transition_diagnostic_20261118
+current_checkpoint: source_diagnostic_native_20261118
+source_diagnostic_native_20261118:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-18-source-diagnostic-native.md
+  base_main: cc1a37b844155e7fde958d23110d0efe01c04299
+  scope: one_native_case_same_diagnostic_in_existing_custody_harness
+  native_execution: pending
+  activation: not_assessed
+  migration: forbidden
+  production_changes: none
+  rollout_gates: G1_G6_open
+
+historical_source_transition_diagnostic_checkpoint: source_transition_diagnostic_20261118
 source_transition_diagnostic_20261118:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-18-source-transition-diagnostic.md

@@ -35,7 +35,23 @@ type Result = {
   observation?: string
   operationalUse?: string
 }
+type WorkResult = Result & {
+  observationId?: string
+  receipt?: {
+    observedAt: number
+    counts: Record<string, number>
+    actions: string[]
+    activation: string
+    migration: string
+  }
+}
 interface Harness {
+  observeWork(descriptor: Descriptor): Promise<WorkResult>
+  recheckWork(descriptor: Descriptor, observationId: string): Promise<Result>
+  createSyntheticPending(descriptor: Descriptor): Promise<string>
+  claimSyntheticPending(descriptor: Descriptor): Promise<number>
+  acknowledgeSyntheticApplied(descriptor: Descriptor): Promise<void>
+  advanceSyntheticClock(descriptor: Descriptor, now: number): Promise<Descriptor>
   verifyEditor(descriptor: Descriptor): Promise<Descriptor>
   seedSource(name: string, now: number): Promise<Descriptor>
   sourceBytes(descriptor: Descriptor): Promise<string>
@@ -373,5 +389,121 @@ test('native custody rejects owner, collision, corruption and nested outer-abort
   } finally {
     await a.evaluate((descriptor) => window.custodyHarness.cleanup(descriptor, null), descriptor)
     await b.evaluate((name) => window.custodyHarness.cleanup(null, name), name)
+  }
+})
+
+test('native source diagnostic preserves pending unknown applied history and fences stale observations', async ({
+  context,
+  request,
+  browser,
+}, info) => {
+  await provenance(request, info)
+  const a = await context.newPage(),
+    editor = await context.newPage()
+  await open(a, A)
+  await open(editor, A)
+  const descriptor = await a.evaluate(
+    (now) => window.custodyHarness.seedSource('ocwp-synthetic-custody-source-diagnostic', now),
+    Date.now(),
+  )
+  const observations: WorkResult[] = []
+  const observe = async (page: Page, d: Descriptor) => {
+    const before = await sourceBytes(page, d)
+    const r = await page.evaluate((d) => window.custodyHarness.observeWork(d), d)
+    expect(r.kind).toBe('observation')
+    expect(r.receipt?.activation).toBe('not_assessed')
+    expect(r.receipt?.migration).toBe('forbidden')
+    expect(r.receipt?.observedAt).toBe(d.now)
+    expect(await sourceBytes(page, d)).toBe(before)
+    for (const privateText of [
+      'synthetic-binding',
+      'synthetic-org',
+      'synthetic-user',
+      'Synthetic private diagnostic customer',
+      'synthetic-diagnostic-operation',
+    ])
+      expect(JSON.stringify(r)).not.toContain(privateText)
+    observations.push(r)
+    return r
+  }
+  try {
+    const initial = await observe(a, descriptor)
+    expect(initial.receipt!.counts.unsent).toBe(2)
+    const originalDrafts = JSON.parse(await sourceBytes(a, descriptor)).captureDraftContents
+    await a.evaluate((d) => window.custodyHarness.createSyntheticPending(d), descriptor)
+    const originalJournal = JSON.parse(await sourceBytes(a, descriptor)).operationJournal
+    const pending = await observe(a, descriptor)
+    expect(pending.receipt!.counts.unresolvedOperations).toBe(1)
+    expect(pending.receipt!.actions).toContain('review_sync_at_source')
+    expect(
+      await a.evaluate((d) => window.custodyHarness.claimSyntheticPending(d), descriptor),
+    ).toBe(1)
+    const unknown = await observe(a, descriptor)
+    expect(unknown.receipt!.actions).toContain('check_unknown_outcome_at_source')
+    await a.evaluate((d) => window.custodyHarness.acknowledgeSyntheticApplied(d), descriptor)
+    const applied = await observe(a, descriptor)
+    expect(applied.receipt!.counts.appliedHistory).toBe(1)
+    expect(applied.receipt!.counts.unresolvedOperations).toBe(0)
+    expect(applied.receipt!.actions).toContain('retain_applied_history')
+    expect(JSON.parse(await sourceBytes(a, descriptor)).operationJournal).toEqual(originalJournal)
+    expect(
+      await a.evaluate(({ d, id }) => window.custodyHarness.recheckWork(d, id), {
+        d: descriptor,
+        id: initial.observationId!,
+      }),
+    ).toEqual({ kind: 'changed', activation: 'not_assessed' })
+    // Move only the explicit fixture clock. Renew through the real verification API:
+    // the existing one-hour lease cannot simply be stretched past the 24-hour TTL.
+    const nearExpiry = await a.evaluate(
+      (d) => window.custodyHarness.advanceSyntheticClock(d, d.now + 86400000 - 500),
+      descriptor,
+    )
+    const renewed = await a.evaluate((d) => window.custodyHarness.verifyEditor(d), nearExpiry)
+    const anchor = await observe(a, renewed)
+    const later = await a.evaluate(
+      (d) => window.custodyHarness.advanceSyntheticClock(d, d.now + 1000),
+      renewed,
+    )
+    const beforeExpiry = await sourceBytes(a, later),
+      expired = await observe(a, later)
+    expect(expired.receipt!.counts.expired).toBe(2)
+    expect(expired.receipt!.counts.appliedHistory).toBe(1)
+    expect(expired.receipt!.actions).not.toContain('finish_capture_at_source')
+    expect(
+      await a.evaluate(({ d, id }) => window.custodyHarness.recheckWork(d, id), {
+        d: later,
+        id: anchor.observationId!,
+      }),
+    ).toEqual({ kind: 'changed', activation: 'not_assessed' })
+    expect(await sourceBytes(a, later)).toBe(beforeExpiry)
+    const editorDescriptor = await editor.evaluate(
+      (d) => window.custodyHarness.verifyEditor(d),
+      later,
+    )
+    expect(editorDescriptor.ticket).not.toEqual(later.ticket)
+    expect(
+      await a.evaluate(({ d, id }) => window.custodyHarness.recheckWork(d, id), {
+        d: later,
+        id: expired.observationId!,
+      }),
+    ).toEqual({ kind: 'refused', reason: 'authority' })
+    const current = await observe(editor, editorDescriptor)
+    expect(current.receipt!.counts.appliedHistory).toBe(1)
+    expect(current.receipt!.counts.expired).toBe(2)
+    const finalRows = JSON.parse(await sourceBytes(editor, editorDescriptor))
+    expect(finalRows.operationJournal).toEqual(originalJournal)
+    expect(finalRows.captureDraftContents).toEqual(originalDrafts)
+    await info.attach('native-source-work-observations', {
+      body: JSON.stringify({
+        browser: browser.version(),
+        observations,
+        scope:
+          'Synthetic kernel command/results and clock; readonly diagnostic, not authenticated sync, physical TTL durability or migration readiness',
+      }),
+      contentType: 'application/json',
+    })
+  } finally {
+    await editor.close()
+    await a.evaluate((d) => window.custodyHarness.cleanup(d, null), descriptor)
   }
 })

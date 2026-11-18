@@ -1632,7 +1632,10 @@ def test_source_transition_diagnostic_is_observation_not_activation():
         root / "docs/10-spec-development/2026-11-18-source-transition-diagnostic.md"
     ).read_text()
     state = (root / "docs/10-spec-development/execution-state.yaml").read_text()
-    assert "current_checkpoint: source_transition_diagnostic_20261118" in state
+    assert (
+        "historical_source_transition_diagnostic_checkpoint: source_transition_diagnostic_20261118"
+        in state
+    )
     for marker in (
         "activation: not_assessed",
         "migration: forbidden",
@@ -1643,3 +1646,24 @@ def test_source_transition_diagnostic_is_observation_not_activation():
         assert marker in document
     runner = (root / "apps/web/tools/run-core-tests.mjs").read_text()
     assert "tools/source-transition/diagnostic.test.mjs" in runner
+
+
+def test_native_source_diagnostic_reuses_module_and_retains_pending_execution():
+    text = read(BASE + "2026-11-18-source-diagnostic-native.md")
+    for marker in (
+        "native execution pending",
+        "fabricated server response",
+        "lease remains one hour",
+        "changed diagnosis with unchanged stored bytes",
+        "physical acceptance",
+    ):
+        assert marker in text
+    assert "current_checkpoint: source_diagnostic_native_20261118" in read(
+        BASE + "execution-state.yaml"
+    )
+    assert "../source-transition/diagnostic.mjs" in read(
+        "apps/web/tools/capture-custody-browser/main.js"
+    )
+    assert "'tools/source-transition/'" in read(
+        "apps/web/tools/capture-custody-browser/prepare.mjs"
+    )

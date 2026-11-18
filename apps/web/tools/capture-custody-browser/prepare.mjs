@@ -6,7 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const web = new URL('../../', import.meta.url)
 const output = new URL('.tmp-capture-custody/', web)
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex')
-const scope = 'Synthetic custody modules; not App/SW or authenticated handover'
+const scope =
+  'Synthetic custody and source diagnostic modules; not App/SW or authenticated handover'
 const digest = (v) => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v)
 const safe = (path) => path === 'index.html' || /^assets\/[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(path)
 async function paths(dir, prefix = '') {
@@ -30,7 +31,12 @@ async function sourceProvenance() {
     'tests/access-kernel/baseline-fixture.mjs',
     'tests/access-kernel/capture-custody-native.spec.ts',
   ]
-  for (const dir of ['src/', 'tools/capture-handover/', 'tools/capture-custody-browser/'])
+  for (const dir of [
+    'src/',
+    'tools/capture-handover/',
+    'tools/source-transition/',
+    'tools/capture-custody-browser/',
+  ])
     for (const path of await paths(new URL(dir, web))) files.push(dir + path)
   const source = {}
   for (const path of files.sort()) source[path] = sha(await readFile(new URL(path, web)))

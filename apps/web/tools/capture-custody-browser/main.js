@@ -4,12 +4,15 @@ import { canonicalJson } from '../../.tmp-kernel/src/access-kernel/operations.js
 import { completedMetadata } from '../../tests/access-kernel/baseline-fixture.mjs'
 import { snapshotSource, revalidateSource } from '../capture-handover/source.mjs'
 import { createCustodyStore, stageCustody, readCustody } from '../capture-handover/staging.mjs'
+import { observeSource, recheckObservation } from '../source-transition/diagnostic.mjs'
 import { stageObservedDraft } from '../capture-handover/coordinator.mjs'
 
 // This entry imports the same prototype modules as the Node suite. Only the
 // synthetic fixture and explicit driver transport live here; no authority bypass.
 const sources = new Map(),
-  targets = new Map()
+  targets = new Map(),
+  observations = new Map(),
+  syntheticDispatches = new Map()
 const sourceName = (name) => {
   if (!/^ocwp-synthetic-custody-source-[a-z0-9-]{1,60}$/.test(name))
     throw Error('Synthetic source name required')
@@ -26,10 +29,12 @@ async function source(descriptor) {
     if (!(await exists(descriptor.name))) throw Error('Existing synthetic source required')
     const db = createKernelDatabase(descriptor.name)
     await db.open()
+    const clock = { now: descriptor.now }
     sources.set(descriptor.name, {
       db,
+      clock,
       kernel: new AccessKernel(db, {
-        now: () => descriptor.now,
+        now: () => clock.now,
         newId: () => globalThis.crypto.randomUUID(),
       }),
     })
@@ -73,6 +78,80 @@ const syntheticContext = (now) => ({
 })
 
 const harness = {
+  async advanceSyntheticClock(descriptor, now) {
+    const { clock } = await source(descriptor)
+    if (!Number.isSafeInteger(now) || now < clock.now)
+      throw Error('Monotonic synthetic clock required')
+    clock.now = now
+    return { ...descriptor, now }
+  },
+  async observeWork(descriptor) {
+    const { db } = await source(descriptor)
+    const result = await observeSource(sourceOptions(db, descriptor))
+    if (result.kind !== 'observation') return result
+    const observationId = globalThis.crypto.randomUUID()
+    observations.set(observationId, { name: descriptor.name, witness: result.witness })
+    return { kind: result.kind, receipt: result.receipt, observationId }
+  },
+  async recheckWork(descriptor, observationId) {
+    const { db } = await source(descriptor)
+    const prior = observations.get(observationId)
+    if (!prior || prior.name !== descriptor.name) return { kind: 'refused', reason: 'witness' }
+    return recheckObservation(sourceOptions(db, descriptor), prior.witness)
+  },
+  async createSyntheticPending(descriptor) {
+    const { kernel } = await source(descriptor)
+    return kernel.commitLocalCommand(descriptor.ticket, {
+      envelope: {
+        mutation_id: 'synthetic-diagnostic-operation',
+        entity_type: 'customer',
+        entity_id: 'synthetic-diagnostic-customer',
+        operation: 'create',
+        organization_id: descriptor.owner.organizationId,
+        location_id: descriptor.owner.selectedLocationId,
+        base_version: null,
+        occurred_at: new Date(descriptor.now).toISOString(),
+        payload: { display_name: 'Synthetic private diagnostic customer' },
+      },
+      optimistic: {
+        customer_id: 'synthetic-diagnostic-customer',
+        organization_id: descriptor.owner.organizationId,
+        location_id: descriptor.owner.selectedLocationId,
+        version: 1,
+        display_name: 'Synthetic private diagnostic customer',
+      },
+      dependsOn: [],
+      localEvents: [{ action: 'synthetic-diagnostic' }],
+    })
+  },
+  async claimSyntheticPending(descriptor) {
+    const { kernel } = await source(descriptor)
+    const batch = await kernel.listDispatchable(descriptor.ticket, 1)
+    if (
+      batch.operations.length !== 1 ||
+      batch.operations[0].mutationId !== 'synthetic-diagnostic-operation'
+    )
+      throw Error('Exact synthetic operation required')
+    syntheticDispatches.set(descriptor.name, batch)
+    return batch.operations.length
+  },
+  async acknowledgeSyntheticApplied(descriptor) {
+    const { kernel } = await source(descriptor)
+    const batch = syntheticDispatches.get(descriptor.name)
+    if (!batch) throw Error('Synthetic dispatch required')
+    // Fabricated server result in an owned test fixture, never a network request.
+    await kernel.applyPushResult(descriptor.ticket, batch, {
+      results: [
+        {
+          mutation_id: 'synthetic-diagnostic-operation',
+          entity_id: 'synthetic-diagnostic-customer',
+          status: 'applied',
+          entity_version: 1,
+        },
+      ],
+    })
+    syntheticDispatches.delete(descriptor.name)
+  },
   async verifyEditor(descriptor) {
     const { kernel } = await source(descriptor)
     const accepted = await kernel.acceptVerifiedContext(
@@ -87,17 +166,21 @@ const harness = {
     sourceName(descriptor.name)
     sources.get(descriptor.name)?.db.close()
     sources.delete(descriptor.name)
+    syntheticDispatches.delete(descriptor.name)
+    for (const [id, value] of observations)
+      if (value.name === descriptor.name) observations.delete(id)
   },
   async seedSource(name, now) {
     sourceName(name)
     if (await exists(name)) throw Error('Never reseed an existing database')
     const db = createKernelDatabase(name)
+    const clock = { now }
     const kernel = new AccessKernel(db, {
-      now: () => now,
+      now: () => clock.now,
       newId: () => globalThis.crypto.randomUUID(),
     })
     await db.open()
-    sources.set(name, { db, kernel })
+    sources.set(name, { db, kernel, clock })
     const value = syntheticContext(now)
     const verify = async () =>
       kernel.acceptVerifiedContext(
@@ -262,6 +345,9 @@ const harness = {
       db.close()
       await db.delete()
       sources.delete(descriptor.name)
+      syntheticDispatches.delete(descriptor.name)
+      for (const [id, value] of observations)
+        if (value.name === descriptor.name) observations.delete(id)
     }
     if (targetDbName) {
       const db = await target(targetDbName)

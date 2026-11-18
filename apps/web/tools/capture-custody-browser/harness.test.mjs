@@ -179,3 +179,65 @@ test('fresh editor requires its own verified kernel session and fences the prior
   // Close the extra connection before the fixture deletes its synthetic database.
   await editor.releaseSource(descriptor)
 })
+
+test('diagnostic harness uses actual module and real kernel pending/inflight/applied states', async (t) => {
+  const { descriptor } = await fixture(t)
+  const initial = await harness.observeWork(descriptor)
+  assert.equal(initial.kind, 'observation')
+  assert.equal(initial.receipt.counts.unsent, 2)
+  await harness.createSyntheticPending(descriptor)
+  const pending = await harness.observeWork(descriptor)
+  assert.equal(pending.receipt.counts.unresolvedOperations, 1)
+  assert.ok(pending.receipt.actions.includes('review_sync_at_source'))
+  assert.equal(await harness.claimSyntheticPending(descriptor), 1)
+  const unknown = await harness.observeWork(descriptor)
+  assert.ok(unknown.receipt.actions.includes('check_unknown_outcome_at_source'))
+  await harness.acknowledgeSyntheticApplied(descriptor)
+  const before = await harness.sourceBytes(descriptor),
+    applied = await harness.observeWork(descriptor)
+  assert.equal(applied.receipt.counts.appliedHistory, 1)
+  assert.equal(applied.receipt.counts.unresolvedOperations, 0)
+  assert.equal(await harness.sourceBytes(descriptor), before)
+  assert.deepEqual(await harness.recheckWork(descriptor, initial.observationId), {
+    kind: 'changed',
+    activation: 'not_assessed',
+  })
+  const nearExpiry = await harness.advanceSyntheticClock(
+    descriptor,
+    descriptor.now + 86400000 - 500,
+  )
+  const renewed = await harness.verifyEditor(nearExpiry)
+  const anchor = await harness.observeWork(renewed)
+  const later = await harness.advanceSyntheticClock(renewed, descriptor.now + 86400000 + 500)
+  const beforeExpiryRead = await harness.sourceBytes(later)
+  assert.equal((await harness.observeWork(later)).receipt.counts.expired, 2)
+  assert.deepEqual(await harness.recheckWork(later, anchor.observationId), {
+    kind: 'changed',
+    activation: 'not_assessed',
+  })
+  assert.equal(await harness.sourceBytes(later), beforeExpiryRead)
+  await assert.rejects(
+    harness.acknowledgeSyntheticApplied(descriptor),
+    /Synthetic dispatch required/,
+  )
+})
+
+test('diagnostic handles are scoped to their database and lost on release', async (t) => {
+  const a = await fixture(t),
+    b = await fixture(t)
+  const observed = await harness.observeWork(a.descriptor)
+  assert.deepEqual(await harness.recheckWork(b.descriptor, observed.observationId), {
+    kind: 'refused',
+    reason: 'witness',
+  })
+  await assert.rejects(
+    harness.advanceSyntheticClock(a.descriptor, now - 1),
+    /Monotonic synthetic clock/,
+  )
+  await harness.releaseSource(a.descriptor)
+  assert.deepEqual(await harness.recheckWork(a.descriptor, observed.observationId), {
+    kind: 'refused',
+    reason: 'witness',
+  })
+  await assert.rejects(harness.createSyntheticPending(a.descriptor), /Session fenced/)
+})

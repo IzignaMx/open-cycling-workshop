@@ -257,3 +257,72 @@ test('a duplicate in-flight request ID stays invalid when the first response lat
   assert.equal(await first.text(), refusal)
   assert.deepEqual(await evidence(base, requestId(7)), { status: 404, value: null })
 })
+
+test('offline barrier blocks every API method without forwarding, preserves assets, and reopens explicitly', async (t) => {
+  let forwarded = 0
+  const base = await proxyFixture(t, (_req, res) => {
+    forwarded += 1
+    res.end('upstream')
+  })
+  const state = async () => (await fetch(`${base}/__fixture/api-isolation`)).json()
+  const control = (action) => fetch(`${base}/__fixture/api-isolation/${action}`, { method: 'POST' })
+  assert.equal((await control('close')).status, 200)
+  assert.deepEqual(await state(), { closed: true, forwarded: 0, active: 0, blocked: 0 })
+  for (const [path, method] of [
+    [MUTATIONS, 'POST'],
+    ['/api/v1/auth/login', 'POST'],
+    ['/api/v1/sync/changes?cursor=0', 'GET'],
+    ['/api', 'DELETE'],
+  ]) {
+    const response = await fetch(`${base}${path}`, { method })
+    assert.equal(response.status, 503)
+    assert.deepEqual(await response.json(), { error: 'fixture_api_isolated' })
+  }
+  assert.equal((await fetch(`${base}/sw.js`)).status, 200)
+  assert.equal((await fetch(`${base}/__fixture/ready`)).status, 200)
+  for (const path of ['/__fixture/api-isolation/open', '/__fixture/api-isolation/close'])
+    assert.equal((await fetch(`${base}${path}`)).status, 404, 'GET cannot change isolation')
+  assert.equal(
+    (await fetch(`${base}/__fixture/api-isolation/open?bypass=1`, { method: 'POST' })).status,
+    404,
+  )
+  assert.deepEqual(await state(), { closed: true, forwarded: 0, active: 0, blocked: 4 })
+  assert.equal(forwarded, 0)
+  assert.equal((await control('open')).status, 200)
+  assert.equal(await (await fetch(`${base}${MUTATIONS}`, { method: 'POST' })).text(), 'upstream')
+  assert.equal(forwarded, 1)
+  assert.equal((await state()).forwarded, 1, 'counts are monotonic across reopen')
+  assert.equal(
+    (await control('open')).status,
+    409,
+    'repeated open cannot manufacture a closed interval',
+  )
+})
+
+test('closing admits no new requests while existing forwarding drains; reopening refuses active work', async (t) => {
+  let finish, entered
+  const started = new Promise((resolve) => {
+    entered = resolve
+  })
+  const base = await proxyFixture(t, (_req, res) => {
+    finish = () => res.end('done')
+    entered()
+  })
+  const pending = fetch(`${base}${MUTATIONS}`, { method: 'POST' })
+  await started
+  const closed = await fetch(`${base}/__fixture/api-isolation/close`, { method: 'POST' })
+  assert.deepEqual(await closed.json(), { closed: true, forwarded: 1, active: 1, blocked: 0 })
+  assert.equal(
+    (await fetch(`${base}/__fixture/api-isolation/open`, { method: 'POST' })).status,
+    409,
+  )
+  assert.equal((await fetch(`${base}${MUTATIONS}`, { method: 'POST' })).status, 503)
+  finish()
+  assert.equal(await (await pending).text(), 'done')
+  const state = await (await fetch(`${base}/__fixture/api-isolation`)).json()
+  assert.deepEqual(state, { closed: true, forwarded: 1, active: 0, blocked: 1 })
+  assert.equal(
+    (await fetch(`${base}/__fixture/api-isolation/open`, { method: 'POST' })).status,
+    200,
+  )
+})

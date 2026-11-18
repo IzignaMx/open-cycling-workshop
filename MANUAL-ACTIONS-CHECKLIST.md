@@ -3151,3 +3151,11 @@ Do not combine frozen service writes with schema 0013 unchanged: explicit effect
       destination without promoting custody or duplicating unknown commands.
 - [ ] Complete physical platform/backup/restore and pilot acceptance. Empty local
       action lists never close these gates or exclude returning offline clients.
+
+## 2026-11-18 · Native source diagnostic rehearsal
+
+- [ ] Qualify the one additional native case in the existing custody harness on the
+      exact candidate: readonly pending/inflight/applied observations, original TTL
+      under an explicit injected clock, and second-tab ticket fencing.
+- [ ] Keep synthetic results distinct from authentication, real sync, physical
+      LIBERTAD acceptance and migration readiness. No selector or deployment here.

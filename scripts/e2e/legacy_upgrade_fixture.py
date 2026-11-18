@@ -11,12 +11,13 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+from cycling_workshop.customers.models import CustomerRecord
 from cycling_workshop.identity.cutover_cli import activate_cutover, recover_cutover
 from cycling_workshop.identity.domain import Principal
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.settings import Settings
 from cycling_workshop.tenancy.models import OrganizationRecord
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from scripts.e2e.prepare_e2e_database import E2E_LEGACY_ORGANIZATION_ID, validate_e2e_database_url
@@ -74,6 +75,34 @@ def legacy_fixture_session(settings: Settings) -> str:
         engine.dispose()
 
 
+def assert_offline_customer_absent(settings: Settings) -> dict[str, object]:
+    """Read-only precondition, not cleanup or proof of browser transport behavior."""
+    validate_e2e_database_url(settings.database_url)
+    engine = create_engine(settings.database_url)
+    try:
+        with Session(engine) as session:
+            organization = session.get(OrganizationRecord, E2E_LEGACY_ORGANIZATION_ID)
+            if organization is None or organization.minimum_write_protocol != 0:
+                raise RuntimeError(
+                    "Legacy fixture requires its dedicated floor-zero synthetic tenant"
+                )
+            # Fixed marker and tenant only. No caller-supplied data, unbounded
+            # payload reads, writes, or deletion to repair a failed precondition.
+            present = session.scalar(
+                select(CustomerRecord.id)
+                .where(
+                    CustomerRecord.organization_id == E2E_LEGACY_ORGANIZATION_ID,
+                    CustomerRecord.display_name == "Pending from genuine old App",
+                )
+                .limit(1)
+            )
+            if present is not None:
+                raise RuntimeError("Offline fixture customer already exists on server")
+            return {"offline_customer_absent": True, "minimum_write_protocol": 0}
+    finally:
+        engine.dispose()
+
+
 def recover_legacy_fixture(settings: Settings, expected_incarnation: str) -> dict[str, object]:
     """Only the dedicated synthetic tenant may rotate in this browser fixture."""
     return recover_cutover(
@@ -85,7 +114,9 @@ def recover_legacy_fixture(settings: Settings, expected_incarnation: str) -> dic
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["legacy-session", "activate", "recover"])
+    parser.add_argument(
+        "action", choices=["legacy-session", "activate", "recover", "assert-offline-absent"]
+    )
     parser.add_argument("--expected-incarnation")
     args = parser.parse_args()
     action = args.action
@@ -103,6 +134,8 @@ def main() -> int:
     if action == "legacy-session":
         # Captured by the browser runner only; never upload credentials as artifacts.
         print(json.dumps({"token": legacy_fixture_session(settings)}))
+    elif action == "assert-offline-absent":
+        print(json.dumps(assert_offline_customer_absent(settings)))
     elif action == "activate":
         print(json.dumps(activate_cutover(settings, organization_id=E2E_LEGACY_ORGANIZATION_ID)))
     else:

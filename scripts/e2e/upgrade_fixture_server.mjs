@@ -104,6 +104,13 @@ function refusalObservations() {
 export function startUpgradeFixture(port = 5174, options = {}) {
   let current = false
   const refusals = refusalObservations()
+  // Synthetic test-host barrier, independent of browser offline emulation.
+  // Never cancel an already forwarded request or reset evidence on reopen.
+  let closed = false,
+    forwarded = 0,
+    active = 0,
+    blocked = 0
+  const isolation = () => ({ closed, forwarded, active, blocked })
   const old = options.legacyDirectory ?? resolve(root, 'artifacts/legacy-client/dist')
   const fresh = options.currentDirectory ?? resolve(root, 'apps/web/dist')
   for (const directory of [old, fresh]) {
@@ -112,6 +119,21 @@ export function startUpgradeFixture(port = 5174, options = {}) {
   }
   const server = createServer((req, res) => {
     const path = req.url ?? '/'
+    const isolationControl = /^\/__fixture\/api-isolation\/(close|open)$/.exec(path)
+    if (
+      (path === '/__fixture/api-isolation' && req.method === 'GET') ||
+      (isolationControl && req.method === 'POST')
+    ) {
+      let status = 200
+      if (isolationControl?.[1] === 'close') closed = true
+      if (isolationControl?.[1] === 'open') {
+        if (!closed || active !== 0) status = 409
+        else closed = false
+      }
+      res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+      res.end(JSON.stringify(isolation()))
+      return
+    }
     const observation = /^\/__fixture\/refusal\/(req-[0-9a-f]{32})$/.exec(path)
     if (observation && req.method === 'GET') {
       const value = refusals.read(observation[1])
@@ -132,6 +154,14 @@ export function startUpgradeFixture(port = 5174, options = {}) {
       return
     }
     if (/^\/api(?:\/|$)/.test(path)) {
+      if (closed) {
+        blocked += 1
+        res.writeHead(503, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+        res.end('{"error":"fixture_api_isolated"}')
+        return
+      }
+      forwarded += 1
+      active += 1
       const proxy = proxyRequest(
         {
           hostname: '127.0.0.1',
@@ -146,6 +176,9 @@ export function startUpgradeFixture(port = 5174, options = {}) {
           upstream.pipe(res)
         },
       )
+      proxy.once('close', () => {
+        active -= 1
+      })
       proxy.on('error', () => {
         res.writeHead(502, { 'content-type': 'application/json' })
         res.end('{"error":"fixture_api_unavailable"}')
