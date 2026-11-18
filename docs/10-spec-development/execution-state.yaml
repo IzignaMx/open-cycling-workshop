@@ -1,6 +1,18 @@
 schema: 1
 
-current_checkpoint: capture_custody_prototype_20261117
+current_checkpoint: capture_custody_native_20261117
+capture_custody_native_20261117:
+  status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-17-capture-custody-native.md
+  base_main: 7fa4e27f8281f67640800da80da8adc0cc37db9f
+  scope: synthetic_native_IndexedDB_same_custody_modules
+  native_execution: pending
+  production_handover: not_implemented
+  operational_restore: forbidden
+  rollout_gates: G1_G6_open
+  production_changes: none
+
+historical_capture_custody_prototype_checkpoint: capture_custody_prototype_20261117
 capture_custody_prototype_20261117:
   status: implemented_pending_evidence
   evidence: docs/10-spec-development/2026-11-17-capture-custody-prototype.md

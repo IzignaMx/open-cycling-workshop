@@ -1592,5 +1592,35 @@ def test_capture_custody_tooling_is_in_core_checks_and_not_product_source() -> N
     assert "capture-handover" in isolation
     assert "inert-capture-custody" in isolation
     state = read(BASE + "execution-state.yaml")
-    assert "current_checkpoint: capture_custody_prototype_20261117" in state
+    assert (
+        "historical_capture_custody_prototype_checkpoint: capture_custody_prototype_20261117"
+        in state
+    )
     assert "production_handover: not_implemented" in state
+
+
+def test_custody_native_rehearsal_keeps_inert_scope_and_source_bound_provenance() -> None:
+    text = read(BASE + "2026-11-17-capture-custody-native.md")
+    for token in (
+        "7fa4e27f8281f67640800da80da8adc0cc37db9f",
+        "G1\u2013G6 remain open",
+        "not authenticated handover",
+        "native execution pending",
+        "without reseeding",
+        "outer transaction",
+    ):
+        assert token in text
+    state = read(BASE + "execution-state.yaml")
+    assert "current_checkpoint: capture_custody_native_20261117" in state
+    assert "production_handover: not_implemented" in state
+
+
+def test_custody_native_ci_runs_separately_and_preserves_evidence() -> None:
+    ci = read(".github/workflows/ci.yml")
+    assert ci.index("test:capture-origin") < ci.index("test:capture-custody")
+    assert "apps/web/.tmp-capture-custody-results/" in ci
+    assert "apps/web/.tmp-capture-custody/provenance.json" in ci
+    runner = read("apps/web/tools/run-core-tests.mjs")
+    assert "tsconfig.capture-custody.json" in runner
+    assert "tools/capture-custody-browser/prepare.test.mjs" in runner
+    assert "tools/capture-custody-browser/harness.test.mjs" in runner

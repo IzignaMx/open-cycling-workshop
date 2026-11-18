@@ -186,3 +186,23 @@ test('nested transaction and witness from another database are refused', async (
   const other = await fixture(t)
   assert.equal((await revalidateSource(other.options, snapshot.witness)).reason, 'witness')
 })
+
+test('asynchronous browser digest rechecks live authority before reading source rows', async (t) => {
+  const { db, options } = await fixture(t)
+  const before = await bytes(db)
+  const original = crypto.subtle.digest
+  let current = true,
+    calls = 0
+  crypto.subtle.digest = async function (...args) {
+    calls++
+    current = false
+    return original.apply(this, args)
+  }
+  t.after(() => {
+    crypto.subtle.digest = original
+  })
+  options.isCurrent = () => current
+  assert.equal((await snapshotSource(options)).kind, 'refused')
+  assert.ok(calls > 0, 'uses browser-compatible digest')
+  assert.equal(await bytes(db), before)
+})

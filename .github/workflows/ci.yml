@@ -363,6 +363,8 @@ jobs:
         run: pnpm --filter @ocwp/web test:capture-app
       - name: Run actual same-context origin isolation and artifact admission
         run: pnpm --filter @ocwp/web test:capture-origin
+      - name: Run isolated native inert custody tests
+        run: pnpm --filter @ocwp/web test:capture-custody
       - name: Prepare browser E2E database
         id: browser_fixture_initial
         shell: bash
@@ -548,6 +550,8 @@ jobs:
           path: |
             apps/web/.tmp-capture-app-results/
             apps/web/.tmp-capture-origin-results/
+            apps/web/.tmp-capture-custody-results/
+            apps/web/.tmp-capture-custody/provenance.json
             artifacts/capture-app-old-admission.json
             artifacts/capture-app-current-admission.json
             artifacts/capture-app-old/

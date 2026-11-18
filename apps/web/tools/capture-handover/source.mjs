@@ -1,5 +1,4 @@
 /** Synthetic custody prototype only. Not a production authorization or handover API. */
-import { createHash } from 'node:crypto'
 import { KernelDatabase } from '../../.tmp-kernel/src/access-kernel/database.js'
 import {
   validCheckpoint,
@@ -20,7 +19,13 @@ import { completedBaseline } from '../../.tmp-kernel/src/access-kernel/baseline-
 const witnesses = new WeakMap()
 const channels = ['customer', 'order']
 const refused = (reason) => ({ kind: 'refused', reason })
-const hash = (value) => createHash('sha256').update(canonicalJson(value)).digest('hex')
+const hash = async (value) => {
+  const bytes = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(canonicalJson(value)),
+  )
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
 const same = (a, b) => canonicalJson(a) === canonicalJson(b)
 
 /** The caller supplies a live synthetic authority callback; stored rows alone are not authentication.
@@ -40,8 +45,8 @@ async function inspect(options) {
     scope = structuredClone(options.scope)
   const checkpointId = options.checkpointId
   if (!validUUID(checkpointId)) return refused('invalid')
-  const bindingKey = hash([scope.apiRealm, scope.sessionBindingId]),
-    scopeKey = hash({ ...scope, capabilities: [...new Set(scope.capabilities)].sort() })
+  const bindingKey = await hash([scope.apiRealm, scope.sessionBindingId]),
+    scopeKey = await hash({ ...scope, capabilities: [...new Set(scope.capabilities)].sort() })
   const result = await db.transaction(
     'r',
     [
