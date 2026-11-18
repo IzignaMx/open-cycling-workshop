@@ -4,9 +4,12 @@ import { verifyArtifactProvenance } from './prepare.mjs'
 const expected = () => ({
   currentHead: 'a'.repeat(40),
   currentTree: 'a'.repeat(40),
-  source: { 'source.mjs': 'b'.repeat(64) },
+  source: {
+    'source.mjs': 'b'.repeat(64),
+    'tools/source-transition/diagnostic.mjs': 'e'.repeat(64),
+  },
   lockSha256: 'c'.repeat(64),
-  scope: 'Synthetic custody modules; not App/SW or authenticated handover',
+  scope: 'Synthetic custody and source diagnostic modules; not App/SW or authenticated handover',
   assets: {
     'index.html': { bytes: 12, sha256: 'd'.repeat(64) },
     'assets/main.js': { bytes: 23, sha256: 'e'.repeat(64) },
@@ -18,6 +21,11 @@ for (const [label, mutate] of [
   ['head', (x) => (x.currentHead = 'f'.repeat(40))],
   ['tree', (x) => (x.currentTree = 'f'.repeat(40))],
   ['source', (x) => (x.source['source.mjs'] = 'f'.repeat(64))],
+  [
+    'diagnostic source',
+    (x) => (x.source['tools/source-transition/diagnostic.mjs'] = 'f'.repeat(64)),
+  ],
+  ['missing diagnostic source', (x) => delete x.source['tools/source-transition/diagnostic.mjs']],
   ['lock', (x) => (x.lockSha256 = 'f'.repeat(64))],
   ['asset hash', (x) => (x.assets['index.html'].sha256 = 'f'.repeat(64))],
   ['asset size', (x) => x.assets['index.html'].bytes++],
