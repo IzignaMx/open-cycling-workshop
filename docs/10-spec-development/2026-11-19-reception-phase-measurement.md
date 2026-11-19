@@ -109,12 +109,12 @@ passed and its successful trace/receipt received fresh independent review. All
 three receptions completed (3 attempted, 3 passed, 0 failed); the direct browser
 suite passed 142 cases with retry zero. Observed phase ranges on this hosted run:
 
-| Phase | Observed minimum–maximum (ms) |
-| --- | --- |
-| draftDurable | 33.7–42.5 |
-| reloadRecovered | 217–244.2 |
-| localCommit | 198.1–201.7 |
-| serverConfirmed | 320.6–353 |
+| Phase           | Observed minimum–maximum (ms) |
+| --------------- | ----------------------------- |
+| draftDurable    | 33.7–42.5                     |
+| reloadRecovered | 217–244.2                     |
+| localCommit     | 198.1–201.7                   |
+| serverConfirmed | 320.6–353                     |
 
 These are descriptive driver-observed ranges from three synthetic receptions,
 not percentiles, pure storage/API latency, hardware qualification or physical
