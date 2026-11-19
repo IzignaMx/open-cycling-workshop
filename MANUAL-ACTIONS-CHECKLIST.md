@@ -1,5 +1,7 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+- [ ] Preparar la [ficha Windows/Android](docs/11-device-qualification/2026-11-19-windows-android-preflight.md): propuesta no calificada, preflight de lectura y condiciones de ensayo. No instala ni sustituye T1–T8/G1–G6.
+
 - [x] Qualified the independent-client inline reception route interruption and causal trace/receipt on exact main `13a9afb3`, CI `44505545387` attempt 1 (143 direct cases, retry zero). See [scope and evidence](docs/10-spec-development/2026-11-19-isolated-reception-route.md). Socket-drop is a synthetic API transport interruption, not Internet/LAN or physical LIBERTAD qualification. Keep G1–G6 open and reuse the existing equipment/origin sheet and safe T1–T8 protocol.
 
 ## 2026-11-19 · Reception phase observations
