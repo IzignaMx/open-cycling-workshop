@@ -1,3 +1,4 @@
+import { captureResponseDuring } from './helpers/response-capture.js'
 import { expect, test, type Page } from '@playwright/test'
 import {
   apiLogin,
@@ -149,10 +150,23 @@ test('resolve an unsent source capture then author distinct new work at another 
       response.url() === `${DESTINATION}/api/v1/auth/login` &&
       response.request().method() === 'POST',
   )
-  await login(destination, identity, undefined, 'synced', DESTINATION)
-  const loginResponse = await destinationLogin
-  expect(loginResponse.status()).toBe(200)
-  const issued = (await loginResponse.json()) as { access_token: string }
+  const issued = await captureResponseDuring(
+    destinationLogin,
+    () => login(destination, identity, undefined, 'synced', DESTINATION),
+    async (loginResponse) => {
+      expect(loginResponse.status()).toBe(200)
+      const body: unknown = await loginResponse.json()
+      // Fail closed without including a token or arbitrary body in assertions.
+      const valid =
+        typeof body === 'object' &&
+        body !== null &&
+        'access_token' in body &&
+        typeof body.access_token === 'string' &&
+        body.access_token.trim().length > 0
+      expect(valid).toBe(true)
+      return body as { access_token: string }
+    },
+  )
   const destinationToken = await sessionToken(destination)
   // Only booleans reach assertions/receipt; never print bearer values.
   expect(destinationToken === issued.access_token).toBe(true)

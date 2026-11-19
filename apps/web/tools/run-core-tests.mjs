@@ -17,6 +17,7 @@ function run(command, args) {
 }
 
 const outputs = [
+  new URL('../.tmp-response-capture/', import.meta.url),
   new URL('../.tmp-reception-measurement/', import.meta.url),
   new URL('../.tmp-sync/', import.meta.url),
   new URL('../.tmp-customer/', import.meta.url),
@@ -33,6 +34,7 @@ const outputs = [
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
 try {
+  run(process.execPath, [tsc, '-p', 'tsconfig.response-capture.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.reception-measurement.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.sync-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.customer-test.json', '--pretty', 'false'])
@@ -164,6 +166,7 @@ try {
     'tests/pwa/upgrade-fixture.test.mjs',
     'tests/pwa/current-route-fixture.test.mjs',
     'tests/pwa/reception-measurement.test.mjs',
+    'tests/pwa/response-capture.test.mjs',
     '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',
