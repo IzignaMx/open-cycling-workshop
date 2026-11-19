@@ -1,12 +1,23 @@
 schema: 1
 
-current_checkpoint: source_completion_new_work_20261118
-source_completion_new_work_20261118:
+current_checkpoint: reception_phase_measurement_20261119
+reception_phase_measurement_20261119:
   status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-19-reception-phase-measurement.md
+  base_main: 95813a35123884e2f310b6c696c41361e3570e54
+  scope: three_synthetic_actual_App_server_receptions_observed_by_phase
+  native_execution: pending
+  physical_readiness: not_assessed
+  production_changes: none
+  rollout_gates: G1_G6_open
+
+historical_source_completion_checkpoint: source_completion_new_work_20261118
+source_completion_new_work_20261118:
+  status: hosted_native_qualified_physical_open
   evidence: docs/10-spec-development/2026-11-18-source-completion-new-work.md
   base_main: e1332790885ff5b2941058d08e8dfb624403d29a
   scope: actual_App_source_completion_and_new_destination_authoring_synthetic_server
-  native_execution: pending
+  native_execution: main_95813a35_CI44254219936_independently_reviewed
   migration: not_performed
   production_changes: none
   rollout_gates: G1_G6_open

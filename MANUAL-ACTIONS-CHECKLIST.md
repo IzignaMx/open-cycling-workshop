@@ -1,12 +1,22 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-19 · Reception phase observations
+
+- [ ] Qualify the three-reception App/server measurement, successful trace, all
+      attempted/failed samples and exact identities. Hosted timing is descriptive.
+- [ ] Identify actual LIBERTAD hardware, trusted authorized test installation and
+      restore evidence before scheduling a physical reception trial. Do not infer
+      readiness from CI, small samples or historical IndexedDB benchmarks.
+      See [measurement boundaries and decision card](docs/10-spec-development/2026-11-19-reception-phase-measurement.md).
+
 ## 2026-11-18 · Source completion and genuinely new destination work
 
-- [ ] Qualify the actual App/server journey: recover UNSENT in A, confirm applied
+- [x] Qualified the actual App/server journey: recover UNSENT in A, confirm applied
       outcome on server, then independently authenticate B and author distinct new
-      work with no copied local journal/capture. Native execution remains pending.
-- [ ] Review successful trace/receipt, exact source history and complete private
-      server feed; do not treat counters or source-code checks as native evidence.
+      work with no copied local journal/capture. Main `95813a35`, CI `44254219936` passed.
+- [x] Independently reviewed successful trace/receipt, exact source history and
+      complete private server feed for PR115/main `95813a35`. This is native
+      synthetic evidence, not physical acceptance; see the linked scope record.
 - [ ] Decide protected entry/auth/coexistence/recovery under the proposed ADR before
       any real transition. No selector, migration, retirement or deployment here;
       G1–G6 and physical LIBERTAD acceptance remain open.

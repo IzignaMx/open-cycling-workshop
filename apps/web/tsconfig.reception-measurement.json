@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "e2e/helpers",
+    "outDir": ".tmp-reception-measurement"
+  },
+  "include": ["e2e/helpers/reception-measurement.ts"]
+}
