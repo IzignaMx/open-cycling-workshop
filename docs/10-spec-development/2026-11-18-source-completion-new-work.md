@@ -1,7 +1,7 @@
 # Finish an existing source capture, then author genuinely new work
 
 Baseline: main `e1332790885ff5b2941058d08e8dfb624403d29a` (PR114).
-Status: authored direct-browser journey, native execution pending.
+Status: hosted native journey qualified on PR115/main; physical acceptance remains open.
 
 ## Finite recommendation
 
@@ -79,3 +79,15 @@ the regular TypeScript compilation path. Scoped lint/format/diff checks, product
 PWA build and both production-isolation checks passed. Official collection found
 **one new direct case, zero locally executed**. No native/physical claim follows
 from these checks; successful hosted trace and receipt require separate review.
+
+## Hosted qualification reconciliation (2026-11-19)
+
+PR115 merged as `95813a35123884e2f310b6c696c41361e3570e54`, exact tree
+`58fb6ad5535e8df2006f7ad0ff45b09025ff5e0a`. Main
+[CI 44254219936](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/44254219936)
+passed. The coordinator recorded independent review of the successful native trace
+and receipt, including source-history preservation and the complete private server
+feed. See [PR115](https://github.com/IzignaMx/open-cycling-workshop/pull/115).
+This supersedes the pending hosted status, not the historical local authoring counts
+above. It does not qualify the later reception measurement candidate, physical
+hardware, migration, exclusivity, production authentication decisions or G1–G6.

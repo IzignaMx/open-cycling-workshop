@@ -56,3 +56,33 @@ def test_destination_session_is_observed_not_copied_and_realms_are_distinct() ->
         assert marker in text
     assert "sessionStorage.setItem" not in text
     assert "addCookies" not in text
+
+
+def test_reception_measurement_keeps_failed_attempts_and_physical_gate_open() -> None:
+    text = (ROOT / "apps/web/e2e/reception-phase-measurement.spec.ts").read_text()
+    assert "test.describe.configure({ retries: 0 })" in text
+    assert "test.use({ trace: 'on' })" in text
+    assert "for (let trial = 1; trial <= 3; trial += 1)" in text
+    assert text.index("phases.localCommit = phaseDuration") < text.index(
+        "getByText('Orden guardada localmente'"
+    )
+    assert "phaseDuration(submitStart, performance.now())" in text
+    assert "status: 'failed'" in text
+    assert "'reception-attempts-raw'" in text
+    assert "'reception-phase-measurement'" in text
+    assert "expect(changes.has_more).toBe(false)" in text
+    assert "expect(changes.items).toHaveLength(7)" in text
+    document = (
+        ROOT / "docs/10-spec-development/2026-11-19-reception-phase-measurement.md"
+    ).read_text()
+    for marker in (
+        "native measurements pending",
+        "not a cold",
+        "not zero durations",
+        "G1\u2013G6",
+        "BLOCKED",
+    ):
+        assert marker in document
+    runner = (ROOT / "apps/web/tools/run-core-tests.mjs").read_text()
+    assert "'tsconfig.reception-measurement.json'" in runner
+    assert "'tests/pwa/reception-measurement.test.mjs'" in runner
