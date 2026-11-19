@@ -34,6 +34,12 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: 'node ../../scripts/e2e/current_route_fixture_server.mjs',
+      url: 'http://127.0.0.1:5176/__fixture/ready',
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
       // Same current dist on a second loopback origin, not a production destination.
       command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5175',
       cwd: '.',

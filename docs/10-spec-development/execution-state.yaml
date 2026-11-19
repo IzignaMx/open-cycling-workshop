@@ -1,12 +1,23 @@
 schema: 1
 
-current_checkpoint: reception_phase_measurement_20261119
-reception_phase_measurement_20261119:
+current_checkpoint: isolated_reception_route_20261119
+isolated_reception_route_20261119:
   status: implemented_pending_evidence
+  evidence: docs/10-spec-development/2026-11-19-isolated-reception-route.md
+  base_main: 06dc8f8d96da2cf7292e843160125145a50019e9
+  scope: independent_context_inline_reception_with_synthetic_API_route_interruption
+  native_execution: pending
+  physical_readiness: not_assessed
+  production_changes: none
+  rollout_gates: G1_G6_open
+
+historical_reception_phase_checkpoint: reception_phase_measurement_20261119
+reception_phase_measurement_20261119:
+  status: hosted_native_qualified_physical_open
   evidence: docs/10-spec-development/2026-11-19-reception-phase-measurement.md
   base_main: 95813a35123884e2f310b6c696c41361e3570e54
   scope: three_synthetic_actual_App_server_receptions_observed_by_phase
-  native_execution: pending
+  native_execution: main_06dc8f8d_CI44472900336_independently_reviewed
   physical_readiness: not_assessed
   production_changes: none
   rollout_gates: G1_G6_open

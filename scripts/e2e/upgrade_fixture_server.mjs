@@ -102,6 +102,9 @@ function refusalObservations() {
   }
 }
 export function startUpgradeFixture(port = 5174, options = {}) {
+  const closedApiBehavior = options.closedApiBehavior ?? 'http-503'
+  if (!['http-503', 'socket-drop'].includes(closedApiBehavior))
+    throw new Error('Unsupported synthetic closed API behavior')
   let current = false
   const refusals = refusalObservations()
   // Synthetic test-host barrier, independent of browser offline emulation.
@@ -156,6 +159,12 @@ export function startUpgradeFixture(port = 5174, options = {}) {
     if (/^\/api(?:\/|$)/.test(path)) {
       if (closed) {
         blocked += 1
+        if (closedApiBehavior === 'socket-drop') {
+          // Only this accepted synthetic API request: no upstream dispatch,
+          // no global network change, and no cancellation of prior forwards.
+          req.socket.destroy()
+          return
+        }
         res.writeHead(503, { 'content-type': 'application/json', 'cache-control': 'no-store' })
         res.end('{"error":"fixture_api_isolated"}')
         return
