@@ -1,13 +1,13 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
-- [ ] Qualify the authored independent-client inline reception route interruption in hosted CI. See [scope and evidence](docs/10-spec-development/2026-11-19-isolated-reception-route.md). Socket-drop is a synthetic API transport interruption, not Internet/LAN or physical LIBERTAD qualification. Keep G1–G6 open and reuse the existing equipment/origin sheet and safe T1–T8 protocol.
+- [x] Qualified the independent-client inline reception route interruption and causal trace/receipt on exact main `13a9afb3`, CI `44505545387` attempt 1 (143 direct cases, retry zero). See [scope and evidence](docs/10-spec-development/2026-11-19-isolated-reception-route.md). Socket-drop is a synthetic API transport interruption, not Internet/LAN or physical LIBERTAD qualification. Keep G1–G6 open and reuse the existing equipment/origin sheet and safe T1–T8 protocol.
 
 ## 2026-11-19 · Reception phase observations
 
 - [x] Qualified the three-reception App/server measurement and independently reviewed
       its successful trace/receipt: main `06dc8f8d`, CI `44472900336`, 3/3 receptions
       and 142 direct browser cases with retry zero. Hosted timing is descriptive,
-      not physical LIBERTAD acceptance; the isolated-route case above remains pending.
+      not physical LIBERTAD acceptance; the separate isolated-route result is recorded above.
 - [ ] Identify actual LIBERTAD hardware, trusted authorized test installation and
       restore evidence before scheduling a physical reception trial. Do not infer
       readiness from CI, small samples or historical IndexedDB benchmarks.

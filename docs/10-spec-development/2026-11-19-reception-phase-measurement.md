@@ -119,5 +119,5 @@ suite passed 142 cases with retry zero. Observed phase ranges on this hosted run
 These are descriptive driver-observed ranges from three synthetic receptions,
 not percentiles, pure storage/API latency, hardware qualification or physical
 LIBERTAD acceptance. The authoring record above remains historical. G1–G6 and
-the physical protocol remain open. The subsequent isolated-route journey has
-separate pending native execution and does not inherit this qualification.
+the physical protocol remain open. The subsequent isolated-route journey has separate hosted qualification on main
+`13a9afb3` / CI `44505545387`; it does not inherit this measurement qualification.

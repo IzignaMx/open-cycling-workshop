@@ -1,7 +1,7 @@
 # Reception with an independently interrupted synthetic API route
 
 Baseline: main `06dc8f8d96da2cf7292e843160125145a50019e9` (PR116).
-Status: authored; native execution pending. No product changes.
+Status: hosted native evidence qualified on exact main; physical acceptance remains open. No product changes.
 
 ## Decision and difference from existing evidence
 
@@ -53,7 +53,8 @@ network errors by themselves do not prove an operation never reached the server.
 ## Evidence and limits
 
 The native case retains its successful trace and a minimal synthetic receipt.
-Native execution is pending, with no local browser launch. Any unexpected recovery
+Hosted execution and its causal trace were independently reviewed; no local browser
+was launched. Any unexpected recovery
 behavior fails the test and needs diagnosis; it is not a performance sample or a
 reason to weaken session fencing. Node fixture tests do not qualify App recovery.
 No real user data, operational migration, selector, format activation, deployment,
@@ -75,3 +76,27 @@ security changes. Completing that sheet is not permission to run or deploy.
 - E2E TypeScript, scoped ESLint, production build and two production-isolation controls pass.
 - Playwright collection finds the one new case. Collection is not native execution.
 - No local native execution, physical timing, or LIBERTAD acceptance is claimed.
+
+## Hosted qualification after PR117
+
+Exact main `13a9afb31e73c157ba23c6ec8267b83d64d77662` (tree
+`373d8ee21d4b2c6e53ae2d149772baa2cb3648f7`) passed
+[CI 44505545387, attempt 1](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/44505545387).
+The completed success result was rechecked from GitHub before this reconciliation.
+The exact-main evidence review recorded 10 successful checks, 27 aggregate entries,
+6,767 Python passes with 58 expected skips, 1,789 frontend passes, and 143 direct
+browser passes with retry zero. The separate native suites passed 3 custody/diagnostic,
+8 App/SW and 3 reducer cases. These counts describe that historical main run, not
+execution of this documentation candidate.
+
+The successful causal trace/receipt verifies the closed and drained A barrier before
+authoring, A transport failure while B remains reachable, exact server absence of
+both new entities, preserved journal/IDs after reload, and original-operation
+confirmation plus B convergence after reopening. This is synthetic loopback evidence,
+not physical WiFi/WAN, LIBERTAD hardware, operational migration or client exclusion.
+The local authoring record above remains historical: no local native execution.
+T1–T8, G1–G6 and physical acceptance remain open; the selector stays disabled and
+there is no deployment or real-data trial.
+
+The earlier PR CI `44494327024` failed document formatting before browser execution;
+that failure is preserved, not reclassified as a product or browser failure.
