@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "e2e/helpers",
+    "outDir": ".tmp-response-capture"
+  },
+  "include": ["e2e/helpers/response-capture.ts"]
+}
