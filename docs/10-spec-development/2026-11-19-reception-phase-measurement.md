@@ -1,7 +1,7 @@
 # Reception workflow observation, not a LIBERTAD readiness certificate
 
 Baseline: main `95813a35123884e2f310b6c696c41361e3570e54` (PR115).
-Status: implemented measurement journey; native measurements pending.
+Status: hosted native measurement qualified on main; physical acceptance remains open.
 
 ## Decision this evidence can support
 
@@ -101,3 +101,23 @@ locally. Dependency setup used frozen locks; the first package install failed on
 missing default store directory, then succeeded with an explicit temporary store.
 Node 24.22.3 / pnpm 11.25.0 were the local authoring environment, not a timing sample
 or the pinned hosted runner. Lockfiles were unchanged.
+
+## Hosted reconciliation after PR116
+
+Main `06dc8f8d96da2cf7292e843160125145a50019e9`, CI `44472900336`,
+passed and its successful trace/receipt received fresh independent review. All
+three receptions completed (3 attempted, 3 passed, 0 failed); the direct browser
+suite passed 142 cases with retry zero. Observed phase ranges on this hosted run:
+
+| Phase | Observed minimum–maximum (ms) |
+| --- | --- |
+| draftDurable | 33.7–42.5 |
+| reloadRecovered | 217–244.2 |
+| localCommit | 198.1–201.7 |
+| serverConfirmed | 320.6–353 |
+
+These are descriptive driver-observed ranges from three synthetic receptions,
+not percentiles, pure storage/API latency, hardware qualification or physical
+LIBERTAD acceptance. The authoring record above remains historical. G1–G6 and
+the physical protocol remain open. The subsequent isolated-route journey has
+separate pending native execution and does not inherit this qualification.

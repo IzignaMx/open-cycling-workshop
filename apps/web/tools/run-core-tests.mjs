@@ -162,6 +162,7 @@ try {
     '../../scripts/e2e/capture_app_server.test.mjs',
     '../../scripts/e2e/capture_app_admission.test.mjs',
     'tests/pwa/upgrade-fixture.test.mjs',
+    'tests/pwa/current-route-fixture.test.mjs',
     'tests/pwa/reception-measurement.test.mjs',
     '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',

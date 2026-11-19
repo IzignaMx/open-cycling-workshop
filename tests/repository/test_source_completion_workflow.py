@@ -76,7 +76,8 @@ def test_reception_measurement_keeps_failed_attempts_and_physical_gate_open() ->
         ROOT / "docs/10-spec-development/2026-11-19-reception-phase-measurement.md"
     ).read_text()
     for marker in (
-        "native measurements pending",
+        "hosted native measurement qualified on main; physical acceptance remains open",
+        "44472900336",
         "not a cold",
         "not zero durations",
         "G1\u2013G6",
