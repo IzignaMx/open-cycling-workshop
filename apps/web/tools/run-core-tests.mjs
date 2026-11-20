@@ -17,6 +17,7 @@ function run(command, args) {
 }
 
 const outputs = [
+  new URL('../.tmp-bootstrap/', import.meta.url),
   new URL('../.tmp-response-capture/', import.meta.url),
   new URL('../.tmp-reception-measurement/', import.meta.url),
   new URL('../.tmp-sync/', import.meta.url),
@@ -34,6 +35,7 @@ const outputs = [
 
 for (const output of outputs) rmSync(output, { recursive: true, force: true })
 try {
+  run(process.execPath, [tsc, '-p', 'tsconfig.bootstrap-test.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.response-capture.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.reception-measurement.json', '--pretty', 'false'])
   run(process.execPath, [tsc, '-p', 'tsconfig.sync-test.json', '--pretty', 'false'])
@@ -77,6 +79,7 @@ try {
     'tools/capture-app/crash-fixture.test.mjs',
     'tools/capture-app/fixture.test.mjs',
     'tools/capture-browser/harness.test.mjs',
+    'tests/bootstrap/bootstrap.test.mjs',
     'tests/module-information/reference.test.mjs',
     'tests/access-kernel/context.test.mjs',
     'tests/access-kernel/cutover-context.test.mjs',
