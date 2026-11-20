@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": [
+    "e2e/bootstrap.spec.ts",
     "e2e/transition-notes.spec.ts",
     "e2e/source-completion-new-work.spec.ts",
     "e2e/reception-phase-measurement.spec.ts",

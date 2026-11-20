@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "noEmit": false, "rootDir": "src", "outDir": ".tmp-bootstrap" },
+  "include": ["src/bootstrap.ts"]
+}
