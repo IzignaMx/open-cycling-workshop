@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-25 · Project and inventory status reconciliation
+
+- Reconcile current README, execution-state and manual-checklist pointers with
+  merged PR121/main `3d11bbd`, preserving dated receipts and failed evidence.
+- Add a generic repository contract for agreement between current checkpoint,
+  last checkpoint, README evidence link and existing active-plan document.
+- Document the implemented inventory APIs/connected UI and remaining stock,
+  offline, commerce, physical and deployment gates without changing product scope.
+- Distinguish the earlier secure-bootstrap CI receipt from the later merged source;
+  fresh candidate verification remains separate. See the
+  [audit record](docs/10-spec-development/2026-11-25-project-inventory-audit.md).
+
 ## 2026-11-10 · Local order queue filters
 
 - Add exact state and priority filters, combined text search and a clear action
