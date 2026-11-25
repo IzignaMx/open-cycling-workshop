@@ -1,5 +1,28 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-25 · Current project and inventory audit
+
+- [x] Inspect merged PR121/main `3d11bbd` and reconcile the current documentation
+      pointers. See the [source inventory and evidence boundary](docs/10-spec-development/2026-11-25-project-inventory-audit.md).
+- [x] Complete local inventory verification: initial suite 456 passed/64 skipped;
+      dedicated PostgreSQL read proof 43 passed and command/migration/authority
+      selection 104 passed, both with zero skips. These groups overlap. Native
+      browser: 17 passed with zero retries. Repository contracts: 226 passed. Synthetic
+      database container absence was confirmed after cleanup.
+- [ ] Qualify the exact successor through hosted CI and independent review; historical
+      CI44692144993 covers the earlier `491ac31d` tree only. Merge metadata is not
+      fresh-main runtime qualification. Exact-main CI44997636297 and runtime44997636334
+      report success in separately inspected Actions metadata; archives were not revalidated.
+- [ ] Supply actual Windows/Android equipment and operator evidence for T1–T8
+      and R01-T035; identify the installation target, trusted origin and proven
+      restore before any operational deployment can be claimed.
+- Inventory software is partial: mounted commands/connected reads exist, while
+  write UI, offline inventory, purchasing/POS and full stock acceptance retain
+  their planned scope. No real workshop stock count was inspected.
+- Earlier sections preserve dated checkpoints, including then-pending publication
+  and test requests. This summary does not mark those historical failures passed
+  or close G1–G6, physical, capacity, recovery or quote activation gates.
+
 - [ ] Preparar la [ficha Windows/Android](docs/11-device-qualification/2026-11-19-windows-android-preflight.md): propuesta no calificada, preflight de lectura y condiciones de ensayo. No instala ni sustituye T1–T8/G1–G6.
 - [ ] Retomar sólo con equipo y operador: [acciones manuales aplazadas del piloto Windows/Android](docs/11-device-qualification/2026-11-20-windows-android-manual-actions.md). La evidencia CI no cierra las pruebas físicas ni autoriza el despliegue.
 

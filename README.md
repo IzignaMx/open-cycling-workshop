@@ -14,7 +14,7 @@ monolith, explicit permissions and vendor-neutral infrastructure.
 > qualification exists; physical Windows/Android acceptance, manual reviews and
 > real installation gates remain open. The static GitHub Pages presentation was published from
 > source `3c6513d`; it is not an operational workshop deployment. Later repository
-> changes do not imply a redeployment. See the [current checkpoint](docs/10-spec-development/2026-11-01-documentation-reconciliation.md).
+> changes do not imply a redeployment. See the [current project and inventory audit](docs/10-spec-development/2026-11-25-project-inventory-audit.md).
 
 ## See the real application
 
@@ -51,7 +51,7 @@ staff operations, retail-only profiles and operational metrics.
 | ---------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | Workshop   | Customers, bicycles, service orders, local journal, sync and conflict handling                | Offline admission depends on identity/context and previously admitted data; do not assume every screen works offline. |
 | Identity   | Connected account, users, permissions, locations and session administration                   | Server-enforced scoped capabilities; no implicit grants to new features.                                              |
-| Inventory  | Products/ledger domain and scoped connected read UI                                           | Inventory reads are online-only, not a local stock snapshot or inventory command UI.                                  |
+| Inventory  | Products/ledger domain, mounted product/movement APIs and scoped connected read UI            | Inventory reads are online-only, not a local stock snapshot or inventory command UI.                                  |
 | Appearance | Four themes, personal preferences, local logo and shared workshop branding                    | Personal device presentation differs from shared workshop identity.                                                   |
 | Quotes     | Arithmetic/history, persistence/service prerequisites, authority fences and namespace privacy | No mounted quote API or quote UI; streaming/cancellation/capacity and activation gates remain open.                   |
 | Operations | Compose candidate, diagnostics, backup/restore and source-bound hosted runtime evidence       | Not proof of a real installation, physical ARM device or production release.                                          |

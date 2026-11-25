@@ -1,6 +1,42 @@
 schema: 1
 
-current_checkpoint: isolated_reception_route_20261119
+current_checkpoint: project_inventory_audit_20261125
+project_inventory_audit_20261125:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-25-project-inventory-audit.md
+  inspected_main: 3d11bbd3afadaa998063ab637c8eb58caaaba32a
+  baseline_PR121: merged_20261122_metadata_and_local_history_checked
+  historical_CI44692144993: earlier_491ac31_tree_documented_not_archives_revalidated
+  current_candidate_qualification: local_inventory_verified_hosted_candidate_pending
+  baseline_hosted_metadata: exact_main_attempt1_success_not_archives_revalidated
+  baseline_CI: 44997636297
+  baseline_CI_verify_log: frontend1805_API1_Python6767_pass58_skips_browser145_pass
+  baseline_CI_archive_acceptance: not_independently_revalidated
+  baseline_runtime: 44997636334
+  baseline_security: 44997636288
+  baseline_micro: 44997636260
+  inventory_python_initial: 456_passed_64_PostgreSQL_environment_skips
+  inventory_PostgreSQL18_4_read_proof: 43_passed_zero_skips_dedicated_synthetic_database
+  inventory_pg_artifacts: artifacts/inventory-read/pg-direct/
+  current_and_pinned_legacy_PWA_builds: passed_Node22_16_pnpm11_17
+  inventory_remaining_PG_selection: 104_passed_zero_skips_includes_remaining21_PG_cases
+  inventory_native_browser: 17_passed_zero_retries_worker1
+  inventory_test_container_cleanup: absence_confirmed
+  repository_contracts: 226_passed
+  independent_source_review: no_blocking_findings_navigation_tests_and_docs
+  full_aggregate: initial21_pass2_toolchain_fail3_environment_blockers_preserved
+  full_python_local: 6140_passed_685_environment_skips
+  frontend_core_local: 1805_passed_zero_skips
+  affected_build_recheck: pinned_Node22_16_pnpm11_17_current_and_reproducible_legacy_pass
+  full_native_and_100k: not_qualified_by_this_local_aggregate
+  scope: source_inventory_documentation_reconciliation_and_inventory_verification
+  physical_stock: not_inspected_no_workshop_database_supplied
+  active_release: V0.1_partial
+  physical_T1_T8_R01_T035: open
+  rollout_gates: G1_G6_open
+  deployment: not_performed
+
+historical_isolated_reception_checkpoint: isolated_reception_route_20261119
 isolated_reception_route_20261119:
   status: hosted_native_qualified_physical_open
   evidence: docs/10-spec-development/2026-11-19-isolated-reception-route.md
@@ -3435,7 +3471,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-12-capture-format-compatibility.md
+active_plan: docs/10-spec-development/2026-11-25-project-inventory-audit.md
+historical_capture_format_plan: docs/10-spec-development/2026-11-12-capture-format-compatibility.md
 historical_order_intake_readback_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
 historical_local_order_filter_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
 historical_frontend_sync_plan: docs/10-spec-development/2026-11-10-frontend-sync-completion.md
@@ -3447,7 +3484,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: capture_format_compatibility_qualification_in_progress
+active_plan_status: local_inventory_and_documentation_verified_hosted_successor_pending
+historical_capture_format_plan_status: capture_format_compatibility_qualification_in_progress
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
 historical_completed_lab_active_plan: docs/superpowers/plans/2026-11-02-m2-hosted-preparation.md
@@ -3457,7 +3495,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: capture_format_compatibility_20261112
+last_checkpoint: project_inventory_audit_20261125
+historical_capture_format_last_checkpoint: capture_format_compatibility_20261112
 historical_order_intake_readback_last_checkpoint: order_intake_readback_20261112
 historical_local_order_filter_last_checkpoint: local_order_filters_20261110
 historical_frontend_diagnostic_last_checkpoint: frontend_diagnostic_retention_20261109
@@ -3732,6 +3771,13 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
+  - qualify the exact new candidate with local checks independent review and normal hosted CI
+  - retain missing product requirements in their canonical phased plan without claiming completion
+  - complete physical T1_T8 and R01_T035 when actual Windows_Android equipment and operator are available
+  - identify deployment target and installation-specific restore and trusted-origin evidence before operational rollout
+  - keep G1_G6 quote activation capacity and historical UNKNOWN_SPENT gates distinct
+
+historical_next_focus_before_20261125:
   - finish exact-source autonomous read-boundary verification without inheriting PR90 acceptance
   - preserve accepted PR89 and PR90 main evidence and all historical failed receipts
   - defer physical Windows and Android Tier 1 execution per current request while retaining open R01-T035 and required evidence
