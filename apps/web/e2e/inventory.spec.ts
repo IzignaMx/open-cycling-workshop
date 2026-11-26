@@ -239,6 +239,73 @@ test('organization-wide inventory directory selection needs no operational basel
   await openInventory(page, f.locationA)
   await selectMain(page)
   const region = panel(page)
+  const directory = region.getByRole('combobox', { name: 'Taller para inventario', exact: true })
+  // The operational selector shares the same bounded directory. Replacing
+  // its page must not leave the previous catalog under an empty selector.
+  const beforeDirectoryPage = requests.inventory.length
+  await page.getByRole('button', { name: 'Más talleres', exact: true }).click()
+  await expect(directory).toContainText('Taller inventario directorio 58')
+  await expect(directory).toHaveValue('')
+  await expect(region.getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+  await expect(region.getByRole('list', { name: 'Productos de inventario' })).toHaveCount(0)
+  await expect(
+    region.getByRole('button', { name: 'Verificar y consultar inventario' }),
+  ).toBeVisible()
+  expect(requests.inventory.length).toBe(beforeDirectoryPage)
+  await openInventory(page, f.locationA)
+  await selectMain(page)
+  // The inventory-owned directory action has the same invalidation semantics.
+  const beforeInventoryPage = requests.inventory.length
+  let release = () => {},
+    held = false
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/locations?*', async (route) => {
+    if (!new URL(route.request().url()).searchParams.has('after_id')) {
+      await route.continue()
+      return
+    }
+    held = true
+    await gate
+    await route.continue().catch(() => undefined)
+  })
+  try {
+    await region.getByRole('button', { name: 'Más talleres para inventario', exact: true }).click()
+    await expect.poll(() => held).toBe(true)
+    await expect(directory).toBeDisabled()
+    await expect(region.getByRole('button', { name: 'Consultar talleres' })).toBeDisabled()
+    await expect(
+      region.getByRole('button', { name: 'Más talleres para inventario' }),
+    ).toBeDisabled()
+    await expect(
+      region.getByRole('button', { name: 'Verificar y consultar inventario' }),
+    ).toBeDisabled()
+    await expect(region.getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+    await expect(region.getByRole('list', { name: 'Productos de inventario' })).toHaveCount(0)
+  } finally {
+    release()
+    await page.unrouteAll({ behavior: 'wait' })
+  }
+  await expect(directory).toContainText('Taller inventario directorio 58')
+  await expect(directory).toHaveValue('')
+  await expect(directory).toBeEnabled()
+  await expect(region.getByLabel('Cantidad disponible', { exact: true })).toHaveCount(0)
+  await expect(region.getByRole('list', { name: 'Productos de inventario' })).toHaveCount(0)
+  expect(requests.inventory.length).toBe(beforeInventoryPage)
+  const viewport = page.viewportSize()
+  await page.setViewportSize({ width: 320, height: 900 })
+  expect(await region.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
+    true,
+  )
+  for (const control of [directory, region.getByRole('button', { name: 'Consultar talleres' })]) {
+    const bounds = await control.boundingBox()
+    expect(bounds?.width ?? 0).toBeGreaterThanOrEqual(44)
+    expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44)
+  }
+  if (viewport) await page.setViewportSize(viewport)
+  await openInventory(page, f.locationA)
+  await selectMain(page)
   await region
     .getByRole('combobox', { name: 'Taller para inventario', exact: true })
     .selectOption(f.locationB)
@@ -254,6 +321,23 @@ test('organization-wide inventory directory selection needs no operational basel
   ).toBeVisible()
   await expect(region).not.toContainText(PRODUCT)
   expect(requests.baseline).toEqual([])
+  expect(requests.inventory.every((method) => method === 'GET')).toBe(true)
+
+  // The same organization also has a genuine operational owner. After
+  // admitting a workshop, inventory must not offer a nonfunctional directory
+  // or an alternate workshop that the runtime cannot authorize.
+  await page.getByRole('button', { name: 'Cerrar esta sesión', exact: true }).click()
+  await login(page, f, 'owner')
+  await page.getByRole('button', { name: 'Taller inventario A', exact: true }).click()
+  await waitForReady(page)
+  await expect(directory).toHaveCount(0)
+  await expect(region.getByRole('button', { name: 'Consultar talleres', exact: true })).toHaveCount(
+    0,
+  )
+  await expect(region.getByRole('button', { name: 'Más talleres para inventario' })).toHaveCount(0)
+  expect(requests.baseline.length).toBeGreaterThan(0)
+  await openInventory(page)
+  await selectMain(page)
   expect(requests.inventory.every((method) => method === 'GET')).toBe(true)
 })
 

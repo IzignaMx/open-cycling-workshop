@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-26 · Inventory workshop selection consistency
+
+- Correct directory paging that left an earlier inventory reading visible, and
+  hide ineligible directory controls for the current operational workshop.
+- Retain bounded authority, clear old readings and pending choices, and block
+  directory selection while the inventory-owned request is pending. Source/native
+  RED and final 17 native/1,828 frontend passes are documented in the
+  [checkpoint](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md).
+  Its PR126 base remains unmerged with exact CI pending at authoring.
+- Retain the separate controlled branding-refusal investigation without
+  attributing or claiming to fix the historical administration CI timeout.
+
 ## 2026-11-26 · Explicit inventory page retry
 
 - Add explicit recovery of a failed catalog offset or movement-history boundary

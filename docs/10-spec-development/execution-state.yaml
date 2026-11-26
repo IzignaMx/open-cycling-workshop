@@ -1,6 +1,48 @@
 schema: 1
 
-current_checkpoint: inventory_page_retry_20261126
+current_checkpoint: inventory_workshop_scope_20261126
+inventory_workshop_scope_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+  base_candidate: a66c581c567a39a3971148e5abfae89d9aa96366
+  base_PR126: draft_unmerged_exact_CI_running_five_companions_success_at_authoring
+  scope: current_inventory_workshop_choice_directory_and_reading_consistency
+  existing_boundary: operational_workshop_or_current_authorized_account_only_directory
+  behavior: hide_ineligible_controls_clear_previous_selection_and_reads_on_directory_change
+  directory_ownership: volatile_revision_and_current_entry_guard_blocks_own_loading_duplicate_or_entry
+  source_RED: eight_expected_failures_twenty_passing_controls
+  actual_runtime_RED: two_expected_failures
+  native_baseline: one_failed_15_1457s_worker1_retry0_frozen_a66c581
+  native_baseline_scope: directory51_workshops_replaced_empty_selection_old_quantity_remains
+  native_baseline_report: apps/web/test-results/inventory-scope-red-20261126-report.json
+  fixture_guard: four_passed
+  initial_candidate_native: one_pass_5_6s_worker1_retry0
+  loading_native_RED: one_failed_15_8525s_worker1_retry0_selector_remained_enabled
+  focused_GREEN: 137_passed_zero_skips_inventory_and_connected_read
+  actual_runtime_GREEN: two_passed_local_probes
+  frontend_core: 1828_passed_zero_failures_or_skips_35_923s
+  native_candidate: 17_passed_53_0826s_worker1_retry0_flaky0_skipped0
+  native_scope: directory51_central_and_own_paging_held_request_operational_owner_320px_44px
+  native_receipt: artifacts/inventory-scope-20261126/native-local-receipt.json
+  native_receipt_sha256: 387dc2da3822139345c473c62a44dfa460df3dfd3d1ca572cea33ffb4e1a8b1e
+  source_and_build_hashes: unchanged_through_final_native_execution
+  candidate_PWA_build: pinned_Node22_16_pnpm11_17_pass
+  static: E2E_types_touched_ESLint_Ruff_Prettier_diff_pass
+  repository_contracts: 227_passed_verifier_OK
+  local_verification: local_verified_hosted_pending
+  independent_review: no_blocking_findings
+  hosted_candidate: pending
+  test_database_cleanup: owned_container_absence_confirmed
+  separate_branding_probe: three_deliberate_failures_two_controls_pass_synthetic_no_browser
+  branding_probe_receipt: artifacts/inventory-scope-20261126/branding-probe/receipt.json
+  branding_probe_receipt_sha256: 9d3ca3925181bb12978c8d6693dcff8383868e8e172e0f429b1ad1b16feaf95d
+  historical_administration_flake_cause: not_established_by_probe
+  schema_ledger_commands_offline_storage: unchanged
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_inventory_page_retry_checkpoint: inventory_page_retry_20261126
 inventory_page_retry_20261126:
   status: partial
   evidence: docs/10-spec-development/2026-11-26-inventory-page-retry.md
@@ -3782,7 +3824,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
+active_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+historical_inventory_page_retry_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
 historical_inventory_accessible_actions_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
 historical_REST_create_conflict_plan: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
 historical_source_completion_login_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
@@ -3799,7 +3842,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
+active_plan_status: inventory_workshop_scope_locally_verified_hosted_pending
+historical_inventory_page_retry_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
 historical_inventory_accessible_actions_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
 historical_REST_create_conflict_plan_status: REST_candidate_CI_pass_local_scanner_correction_pass_exact_commit_and_hosted_pending
 historical_source_completion_login_plan_status: local_same_document_correction_verified_exact_hosted_pending
@@ -3815,7 +3859,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: inventory_page_retry_20261126
+last_checkpoint: inventory_workshop_scope_20261126
+historical_inventory_page_retry_last_checkpoint: inventory_page_retry_20261126
 historical_inventory_accessible_actions_last_checkpoint: inventory_accessible_actions_20261126
 historical_REST_create_conflict_last_checkpoint: rest_create_id_conflicts_20261126
 historical_source_completion_login_last_checkpoint: source_completion_login_document_20261126
@@ -4095,6 +4140,10 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
+  - publish_bounded_inventory_workshop_scope_successor_and_qualify_exact_hosted_candidate
+  - preserve_PR126_unmerged_status_until_exact_hosted_checks_complete
+  - qualify_exact_inventory_workshop_scope_successor_without_inheriting_base_evidence
+  - keep_controlled_branding_refusal_probe_separate_from_unproven_historical_CI_timeout
   - qualify_exact_inventory_page_retry_successor_hosted_after_local_native_and_source_review_pass
   - inspect_separate_PR125_main_CI45902761276_without_inheriting_candidate_acceptance
   - preserve_known_administration_identity_flake_without_inventing_cause_or_waiving_retry_free_gates

@@ -176,6 +176,17 @@ def seed_inventory_identities(database_url: str) -> None:
                         )
                         for entity, letter in ((1, "A"), (2, "B"))
                     )
+                    if case == "directory":
+                        # A genuine second directory page (limit 50). Keep A/B
+                        # and all products/ledger rows unchanged.
+                        session.add_all(
+                            LocationRecord(
+                                id=identity(entity),
+                                organization_id=identity(0),
+                                name=f"Taller inventario directorio {entity}",
+                            )
+                            for entity in range(10, 59)
+                        )
                     session.flush()
                     # A genuine local-only writer makes pre-existing pending work
                     # deterministic without intercepting delivery or racing timers.

@@ -1,5 +1,25 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · Inventory workshop selection consistency
+
+- [x] Reproduce mismatched account-only directory/reading scope and ineligible
+      operational directory controls in isolated source checks; retain native
+      baseline failure with 51 workshops, zero retries and four fixture passes.
+- [x] Complete the bounded correction, focused GREEN and independent review;
+      preserve current authority, immediate invalidation and late-response fences.
+- [x] Verify the exact rebuilt PWA with 1,828 frontend tests and 17 native inventory
+      journeys, all passing without retries/skips; preserve source/build receipts
+      and confirm disposable database cleanup.
+- [x] Verify repository contracts (227 passing) and repository verifier on the
+      current candidate; retain exact hosted qualification separately.
+- [ ] Qualify the exact successor through hosted checks; its base PR126 remains
+      draft with CI pending and is not integrated at this authored checkpoint.
+- Keep the separate branding probe's three deliberate failures and two passing
+  controls distinct from the historical CI timeout: no cause attribution, fence
+  relaxation or automatic retry follows from that investigation.
+  See the [current checkpoint](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md).
+- Full inventory, physical acceptance, recovery and deployment gates remain open.
+
 ## 2026-11-26 · Explicit inventory page retry
 
 - [x] Inspect the missing direct recovery action for failed catalog/history pages;

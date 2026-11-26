@@ -1,4 +1,4 @@
-import type { WorkshopController } from '../../runtime/controller.js'
+import type { WorkshopController, WorkshopSnapshot } from '../../runtime/controller.js'
 import type { ConnectedReadCapture, ConnectedReadSnapshot } from '../../runtime/connected-read.js'
 import type { AccountAccessSnapshot } from '../../runtime/account-access.js'
 import type { WorkshopLocation } from '../../runtime/transport.js'
@@ -32,6 +32,10 @@ export interface InventorySnapshot {
   access: ConnectedReadSnapshot
   account: AccountAccessSnapshot
   generation: number
+  runtimePhase: WorkshopSnapshot['phase']
+  canChooseLocation: boolean
+  directoryVersion: number
+  directoryLoading: boolean
   locations: WorkshopLocation[]
   nextLocation: string | null
   catalog: InventoryRead<InventoryProduct[]>
@@ -53,6 +57,7 @@ export class InventoryController {
   #listeners = new Set<() => void>()
   #unsubscribers: (() => void)[]
   #generation = 0
+  #directoryVersion = 0
   #selection = 0
   #entry = 0
   #disposed = false
@@ -73,11 +78,23 @@ export class InventoryController {
       runtime.subscribeAccount(() => this.reset()),
       runtime.subscribe(() => {
         const state = runtime.getSnapshot()
-        if (
+        const directoryChanged =
           state.locations !== this.#snapshot.locations ||
           state.nextLocation !== this.#snapshot.nextLocation
-        )
-          this.publish({ locations: state.locations, nextLocation: state.nextLocation })
+        if (directoryChanged && this.canChooseLocation()) {
+          // The central workshop selector also replaces this directory. Never
+          // display a receipt whose choice is no longer the current page's choice.
+          this.#directoryVersion++
+          this.clearSelection()
+        }
+        if (directoryChanged || state.phase !== this.#snapshot.runtimePhase)
+          this.publish({
+            locations: state.locations,
+            nextLocation: state.nextLocation,
+            runtimePhase: state.phase,
+            canChooseLocation: this.canChooseLocation(),
+            directoryVersion: this.#directoryVersion,
+          })
       }),
     ]
   }
@@ -87,6 +104,10 @@ export class InventoryController {
       access: this.runtime.connectedReads.getSnapshot(),
       account: this.runtime.getAccountSnapshot(),
       generation: this.#generation,
+      runtimePhase: state.phase,
+      canChooseLocation: this.canChooseLocation(),
+      directoryVersion: this.#directoryVersion,
+      directoryLoading: false,
       locations: state.locations,
       nextLocation: state.nextLocation,
       catalog: emptyRead(),
@@ -121,7 +142,7 @@ export class InventoryController {
     for (const listener of this.#listeners) listener()
   }
   async enter(locationId?: string) {
-    if (this.#disposed) return
+    if (this.#disposed || this.#snapshot.directoryLoading) return
     const entry = ++this.#entry
     const expectedUser = this.runtime.getAccountSnapshot().user ?? this.runtime.getSnapshot().user
     try {
@@ -164,7 +185,28 @@ export class InventoryController {
     this.#entry++
     this.runtime.connectedReads.clear()
   }
-  loadLocations = (afterId?: string) => this.runtime.loadLocations(afterId)
+  private canChooseLocation() {
+    const account = this.runtime.getAccountSnapshot(),
+      phase = this.runtime.getSnapshot().phase
+    return (
+      account.phase === 'connected' &&
+      account.user?.location_id === null &&
+      account.user.capabilities.includes('locations.read') &&
+      (phase === 'selector' || phase === 'held')
+    )
+  }
+  loadLocations = async (afterId?: string) => {
+    if (this.#disposed || this.#snapshot.directoryLoading || !this.canChooseLocation()) return
+    this.#directoryVersion++
+    this.clearSelection()
+    const entry = this.#entry
+    this.publish({ directoryLoading: true })
+    try {
+      await this.runtime.loadLocations(afterId)
+    } finally {
+      if (!this.#disposed && entry === this.#entry) this.publish({ directoryLoading: false })
+    }
+  }
   private begin(kind: ReadKind) {
     if (this.#disposed) return null
     this.cancel(kind)
