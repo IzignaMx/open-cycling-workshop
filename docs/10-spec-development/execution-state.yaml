@@ -31,9 +31,46 @@ rest_create_id_conflicts_20261126:
   independent_source_review: no_blocking_findings_three_routes
   static: strict_mypy127_source_files_Ruff363_lint_format_pass
   hosted_candidate: pending
+  later_source_receipt: pr124_initial_hosted_and_security_blocker_20261126
   release: V0.1_partial
   physical_T1_T8_R01_T035_and_G1_G6: open
   deployment: not_performed
+
+pr124_initial_hosted_and_security_blocker_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
+  head: 9921b54073b1d756c6462e63dd7505348fed08b2
+  base_main: 618c445f0bbd51942ae8bd6293f25788c2ce936e
+  tested_merge_short: 5a232e5c
+  tested_tree: 5aa2e88ae0e2853beeef9023b6f3700744883a62
+  CI: 45811741910
+  successful_workflows: CI_DCO_runtime_public_preview_microfixture
+  CI_log_results: Python6813_pass58_intentional_skips_frontend1805_API1
+  CI_browser_results: direct146_aggregate146_pass_no_reported_flakes_or_retries
+  zero_retry_groups: [20, 9, 5, 10]
+  inspected_python_artifact: 15114159444
+  inspected_python_artifact_sha256: 099f02dd7717e16d4dfc97ff44a74a621406fac21ac7a6b2ec8c111a50a7f53c
+  new_PostgreSQL_tests: ten_setup_call_teardown_verified_PG18_4_psycopg3_3_4_cleanup
+  Security: 45811741828
+  Security_result: failed_Gitleaks_public_test_count_false_positive_not_reclassified
+  Security_metadata_artifact: 15112443031
+  finding_scope: one_nonsecret_execution_state_value_in_two_scanned_commits
+  correction_scope: exact_rule_path_value_allowlist_default_and_history_scans_preserved
+  local_scanner_canaries: observed_RED_then24_pass_with_changed_value_path_and_other_rule_detection
+  local_scanner_policy_guard: observed_RED_then_pass_fifth_exact_AND_exception
+  scanner_version: 8.30.1_release_checksum_verified
+  precommit_history_scan: zero_findings_588_scanned596_reachable_28747574_bytes_at_9921b540
+  precommit_policy_boundary: corrected_worktree_policy_not_new_committed_tree
+  full_mutation_tests: 15_passed_zero_skips_75_09s_four_mutation_classes_five_exceptions
+  independent_policy_review: no_blocking_findings
+  CI_repository_compatibility: 440_passed_7_82s_touched_Ruff_pass
+  REUSE: 3_3_lint1150_of1150_license_and_copyright_pass
+  locked_Python_dependency_audit: pip_audit2_9_0_no_known_vulnerabilities41_active2_marker_exclusions
+  local_Trivy: not_run_separate_hosted_check
+  final_exact_commit_scan: pending
+  successor_hosted_Security: pending
+  merge_readiness: blocked_until_required_successor_checks_pass
+  production_changes_from_scanner_correction: none
 
 historical_source_completion_login_checkpoint: source_completion_login_document_20261126
 source_completion_login_document_20261126:
@@ -84,11 +121,28 @@ pr123_candidate_and_merge_20261126:
   postmerge_repository_contracts: 227_passed_verifier_OK
   main_CI: 45810295315
   main_CI_status: pending_separate_exact_source_outcome
+  later_main_receipt: pr123_main_observed_20261126
   supersedes: PR123_authored_candidate_hosted_pending_only
   internal_CDP_cause: unproven_historical_failures_preserved
   release: V0.1_partial
   physical_T1_T8_R01_T035_and_G1_G6: open
   deployment: not_performed
+
+pr123_main_observed_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-source-completion-login-document.md
+  main: 618c445f0bbd51942ae8bd6293f25788c2ce936e
+  CI: 45810295315
+  attempt: 1
+  jobs_and_steps: all_success_including_both_shard_cleanups
+  log_results: Python6771_pass58_intentional_skips_frontend1805_API1
+  browser_logs: direct146_aggregate146_pass_no_flake_retry_CDP_error_markers
+  zero_retry_groups: [20, 9, 5, 10]
+  companion_success: [45810295281, 45810295406, 45810295295, 45810295348]
+  evidence_kind: exact_source_metadata_and_logs_not_every_archive_revalidation
+  supersedes: PR123_main_pending_only_historical_failures_unchanged
+  internal_CDP_cause: unproven
+  release: V0.1_partial
 
 historical_project_inventory_checkpoint: project_inventory_audit_20261125
 project_inventory_audit_20261125:
@@ -3604,7 +3658,7 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: REST_create_conflict_locally_verified_hosted_candidate_pending
+active_plan_status: REST_candidate_CI_pass_local_scanner_correction_pass_exact_commit_and_hosted_pending
 historical_source_completion_login_plan_status: local_same_document_correction_verified_exact_hosted_pending
 historical_PR122_postmerge_plan_status: PR122_integrated_source_checks_pass_known_browser_flake_open
 historical_project_audit_plan_status: local_inventory_and_documentation_verified_hosted_successor_pending
@@ -3896,8 +3950,8 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify exact_customer_bicycle_service_order_REST_ID_conflict_candidate_with_hosted_CI_and_review
-  - inspect separate PR123_main CI45810295315 and preserve its own exact_source outcome
+  - verify narrow_nonsecret_scanner_policy_correction_then_exact_PR124_successor_required_checks
+  - preserve exact_PR123_main_pass_and_PR124_initial_Security_failure_as_distinct_source_receipts
   - retain PR123_same_document candidate acceptance separately from current_REST_correction qualification
   - retain unproven internal_CDP cause and original failed traces without weakening token_readback or retry policy
   - preserve PR122_candidate flaky evidence separately from main810a462 clean browser logs

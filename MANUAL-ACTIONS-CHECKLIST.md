@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · PR124 hosted results and Security correction
+
+- [x] Inspect CI45811741910 and ten new PostgreSQL cases' actual phases in
+      artifact15114159444; preserve five successful workflows separately from
+      failed Security45811741828 and safe metadata artifact15112443031.
+- [x] Verify that both Gitleaks findings refer to one public test-count value in
+      two scanned commits, not credential material. Retain the original failure.
+- [x] Observe scanner/policy RED, then pass all 24 canaries including changed
+      value/path and other-rule controls. Precommit history scan with corrected
+      policy reports zero findings at existing HEAD9921b540; it is not a scan of
+      the future corrected commit.
+- [x] Complete 15 native policy tests with zero skips, including all four
+      mutation classes across five exact exceptions; independent review found no
+      blocker. REUSE 1,150/1,150 and the 41-active-package dependency audit pass.
+- [ ] Scan the exact final commit and qualify the successor through required
+      hosted checks before merge; local Trivy remains unexecuted.
+      No scanner disabling, broad exclusion or premature Security pass is implied.
+      See the [candidate receipt](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md#pr124-initial-hosted-evidence-and-security-blocker--2026-11-26).
+- [x] Separately inspect PR123 main618c445 CI45810295315 and all companion
+      successes; its log reports direct/aggregate146 each without flake/retry/CDP
+      markers. This supersedes PR123's historical main-pending item only.
+
 ## 2026-11-26 · REST create ID-conflict correction
 
 - [x] Reproduce supplied customer-ID reuse returning HTTP201 then HTTP503.

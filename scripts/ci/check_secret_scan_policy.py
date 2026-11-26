@@ -59,6 +59,11 @@ def qualify_policy(root: Path, output: Path, binary: Path | None = None) -> dict
         for line in (root / execution_state_path).read_text().splitlines()
         if line.strip().startswith("json_escaping:")
     )
+    openapi_guard_prose = next(
+        line
+        for line in (root / execution_state_path).read_text().splitlines()
+        if line.strip().startswith("OpenAPI_guard:")
+    )
     cases = [
         ("exact_invalid_fixture", fixture_path, f'token = "{token}"\n', None),
         ("changed_fixture", fixture_path, f'token = "{token}x"\n', "generic-api-key"),
@@ -89,9 +94,28 @@ def qualify_policy(root: Path, output: Path, binary: Path | None = None) -> dict
             execution_state_prose + "\n",
             "generic-api-key",
         ),
+        ("exact_openapi_test_count", execution_state_path, openapi_guard_prose + "\n", None),
+        (
+            "changed_openapi_test_count",
+            execution_state_path,
+            openapi_guard_prose + "x\n",
+            "generic-api-key",
+        ),
+        (
+            "openapi_test_count_other_path",
+            "docs/10-spec-development/OTHER.yaml",
+            openapi_guard_prose + "\n",
+            "generic-api-key",
+        ),
         (
             "default_other_rule",
             "src/other.py",
+            'value = "' + "ghp_" + "AbcD0123456789" * 2 + "AbCd012345" + '"\n',
+            "github-pat",
+        ),
+        (
+            "default_other_rule_in_execution_state",
+            execution_state_path,
             'value = "' + "ghp_" + "AbcD0123456789" * 2 + "AbCd012345" + '"\n',
             "github-pat",
         ),

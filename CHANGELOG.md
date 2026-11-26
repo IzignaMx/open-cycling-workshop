@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-26 · PR124 hosted evidence and bounded scanner correction
+
+- Record passing REST-create candidate CI and all ten new PostgreSQL cases
+  independently of the failed Security scan on a public documentation count.
+- Preserve the failed attempt and prepare an exact rule/path/value exception
+  under the existing false-positive policy, retaining default/history scanning.
+  Local RED/GREEN canaries, 15 mutation-policy tests, precommit history scan,
+  REUSE and locked Python dependency audit pass. Final committed-tree scan and
+  successor hosted acceptance remain pending.
+- Record PR123 fresh-main success separately; no release or deployment gate is
+  closed by these [source-bound receipts](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md#pr124-initial-hosted-evidence-and-security-blocker--2026-11-26).
+
 ## 2026-11-26 · Stable conflicts for REST entity creation
 
 - Return stable HTTP409 conflicts for already allocated customer, bicycle and

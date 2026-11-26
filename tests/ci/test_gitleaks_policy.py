@@ -17,7 +17,7 @@ def test_policy_extends_defaults_and_only_uses_conjunctive_exact_exceptions() ->
     rule = policy["rules"][0]
     assert rule["id"] == "generic-api-key"
     assert set(rule) == {"id", "allowlists"}
-    assert len(rule["allowlists"]) == 4
+    assert len(rule["allowlists"]) == 5
     assert {(entry["paths"][0], entry["regexes"][0]) for entry in rule["allowlists"]} == {
         (
             r"^tests/operations/test_local_compose_runtime\.py$",
@@ -34,6 +34,7 @@ def test_policy_extends_defaults_and_only_uses_conjunctive_exact_exceptions() ->
             r"^docs/10-spec-development/execution-state\.yaml$",
             r"^may_expand_beyond_retained_utf8_bytes$",
         ),
+        (r"^docs/10-spec-development/execution-state\.yaml$", r"^RED1_then3_pass$"),
     }
     for entry in rule["allowlists"]:
         assert entry["condition"] == "AND"
@@ -112,7 +113,7 @@ def test_actual_pinned_scanner_rejects_near_misses_and_other_paths(tmp_path: Pat
         pytest.skip("Actual scanner canaries are mandatory in the hosted Security workflow")
     evidence = qualify_policy(Path.cwd(), tmp_path, Path(binary))
     assert evidence["status"] == "passed"
-    assert evidence["cases"] == 20
+    assert evidence["cases"] == 24
 
 
 @pytest.mark.parametrize("exit_code", [0, 1])

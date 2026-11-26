@@ -140,3 +140,22 @@ the repository verifier. The separate
 is pending at this receipt; no outcome is inherited from candidate CI.
 Product, inventory, physical-device, recovery, rollout and operational deployment
 gates remain unchanged.
+
+## Exact PR123 main outcome observed · 2026-11-26
+
+The previously pending postmerge run
+[CI45810295315](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45810295315)
+completed successfully on exact main `618c445f0bbd51942ae8bd6293f25788c2ce936e`,
+attempt 1. Both jobs/all steps, including both shard cleanup gates, passed.
+The verify log reports **6,771 Python passes / 58 exact intentional skips**,
+**1,805 frontend passes**, **1 API-client pass**, **146 direct and 146 aggregate
+browser passes**, and zero-retry groups **20 / 9 / 5 / 10**. No flaky, retry or
+CDP-error markers were found in that inspected log. Direct and aggregate browser
+durations were 7.1 and 7.0 minutes, descriptive hosted observations only.
+
+Security45810295281, Local runtime45810295406, microfixture45810295295 and
+public-preview45810295348 also concluded successfully on that same main SHA,
+attempt 1. This receipt supersedes the earlier postmerge-pending statement for
+PR123 only. It is independent job/log observation, not a claim that every uploaded
+archive was revalidated or the internal CDP cause was proven. Later REST-create
+and scanner-policy changes require their own candidate evidence.
