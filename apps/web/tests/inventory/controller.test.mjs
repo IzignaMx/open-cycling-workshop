@@ -101,6 +101,182 @@ function setup(overrides = {}, capabilities = ['inventory.read']) {
   }
   return { controller, calls, change, access, runtime }
 }
+
+test('manual catalog retry repeats only the failed offset without verification or automatic work', async () => {
+  const offsets = []
+  const retry = deferred()
+  const env = setup({
+    catalog: async (_source, offset) => {
+      offsets.push(offset)
+      if (offsets.length === 2) throw new InventoryHttpError('unavailable', 503)
+      if (offsets.length === 3) return retry.promise
+      return [product()]
+    },
+  })
+  await env.controller.retryCatalog()
+  assert.deepEqual(offsets, [])
+  await env.controller.enter()
+  await env.controller.loadCatalog(50)
+  assert.equal(env.controller.getSnapshot().catalog.phase, 'error')
+  assert.equal(env.controller.getSnapshot().catalog.value, null)
+  await turn()
+  assert.deepEqual(offsets, [0, 50])
+  const pending = env.controller.retryCatalog()
+  await env.controller.retryCatalog()
+  await turn()
+  assert.deepEqual(offsets, [0, 50, 50])
+  assert.equal(env.controller.getSnapshot().catalog.phase, 'loading')
+  retry.resolve([product('page-two')])
+  await pending
+  assert.equal(env.controller.getSnapshot().offset, 50)
+  assert.equal(env.controller.getSnapshot().catalog.value[0].product_id, 'page-two')
+  await env.controller.retryCatalog()
+  assert.deepEqual(offsets, [0, 50, 50])
+  assert.equal(env.calls.verify, 1)
+  env.controller.dispose()
+})
+
+for (const initial of [true, false]) {
+  test(`manual history retry retains its ${initial ? 'initial' : 'older'} boundary and independent stock`, async () => {
+    const requests = []
+    let fail = initial
+    const retry = deferred()
+    let hold = false
+    const env = setup({
+      movements: async (_source, id, before) => {
+        requests.push([id, before])
+        if (fail) throw new InventoryHttpError('network_error')
+        if (hold) return retry.promise
+        return { items: [], next_cursor: 'older-page' }
+      },
+    })
+    await env.controller.retryHistory()
+    assert.deepEqual(requests, [])
+    await env.controller.enter()
+    await env.controller.selectProduct('a')
+    if (!initial) {
+      fail = true
+      await env.controller.older()
+    }
+    const before = initial ? undefined : 'older-page'
+    const stock = env.controller.getSnapshot().stock
+    const selected = env.controller.getSnapshot().product
+    assert.equal(env.controller.getSnapshot().history.phase, 'error')
+    assert.equal(env.controller.getSnapshot().historyBefore, before ?? null)
+    assert.equal(env.controller.getSnapshot().history.value, null)
+    const failedCount = requests.length
+    await turn()
+    assert.equal(requests.length, failedCount)
+    fail = false
+    hold = true
+    const pending = env.controller.retryHistory()
+    await env.controller.retryHistory()
+    await turn()
+    assert.equal(requests.length, failedCount + 1)
+    assert.deepEqual(requests.at(-1), ['a', before])
+    retry.resolve({ items: [{ movement_id: 'recovered' }], next_cursor: null })
+    await pending
+    assert.equal(env.controller.getSnapshot().history.value.items[0].movement_id, 'recovered')
+    assert.equal(env.controller.getSnapshot().stock, stock)
+    assert.equal(env.controller.getSnapshot().product, selected)
+    assert.equal(env.calls.stock, 1)
+    await env.controller.retryHistory()
+    assert.equal(requests.length, failedCount + 1)
+    hold = false
+    await env.controller.newest()
+    assert.deepEqual(requests.at(-1), ['a', undefined])
+    assert.equal(env.calls.verify, 1)
+    env.controller.dispose()
+  })
+}
+
+for (const kind of ['catalog', 'history']) {
+  test(`manual ${kind} retry checks current ownership before dispatch and never verifies access`, async () => {
+    let reads = 0
+    const env = setup({
+      [kind === 'catalog' ? 'catalog' : 'movements']: async () => {
+        reads++
+        throw new InventoryHttpError('unavailable', 503)
+      },
+    })
+    await env.controller.enter()
+    if (kind === 'history') await env.controller.selectProduct('a')
+    assert.equal(reads, 1)
+    env.access.check = async () => env.change('unavailable')
+    await env.controller[kind === 'catalog' ? 'retryCatalog' : 'retryHistory']()
+    assert.equal(reads, 1)
+    assert.equal(env.controller.getSnapshot()[kind].phase, 'idle')
+    await env.controller[kind === 'catalog' ? 'retryCatalog' : 'retryHistory']()
+    assert.equal(reads, 1)
+    assert.equal(env.calls.verify, 1)
+    env.controller.dispose()
+  })
+  test(`manual ${kind} retry leaves authority refusals unchanged without a status code`, async () => {
+    for (const code of ['invalid_session', 'capability_denied']) {
+      let reads = 0
+      const env = setup({
+        [kind === 'catalog' ? 'catalog' : 'movements']: async () => {
+          reads++
+          throw new InventoryHttpError(code)
+        },
+      })
+      await env.controller.enter()
+      if (kind === 'history') await env.controller.selectProduct('a')
+      const refused = env.controller.getSnapshot()
+      assert.equal(refused[kind].error, code)
+      await env.controller[kind === 'catalog' ? 'retryCatalog' : 'retryHistory']()
+      assert.equal(reads, 1)
+      assert.equal(env.controller.getSnapshot(), refused)
+      assert.equal(env.calls.verify, 1)
+      env.controller.dispose()
+    }
+  })
+}
+
+test('manual catalog retry does not republish a denied-capability snapshot', async () => {
+  const env = setup({}, ['inventory.write'])
+  await env.controller.enter()
+  const denied = env.controller.getSnapshot()
+  assert.equal(denied.catalog.error, 'capability_denied')
+  await env.controller.retryCatalog()
+  assert.equal(env.controller.getSnapshot(), denied)
+  assert.equal(env.calls.catalog, 0)
+  assert.equal(env.calls.verify, 1)
+  env.controller.dispose()
+})
+
+for (const status of [401, 403]) {
+  test(`manual history retry handles current ${status} refusal and ignores it after product replacement`, async () => {
+    for (const stale of [false, true]) {
+      const response = deferred()
+      let reads = 0
+      const env = setup({
+        movements: async () => {
+          reads++
+          if (reads === 1) throw new InventoryHttpError('unavailable', 503)
+          if (reads === 2) return response.promise
+          return { items: [{ movement_id: 'replacement' }], next_cursor: null }
+        },
+      })
+      await env.controller.enter()
+      await env.controller.selectProduct('a')
+      const pending = env.controller.retryHistory()
+      await turn()
+      if (stale) await env.controller.selectProduct('b')
+      response.reject(
+        new InventoryHttpError(status === 401 ? 'invalid_session' : 'capability_denied', status),
+      )
+      await pending
+      assert.equal(env.calls.refusal, stale ? 0 : 1)
+      assert.equal(env.controller.getSnapshot().product?.product_id ?? null, stale ? 'b' : null)
+      assert.equal(env.controller.getSnapshot().history.phase, stale ? 'ready' : 'idle')
+      const after = reads
+      await env.controller.retryHistory()
+      assert.equal(reads, after)
+      env.controller.dispose()
+    }
+  })
+}
 test('explicit entry only, current read grant and separate stock/history requests', async () => {
   const env = setup()
   assert.equal(env.calls.catalog, 0)

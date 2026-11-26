@@ -14,7 +14,7 @@ monolith, explicit permissions and vendor-neutral infrastructure.
 > qualification exists; physical Windows/Android acceptance, manual reviews and
 > real installation gates remain open. The static GitHub Pages presentation was published from
 > source `3c6513d`; it is not an operational workshop deployment. Later repository
-> changes do not imply a redeployment. See the [current source and verification checkpoint](docs/10-spec-development/2026-11-26-inventory-accessible-actions.md).
+> changes do not imply a redeployment. See the [current source and verification checkpoint](docs/10-spec-development/2026-11-26-inventory-page-retry.md).
 
 ## See the real application
 

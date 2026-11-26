@@ -2,6 +2,17 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 const source = (name) => readFileSync(new URL(`../../src/${name}`, import.meta.url), 'utf8')
+test('failed inventory pages expose explicit separate retry actions with paging focus', () => {
+  const panel = source('features/inventory/InventoryPanel.tsx')
+  assert.match(
+    panel,
+    /state\.catalog\.phase === 'error'[\s\S]*?focusAfter\(controller\.retryCatalog\(\), catalogHeading\)[\s\S]*?Volver a consultar esta página/,
+  )
+  assert.match(
+    panel,
+    /state\.history\.phase === 'error'[\s\S]*?focusAfter\(controller\.retryHistory\(\), historyHeading\)[\s\S]*?Volver a consultar estos movimientos/,
+  )
+})
 test('inventory uses plain-text closed fields, independent freshness and truthful ledger semantics', () => {
   const panel = source('features/inventory/InventoryPanel.tsx')
   assert.match(panel, /aria-label="Cantidad disponible"/)

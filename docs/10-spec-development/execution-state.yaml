@@ -1,6 +1,42 @@
 schema: 1
 
-current_checkpoint: inventory_accessible_actions_20261126
+current_checkpoint: inventory_page_retry_20261126
+inventory_page_retry_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-page-retry.md
+  base_main: c65d54d6adc5e262356a883ef378a0696e7cb363
+  scope: explicit_current_error_inventory_catalog_offset_and_history_cursor_retry
+  existing_boundary: connected_only_live_paging_current_authority_no_automatic_retry
+  behavior: retry_failed_position_without_changing_refresh_or_Newest_reset
+  schema_ledger_commands_offline_storage: unchanged
+  local_verification: local_verified_hosted_pending
+  focused_RED_GREEN: initial8_fail14_controls_then22_pass_guard3_fail22_controls_then25_pass
+  focused_scope: controller19_including10_new_panel6_including1_new
+  static: inventory_compile_E2E_types_touched_ESLint_Prettier_diff_pass
+  independent_source_review: no_blocking_findings
+  candidate_PWA_build: pinned_toolchain_pass
+  native_baseline: one_failed_retry0_missing_retry_after503_catalog_offset50_frozen_c65d54d
+  native_candidate: 17_passed_50_2s_worker1_retry0_flaky0_skipped0
+  native_scope: exact_failed_offset_and_cursor_manual_keyboard_retry_stock_receipt_preserved_320px_geometry
+  frontend_core: 1817_passed_zero_failures_or_skips_34_14s
+  repository_contracts: 227_passed_3_48s_verifier_OK
+  native_receipt: artifacts/inventory-retry-20261126/native-local-receipt.json
+  native_receipt_sha256: 3802c93237c938ce7615a4016be10c6145cb38b94c0ada5caac3fe45c5b99d7a
+  baseline_build_receipt: artifacts/inventory-retry-20261126/baseline-build.json
+  native_reports:
+    - apps/web/test-results/inventory-retry-red-20261126-report.json
+    - apps/web/test-results/inventory-retry-green-20261126-report.json
+  source_and_build_hashes: unchanged_through_candidate_run
+  test_database_cleanup: owned_container_absence_confirmed
+  authority_guard: current_error_ready_inventory_read_excludes_invalid_session_and_capability_denied
+  no_reverification_or_automatic_retry: preserved
+  hosted_candidate: pending
+  separate_administration_identity_flake: preserved_cause_unproven
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_inventory_accessible_actions_checkpoint: inventory_accessible_actions_20261126
 inventory_accessible_actions_20261126:
   status: partial
   evidence: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
@@ -32,9 +68,36 @@ inventory_accessible_actions_20261126:
   independent_source_review: no_blocking_findings_existing_assertions_preserved
   local_verification: local_verified_hosted_pending
   hosted_candidate: pending
+  later_source_receipt: pr125_candidate_acceptance_and_merge_20261126
   inventory_requirement_scope: FR_INV001_partial_all_original_gaps_retained
   release: V0.1_partial
   physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+pr125_candidate_acceptance_and_merge_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
+  candidate: d5c1c1cfa4f437953ce06ee90c8429eb83d82ce6
+  tested_merge_short: a090455d
+  merged_main: c65d54d6adc5e262356a883ef378a0696e7cb363
+  identical_tree: ccc760190dd26bcc0efb81adedd5f0d1799ce019
+  candidate_CI: 45889141066
+  candidate_workflows: all_six_success
+  log_results: Python6813_pass58_intentional_skips_frontend1806_client1
+  direct_browser: 146_passed
+  aggregate_browser: 145_passed_one_flaky_administration_identity_case_retry1_passed
+  direct_artifact: 15153140358
+  direct_artifact_sha256: 265eb4ae8ada9a32e1784cd9aee03c006f62af318516932a6906f05383249ae1
+  aggregate_artifact: 15153092353
+  aggregate_artifact_sha256: 968b9c1310acfb8f5ba268c3393c56e062166f1179ac153a3b8dc8d6990fe7ba
+  inventory_archive_scope: direct_and_aggregate_each17_single_attempt_four_theme_actions_and_geometry
+  administration_symptom: identity_expected_workshop_name_OCWP_fallback_timeout10s_line632
+  administration_cause: unproven_known_symptom_preserved_not_fixed_by_inventory_work
+  global_retry_free: not_claimed
+  postmerge_repository_contracts: 227_passed
+  main_CI: 45902761276
+  main_CI_status: pending_separate_exact_source_outcome
+  release: V0.1_partial
   deployment: not_performed
 
 historical_REST_create_conflict_checkpoint: rest_create_id_conflicts_20261126
@@ -130,8 +193,23 @@ pr124_corrected_acceptance_and_merge_20261126:
   postmerge_repository_contracts: 227_passed
   main_CI: 45888038861
   main_CI_status: pending_separate_exact_source_outcome
+  later_main_receipt: pr124_main_observed_20261126
   release: V0.1_partial
   deployment: not_performed
+
+pr124_main_observed_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
+  main: 382fa000ebd1b72fac3a1dfc6ea60ac0df712021
+  CI: 45888038861
+  attempt: 1
+  jobs_steps_workflows: all_success_five_main_workflows
+  log_results: Python6813_pass58_intentional_skips_frontend1805_client1_both_shard_cleanups
+  browser_logs: direct146_aggregate146_pass_no_reported_flake_retry_CDP_markers
+  zero_retry_groups: [20, 9, 5, 10]
+  evidence_kind: exact_source_metadata_and_logs_not_every_archive_revalidation
+  prior_Security_failure: preserved
+  release: V0.1_partial
 
 historical_source_completion_login_checkpoint: source_completion_login_document_20261126
 source_completion_login_document_20261126:
@@ -3704,7 +3782,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
+active_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
+historical_inventory_accessible_actions_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
 historical_REST_create_conflict_plan: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
 historical_source_completion_login_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
 historical_project_inventory_plan: docs/10-spec-development/2026-11-25-project-inventory-audit.md
@@ -3720,7 +3799,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
+active_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
+historical_inventory_accessible_actions_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
 historical_REST_create_conflict_plan_status: REST_candidate_CI_pass_local_scanner_correction_pass_exact_commit_and_hosted_pending
 historical_source_completion_login_plan_status: local_same_document_correction_verified_exact_hosted_pending
 historical_PR122_postmerge_plan_status: PR122_integrated_source_checks_pass_known_browser_flake_open
@@ -3735,7 +3815,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: inventory_accessible_actions_20261126
+last_checkpoint: inventory_page_retry_20261126
+historical_inventory_accessible_actions_last_checkpoint: inventory_accessible_actions_20261126
 historical_REST_create_conflict_last_checkpoint: rest_create_id_conflicts_20261126
 historical_source_completion_login_last_checkpoint: source_completion_login_document_20261126
 historical_project_inventory_last_checkpoint: project_inventory_audit_20261125
@@ -4014,8 +4095,9 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify_exact_inventory_accessible_action_candidate_hosted_after_local_native_and_review_pass
-  - inspect_separate_PR124_main_CI45888038861_without_inheriting_candidate_acceptance
+  - qualify_exact_inventory_page_retry_successor_hosted_after_local_native_and_source_review_pass
+  - inspect_separate_PR125_main_CI45902761276_without_inheriting_candidate_acceptance
+  - preserve_known_administration_identity_flake_without_inventing_cause_or_waiving_retry_free_gates
   - preserve exact_PR123_main_pass_and_PR124_initial_Security_failure_as_distinct_source_receipts
   - retain PR123_same_document candidate acceptance separately from current_REST_correction qualification
   - retain unproven internal_CDP cause and original failed traces without weakening token_readback or retry policy

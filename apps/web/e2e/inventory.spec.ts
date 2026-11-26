@@ -508,8 +508,122 @@ test('unsafe numeric wire values and a failed quantity refresh never show a roun
 }, info) => {
   const f = fixture('errors', info)
   await login(page, f)
+  const originalViewport = page.viewportSize()
+  await page.setViewportSize({ width: 320, height: 900 })
   await openInventory(page)
+  const region = panel(page)
+  const catalogRoute = '**/api/v1/inventory/products?*'
+  let catalogAttempts = 0,
+    failedCatalogUrl = '',
+    sameCatalogRequest = false
+  // Explicit test-only failure of one page read. The manual retry reaches the real server.
+  await page.route(catalogRoute, async (route) => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('offset') !== '50') {
+      await route.continue()
+      return
+    }
+    expect(route.request().method()).toBe('GET')
+    catalogAttempts++
+    if (catalogAttempts === 1) {
+      failedCatalogUrl = url.href
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        headers: { 'Cache-Control': 'no-store' },
+        body: '{"detail":"synthetic page unavailable"}',
+      })
+    } else {
+      sameCatalogRequest = url.href === failedCatalogUrl
+      await route.continue()
+    }
+  })
+  await region.getByRole('button', { name: 'Más productos', exact: true }).click()
+  const retryCatalog = region.getByRole('button', {
+    name: 'Volver a consultar esta página',
+    exact: true,
+  })
+  await expect(retryCatalog).toBeVisible()
+  expect((await retryCatalog.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  await expect(
+    region.getByRole('list', { name: 'Productos de inventario', exact: true }),
+  ).toHaveCount(0)
+  await expect(region.getByRole('button', { name: 'Más productos', exact: true })).toBeDisabled()
+  expect(catalogAttempts).toBe(1)
+  await retryCatalog.focus()
+  await expect(retryCatalog).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(region.getByRole('button', { name: /^Consultar producto P/ })).toHaveCount(2)
+  await expect(region).toContainText('2 de 2 productos en esta página. Página 2.')
+  await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
+  await expect(retryCatalog).toHaveCount(0)
+  expect(catalogAttempts).toBe(2)
+  expect(sameCatalogRequest).toBe(true)
+  await page.unroute(catalogRoute)
+  await region.getByRole('button', { name: 'Productos anteriores', exact: true }).click()
+  await expect(region.getByRole('button', { name: /^Consultar producto P/ })).toHaveCount(50)
   await selectMain(page)
+  const stockReceipt = region.getByText(/^Cantidad recibida:/)
+  const originalStockReceipt = await stockReceipt.textContent()
+  const historyRoute = `**/api/v1/inventory/products/${f.productId}/movements?*`
+  let historyAttempts = 0,
+    failedHistoryUrl = '',
+    sameHistoryRequest = false
+  await page.route(historyRoute, async (route) => {
+    const url = new URL(route.request().url())
+    if (!url.searchParams.has('before')) {
+      await route.continue()
+      return
+    }
+    expect(route.request().method()).toBe('GET')
+    historyAttempts++
+    if (historyAttempts === 1) {
+      failedHistoryUrl = url.href
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        headers: { 'Cache-Control': 'no-store' },
+        body: '{"detail":"synthetic history page unavailable"}',
+      })
+    } else {
+      // Keep cursor bytes out of assertion output, including on failure.
+      sameHistoryRequest = url.href === failedHistoryUrl
+      await route.continue()
+    }
+  })
+  await region.getByRole('button', { name: 'Movimientos anteriores', exact: true }).click()
+  const retryHistory = region.getByRole('button', {
+    name: 'Volver a consultar estos movimientos',
+    exact: true,
+  })
+  const ledger = region.getByRole('list', { name: 'Movimientos de inventario', exact: true })
+  await expect(retryHistory).toBeVisible()
+  expect((await retryHistory.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  await expect(ledger).toHaveCount(0)
+  await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
+  expect(historyAttempts).toBe(1)
+  await retryHistory.focus()
+  await expect(retryHistory).toBeFocused()
+  await page.keyboard.press('Space')
+  await expect(ledger.getByRole('listitem')).toHaveCount(4)
+  await expect(ledger).toContainText(f.id(349))
+  await expect(ledger).toContainText('-4')
+  await expect(region.getByRole('heading', { name: 'Movimientos', exact: true })).toBeFocused()
+  await expect(retryHistory).toHaveCount(0)
+  expect(historyAttempts).toBe(2)
+  expect(sameHistoryRequest).toBe(true)
+  await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
+  expect(await stockReceipt.textContent()).toBe(originalStockReceipt)
+  await page.unroute(historyRoute)
+  await region.getByRole('button', { name: 'Movimientos más recientes', exact: true }).click()
+  await expect(ledger.getByRole('listitem')).toHaveCount(50)
+  if (originalViewport) await page.setViewportSize(originalViewport)
   const endpoint = `**/inventory/products/${f.productId}/stock`
   // Clearly labelled malformed-response injection, not authoritative server data.
   await page.route(endpoint, async (route) => {

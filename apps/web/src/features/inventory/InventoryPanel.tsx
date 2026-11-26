@@ -182,6 +182,14 @@ export function InventoryPanel({ controller }: { controller: InventoryController
               </>
             )}
             <div className="inventory-actions">
+              {state.catalog.phase === 'error' && (
+                <button
+                  type="button"
+                  onClick={() => void focusAfter(controller.retryCatalog(), catalogHeading)}
+                >
+                  Volver a consultar esta página
+                </button>
+              )}
               <button
                 type="button"
                 disabled={state.catalog.phase === 'loading' || state.offset === 0}
@@ -290,6 +298,14 @@ export function InventoryPanel({ controller }: { controller: InventoryController
                 </>
               )}
               <div className="inventory-actions">
+                {state.history.phase === 'error' && (
+                  <button
+                    type="button"
+                    onClick={() => void focusAfter(controller.retryHistory(), historyHeading)}
+                  >
+                    Volver a consultar estos movimientos
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={state.history.phase === 'loading'}

@@ -101,3 +101,43 @@ T1–T8/R01-T035, G1–G6, real stock reconciliation, installation restore and d
 are not established by synthetic browser results. All FR-INV-001–012 gaps remain
 in the [inventory scope table](2026-11-25-project-inventory-audit.md#inventory-requirements-retained).
 There is no new installed instance or changed workshop data in this increment.
+
+## PR125 candidate acceptance and merge · 2026-11-26
+
+[PR125](https://github.com/IzignaMx/open-cycling-workshop/pull/125) merged as
+`c65d54d6adc5e262356a883ef378a0696e7cb363`. Candidate
+`d5c1c1cfa4f437953ce06ee90c8429eb83d82ce6` was tested as synthetic merge
+`a090455d`; candidate and main share tree
+`ccc760190dd26bcc0efb81adedd5f0d1799ce019`.
+[CI45889141066](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45889141066)
+and all five companion workflows concluded successfully. Its reviewed log reports
+**6,813 Python passes / 58 intentional skips**, **1,806 frontend passes**,
+**1 API-client pass** and **146 direct browser passes**. The aggregate browser
+phase reports **145 passed plus one flaky administration identity-readiness case**;
+there is no global retry-free acceptance claim.
+
+Direct artifact `15153140358`, SHA-256
+`265eb4ae8ada9a32e1784cd9aee03c006f62af318516932a6906f05383249ae1`,
+and aggregate artifact `15153092353`, SHA-256
+`968b9c1310acfb8f5ba268c3393c56e062166f1179ac153a3b8dc8d6990fe7ba`,
+were independently reviewed. The inventory selection is **17/17, each executed
+once**, in both phases. All four themes show the distinct labels, Enter/Space
+selection, exact stock-request product ID, selected SKU, focus and pressed state.
+Each phase's 16 geometry attachments preserve the 44/56px target and intact-word
+checks. This is scoped inventory evidence, not a claim that every browser case
+passed without retry or that manual assistive technology was qualified.
+
+The aggregate administration test timed out at line 632 waiting for the exact
+workshop identity after **10 seconds**, while `OCWP` fallback text remained; retry
+1 passed. This is the same observed symptom described in the
+[October 16 identity-readiness record](2026-10-16-administration-identity-readiness.md)
+and retained as unresolved in later checkpoints. The exact cause/interleaving is
+not established by this recurrence or retry. No administration code, wait budget,
+retry policy or acceptance assertion was changed; this inventory correction does
+not fix or reclassify that separate failure.
+
+Fresh-main repository checks passed **227 tests**. The separate
+[main CI45902761276](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45902761276)
+is pending at this receipt. Earlier candidate-hosted-pending wording is superseded
+only for PR125's accepted source and scoped results above. V0.1 physical,
+recovery, inventory-completion and deployment gates remain open.
