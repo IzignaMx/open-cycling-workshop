@@ -85,3 +85,11 @@ directory actions until it settles. The final local evidence includes 137 focuse
 cases and 17 native inventory journeys, all passing. Hosted qualification remains
 separate. No inventory authority, operational selection, API, local persistence or
 offline contract changes are implied.
+
+The later [PR126 scoped merge receipt](../../../../../docs/10-spec-development/2026-11-26-inventory-page-retry.md#pr126-scoped-acceptance-and-merge--2026-11-26)
+records 17 inventory cases passing once in each hosted browser phase. The
+[PR127 stacked receipt and retarget](../../../../../docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-stacked-evidence-and-retarget-to-main--2026-11-26)
+independently records another 17 single-attempt inventory passes in each phase
+for its own exact source. Full-suite login-body failures remain preserved;
+neither scoped result implies global retry-free acceptance. The retargeted
+documentation successor still needs its own exact hosted qualification.

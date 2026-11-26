@@ -157,3 +157,51 @@ is inspected. T1–T8/R01-T035, physical assistive technology, G1–G6, actual
 installation restore, quote activation/capacity and deployment remain distinct
 open gates. Neither the isolated probe nor this synthetic inventory correction
 qualifies a production installation or advances those gates.
+
+## PR127 stacked evidence and retarget to main · 2026-11-26
+
+[PR126 merged](2026-11-26-inventory-page-retry.md#pr126-scoped-acceptance-and-merge--2026-11-26)
+as `5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c`. This supersedes the earlier
+authored statement that the base was draft/unmerged; the original local base
+and evidence remain unchanged. Its fresh-main CI is separate and in progress.
+
+[PR127](https://github.com/IzignaMx/open-cycling-workshop/pull/127) head
+`479f4308520d3663d78cf30c20684813e67a6712` passed its stacked
+[CI45905913295](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45905913295)
+and all five companion workflows while based on PR126's branch at `a66c581`.
+The tested synthetic merge is `68f4cc6efe970d00d228bc8da54420d19402950d`,
+with tree `069a1dde5919dc560dacedbf6dd97150c2558a7b`, identical to the head tree.
+Reviewed logs report **1,828 frontend passes**, **1 API-client pass** and
+**6,813 Python passes / 58 intentional skips**.
+
+Independent review of Python artifact `15157784964`, SHA-256
+`44ee68a0251f761692a3689239c9408bc9f6cc9d9da6dce98a17ade5da6e7172`,
+confirms the two shard receipts bind
+the clean source, tested merge and tree, report **4,412 / 11** and **2,401 / 47**
+passed/intentional-skipped cases respectively, with no failed, error, unrun or
+unexpected-skipped cases, and confirm both owned-database cleanups absent.
+
+Direct browser artifact `15159602188`, SHA-256
+`604e118a7f379a6ac4668a7b07001d14cb0713e3d6faae66addf6c967fb52d67`,
+and aggregate artifact `15159809434`, SHA-256
+`b6c5d6d488ea53618cbbc81dc6060a4df818e68e76acd7d40dbceecc89ffefa4`,
+were independently reviewed. Both contain **17 inventory cases**, each passing
+once with retry zero and no errors. The directory journey's 107 steps verify
+the four disabled controls, cleared readings and geometry; all four theme
+journeys remain. The aggregate full browser phase passes **146 cases**, with
+zero flaky or skipped cases. Direct reports **145 passed plus one flaky
+source-completion case**: login response JSON fails through CDP
+`Network.getResponseBody` and retry 1 passes. Its cause remains unproven; this
+is not attributed to administration branding or fixed by the inventory change.
+The failed safe observation again records zero main-frame navigations, empty
+session checked, response seen/not from the service worker, body not validated
+and login not completed. It does not establish why CDP could not return the body.
+There is no global retry-free claim.
+
+PR127 is now retargeted to `main` at `5ccb44f`. A clean local merge-tree check
+for that base and the unchanged `479f430` head produces the same
+`069a1dde5919dc560dacedbf6dd97150c2558a7b` tree. This establishes source
+compatibility, not a new CI execution. The documentation reconciliation creates
+a later candidate that requires its own exact retargeted CI and review before
+merge. These stacked receipts do not prequalify that later commit. The current
+checkpoint remains partial; no production or physical gate is promoted.
