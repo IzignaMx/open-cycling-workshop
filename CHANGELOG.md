@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-26 · Inventory catalog accessible action names
+
+- Include the visible action label, product name and SKU in catalog button names,
+  distinguishing same-name products while keeping ID-based selection and connected
+  reads unchanged. Preserve existing keyboard, state and request boundaries.
+- Reproduce the old name failure and verify 17 native cases with zero retries,
+  including four themes. Reconcile the feature README with source-bound evidence;
+  hosted successor checks remain pending in the [checkpoint](docs/10-spec-development/2026-11-26-inventory-accessible-actions.md).
+
+## 2026-11-26 · Corrected REST conflict candidate integrated
+
+- Record all six successful workflows for corrected PR124, independently checked
+  PostgreSQL/cleanup and Security artifacts, and merge `382fa000` with the same tree.
+- Preserve the earlier scanner failure and separate pending fresh-main CI from
+  the accepted candidate; release and deployment gates remain open. See the
+  [merge receipt](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md#corrected-pr124-acceptance-and-merge--2026-11-26).
+
 ## 2026-11-26 · PR124 hosted evidence and bounded scanner correction
 
 - Record passing REST-create candidate CI and all ten new PostgreSQL cases

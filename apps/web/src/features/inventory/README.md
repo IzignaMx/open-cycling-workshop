@@ -22,7 +22,11 @@ Current 401/403 precede untrusted headers/body; obsolete refusals have no effect
 
 The panel uses existing theme tokens/density, plain text, separate status/error
 announcements and paging focus. In-page navigation keeps unsent operational forms
-mounted. Four-theme browser scenes are authored, not yet locally executed.
+mounted. The November 25 audit records 17 locally executed native inventory
+cases with zero retries, including four-theme scenes, for its dated source.
+See the [source-bound receipt](../../../../../docs/10-spec-development/2026-11-25-project-inventory-audit.md).
+Later source changes require their own proof; these browser results do not replace
+physical-device or assistive-technology acceptance.
 
 Tests: `tests/inventory`, `tests/runtime/connected-read.test.mjs`, and
 `e2e/inventory.spec.ts`. The repository ADR freezes the interface; native browser,
@@ -42,3 +46,14 @@ refresh or access loss resets the query, while stock/history updates retain it.
 No matching rows is distinct from an empty server page. See the
 [bounded evidence](../../../../../docs/10-spec-development/2026-11-11-inventory-page-filter.md)
 for browser and physical acceptance limits.
+
+Catalog action names include the visible **Consultar producto** caption followed
+by the product name and **SKU** value. Same-name products with different SKUs
+therefore have distinct accessible action names; selection still uses each row's
+product ID. Existing displayed/authorized text is reused with normal escaping,
+without extra requests or local persistence. The [November 26 source-bound
+qualification](../../../../../docs/10-spec-development/2026-11-26-inventory-accessible-actions.md)
+records component/native RED then seven component and 17 native passes with zero
+retries, including exact product-ID keyboard selection in all four themes.
+This is synthetic browser evidence; manual voice-control/screen-reader and
+physical-device qualification remain separate.

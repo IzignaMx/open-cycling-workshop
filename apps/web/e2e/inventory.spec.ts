@@ -83,12 +83,12 @@ async function openInventory(page: Page, location?: string) {
     .getByRole('button', { name: 'Verificar y consultar inventario', exact: true })
     .click()
   await expect(
-    region.getByRole('button', { name: `Consultar ${PRODUCT}`, exact: true }),
+    region.getByRole('button', { name: `Consultar producto ${PRODUCT}, SKU SKU-000`, exact: true }),
   ).toBeVisible()
 }
 async function selectMain(page: Page) {
   await panel(page)
-    .getByRole('button', { name: `Consultar ${PRODUCT}`, exact: true })
+    .getByRole('button', { name: `Consultar producto ${PRODUCT}, SKU SKU-000`, exact: true })
     .click()
   await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toContainText('148')
   await expect(
@@ -193,22 +193,33 @@ for (const floor of ['floor-zero', 'floor-one'] as const) {
         .getByRole('listitem'),
     ).toHaveCount(1)
     await expect(
-      region.getByRole('button', { name: 'Consultar P001 Saldo negativo', exact: true }),
+      region.getByRole('button', {
+        name: 'Consultar producto P001 Saldo negativo, SKU SKU-001',
+        exact: true,
+      }),
     ).toBeVisible()
     expect(requests.inventory.length).toBe(readsBeforeFilter + 1)
     await filter.fill('no-product-matches-this-page')
     await region.getByRole('button', { name: 'Más productos', exact: true }).click()
-    await expect(region.getByRole('button', { name: /^Consultar P/ })).toHaveCount(2)
+    await expect(region.getByRole('button', { name: /^Consultar producto P/ })).toHaveCount(2)
     await expect(filter).toHaveValue('')
     await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
     await expect(region).not.toContainText(PRODUCT)
     await region.getByRole('button', { name: 'Productos anteriores', exact: true }).click()
-    await expect(region.getByRole('button', { name: /^Consultar P/ })).toHaveCount(50)
+    await expect(region.getByRole('button', { name: /^Consultar producto P/ })).toHaveCount(50)
     await expect(region.getByRole('heading', { name: 'Productos', exact: true })).toBeFocused()
-    await region.getByRole('button', { name: 'Consultar P001 Saldo negativo', exact: true }).click()
+    await region
+      .getByRole('button', {
+        name: 'Consultar producto P001 Saldo negativo, SKU SKU-001',
+        exact: true,
+      })
+      .click()
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('-7')
     await region
-      .getByRole('button', { name: 'Consultar P002 Sin movimientos', exact: true })
+      .getByRole('button', {
+        name: 'Consultar producto P002 Sin movimientos, SKU SKU-002',
+        exact: true,
+      })
       .click()
     await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('0')
     await expect(region).toContainText(/sin movimientos|no hay movimientos/i)
@@ -236,7 +247,10 @@ test('organization-wide inventory directory selection needs no operational basel
     .getByRole('button', { name: 'Verificar y consultar inventario', exact: true })
     .click()
   await expect(
-    region.getByRole('button', { name: 'Consultar B000 Producto de otro taller', exact: true }),
+    region.getByRole('button', {
+      name: 'Consultar producto B000 Producto de otro taller, SKU OTHER-WORKSHOP',
+      exact: true,
+    }),
   ).toBeVisible()
   await expect(region).not.toContainText(PRODUCT)
   expect(requests.baseline).toEqual([])
@@ -400,13 +414,16 @@ for (const transition of ['scope', 'product', 'logout'] as const) {
           .click()
         await expect(
           panel(page).getByRole('button', {
-            name: 'Consultar B000 Producto de otro taller',
+            name: 'Consultar producto B000 Producto de otro taller, SKU OTHER-WORKSHOP',
             exact: true,
           }),
         ).toBeVisible()
       } else if (transition === 'product') {
         await panel(page)
-          .getByRole('button', { name: 'Consultar P001 Saldo negativo', exact: true })
+          .getByRole('button', {
+            name: 'Consultar producto P001 Saldo negativo, SKU SKU-001',
+            exact: true,
+          })
           .click()
         await expect(panel(page).getByLabel('Cantidad disponible', { exact: true })).toContainText(
           '-7',
@@ -422,7 +439,7 @@ for (const transition of ['scope', 'product', 'logout'] as const) {
           .click()
         await expect(
           panel(page).getByRole('button', {
-            name: 'Consultar B000 Producto de otro taller',
+            name: 'Consultar producto B000 Producto de otro taller, SKU OTHER-WORKSHOP',
             exact: true,
           }),
         ).toBeVisible()
@@ -600,7 +617,48 @@ for (const theme of THEMES) {
     await expect(page.locator('#personalization-panel')).toBeHidden()
     await expect(settings).toHaveAttribute('aria-expanded', 'false')
     await expect(settings).toBeFocused()
-    await openInventory(page)
+    const region = panel(page)
+    await region
+      .getByRole('button', { name: 'Verificar y consultar inventario', exact: true })
+      .click()
+    const sameName = 'P004 Refacción sintética'
+    const first = region.getByRole('button', {
+      name: `Consultar producto ${sameName}, SKU SKU-004`,
+      exact: true,
+    })
+    const second = region.getByRole('button', {
+      name: `Consultar producto ${sameName}, SKU SKU-005`,
+      exact: true,
+    })
+    await expect(first).toBeVisible()
+    await expect(second).toBeVisible()
+    await expect(first).toHaveText('Consultar producto')
+    await expect(second).toHaveText('Consultar producto')
+    await expect(
+      region.getByRole('button', {
+        name: `Consultar producto ${PRODUCT}, SKU SKU-000`,
+        exact: true,
+      }),
+    ).toBeVisible()
+    const stockPaths: string[] = []
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname
+      if (path.startsWith('/api/v1/inventory/products/') && path.endsWith('/stock'))
+        stockPaths.push(path)
+    })
+    for (const [button, other, sku, productId, key] of [
+      [first, second, 'SKU-004', f.id(104), 'Enter'],
+      [second, first, 'SKU-005', f.id(105), 'Space'],
+    ] as const) {
+      await button.focus()
+      await page.keyboard.press(key)
+      await expect(button).toHaveAttribute('aria-pressed', 'true')
+      await expect(other).toHaveAttribute('aria-pressed', 'false')
+      await expect(region.locator('.inventory-detail')).toContainText(`SKU: ${sku}`)
+      await expect(region.getByRole('heading', { name: sameName, exact: true })).toBeFocused()
+      await expect(region.getByLabel('Cantidad disponible', { exact: true })).toContainText('0')
+      expect(stockPaths.at(-1)).toBe(`/api/v1/inventory/products/${productId}/stock`)
+    }
     await selectMain(page)
     for (const scene of [
       { name: 'desktop', width: 1440, height: 1000, scale: 1, scheme: 'light', workshop: false },

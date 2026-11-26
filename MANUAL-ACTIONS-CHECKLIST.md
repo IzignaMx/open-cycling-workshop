@@ -1,5 +1,34 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · Inventory catalog accessible actions
+
+- [x] Inspect missing visible-label text in the product action's accessible name
+      and ambiguity for same-name products with different SKUs.
+- [x] Verify the bounded visible-label/name/SKU correction: component seven,
+      fixture four, core 1,806 and repository 227 pass. Frozen native baseline
+      fails at the missing name; candidate passes 17/17 with zero retries/flakes/
+      skips, including all four themes and keyboard product-ID selection.
+      Pinned PWA build/static checks pass; independent review found no blocker.
+      Source/build-bound native receipt retained and owned test-container absence confirmed.
+- [ ] Qualify the exact successor through hosted checks; preserve ID-based
+      selection, connected-only reads and existing grants. See the
+      [current checkpoint](docs/10-spec-development/2026-11-26-inventory-accessible-actions.md).
+- [x] Link the inventory feature README's browser statement to the dated November
+      25 local receipt; that prior 17-case result does not qualify new source.
+- Physical assistive technology, inventory, recovery, rollout and deployment
+  gates remain open; no product requirement is removed.
+
+## 2026-11-26 · Corrected PR124 acceptance and merge
+
+- [x] Verify corrected candidate `9e8c718` CI45865062069 and all six workflows,
+      including Security; preserve old failed Security45811741828 independently.
+      Review exact-tree PostgreSQL phases/cleanup in artifact15141365529 and
+      Security evidence15140655994. Browser counts remain log-only evidence.
+- [x] Integrate as main `382fa000` with the candidate tree; 227 postmerge
+      repository tests passed. See the [acceptance and merge receipt](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md#corrected-pr124-acceptance-and-merge--2026-11-26).
+- [ ] Verify separate main CI45888038861 when complete. Candidate checks do not
+      qualify later source; physical, stock, recovery and deployment gates remain open.
+
 ## 2026-11-26 · PR124 hosted results and Security correction
 
 - [x] Inspect CI45811741910 and ten new PostgreSQL cases' actual phases in

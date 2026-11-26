@@ -177,3 +177,32 @@ The final exact commit scan and the successor's required hosted Security result
 remain pending at this authored checkpoint. PR124 is not fully qualified or ready to merge until that
 required hosted result is observed. Product code, authorization, sync and deployment
 are unchanged by the scanner-policy correction.
+
+## Corrected PR124 acceptance and merge · 2026-11-26
+
+Corrected candidate `9e8c718c51047ea792975a09ace1fb8ba6c2b7a9` was accepted and
+[PR124](https://github.com/IzignaMx/open-cycling-workshop/pull/124) merged as
+`382fa000ebd1b72fac3a1dfc6ea60ac0df712021`; candidate and main share tree
+`5533ec24c223973761f8c9629e8efd102b5fc952`.
+[CI45865062069](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45865062069)
+reports **6,813 Python passes / 58 intentional skips**, **1,805 frontend passes**,
+**1 API-client pass**, **146 direct and 146 aggregate browser passes** without
+reported flakes/retries, and zero-retry groups **20 / 9 / 5 / 10**.
+All six candidate workflows concluded successfully, including the corrected
+Security run; its safe evidence artifact `15140655994` was verified. The earlier
+Security45811741828 failure remains a failed historical attempt, not a rerun or
+retrospective pass.
+
+Independent review of the corrected full-Python artifact `15141365529`, SHA-256
+`32faaa13a1c06990cdbb05d12e83f2a8594c5174fe22481326b2828642098571`,
+bound it to the exact candidate tree and verified every setup/call/teardown phase
+of the ten new PostgreSQL tests plus cleanup absence. Browser counts above are
+reviewed-log evidence only; no independent browser-archive review is inferred.
+This receipt supersedes earlier candidate-hosted/Security-pending statements
+only for the accepted corrected candidate.
+
+Fresh merged-main repository checks passed **227 tests**. The separate
+[main CI45888038861](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45888038861)
+is pending at this receipt; its outcome is not inherited from candidate CI.
+The REST behavior is integrated, while physical, actual stock, recovery,
+release and deployment gates remain open.
