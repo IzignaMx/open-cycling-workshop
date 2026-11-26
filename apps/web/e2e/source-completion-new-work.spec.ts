@@ -1,11 +1,12 @@
 import { captureResponseDuring } from './helpers/response-capture.js'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Frame, type Page } from '@playwright/test'
 import {
   apiLogin,
   createCaseIdentity,
   createCustomer,
   kernelSnapshot,
   login,
+  loginOnCurrentPage,
   sessionToken,
   waitForApplied,
   waitForConfirmed,
@@ -144,29 +145,60 @@ test('resolve an unsent source capture then author distinct new work at another 
 
   const destination = await context.newPage()
   await destination.goto(DESTINATION)
-  expect(await destination.evaluate(() => sessionStorage.getItem('ocwp.session.v2'))).toBeNull()
-  const destinationLogin = destination.waitForResponse(
-    (response) =>
-      response.url() === `${DESTINATION}/api/v1/auth/login` &&
-      response.request().method() === 'POST',
-  )
-  const issued = await captureResponseDuring(
-    destinationLogin,
-    () => login(destination, identity, undefined, 'synced', DESTINATION),
-    async (loginResponse) => {
-      expect(loginResponse.status()).toBe(200)
-      const body: unknown = await loginResponse.json()
-      // Fail closed without including a token or arbitrary body in assertions.
-      const valid =
-        typeof body === 'object' &&
-        body !== null &&
-        'access_token' in body &&
-        typeof body.access_token === 'string' &&
-        body.access_token.trim().length > 0
-      expect(valid).toBe(true)
-      return body as { access_token: string }
-    },
-  )
+  const loginObservation = {
+    mainFrameNavigations: 0,
+    emptySessionChecked: false,
+    responseSeen: false,
+    responseFromServiceWorker: null as boolean | null,
+    bodyValidated: false,
+    loginCompleted: false,
+  }
+  const observeNavigation = (frame: Frame) => {
+    if (frame === destination.mainFrame()) loginObservation.mainFrameNavigations += 1
+  }
+  destination.on('framenavigated', observeNavigation)
+  let issued: { access_token: string }
+  try {
+    // Keep even an unexpected preexisting bearer out of assertion output.
+    expect(
+      await destination.evaluate(() => sessionStorage.getItem('ocwp.session.v2') === null),
+    ).toBe(true)
+    loginObservation.emptySessionChecked = true
+    const destinationLogin = destination.waitForResponse(
+      (response) =>
+        response.url() === `${DESTINATION}/api/v1/auth/login` &&
+        response.request().method() === 'POST',
+    )
+    issued = await captureResponseDuring(
+      destinationLogin,
+      () => loginOnCurrentPage(destination, identity),
+      async (loginResponse) => {
+        loginObservation.responseSeen = true
+        loginObservation.responseFromServiceWorker = loginResponse.fromServiceWorker()
+        expect(loginResponse.status()).toBe(200)
+        const body: unknown = await loginResponse.json()
+        // Fail closed without including a token or arbitrary body in assertions.
+        const valid =
+          typeof body === 'object' &&
+          body !== null &&
+          'access_token' in body &&
+          typeof body.access_token === 'string' &&
+          body.access_token.trim().length > 0
+        expect(valid).toBe(true)
+        loginObservation.bodyValidated = true
+        return body as { access_token: string }
+      },
+    )
+    loginObservation.loginCompleted = true
+    expect(loginObservation.mainFrameNavigations).toBe(0)
+  } finally {
+    destination.off('framenavigated', observeNavigation)
+    // Preserve diagnostic progress on failure, without response bodies or tokens.
+    await info.attach('source-completion-login-observation', {
+      body: JSON.stringify(loginObservation),
+      contentType: 'application/json',
+    })
+  }
   const destinationToken = await sessionToken(destination)
   // Only booleans reach assertions/receipt; never print bearer values.
   expect(destinationToken === issued.access_token).toBe(true)

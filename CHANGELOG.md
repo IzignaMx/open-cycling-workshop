@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-26 · Preserve the inspected destination login document
+
+- Remove a duplicate test-helper navigation after checking the destination's
+  empty session, keeping exact response-token comparison and server readback.
+- Add a nonsecret navigation/progress receipt and source guard. Preserve the
+  native baseline failure separately from three passing candidate trials and
+  two wrapper journeys with zero retries. Exact hosted proof is pending and the
+  internal CDP cause remains unproven. Product behavior and retry policy are unchanged.
+  See the [test correction](docs/10-spec-development/2026-11-26-source-completion-login-document.md).
+
+## 2026-11-26 · PR122 postmerge evidence and browser failure tracking
+
+- Record fresh-main `810a462` CI45549103908 and its source-bound passing results
+  separately from candidate/browser retry evidence and physical release gates.
+- Preserve the candidate and older baseline login response-body failure as an
+  unresolved engineering issue; a clean main run does not establish its cause
+  or fix. See the [postmerge record](docs/10-spec-development/2026-11-25-project-inventory-audit.md#pr122-postmerge-evidence--2026-11-26).
+
 ## 2026-11-25 · Project and inventory status reconciliation
 
 - Reconcile current README, execution-state and manual-checklist pointers with
