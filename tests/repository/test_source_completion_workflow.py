@@ -58,6 +58,19 @@ def test_destination_session_is_observed_not_copied_and_realms_are_distinct() ->
     assert "addCookies" not in text
 
 
+def test_destination_login_preserves_the_document_checked_for_empty_session() -> None:
+    text = SPEC.read_text()
+    login = text.split("const destination = await context.newPage()", 1)[1].split(
+        "const destinationToken =", 1
+    )[0]
+    assert login.count("destination.goto(DESTINATION)") == 1
+    assert "loginOnCurrentPage(destination, identity)" in login
+    assert "() => login(destination," not in login
+    assert "expect(loginObservation.mainFrameNavigations).toBe(0)" in login
+    assert "destination.off('framenavigated', observeNavigation)" in login
+    assert "'source-completion-login-observation'" in login
+
+
 def test_reception_measurement_keeps_failed_attempts_and_physical_gate_open() -> None:
     text = (ROOT / "apps/web/e2e/reception-phase-measurement.spec.ts").read_text()
     assert "test.describe.configure({ retries: 0 })" in text

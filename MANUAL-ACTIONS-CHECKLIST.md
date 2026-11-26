@@ -1,5 +1,39 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · Destination document preservation candidate
+
+- [x] Reproduce the native baseline response-body failure with retries zero and
+      fail-stop; retain its trace and the two unexecuted planned trials.
+- [x] Correct the test's duplicate destination navigation, retaining exact issued
+      token/session equality and independent server readback; source guard RED
+      then five authoring checks passed. Add a bounded nonsecret navigation receipt.
+- [x] Complete three bounded native candidate trials and two adjacent wrapper
+      journeys, all passing with zero retries; all candidate receipts show zero
+      main-frame navigations and complete required login evidence. Repository
+      contracts: 227 passed. Independent source review found no blockers and
+      dedicated test-database container absence was confirmed.
+- [ ] Qualify the exact successor through hosted CI. Internal CDP cause remains
+      unproven; no original failure is reclassified. See the [current evidence](docs/10-spec-development/2026-11-26-source-completion-login-document.md).
+- This is test-only. Product, physical-device, G1–G6, installation/restore,
+  inventory and deployment gates remain unchanged.
+
+## 2026-11-26 · PR122 postmerge receipt and open browser failure
+
+- [x] Verify merged main `810a462` and fresh-main CI45549103908 job/log success:
+      Python 6,770 passed/58 intentional skips, frontend 1,805, API client one;
+      direct and aggregate browsers each 146 passed without a reported flaky case.
+      This supersedes PR122's historical hosted-pending source status only.
+- [x] Preserve candidate CI45540359069: direct and aggregate each 145 passed plus
+      one flaky source-completion case; the same failure exists in the older
+      baseline. See the [postmerge evidence](docs/10-spec-development/2026-11-25-project-inventory-audit.md#pr122-postmerge-evidence--2026-11-26).
+- Historical investigation request: the bounded reproduction and local candidate
+  evidence are now recorded in the destination-document section above. The
+  intermittent `Network.getResponseBody` internal cause remains unknown; the clean
+  postmerge run does not resolve it. Hosted successor qualification remains open.
+- Physical T1–T8/R01-T035, G1–G6, actual stock reconciliation, installation restore
+  and operational deployment remain open. No device or operator gate is closed
+  by these hosted results; no production change is introduced here.
+
 ## 2026-11-25 · Current project and inventory audit
 
 - [x] Inspect merged PR121/main `3d11bbd` and reconcile the current documentation

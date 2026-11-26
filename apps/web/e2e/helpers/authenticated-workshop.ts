@@ -158,8 +158,18 @@ export async function login(
   syncExpectation: 'synced' | 'local-only' = 'synced',
   entryPath = '/',
 ) {
-  const username = typeof identity === 'string' ? identity : identity.username
   await page.goto(entryPath)
+  await loginOnCurrentPage(page, identity, workshop, syncExpectation)
+}
+
+/** Authenticate in the already loaded document without navigating it again. */
+export async function loginOnCurrentPage(
+  page: Page,
+  identity: WorkshopIdentity | string,
+  workshop?: string,
+  syncExpectation: 'synced' | 'local-only' = 'synced',
+) {
+  const username = typeof identity === 'string' ? identity : identity.username
   await page.getByLabel('Organización', { exact: true }).fill(ORGANIZATION_ID)
   await page.getByLabel('Usuario', { exact: true }).fill(username)
   await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD)

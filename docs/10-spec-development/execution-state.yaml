@@ -1,6 +1,35 @@
 schema: 1
 
-current_checkpoint: project_inventory_audit_20261125
+current_checkpoint: source_completion_login_document_20261126
+source_completion_login_document_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-source-completion-login-document.md
+  base_main: 810a4623a64c28d1abf0e40454129df780adb328
+  scope: test_only_same_document_login_and_nonsecret_navigation_observation
+  baseline_native: first_trial_failed_two_unrun_retry0_fail_stop
+  baseline_trace_sha256: cdb12401b0f11f83376e658d33cdf5e657ee8e317e19a47e594b8cfa7d6179ae
+  observed: two_destination_navigations_second_before_POST_HTTP200_then_body_CDP_failure
+  post_POST_document_request_before_failure: not_observed
+  internal_CDP_cause: unproven
+  correction: loginOnCurrentPage_preserves_checked_document_and_exact_token_assertions
+  source_guard: observed_RED_then_five_passed
+  static: touched_lint_orders_inventory_branding_E2E_typechecks_passed
+  repository_contracts: 227_passed
+  frontend_core: 1805_passed_zero_failures_or_skips_32_37s
+  native_candidate: 3_passed_17_5s_retry0_flaky0_skipped0
+  native_receipts: zero_mainframe_navigation_all_required_progress_true_response_from_SW_false
+  adjacent_wrapper_journeys: 2_passed_15_2s_retry0
+  test_database_cleanup: container_absence_confirmed
+  independent_source_review: no_blocking_findings
+  baseline_receipt: artifacts/source-completion-20261126/baseline-local-receipt.json
+  candidate_receipt: artifacts/source-completion-20261126/candidate-local-receipt.json
+  exact_candidate_hosted: pending
+  production_changes: none
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_project_inventory_checkpoint: project_inventory_audit_20261125
 project_inventory_audit_20261125:
   status: partial
   evidence: docs/10-spec-development/2026-11-25-project-inventory-audit.md
@@ -8,6 +37,7 @@ project_inventory_audit_20261125:
   baseline_PR121: merged_20261122_metadata_and_local_history_checked
   historical_CI44692144993: earlier_491ac31_tree_documented_not_archives_revalidated
   current_candidate_qualification: local_inventory_verified_hosted_candidate_pending
+  later_source_receipt: pr122_postmerge_evidence_20261126
   baseline_hosted_metadata: exact_main_attempt1_success_not_archives_revalidated
   baseline_CI: 44997636297
   baseline_CI_verify_log: frontend1805_API1_Python6767_pass58_skips_browser145_pass
@@ -34,6 +64,33 @@ project_inventory_audit_20261125:
   active_release: V0.1_partial
   physical_T1_T8_R01_T035: open
   rollout_gates: G1_G6_open
+  deployment: not_performed
+
+pr122_postmerge_evidence_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-25-project-inventory-audit.md
+  merged_main: 810a4623a64c28d1abf0e40454129df780adb328
+  PR122_head: d1d24d7cce0ff642041e2a855bde7361487d95c8
+  candidate_tested_merge: da346145cee3a0435cdd31d1374ef0f8cd00625f
+  same_tree: candidate_head_tested_merge_and_main
+  supersedes: PR122_historical_hosted_pending_only_not_failed_evidence_or_release_gates
+  main_CI: 45549103908
+  main_jobs: python_and_verify_success_with_cleanup_steps
+  main_log_results: Python6770_pass58_intentional_skips_frontend1805_API1
+  main_browser_log_results: direct146_and_aggregate146_pass_no_flaky_case_reported
+  main_zero_retry_groups: [20, 9, 5, 10]
+  archive_acceptance: not_every_archive_independently_revalidated
+  candidate_CI: 45540359069
+  candidate_browser_results: direct_and_aggregate_each145_pass1_flaky_retry1_passed
+  candidate_direct_artifact: 14989968065
+  candidate_aggregate_artifact: 14991575953
+  baseline_CI44997636297: direct_same_failure_and_flaky_classification
+  known_open_defect: source_completion_login_response_body_Network_getResponseBody
+  defect_cause: unknown_not_resolved_by_fresh_main_pass
+  next_engineering_task: bounded_reproduction_and_response_body_source_investigation
+  production_changes: none
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
   deployment: not_performed
 
 historical_isolated_reception_checkpoint: isolated_reception_route_20261119
@@ -3471,7 +3528,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-25-project-inventory-audit.md
+active_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
+historical_project_inventory_plan: docs/10-spec-development/2026-11-25-project-inventory-audit.md
 historical_capture_format_plan: docs/10-spec-development/2026-11-12-capture-format-compatibility.md
 historical_order_intake_readback_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
 historical_local_order_filter_plan: docs/10-spec-development/2026-11-10-local-order-filters.md
@@ -3484,7 +3542,9 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: local_inventory_and_documentation_verified_hosted_successor_pending
+active_plan_status: local_same_document_correction_verified_exact_hosted_pending
+historical_PR122_postmerge_plan_status: PR122_integrated_source_checks_pass_known_browser_flake_open
+historical_project_audit_plan_status: local_inventory_and_documentation_verified_hosted_successor_pending
 historical_capture_format_plan_status: capture_format_compatibility_qualification_in_progress
 historical_composition_plan: docs/10-spec-development/2026-11-05-customer-lookup-composition.md
 historical_local_customer_lookup_plan: docs/10-spec-development/2026-11-04-local-customer-lookup.md
@@ -3495,7 +3555,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: project_inventory_audit_20261125
+last_checkpoint: source_completion_login_document_20261126
+historical_project_inventory_last_checkpoint: project_inventory_audit_20261125
 historical_capture_format_last_checkpoint: capture_format_compatibility_20261112
 historical_order_intake_readback_last_checkpoint: order_intake_readback_20261112
 historical_local_order_filter_last_checkpoint: local_order_filters_20261110
@@ -3771,6 +3832,9 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
+  - qualify exact same_document login correction in hosted CI after local_native and source_review_passes
+  - retain unproven internal_CDP cause and original failed traces without weakening token_readback or retry policy
+  - preserve PR122_candidate flaky evidence separately from main810a462 clean browser logs
   - qualify the exact new candidate with local checks independent review and normal hosted CI
   - retain missing product requirements in their canonical phased plan without claiming completion
   - complete physical T1_T8 and R01_T035 when actual Windows_Android equipment and operator are available

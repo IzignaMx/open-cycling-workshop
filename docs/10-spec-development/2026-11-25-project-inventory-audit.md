@@ -1,5 +1,8 @@
 # Project and inventory status reconciliation · 2026-11-25
 
+Latest source update: [PR122 postmerge evidence, November 26](#pr122-postmerge-evidence--2026-11-26).
+The original audit below retains its historical evidence and limitations.
+
 ## Source and evidence boundary
 
 Inspected baseline: `3d11bbd3afadaa998063ab637c8eb58caaaba32a`, merged
@@ -166,3 +169,50 @@ physical qualification and exact successor hosted CI remain separate gates.
    **UNKNOWN** and measurement `40927223929` **SPENT** as distinct gates.
    This reconciliation does not rerun consumed experiments or authorize loss of
    data, historical evidence, local drafts or pending mutations.
+
+## PR122 postmerge evidence · 2026-11-26
+
+The documentation/navigation-test candidate was merged as
+`810a4623a64c28d1abf0e40454129df780adb328` in
+[PR122](https://github.com/IzignaMx/open-cycling-workshop/pull/122). Candidate head
+`d1d24d7cce0ff642041e2a855bde7361487d95c8`, its tested synthetic merge
+`da346145cee3a0435cdd31d1374ef0f8cd00625f`, and merged main have the same tree.
+The successor's hosted-pending statements above are historical; this receipt
+supersedes them only for that exact source, not later edits or release acceptance.
+
+Fresh-main [CI45549103908](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45549103908)
+completed successfully. Its Python and verify jobs report successful steps,
+including both Python-shard cleanup gates, actual inventory PostgreSQL/Caddy
+checks, branding restore, current/historical PWA builds and browser execution.
+The reviewed logs report **6,770 Python passes / 58 intentional skips**,
+**1,805 frontend passes**, **1 API-client pass**, and **146 direct and 146
+aggregate browser passes, with no flaky case reported in either phase**.
+The separate configured zero-retry groups report **20 / 9 / 5 / 10** passes.
+These are source-bound job/log observations; independent validation of every
+uploaded archive and physical-device acceptance are not implied.
+
+The [PR candidate CI45540359069](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45540359069)
+was successful at workflow level but reported **145 passed plus one flaky case**
+in both direct and aggregate browser phases. Preserve direct artifact
+`14989968065` and aggregate artifact `14991575953`. In
+`source-completion-new-work.spec.ts:27`, the login-body read at line 158 failed
+with `Network.getResponseBody`; retry 1 passed. The unchanged older main
+[CI44997636297](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/44997636297)
+direct phase has the same observed failure and flaky classification. This
+corrects any inference that the earlier **145 passes** summary meant no flakes.
+
+The fresh-main pass does **not** establish the underlying cause or fix the known
+intermittent response-body failure. Its investigation remains open. No workflow
+rerun, retry increase, test quarantine or weakened assertion is part of this
+reconciliation. The next engineering task is a bounded reproduction and source
+investigation of that failure, preserving independent authentication and reception
+readback semantics before accepting any proposed correction.
+
+V0.1 remains **partial**. The inventory implementation, FR-INV-001–012 gaps,
+G1–G6, T1–T8, R01-T035, real stock counts, installation-specific restore and
+operational deployment boundaries above remain unchanged. Historical failed
+receipts remain failed; successful postmerge CI does not waive these gates.
+
+The next bounded test correction and native evidence are recorded in the
+[November 26 destination-document checkpoint](2026-11-26-source-completion-login-document.md).
+It preserves this postmerge receipt and does not revise historical failures.
