@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from cycling_workshop.api.errors import ApiError
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.repository import SqlAlchemyCustomerRepository
 from cycling_workshop.customers.schemas import CustomerCreateRequest, CustomerResponse
@@ -34,7 +35,12 @@ def _response(customer: Customer) -> CustomerResponse:
     )
 
 
-@router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=CustomerResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={409: {"description": "Customer identifier already exists; no record is changed."}},
+)
 def create_customer(
     payload: CustomerCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("customers.write"))],
@@ -67,7 +73,8 @@ def create_customer(
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid customer request") from None
     repository = SqlAlchemyCustomerRepository(session)
-    repository.add(customer)
+    if not repository.try_add(customer):
+        raise ApiError(409, "customer_conflict", "customer identifier already exists")
     append_change(
         session,
         organization_id=customer.organization_id,

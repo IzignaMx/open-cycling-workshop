@@ -3900,6 +3900,9 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "description": "Bicycle identifier already exists; no record is changed."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -4032,6 +4035,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "Customer identifier already exists; no record is changed."
           },
           "422": {
             "content": {
@@ -4929,6 +4935,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "Order identifier already exists; no record is changed."
           },
           "422": {
             "content": {

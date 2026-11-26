@@ -28,6 +28,13 @@ regexTarget = "secret"
 regexes = ['''^may_expand_beyond_retained_utf8_bytes$''']
 
 [[rules.allowlists]]
+description = "Public OpenAPI regression test counts from PR124; not credential material"
+condition = "AND"
+paths = ['''^docs/10-spec-development/execution-state\.yaml$''']
+regexTarget = "secret"
+regexes = ['''^RED1_then3_pass$''']
+
+[[rules.allowlists]]
 description = "Three public source SHA256 provenance values; independently recomputed from a960bdd"
 condition = "AND"
 paths = ['''^docs/site/screenshots\.json$''']

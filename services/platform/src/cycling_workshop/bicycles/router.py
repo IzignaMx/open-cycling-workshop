@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from cycling_workshop.api.errors import ApiError
 from cycling_workshop.bicycles.domain import Bicycle
 from cycling_workshop.bicycles.repository import SqlAlchemyBicycleRepository
 from cycling_workshop.bicycles.schemas import BicycleCreateRequest, BicycleResponse
@@ -39,7 +40,10 @@ def _response(bicycle: Bicycle) -> BicycleResponse:
 
 
 @router.post(
-    "/api/v1/bicycles", response_model=BicycleResponse, status_code=status.HTTP_201_CREATED
+    "/api/v1/bicycles",
+    response_model=BicycleResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={409: {"description": "Bicycle identifier already exists; no record is changed."}},
 )
 def create_bicycle(
     payload: BicycleCreateRequest,
@@ -82,7 +86,8 @@ def create_bicycle(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Invalid bicycle request") from exc
     repository = SqlAlchemyBicycleRepository(session)
-    repository.add(bicycle)
+    if not repository.try_add(bicycle):
+        raise ApiError(409, "bicycle_conflict", "bicycle identifier already exists")
     append_change(
         session,
         organization_id=bicycle.organization_id,

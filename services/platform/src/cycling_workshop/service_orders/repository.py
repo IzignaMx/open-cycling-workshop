@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, Table, select
 from sqlalchemy.orm import Session
 
+from cycling_workshop.db.insert_conflict import insert_unless_id_conflicts
 from cycling_workshop.service_orders.domain import ServiceOrder, ServiceOrderEvent
 from cycling_workshop.service_orders.models import ServiceOrderEventRecord, ServiceOrderRecord
 
@@ -19,6 +21,29 @@ class SqlAlchemyServiceOrderRepository:
 
     def add(self, order: ServiceOrder) -> None:
         self._session.add(self._to_record(order))
+
+    def try_add(self, order: ServiceOrder) -> bool:
+        """Insert a REST-created order without replacing an occupied global ID."""
+        return insert_unless_id_conflicts(
+            self._session,
+            cast(Table, ServiceOrderRecord.__table__),
+            {
+                "id": order.order_id,
+                "organization_id": order.organization_id,
+                "location_id": order.location_id,
+                "customer_id": order.customer_id,
+                "bicycle_id": order.bicycle_id,
+                "state": order.state,
+                "reported_problem": order.reported_problem,
+                "intake_condition": order.intake_condition,
+                "accessories": order.accessories,
+                "priority": order.priority,
+                "diagnosis": order.diagnosis,
+                "created_at": order.created_at,
+                "updated_at": order.updated_at,
+                "version": order.version,
+            },
+        )
 
     def save(self, order: ServiceOrder) -> None:
         record = self._session.get(ServiceOrderRecord, order.order_id)

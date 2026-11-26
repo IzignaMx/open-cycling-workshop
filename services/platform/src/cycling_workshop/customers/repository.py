@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, Table, select
 from sqlalchemy.orm import Session
 
 from cycling_workshop.customers.domain import Customer
 from cycling_workshop.customers.models import CustomerRecord
+from cycling_workshop.db.insert_conflict import insert_unless_id_conflicts
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -19,6 +21,23 @@ class SqlAlchemyCustomerRepository:
 
     def add(self, customer: Customer) -> None:
         self._session.add(self._to_record(customer))
+
+    def try_add(self, customer: Customer) -> bool:
+        return insert_unless_id_conflicts(
+            self._session,
+            cast(Table, CustomerRecord.__table__),
+            {
+                "id": customer.customer_id,
+                "organization_id": customer.organization_id,
+                "location_id": customer.location_id,
+                "display_name": customer.display_name,
+                "email": customer.email,
+                "phone": customer.phone,
+                "created_at": customer.created_at,
+                "updated_at": customer.updated_at,
+                "version": customer.version,
+            },
+        )
 
     def save(self, customer: Customer) -> None:
         record = self._session.get(CustomerRecord, customer.customer_id)
