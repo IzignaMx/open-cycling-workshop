@@ -89,6 +89,13 @@ def test_inventory_seed_keeps_partial_grants_and_immutable_signed_history(
                         assert not products
                         continue
                     assert len(products) == 53
+                    # The accessibility journeys exercise two real catalog rows
+                    # with identical names and different admitted SKUs. Other
+                    # fixtures preserve their original names and pagination.
+                    first = next(row for row in products if row.id == identity(104))
+                    second = next(row for row in products if row.id == identity(105))
+                    assert first.sku == "SKU-004" and second.sku == "SKU-005"
+                    assert (first.name == second.name) is case.startswith("visual-")
                     ledger = list(
                         session.scalars(
                             select(InventoryMovementRecord)

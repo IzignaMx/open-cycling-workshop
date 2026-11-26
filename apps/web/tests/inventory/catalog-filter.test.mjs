@@ -20,6 +20,34 @@ test('filter is literal and does not search IDs or units', () => {
 })
 test('empty page stays empty', () => assert.deepEqual(filterCatalogPage([], 'cadena'), []))
 
+test('product actions retain their visible label and distinguish equal names by SKU', async () => {
+  const { createElement } = await import('react')
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const { CatalogPageView } =
+    await import('../../.tmp-inventory/src/features/inventory/CatalogPage.js')
+  const products = [rows[0], { ...rows[1], name: rows[0].name }]
+  const html = renderToStaticMarkup(
+    createElement(CatalogPageView, {
+      products,
+      query: '',
+      offset: 0,
+      selectedProductId: 'secret-id',
+      onQuery() {},
+      onSelect() {},
+    }),
+  )
+  const names = [...html.matchAll(/aria-label="([^"]+)" aria-pressed="(?:true|false)"/g)].map(
+    (match) => match[1],
+  )
+  assert.deepEqual(names, [
+    'Consultar producto Cadena sintética, SKU CH-01',
+    'Consultar producto Cadena sintética, SKU BR-02',
+  ])
+  assert.equal((html.match(/>Consultar producto<\/button>/g) ?? []).length, 2)
+  assert.match(html, /SKU CH-01" aria-pressed="true"/)
+  assert.match(html, /SKU BR-02" aria-pressed="false"/)
+})
+
 test('rendered catalog has native named search, reset, page boundary and announced count', async () => {
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

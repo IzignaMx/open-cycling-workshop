@@ -71,6 +71,8 @@ def _seed_products(session: Session, case_index: int, retry: int) -> None:
             if index == 2
             else LONG_PRODUCT_NAME
             if index == 3
+            else "P004 Refacción sintética"
+            if index in (4, 5) and INVENTORY_CASES[case_index].startswith("visual-")
             else f"P{index:03d} Refacción sintética"
         )
         session.add(

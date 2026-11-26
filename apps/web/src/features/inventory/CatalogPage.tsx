@@ -69,7 +69,7 @@ export function CatalogPageView({
               </div>
               <button
                 type="button"
-                aria-label={`Consultar ${product.name}`}
+                aria-label={`Consultar producto ${product.name}, SKU ${product.sku}`}
                 aria-pressed={selectedProductId === product.product_id}
                 onClick={() => onSelect(product.product_id)}
               >
