@@ -1,5 +1,30 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · REST create ID-conflict correction
+
+- [x] Reproduce supplied customer-ID reuse returning HTTP201 then HTTP503.
+- [x] Implement and locally verify stable HTTP409 conflicts across existing
+      customer, bicycle and service-order REST creates, preserving original
+      rows/effects, authorization, references and sync idempotency. Broad selection:
+      1,763 passed/79 environment skips; native PostgreSQL 10 passed separately;
+      final focused/repository 261 passed. Real HTTP smoke, API-client test/types,
+      static and generated-contract checks pass; test-container absence confirmed.
+- [ ] Qualify the exact successor through hosted CI. The overlapping local results
+      and their limits are recorded in the [current checkpoint](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md).
+- This work does not close physical, inventory, G1–G6, recovery or deployment gates.
+
+## 2026-11-26 · PR123 candidate acceptance and merge
+
+- [x] Qualify candidate `cb5ca69` through CI45800567229 and five companion
+      workflows; direct/aggregate browsers each 146 passed without reported
+      retries/flakes. Integrate as `618c445`, preserve candidate/main tree equality
+      and 227 passing postmerge repository checks.
+- [ ] Inspect separate main CI45810295315 when complete. Candidate success is
+      not its result; the [merge receipt](docs/10-spec-development/2026-11-26-source-completion-login-document.md#pr123-candidate-acceptance-and-merge-receipt--2026-11-26)
+      supersedes the old candidate-hosted-pending field only.
+- Internal CDP cause remains unproven. Historical browser failures, V0.1 physical,
+  inventory, recovery, rollout and deployment gates remain unchanged.
+
 ## 2026-11-26 · Destination document preservation candidate
 
 - [x] Reproduce the native baseline response-body failure with retries zero and

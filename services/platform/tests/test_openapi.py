@@ -39,3 +39,18 @@ def test_readiness_openapi_declares_ready_and_unavailable_contracts() -> None:
     assert responses["503"]["content"]["application/json"]["schema"]["$ref"].endswith(
         "/HealthUnavailableResponse"
     )
+
+
+def test_workshop_creates_document_identifier_conflict() -> None:
+    settings = Settings(
+        environment="test",
+        database_url="sqlite+pysqlite:///:memory:",
+        log_level="WARNING",
+        auth_secret="test-secret-that-is-long-enough-for-tests",
+    )
+    paths = create_app(settings=settings).openapi()["paths"]
+    for resource in ("customers", "bicycles", "service-orders"):
+        responses = paths[f"/api/v1/{resource}"]["post"]["responses"]
+        assert "201" in responses
+        assert "409" in responses
+        assert "identifier" in responses["409"]["description"].lower()

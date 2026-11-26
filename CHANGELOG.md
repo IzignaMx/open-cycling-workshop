@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-26 · Stable conflicts for REST entity creation
+
+- Return stable HTTP409 conflicts for already allocated customer, bicycle and
+  service-order IDs; successful creates retain their existing transaction/feed
+  behavior. Sync idempotency, authorization, original rows and effects are preserved.
+- Target only the ID constraint, so unrelated database failures retain HTTP503
+  and transaction rollback. Add PostgreSQL concurrency/rollback evidence and
+  explicit OpenAPI409 descriptions. Local verification passes; exact hosted
+  qualification remains pending in the [checkpoint](docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md).
+
+## 2026-11-26 · PR123 candidate acceptance and merge
+
+- Record candidate CI45800567229 and companion successes for `cb5ca69`, then
+  merge `618c445` with the same tree and 227 postmerge repository checks.
+- Preserve earlier failures and internal-CDP uncertainty; fresh-main
+  CI45810295315 remains separately pending in the
+  [merge receipt](docs/10-spec-development/2026-11-26-source-completion-login-document.md#pr123-candidate-acceptance-and-merge-receipt--2026-11-26).
+
 ## 2026-11-26 · Preserve the inspected destination login document
 
 - Remove a duplicate test-helper navigation after checking the destination's

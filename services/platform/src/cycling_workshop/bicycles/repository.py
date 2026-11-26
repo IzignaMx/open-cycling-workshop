@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, Table, select
 from sqlalchemy.orm import Session
 
 from cycling_workshop.bicycles.domain import Bicycle
 from cycling_workshop.bicycles.models import BicycleRecord
+from cycling_workshop.db.insert_conflict import insert_unless_id_conflicts
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -19,6 +21,27 @@ class SqlAlchemyBicycleRepository:
 
     def add(self, bicycle: Bicycle) -> None:
         self._session.add(self._to_record(bicycle))
+
+    def try_add(self, bicycle: Bicycle) -> bool:
+        """Insert a REST create without replacing an existing identifier."""
+        return insert_unless_id_conflicts(
+            self._session,
+            cast(Table, BicycleRecord.__table__),
+            {
+                "id": bicycle.bicycle_id,
+                "organization_id": bicycle.organization_id,
+                "location_id": bicycle.location_id,
+                "customer_id": bicycle.customer_id,
+                "brand": bicycle.brand,
+                "model": bicycle.model,
+                "bicycle_type": bicycle.bicycle_type,
+                "wheel_size": bicycle.wheel_size,
+                "notes": bicycle.notes,
+                "created_at": bicycle.created_at,
+                "updated_at": bicycle.updated_at,
+                "version": bicycle.version,
+            },
+        )
 
     def save(self, bicycle: Bicycle) -> None:
         record = self._session.get(BicycleRecord, bicycle.bicycle_id)

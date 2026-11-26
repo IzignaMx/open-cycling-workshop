@@ -52,7 +52,12 @@ def _response(order: ServiceOrder) -> ServiceOrderResponse:
     )
 
 
-@router.post("", response_model=ServiceOrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ServiceOrderResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={409: {"description": "Order identifier already exists; no record is changed."}},
+)
 def create_service_order(
     payload: ServiceOrderCreateRequest,
     principal: Annotated[Principal, Depends(require_capability("orders.write"))],
@@ -101,7 +106,8 @@ def create_service_order(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Invalid order request") from exc
     repository = SqlAlchemyServiceOrderRepository(session)
-    repository.add(order)
+    if not repository.try_add(order):
+        raise ApiError(409, "order_conflict", "order identifier already exists")
     append_change(
         session,
         organization_id=order.organization_id,

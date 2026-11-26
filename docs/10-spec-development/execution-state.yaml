@@ -1,6 +1,41 @@
 schema: 1
 
-current_checkpoint: source_completion_login_document_20261126
+current_checkpoint: rest_create_id_conflicts_20261126
+rest_create_id_conflicts_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
+  base_main: 618c445f0bbd51942ae8bd6293f25788c2ce936e
+  scope: existing_customer_bicycle_service_order_REST_create_ID_conflict_classification
+  reproduced: customer_same_ID_first201_then503_database_command_failed
+  behavior: existing_ID409_stable_domain_conflict_with_no_duplicate_effect
+  implementation: shared_targeted_insert_ID_conflict_only_PostgreSQL_and_SQLite
+  authorization_and_sync_idempotency: unchanged
+  schema: unchanged
+  local_verification: local_verified_hosted_pending
+  broad_selection: 1763_passed_79_environment_skips_one_existing_warning_88_93s
+  broad_collection_boundary: before_late_customer_nonID_unique_control_separately_passed
+  final_focused_and_repository: 261_passed_12customer_7bicycle_12order_3OpenAPI_227repository
+  real_HTTP_smoke: synthetic_health_readiness_login_push_pull_pass
+  API_client: one_core_test_and_typecheck_pass
+  full_frontend_browser_release: not_claimed_for_server_only_correction
+  customer_SQLite: RED4_fail7_control_pass_then11_pass_final12_with_real_nonID_unique_control
+  bicycle_SQLite: RED4_fail1_control_pass_then_final7_pass_broader82_pass
+  order_SQLite: RED6_fail2_control_pass_then_final12_pass_broader94_pass
+  PostgreSQL: RED7_fail3_control_pass_then10_pass_zero_skips_2_32s
+  PostgreSQL_scope: six_three_entity_scope_collisions_one_concurrent_customer_three_real_outbox_failures
+  PostgreSQL_receipt: artifacts/workshop-create-conflict-20261126/postgres-local-receipt.json
+  PostgreSQL_cleanup: container_absence_confirmed
+  PostgreSQL_hash_boundary: bicycle_router_before_description_only_alignment_runtime_code_unchanged
+  OpenAPI_guard: RED1_then3_pass
+  generated_contracts: three409_descriptions_only_TypeScript_byte_identical_both_checks_pass
+  independent_source_review: no_blocking_findings_three_routes
+  static: strict_mypy127_source_files_Ruff363_lint_format_pass
+  hosted_candidate: pending
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_source_completion_login_checkpoint: source_completion_login_document_20261126
 source_completion_login_document_20261126:
   status: partial
   evidence: docs/10-spec-development/2026-11-26-source-completion-login-document.md
@@ -24,7 +59,33 @@ source_completion_login_document_20261126:
   baseline_receipt: artifacts/source-completion-20261126/baseline-local-receipt.json
   candidate_receipt: artifacts/source-completion-20261126/candidate-local-receipt.json
   exact_candidate_hosted: pending
+  later_source_receipt: pr123_candidate_and_merge_20261126
   production_changes: none
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+pr123_candidate_and_merge_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-source-completion-login-document.md
+  candidate_head: cb5ca69c3f38315733c92d06f311209170aa4237
+  merged_main: 618c445f0bbd51942ae8bd6293f25788c2ce936e
+  tree_equality: reviewed_candidate_and_main
+  candidate_CI: 45800567229
+  candidate_workflows: all_six_success_attempt1
+  candidate_log_results: Python6771_pass58_intentional_skips_frontend1805_API1
+  candidate_browser_log_results: direct146_and_aggregate146_pass_no_flaky_retry_CDP_error_markers
+  candidate_zero_retry_groups: [20, 9, 5, 10]
+  independent_source_job_log_review: no_blocking_findings
+  direct_artifact_reviewed: 15109176032
+  direct_artifact_sha256: 17be6b8e34c17ae283b82f83c54ab9bd8c7c06040c8153ab1e6e003ad087e77f
+  direct_receipt: navigation0_independent_token_context_match_source_journal_preserved_two_orders
+  aggregate_artifact: 15109781847_log_review_only
+  postmerge_repository_contracts: 227_passed_verifier_OK
+  main_CI: 45810295315
+  main_CI_status: pending_separate_exact_source_outcome
+  supersedes: PR123_authored_candidate_hosted_pending_only
+  internal_CDP_cause: unproven_historical_failures_preserved
   release: V0.1_partial
   physical_T1_T8_R01_T035_and_G1_G6: open
   deployment: not_performed
@@ -3528,7 +3589,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
+active_plan: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
+historical_source_completion_login_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
 historical_project_inventory_plan: docs/10-spec-development/2026-11-25-project-inventory-audit.md
 historical_capture_format_plan: docs/10-spec-development/2026-11-12-capture-format-compatibility.md
 historical_order_intake_readback_plan: docs/10-spec-development/2026-11-12-order-intake-readback.md
@@ -3542,7 +3604,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: local_same_document_correction_verified_exact_hosted_pending
+active_plan_status: REST_create_conflict_locally_verified_hosted_candidate_pending
+historical_source_completion_login_plan_status: local_same_document_correction_verified_exact_hosted_pending
 historical_PR122_postmerge_plan_status: PR122_integrated_source_checks_pass_known_browser_flake_open
 historical_project_audit_plan_status: local_inventory_and_documentation_verified_hosted_successor_pending
 historical_capture_format_plan_status: capture_format_compatibility_qualification_in_progress
@@ -3555,7 +3618,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: source_completion_login_document_20261126
+last_checkpoint: rest_create_id_conflicts_20261126
+historical_source_completion_login_last_checkpoint: source_completion_login_document_20261126
 historical_project_inventory_last_checkpoint: project_inventory_audit_20261125
 historical_capture_format_last_checkpoint: capture_format_compatibility_20261112
 historical_order_intake_readback_last_checkpoint: order_intake_readback_20261112
@@ -3832,7 +3896,9 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify exact same_document login correction in hosted CI after local_native and source_review_passes
+  - qualify exact_customer_bicycle_service_order_REST_ID_conflict_candidate_with_hosted_CI_and_review
+  - inspect separate PR123_main CI45810295315 and preserve its own exact_source outcome
+  - retain PR123_same_document candidate acceptance separately from current_REST_correction qualification
   - retain unproven internal_CDP cause and original failed traces without weakening token_readback or retry policy
   - preserve PR122_candidate flaky evidence separately from main810a462 clean browser logs
   - qualify the exact new candidate with local checks independent review and normal hosted CI

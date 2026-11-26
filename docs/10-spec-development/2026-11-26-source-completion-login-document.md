@@ -105,3 +105,38 @@ local data, enable the existing-bicycle selector or deploy an installation.
 G1–G6, physical T1–T8/R01-T035, actual inventory reconciliation, installation
 restore and quote capacity/activation remain open. The original flaky failure's
 internal cause remains unproven despite the bounded passing candidate trials.
+
+## PR123 candidate acceptance and merge receipt · 2026-11-26
+
+[PR123](https://github.com/IzignaMx/open-cycling-workshop/pull/123) was merged as
+`618c445f0bbd51942ae8bd6293f25788c2ce936e`. Its reviewed candidate
+`cb5ca69c3f38315733c92d06f311209170aa4237` and merged main have the same tree.
+[Candidate CI45800567229](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45800567229),
+attempt 1, reported both jobs/all steps successful: **6,771 Python passes / 58
+intentional skips**, **1,805 frontend passes**, **1 API-client pass**, and **146
+direct plus 146 aggregate browser passes**, without reported flaky/retry/CDP
+error markers. The separate zero-retry groups passed **20 / 9 / 5 / 10** cases.
+DCO45800567224, Security45800567128, Local runtime45800567076, public
+preview45800567134 and microfixture45800567327 also concluded successfully.
+Independent source/job/log review found no blocking findings.
+
+The direct browser artifact `15109176032` was independently extracted and
+reviewed; archive SHA-256:
+`17be6b8e34c17ae283b82f83c54ab9bd8c7c06040c8153ab1e6e003ad087e77f`.
+Its destination-login observation records zero main-frame navigations, completed
+empty-session/response/body/login checks and `responseFromServiceWorker: false`.
+The final journey receipt confirms an independently issued destination token,
+matching server/kernel context, initially empty destination journal/captures,
+preserved source journal and exactly two server order creations. This is bounded
+synthetic artifact evidence. Aggregate artifact `15109781847` is represented by
+its reviewed log only; no independent archive inspection is claimed for it.
+
+This receipt supersedes the earlier authored hosted-pending statements for the
+exact PR123 candidate only. It supports the bounded same-document test correction;
+it does not establish Chromium's internal cause, erase previous failures or prove
+all future browser runs. Fresh-main repository checks passed **227 tests** and
+the repository verifier. The separate
+[postmerge CI45810295315](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45810295315)
+is pending at this receipt; no outcome is inherited from candidate CI.
+Product, inventory, physical-device, recovery, rollout and operational deployment
+gates remain unchanged.
