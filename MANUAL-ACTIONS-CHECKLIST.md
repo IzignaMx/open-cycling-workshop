@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · Destination login response observation
+
+- [x] Preserve PR126/PR127 failed response-body observations and reproduce the
+      predecessor natively: two passes, one failure, zero retries/skips; retain
+      exact source/build provenance and safe diagnostic fields.
+- [x] Observe authoring/helper RED and retain intermediate passing controls;
+      these do not qualify the final observer or native journey.
+- [x] Complete the bounded page observer and final focused checks: 22 observer,
+      seven response-capture controls and six authoring guards. Cap actual clone
+      inspection at 32 KiB and preserve independent response/token/server proof.
+      Broader verification and native acceptance remain separate.
+- [x] Complete independent source review and static checks; pass 1,850 frontend
+      and 228 repository cases, plus eight native trials with zero retries/flakes/
+      skips. Retain full authentication/server-work receipts and confirmed owned
+      database absence. The original helper is unchanged; seven response controls
+      pass and no separate adjacent native wrapper run is claimed.
+- [ ] Qualify the exact successor through hosted CI. Predecessor PR127
+      CI45912843815 remains pending at this authored checkpoint.
+- The [current checkpoint](docs/10-spec-development/2026-11-26-source-login-observation.md)
+  does not establish the CDP cause or fix the separate branding/administration
+  incident. Product, physical, recovery and deployment gates remain open.
+
 ## 2026-11-26 · PR126 integration and PR127 retarget reconciliation
 
 - [x] Verify PR125 exact-main CI45902761276 and all five workflow successes;

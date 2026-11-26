@@ -1,6 +1,47 @@
 schema: 1
 
-current_checkpoint: inventory_workshop_scope_20261126
+current_checkpoint: source_login_observation_20261126
+source_login_observation_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-source-login-observation.md
+  base_candidate: 996f0bb5d55ef5788f557691e3b46169e5dd3778
+  predecessor_PR127: retargeted_CI45912843815_pending_unmerged_at_authoring
+  scope: test_only_exact_destination_origin_actual_login_response_observation
+  intended_behavior: observer_installed_before_navigation_bounded_clone_no_delay_of_original
+  observation_limit_bytes: 32768
+  independent_token_and_server_assertions: retained_no_storage_fallback
+  retries_timeouts_product_auth_and_runtime: unchanged
+  authoring_RED: three_expected_failures_three_passing_controls
+  helper_intermediate: missing_helper_RED_then_twenty_initial_pass
+  origin_gate_RED_GREEN: one_failed_twenty_one_controls_then_twenty_two_passed
+  focused_GREEN: observer22_response_capture_controls7_authoring_guards6
+  candidate_source_receipt: artifacts/source-login-observation-20261126/candidate-source.json
+  production_dist: unchanged_from_PR127_predecessor
+  final_native_trials: eight_passed_67_913253s_worker1_retry0_flaky0_skipped0
+  final_safe_observations: nav0_empty_session_response_seen_not_service_worker_body_valid_issued_matches_stored_login_complete
+  final_downstream_receipts: independent_destination_exact_restore_server_context_source_journal_preserved_two_orders_initial_destination_empty
+  native_receipt: artifacts/source-login-observation-20261126/native-local-receipt.json
+  native_receipt_sha256: 3f94d7834b5f61c29840ebe479acd2ad32f61a2584167266017273ac203c0e6b
+  source_and_dist_hashes: unchanged_through_final_execution
+  frontend_core: 1850_passed_zero_failures_or_skips_39_2548s
+  repository_contracts: 228_passed_4_42s_verifier_OK
+  static: E2E_orders_TSC_touched_ESLint_Ruff_Prettier_diff_pass
+  adjacent_wrapper: original_helper_unchanged_seven_response_controls_pass_no_separate_native_run
+  native_baseline: two_passed_one_failed_15_659679s_worker1_retry0_skipped0
+  native_baseline_source: pinned_996f0bb_PWA_byte_identical_to_PR127_local_build_receipt
+  native_baseline_report: apps/web/test-results/source-login-observation-baseline-20261126-report.json
+  native_failure: response_JSON_CDP_Network_getResponseBody_spec_line179
+  failed_safe_observation: nav0_empty_session_checked_response_seen_not_service_worker_body_unvalidated_login_incomplete
+  CDP_cause: unproven
+  local_verification: local_verified_hosted_pending
+  independent_review: final_no_blocking_findings_exact_root_and_isolated_bytes
+  hosted_candidate: pending
+  test_database_cleanup: owned_container_removed_fresh_label_query_absent
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_inventory_workshop_scope_checkpoint: inventory_workshop_scope_20261126
 inventory_workshop_scope_20261126:
   status: partial
   evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
@@ -3907,7 +3948,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+active_plan: docs/10-spec-development/2026-11-26-source-login-observation.md
+historical_inventory_workshop_scope_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
 historical_inventory_page_retry_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
 historical_inventory_accessible_actions_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
 historical_REST_create_conflict_plan: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
@@ -3925,7 +3967,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: inventory_workshop_scope_stacked_hosted_reviewed_retargeted_candidate_pending
+active_plan_status: source_login_observation_locally_verified_hosted_pending
+historical_inventory_workshop_scope_plan_status: inventory_workshop_scope_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_inventory_page_retry_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
 historical_inventory_accessible_actions_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
 historical_REST_create_conflict_plan_status: REST_candidate_CI_pass_local_scanner_correction_pass_exact_commit_and_hosted_pending
@@ -3942,7 +3985,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: inventory_workshop_scope_20261126
+last_checkpoint: source_login_observation_20261126
+historical_inventory_workshop_scope_last_checkpoint: inventory_workshop_scope_20261126
 historical_inventory_page_retry_last_checkpoint: inventory_page_retry_20261126
 historical_inventory_accessible_actions_last_checkpoint: inventory_accessible_actions_20261126
 historical_REST_create_conflict_last_checkpoint: rest_create_id_conflicts_20261126
@@ -4223,6 +4267,9 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
+  - qualify_exact_source_login_observation_successor_hosted_without_inheriting_predecessor_acceptance
+  - preserve_native_baseline_failure_and_eight_passing_trials_without_claiming_CDP_root_cause
+  - inspect_predecessor_PR127_CI45912843815_without_inheriting_stacked_acceptance
   - qualify_exact_retargeted_PR127_documentation_successor_before_merge
   - inspect_separate_PR126_main_CI45912372086_without_inheriting_candidate_acceptance
   - preserve_PR126_and_stacked_PR127_source_completion_CDP_failures_and_scoped_inventory_acceptance

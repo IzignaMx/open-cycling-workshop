@@ -45,7 +45,10 @@ def test_destination_session_is_observed_not_copied_and_realms_are_distinct() ->
     for marker in (
         "destination.waitForResponse",
         "expect(loginResponse.status()).toBe(200)",
-        "expect(destinationToken === issued.access_token).toBe(true)",
+        "expect(loginObservation.responseFromServiceWorker).toBe(false)",
+        "expect(loginResponse.request().method()).toBe('POST')",
+        "expect(issued.issuedMatchesStored).toBe(true)",
+        "expect(issued.bodyValidated).toBe(true)",
         "expect(destinationToken !== token).toBe(true)",
         "await assertServerContext(source, token)",
         "await assertServerContext(destination, destinationToken)",
@@ -64,6 +67,15 @@ def test_destination_login_preserves_the_document_checked_for_empty_session() ->
         "const destinationToken =", 1
     )[0]
     assert login.count("destination.goto(DESTINATION)") == 1
+    assert login.index("await installLoginObserver(destination, DESTINATION)") < login.index(
+        "await destination.goto(DESTINATION)"
+    )
+    assert login.index("loginObservation.emptySessionChecked = true") < login.index(
+        "issued = await observeLogin(destination,"
+    )
+    assert login.index("issued = await observeLogin(destination,") < login.index(
+        "const destinationLogin = destination.waitForResponse("
+    )
     assert "loginOnCurrentPage(destination, identity)" in login
     assert "() => login(destination," not in login
     assert "expect(loginObservation.mainFrameNavigations).toBe(0)" in login
@@ -100,3 +112,19 @@ def test_reception_measurement_keeps_failed_attempts_and_physical_gate_open() ->
     runner = (ROOT / "apps/web/tools/run-core-tests.mjs").read_text()
     assert "'tsconfig.reception-measurement.json'" in runner
     assert "'tests/pwa/reception-measurement.test.mjs'" in runner
+
+
+def test_login_clone_observation_remains_test_only_and_runs_in_core_checks() -> None:
+    text = SPEC.read_text()
+    assert "from './helpers/login-observation.mjs'" in text
+    assert "loginResponse.json()" not in text
+    assert "loginResponse.body()" not in text
+    assert "loginResponse.text()" not in text
+    assert "loginObservation.bodyValidated = issued.bodyValidated" in text
+    assert "loginObservation.issuedMatchesStored = issued.issuedMatchesStored" in text
+    assert "issued.access_token" not in text
+    runner = (ROOT / "apps/web/tools/run-core-tests.mjs").read_text()
+    assert "tests/pwa/login-observation.test.mjs" in runner
+    for source in (ROOT / "apps/web/src").rglob("*"):
+        if source.is_file() and source.suffix in {".ts", ".tsx", ".mjs"}:
+            assert "login-observation" not in source.read_text(), source

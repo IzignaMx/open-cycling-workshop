@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-26 · Observe the real destination login response
+
+- Preserve the repeated source-completion CDP body-read failures, including a
+  fresh native predecessor run with two passes and one failure at retry zero.
+- Add a test-only, exact-origin observer of the real login response clone;
+  retain independent token equality, server context and source/destination work.
+  Final helper/static checks, 1,850 frontend, 228 repository and eight native
+  trials pass; exact hosted qualification remains pending in the
+  [checkpoint](docs/10-spec-development/2026-11-26-source-login-observation.md).
+- Keep the CDP cause unproven, retries/timeouts unchanged and PR127's predecessor
+  CI separate. No production authentication or inventory behavior changes.
+
 ## 2026-11-26 · Inventory candidate evidence and retarget reconciliation
 
 - Record exact PR125 main success separately from its earlier administration
