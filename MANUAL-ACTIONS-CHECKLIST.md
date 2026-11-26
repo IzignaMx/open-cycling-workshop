@@ -1,5 +1,36 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · Explicit inventory page retry
+
+- [x] Inspect the missing direct recovery action for failed catalog/history pages;
+      preserve the ADR's live pagination, Newest/refresh reset and no-auto-retry rules.
+- [x] Reproduce controller/panel and frozen native baseline failures, then pass
+      25 focused cases, 1,817 frontend tests, 227 repository tests and 17 native
+      cases with zero retries/flakes/skips. Native proof includes same-position
+      manual recovery, independent stock receipt, keyboard/focus and narrow targets.
+      Preserve source/build-bound receipts and owned database cleanup absence.
+- [ ] Qualify the exact successor through hosted checks; current authority,
+      invalidation and no-auto-retry boundaries remain in the
+      [current checkpoint](docs/10-spec-development/2026-11-26-inventory-page-retry.md).
+- Keep the known administration identity timeout, all FR inventory gaps, physical,
+  recovery and deployment gates separate from this read-recovery correction.
+
+## 2026-11-26 · PR125 scoped acceptance and merge
+
+- [x] Verify all six candidate workflows and independently review direct and
+      aggregate inventory archives: 17 cases each, every case one attempt, all
+      four accessible-name/theme journeys and retained geometry checks.
+- [x] Preserve aggregate browser 145 passed plus one flaky administration identity
+      timeout, versus 146 direct passes. Retry 1 does not resolve its internal
+      cause; no administration or retry policy changes are included.
+- [x] Integrate as main `c65d54d`; 227 postmerge repository tests pass. The
+      [receipt](docs/10-spec-development/2026-11-26-inventory-accessible-actions.md#pr125-candidate-acceptance-and-merge--2026-11-26)
+      supersedes earlier candidate-pending fields only within its scoped evidence.
+- [ ] Inspect separate main CI45902761276 when complete. Physical, complete
+      inventory, recovery and deployment gates remain open.
+- [x] Separately verify prior PR124 main CI45888038861 and five successful
+      workflows; no failure or later source is reclassified by that receipt.
+
 ## 2026-11-26 · Inventory catalog accessible actions
 
 - [x] Inspect missing visible-label text in the product action's accessible name

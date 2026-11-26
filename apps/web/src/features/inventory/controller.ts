@@ -235,6 +235,17 @@ export class InventoryController {
     if (!Number.isFinite(now)) throw new InventoryHttpError('stale_request')
     return { phase: 'ready', value, error: null, receivedAt: now }
   }
+  private canRetry(kind: 'catalog' | 'history') {
+    const read = this.#snapshot[kind],
+      access = this.#snapshot.access
+    return (
+      read.phase === 'error' &&
+      read.error !== 'invalid_session' &&
+      read.error !== 'capability_denied' &&
+      access.phase === 'ready' &&
+      access.context?.capabilities.includes('inventory.read') === true
+    )
+  }
   async loadCatalog(offset = 0) {
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 2147483647 || this.#disposed) return
     this.#selection++
@@ -256,6 +267,10 @@ export class InventoryController {
     } catch (error) {
       await this.failed('catalog', source, error)
     }
+  }
+  retryCatalog = async () => {
+    if (!this.canRetry('catalog')) return
+    await this.loadCatalog(this.#snapshot.offset)
   }
   async selectProduct(productId: string) {
     if (this.#disposed) return
@@ -295,6 +310,10 @@ export class InventoryController {
     }
   }
   newest = () => this.history()
+  retryHistory = async () => {
+    if (!this.canRetry('history')) return
+    await this.history(this.#snapshot.historyBefore ?? undefined)
+  }
   older = async () => {
     const next = this.#snapshot.history.value?.next_cursor
     if (next) await this.history(next)

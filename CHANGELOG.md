@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-26 · Explicit inventory page retry
+
+- Add explicit recovery of a failed catalog offset or movement-history boundary
+  using current authority and existing reads. Preserve refresh/Newest resets,
+  online-only behavior, independent stock freshness and no automatic retry.
+- Reproduce missing controls and authority-guard failures, then pass focused/core
+  and 17 native cases without retries. Exact successor hosted checks remain
+  pending in the [checkpoint](docs/10-spec-development/2026-11-26-inventory-page-retry.md).
+
+## 2026-11-26 · Accessible inventory actions integrated
+
+- Record PR125 candidate acceptance and merge `c65d54d`: direct and aggregate
+  inventory selections each pass 17 cases once, with independently reviewed
+  keyboard, SKU and geometry evidence.
+- Preserve the separate aggregate administration identity timeout and retry;
+  no global retry-free or root-cause claim. Fresh-main CI remains pending in the
+  [receipt](docs/10-spec-development/2026-11-26-inventory-accessible-actions.md#pr125-candidate-acceptance-and-merge--2026-11-26).
+
 ## 2026-11-26 · Inventory catalog accessible action names
 
 - Include the visible action label, product name and SKU in catalog button names,

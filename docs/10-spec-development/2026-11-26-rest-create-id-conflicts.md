@@ -206,3 +206,16 @@ Fresh merged-main repository checks passed **227 tests**. The separate
 is pending at this receipt; its outcome is not inherited from candidate CI.
 The REST behavior is integrated, while physical, actual stock, recovery,
 release and deployment gates remain open.
+
+## Exact PR124 main outcome observed · 2026-11-26
+
+The previously pending [main CI45888038861](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45888038861)
+completed successfully on `382fa000ebd1b72fac3a1dfc6ea60ac0df712021`, attempt 1.
+Both jobs/all steps passed, and all five main workflows concluded successfully.
+Independent verify-log inspection reports **6,813 Python passes / 58 exact
+intentional skips**, both shard cleanups, **1,805 frontend passes**, **1 API-client
+pass**, and **146 direct plus 146 aggregate browser passes**, without reported
+flake/retry/CDP-error markers. The zero-retry groups passed **20 / 9 / 5 / 10**.
+This source-bound job/log receipt supersedes PR124's historical main-pending
+statement; it does not revalidate every archive or qualify later inventory UI
+changes. The earlier failed Security attempt remains preserved.

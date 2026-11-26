@@ -57,3 +57,19 @@ records component/native RED then seven component and 17 native passes with zero
 retries, including exact product-ID keyboard selection in all four themes.
 This is synthetic browser evidence; manual voice-control/screen-reader and
 physical-device qualification remain separate.
+
+A failed catalog or history page exposes an explicit **Volver a consultar esta
+página** or **Volver a consultar estos movimientos** action. It retries the
+current failed offset/boundary through the same guarded read method; it does not
+reverify the account, retry automatically or preserve stale data. Ready/loading/
+cleared states and authority refusals do not dispatch retry work. Current access,
+capability, scope, request and product fences still apply, including invalidation
+while a retry is pending. History retry keeps the independent stock receipt.
+
+**Actualizar catálogo** and **Movimientos más recientes** still reset their
+traversal. Retry retains query position, not a snapshot or guaranteed identical
+rows. The [November 26 retry evidence](../../../../../docs/10-spec-development/2026-11-26-inventory-page-retry.md)
+records native baseline failure and 17 candidate passes with zero retries,
+including Enter/Space recovery, exact request positions, heading focus and narrow
+error-state controls. Exact successor hosted and physical acceptance remain
+separate; the connected-only inventory contract is unchanged.
