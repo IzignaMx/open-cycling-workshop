@@ -45,6 +45,7 @@ const CASES = [
   'visual-plano',
   'visual-ritmo',
   'visual-noche',
+  'read-fenced-recovery',
 ] as const
 type Case = (typeof CASES)[number]
 const OWNER = 'e2e-branding-owner'
@@ -1137,3 +1138,160 @@ for (const theme of THEMES) {
     })
   })
 }
+
+// Test-only scheduling of the actual server logo digest. Do not substitute a
+// profile, mutate IndexedDB, or change the native digest result. Transport and
+// cache each validate the exact canonical PNG; hold only the selected calls.
+interface BrandingDigestGate {
+  read(): { matches: number; held: { call: number; enteredAt: number } | null }
+  release(call: number): void
+  dispose(): void
+}
+declare global {
+  interface Window {
+    __ocwpBrandingDigestGate?: BrandingDigestGate
+  }
+}
+
+test('a current refused branding cache write exposes one explicit recovery action without changing workshop data', async ({
+  page,
+  request,
+}, info) => {
+  const f = fixture('read-fenced-recovery', info)
+  const owner = await token(request, f)
+  const profile = await put(
+    request,
+    owner,
+    f.locationA,
+    input('Marca confirmada de prueba', 'jade', 0, await syntheticLogo(page)),
+  )
+  expect(profile.logo_state).toBe('available')
+  const png = profile.logo!.png_base64
+  if (typeof png !== 'string') throw new Error('Synthetic canonical logo unavailable')
+  await page.addInitScript((encoded) => {
+    if (window.top !== window || window.location.origin !== 'http://127.0.0.1:5173') return
+    const expected = Uint8Array.from(atob(encoded), (byte) => byte.charCodeAt(0))
+    const original = crypto.subtle.digest
+    let matches = 0
+    let held: { call: number; enteredAt: number; release: () => void } | null = null
+    function wrapped(this: SubtleCrypto, algorithm: AlgorithmIdentifier, data: BufferSource) {
+      const result = original.call(this, algorithm, data)
+      const bytes = ArrayBuffer.isView(data)
+        ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+        : new Uint8Array(data)
+      if (
+        algorithm !== 'SHA-256' ||
+        bytes.length !== expected.length ||
+        !bytes.every((byte, index) => byte === expected[index])
+      )
+        return result
+      const call = ++matches
+      if (![2, 4, 5].includes(call)) return result
+      let release = () => {}
+      const barrier = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      held = { call, enteredAt: Date.now(), release }
+      return result.then(async (digest) => {
+        await barrier
+        return digest
+      })
+    }
+    crypto.subtle.digest = wrapped
+    window.__ocwpBrandingDigestGate = {
+      read: () => ({ matches, held: held ? { call: held.call, enteredAt: held.enteredAt } : null }),
+      release(call) {
+        if (held?.call !== call) throw new Error('Unexpected synthetic digest gate')
+        const release = held.release
+        held = null
+        release()
+      },
+      dispose() {
+        held?.release()
+        held = null
+        if (crypto.subtle.digest === wrapped) crypto.subtle.digest = original
+        delete window.__ocwpBrandingDigestGate
+      },
+    }
+  }, png)
+  const inspect = () => page.evaluate(() => window.__ocwpBrandingDigestGate!.read())
+  const release = (call: number) =>
+    page.evaluate((index) => window.__ocwpBrandingDigestGate!.release(index), call)
+  let reads = 0
+  const fencedDigestCalls: number[] = []
+  let recovered = false
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && new URL(request.url()).pathname === endpoint(f.locationA))
+      reads++
+  })
+  try {
+    await login(page, f, SCOPED)
+    await expect.poll(async () => (await inspect()).held?.call).toBe(2)
+    await expect(page.getByLabel('Estado de sincronización')).toContainText('Sincronizado')
+    const before = await kernelSnapshot(page)
+    for (const call of [2, 4]) {
+      await expect.poll(async () => (await inspect()).held?.call).toBe(call)
+      const enteredAt = (await inspect()).held!.enteredAt
+      // Run a genuine local page read, which advances trusted observation time.
+      // The digest gate leaves cache admission to its unchanged real fence.
+      await page.getByRole('button', { name: 'Primeros clientes', exact: true }).click()
+      await expect
+        .poll(async () => (await kernelSnapshot(page)).control.observedAt)
+        .toBeGreaterThan(enteredAt)
+      fencedDigestCalls.push(call)
+      await release(call)
+    }
+    const recovery = page.getByRole('button', { name: 'Volver a consultar la marca', exact: true })
+    await expect(recovery).toBeEnabled()
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'No se pudo confirmar la marca compartida para esta vista.' }),
+    ).toBeVisible()
+    await expect(page.locator('.workshop-identity strong')).not.toHaveText(profile.display_name)
+    expect(await rows<BrandingSnapshot>(page, 'brandingSnapshots')).toEqual([])
+    expect(reads).toBe(2)
+    const viewport = page.viewportSize()
+    await page.setViewportSize({ width: 320, height: 900 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
+    ).toBe(true)
+    const bounds = await recovery.boundingBox()
+    expect(bounds?.width ?? 0).toBeGreaterThanOrEqual(44)
+    expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44)
+    const accessibility = await new AxeBuilder({ page })
+      .include('section[aria-label="Recuperar marca compartida"]')
+      .analyze()
+    expect(
+      accessibility.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? '')),
+    ).toEqual([])
+    await recovery.focus()
+    await page.keyboard.press('Enter')
+    await expect.poll(async () => (await inspect()).held?.call).toBe(5)
+    await expect(recovery).toBeDisabled()
+    await release(5)
+    await expectBrand(page, profile)
+    await expect(recovery).toHaveCount(0)
+    await expect(page.locator('#workshop-content')).toBeFocused()
+    expect(reads).toBe(3)
+    const after = await kernelSnapshot(page)
+    expect(after.context).toEqual(before.context)
+    expect(after.partition.partitionId).toBe(before.partition.partitionId)
+    expect(after.journal).toEqual(before.journal)
+    expect(
+      (await rows<BrandingSnapshot>(page, 'brandingSnapshots')).map((row) => row.version),
+    ).toEqual([profile.version])
+    recovered = true
+    if (viewport) await page.setViewportSize(viewport)
+  } finally {
+    await page.evaluate(() => window.__ocwpBrandingDigestGate?.dispose())
+    // Only synthetic scheduling positions, counts and assertion outcomes; no
+    // response body, credentials, location or persistent record contents.
+    await info.attach('branding-manual-recovery-observation', {
+      body: JSON.stringify({ fencedDigestCalls, reads, recovered }),
+      contentType: 'application/json',
+    })
+  }
+})

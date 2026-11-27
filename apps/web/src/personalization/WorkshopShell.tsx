@@ -29,6 +29,8 @@ interface WorkshopShellProps {
   sharedBranding?: BrandingProfile | null
   brandingCached?: boolean
   brandingMessage?: string | null
+  brandingRefreshSuggested?: boolean
+  brandingLoading?: boolean
   onRefreshBranding?: () => void
   locationLabel?: string
 }
@@ -42,6 +44,8 @@ export function WorkshopShell({
   sharedBranding = null,
   brandingCached = false,
   brandingMessage = null,
+  brandingRefreshSuggested = false,
+  brandingLoading = false,
   onRefreshBranding,
   locationLabel = 'OCWP',
 }: WorkshopShellProps) {
@@ -59,6 +63,39 @@ export function WorkshopShell({
   const [logoMessage, setLogoMessage] = useState<string | null>(null)
   const [brokenLogo, setBrokenLogo] = useState<string | null>(null)
   const trigger = useRef<HTMLButtonElement>(null)
+  const content = useRef<HTMLElement>(null)
+  const recoveryTrigger = useRef<HTMLButtonElement>(null)
+  const recoveryOwnsFocus = useRef(false)
+  const showBrandingRecovery = brandingRefreshSuggested && !sharedBranding && !!brandingMessage
+  useEffect(() => {
+    if (!showBrandingRecovery) {
+      if (recoveryOwnsFocus.current && document.activeElement === document.body)
+        content.current?.focus()
+      recoveryOwnsFocus.current = false
+      return
+    }
+    // Disabling the active action may move focus to body. Explicit focus or
+    // pointer movement elsewhere relinquishes recovery ownership instead.
+    const pointerElsewhere = (event: PointerEvent) => {
+      if (!recoveryTrigger.current?.contains(event.target as Node))
+        recoveryOwnsFocus.current = false
+    }
+    const focusElsewhere = (event: FocusEvent) => {
+      if (event.target !== document.body && event.target !== recoveryTrigger.current)
+        recoveryOwnsFocus.current = false
+    }
+    const leaveWindow = () => {
+      recoveryOwnsFocus.current = false
+    }
+    document.addEventListener('pointerdown', pointerElsewhere)
+    document.addEventListener('focusin', focusElsewhere)
+    window.addEventListener('blur', leaveWindow)
+    return () => {
+      document.removeEventListener('pointerdown', pointerElsewhere)
+      document.removeEventListener('focusin', focusElsewhere)
+      window.removeEventListener('blur', leaveWindow)
+    }
+  }, [showBrandingRecovery])
   const { organizationId, userId, locationId } = scope
 
   useEffect(() => {
@@ -476,7 +513,7 @@ export function WorkshopShell({
             {message}
           </p>
         </section>
-        <main id="workshop-content" tabIndex={-1}>
+        <main id="workshop-content" tabIndex={-1} ref={content}>
           <div className="workshop-heading">
             <div>
               <p className="eyebrow">Open Cycling Workshop</p>
@@ -497,6 +534,27 @@ export function WorkshopShell({
               </a>
             ) : null}
           </div>
+          {showBrandingRecovery && (
+            <section className="workshop-notice" aria-label="Recuperar marca compartida">
+              <p role="status">{brandingMessage}</p>
+              <button
+                type="button"
+                className="secondary-button"
+                ref={recoveryTrigger}
+                disabled={brandingLoading}
+                onFocus={() => {
+                  recoveryOwnsFocus.current = true
+                }}
+                onBlur={(event: { relatedTarget: EventTarget | null }) => {
+                  if (event.relatedTarget && event.relatedTarget !== document.body)
+                    recoveryOwnsFocus.current = false
+                }}
+                onClick={onRefreshBranding}
+              >
+                Volver a consultar la marca
+              </button>
+            </section>
+          )}
           {children}
         </main>
       </div>

@@ -9,13 +9,15 @@
     "rootDir": ".",
     "declaration": false,
     "sourceMap": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
   "include": [
     "src/personalization/catalog.ts",
     "src/personalization/preferences.ts",
     "src/personalization/repository.ts",
     "src/personalization/logo.ts",
-    "src/personalization/logo-backing.ts"
+    "src/personalization/logo-backing.ts",
+    "src/personalization/WorkshopShell.tsx"
   ]
 }

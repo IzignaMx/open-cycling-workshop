@@ -14,6 +14,7 @@ export interface BrandingDisplaySnapshot {
   cached: boolean
   loading: boolean
   cacheError: boolean
+  refreshSuggested: boolean
   message: string | null
 }
 interface Options {
@@ -32,11 +33,14 @@ function revisionIdentity(profile: BrandingProfile): string {
     logo: profile.logo ? { ...profile.logo, png_base64: undefined } : null,
   })
 }
+const refreshSuggestion =
+  'No se pudo confirmar la marca compartida para esta vista. Puedes volver a consultarla.'
 const empty = (): BrandingDisplaySnapshot => ({
   profile: null,
   cached: false,
   loading: false,
   cacheError: false,
+  refreshSuggested: false,
   message: null,
 })
 /** Runtime-owned admitted display cache. Never owns or creates an admission. */
@@ -142,7 +146,13 @@ export class BrandingDisplayController {
             this.options.now(),
           )
           if (!current()) return
-          if (cached && this.acceptable(cached)) this.publish({ profile: cached, cached: true })
+          if (cached && this.acceptable(cached))
+            this.publish({
+              profile: cached,
+              cached: true,
+              refreshSuggested: false,
+              ...(this.#snapshot.message === refreshSuggestion ? { message: null } : {}),
+            })
         } catch {
           if (!current()) return
           this.publish({
@@ -171,8 +181,9 @@ export class BrandingDisplayController {
         this.options.refused(source, error.status)
       } else
         this.publish({
-          message:
-            'No se pudo actualizar la configuración compartida. La última copia verificada se conserva durante esta sesión.',
+          message: this.#snapshot.refreshSuggested
+            ? 'No se pudo actualizar la configuración compartida. Puedes volver a consultarla.'
+            : 'No se pudo actualizar la configuración compartida. La última copia verificada se conserva durante esta sesión.',
         })
     } finally {
       if (this.#flight === flight) {
@@ -216,17 +227,34 @@ export class BrandingDisplayController {
     )
       return
     if (!this.acceptable(profile)) return
-    let cacheError = false
+    let cacheError = false,
+      stored = true
     try {
-      const stored = await this.options.repository.write(
+      stored = await this.options.repository.write(
         source.ticket,
         source.context,
         profile,
         this.options.now(),
       )
-      if (!stored) return
     } catch {
       cacheError = true
+    }
+    if (!stored) {
+      // Refusal may be a legitimate freshness/authority fence, not storage failure.
+      // Revalidate the exact admission before suggesting a new explicit read.
+      // Never publish the refused profile or schedule another request here.
+      if (
+        current() &&
+        !this.#snapshot.profile &&
+        (await this.options.validate(source)) &&
+        current() &&
+        !this.#snapshot.profile
+      )
+        this.publish({
+          refreshSuggested: true,
+          ...(this.#snapshot.cacheError ? {} : { message: refreshSuggestion }),
+        })
+      return
     }
     if (!current() || !(await this.options.validate(source)) || !current()) return
     if (!this.acceptable(profile)) return
@@ -234,6 +262,7 @@ export class BrandingDisplayController {
       profile,
       cached: false,
       cacheError,
+      refreshSuggested: false,
       message: cacheError
         ? 'Configuración aplicada. No se pudo guardar la copia sin conexión; el trabajo pendiente no cambió.'
         : profile.logo_state === 'unavailable'

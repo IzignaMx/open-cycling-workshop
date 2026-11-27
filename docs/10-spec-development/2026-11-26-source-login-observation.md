@@ -176,3 +176,40 @@ later candidate requiring its own exact retargeted CI and review before merge.
 The earlier stacked-hosted-pending statement is superseded only for the tested
 source above; the new documentation candidate remains pending. No release,
 physical, installation or deployment gate is promoted.
+
+## PR128 retargeted acceptance and merge · 2026-11-27
+
+The retargeted head `5e99f172d6d6e185248b89e4adb12068d6505421`, based on
+main `971bdd20e14508b5335189b1eb56c4d93ef70cea`, passed
+[CI45918527486](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45918527486)
+and all five companion workflows. Its tested synthetic merge is
+`a86d760aa4c128ce3a856ce38981cfa63915c7c3`; the head, tested merge and final
+merged main `ed8057b2b473911574f97050ce24ac537716118f` share tree
+`18a1d434ac169e5ce8c48b61d5e0eac1d1dc2344`.
+Both CI jobs and every step succeeded. Logs report **6,814 Python passes /
+58 intentional skips**, zero unrun cases and verified cleanup, **1,850 frontend
+passes**, **1 API-client pass**, and repeat groups **20 / 9 / 5 / 10**.
+These Python counts/cleanup are log evidence; the earlier stacked Python archive
+remains separately identified above.
+
+Independent full-ZIP/report review covered direct artifact `15165350518`,
+SHA-256 `bfa79c56734c5d05013be91c642169bc757225efbebe127ac4c475a0e6bea26c`,
+and aggregate artifact `15165367151`, SHA-256
+`7ca8d2b7048175c0e7709ab5c38cc3d3fdb99b7010e113022c359f2444f08f08`.
+Each native report binds the exact tested merge, base and run, and contains
+**146/146 passes**, all at retry zero with no errors, flakes or skips. Each
+includes inventory **17/17**, administration **16/16** and source-completion
+**1/1**. Both safe login observations report zero main-frame navigations,
+empty session checked, response seen, body validated, issued/stored equality
+and login completed; `responseFromServiceWorker` is false. No token values
+are included in this receipt.
+
+PR128 is merged. Its fresh-main [CI45970597364](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45970597364),
+Security `45970597296`, quote microfixture `45970597215`, presentation preview
+`45970597189` and Local runtime `45970597329` were in progress at the separate
+observation; their exact-main acceptance remains pending. The
+[PR127 main receipt](2026-11-26-inventory-workshop-scope.md#exact-pr127-main-outcome-observed--2026-11-27)
+preserves its direct administration flake independently. This acceptance
+supersedes only PR128's retargeted-candidate-pending/unmerged statements. It
+does not establish the historical CDP or identity-timeout cause, qualify PR129,
+or close product, physical, recovery or deployment gates.

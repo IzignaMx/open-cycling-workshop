@@ -1,6 +1,80 @@
 schema: 1
 
-current_checkpoint: source_login_observation_20261126
+current_checkpoint: branding_manual_recovery_20261127
+branding_manual_recovery_20261127:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
+  base_candidate: 5e99f172d6d6e185248b89e4adb12068d6505421
+  local_reproduced_base: 5acc4342e157b0fe7128cb0c0638b4bb06b897b0
+  base_difference: documentation_only_production_and_test_bytes_unchanged
+  predecessor_PR128: retargeted_documentation_successor_CI45918527486_in_progress_at_authoring
+  scope: visible_unconfirmed_branding_notice_and_existing_explicit_manual_refresh
+  behavior: current_admission_no_accepted_profile_refused_write_suggests_manual_recovery
+  authority_cache_kernel_retry_policy: unchanged_no_automatic_retry_or_refused_profile_publication
+  diagnostic_and_existing_profile_preservation: verified
+  action: disabled_while_loading_keyboard_focus_return_only_when_recovery_owns_focus
+  controller_RED: seven_failed_five_controls_after_initial_six_failed_selection
+  diagnostic_RED: one_additional_regression_against_initial_candidate
+  runtime_GREEN: thirty_one_passed_including_thirteen_new
+  branding_selection: seventy_nine_passed_including_runtime31
+  composition_RED_GREEN: three_failed_then_five_passed_three_new_two_retained
+  shell_RED_GREEN: three_failed_three_controls_then_six_passed
+  fixture_contracts: three_passed
+  native_baseline: one_failed_14_918684s_worker1_retry0_missing_recovery_action
+  native_mechanism: digest_calls2_4_preserve_native_result_real_customer_reads_advance_observedAt_no_direct_DB_mutation
+  native_focused: one_passed_5_120284s_worker1_retry0
+  native_candidate: twenty_one_passed_111_304183s_worker1_retry0_flaky0_skipped0
+  native_scope: third_GET_recovery_context_partition_journal_preserved_keyboard_pending_disabled_320px44px_axe_four_themes
+  frontend_core: 1872_passed_including22_new
+  repository_contracts: 228_passed_verifier_OK
+  static: E2E_branding_web_offline_TSC_touched_ESLint_Ruff_Prettier_diff_pass
+  independent_review: no_blocking_findings
+  native_receipt: artifacts/branding-recovery-20261127/native-local-receipt.json
+  native_receipt_sha256: 8f3f1baffeec815ac718bb550b9e8637873fc10a72e8da07b25ff80de36577bb
+  source_and_dist_hashes: unchanged_through_final_execution
+  cleanup: owned_PostgreSQL_and_three_synthetic_asset_paths_absent_confirmed
+  local_verification: local_verified_hosted_pending
+  hosted_candidate: pending
+  later_source_receipt: pr129_stacked_evidence_and_retarget_20261127
+  historical_administration_and_CDP_causes: unproven_not_attributed_or_fixed_by_this_recovery_UX
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+pr129_stacked_evidence_and_retarget_20261127:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
+  candidate: b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8
+  stacked_base: 5e99f172d6d6e185248b89e4adb12068d6505421
+  tested_merge: 799acba763ce66899ef1e9d368b24b90d6704709
+  identical_tree: 556de26d0de424b71fa7097bc0284347cb421104
+  candidate_CI: 45918812340
+  workflows: all_six_success
+  log_results: frontend1872_API1
+  python_artifact: 15163982390
+  python_artifact_sha256: ac106a241ea7962f250b11bbbce9035ccfafe1b063e200302e8f601832b59871
+  python_archive_review: clean_exact_source_disjoint_shards4413_11_and2401_47_total6814_58
+  python_other_outcomes: zero_failed_error_unrun_unexpected_skipped
+  python_cleanup: primary_and_independent_verified_absent_both_shards
+  direct_artifact: 15164289405
+  direct_artifact_sha256: 24e7e1433f0aab423b55b2934b67b7511152ec7cbd720cc27b9ebabf9b36ce6c
+  aggregate_artifact: 15165635222
+  aggregate_artifact_sha256: c661a1491f655210b3ce6059a6a1e1f0adea8b3ff4ffff0d5e0784e74de3b80a
+  browser_archive_review: direct147_aggregate147_retry0_errors0_flaky0_skipped0
+  scoped_archive_cases: branding21_inventory17_administration16_source_completion1_each
+  safe_branding_receipts: fenced_digest_calls2_4_reads3_recovered_true_both
+  safe_login_observations: nav0_empty_session_response_seen_body_valid_issued_matches_stored_login_complete_not_service_worker
+  downstream_receipts: source_journal_preserved_two_server_orders
+  historical_administration_and_CDP_causes: unproven_failures_preserved
+  retargeted_base: main_ed8057b2b473911574f97050ce24ac537716118f
+  retarget_merge_tree: clean_identical_to_b49f10b_tree_before_documentation_successor
+  retargeted_documentation_successor: exact_CI_and_review_pending_before_merge
+  predecessor_receipt: pr128_retargeted_acceptance_and_merge_20261127
+  supersedes: tested_PR129_stacked_hosted_pending_and_PR128_predecessor_unmerged_statements_only
+  release: V0.1_partial
+  deployment: not_performed
+
+historical_source_login_observation_checkpoint: source_login_observation_20261126
 source_login_observation_20261126:
   status: partial
   evidence: docs/10-spec-development/2026-11-26-source-login-observation.md
@@ -45,6 +119,7 @@ source_login_observation_20261126:
 
 pr128_stacked_evidence_and_retarget_20261127:
   status: partial
+  later_source_receipt: pr128_retargeted_acceptance_and_merge_20261127
   evidence: docs/10-spec-development/2026-11-26-source-login-observation.md
   candidate: 5acc4342e157b0fe7128cb0c0638b4bb06b897b0
   stacked_base: 996f0bb5d55ef5788f557691e3b46169e5dd3778
@@ -70,6 +145,35 @@ pr128_stacked_evidence_and_retarget_20261127:
   retarget_merge_tree: clean_identical_to_5acc434_tree_before_documentation_successor
   retargeted_documentation_successor: exact_CI_and_review_pending_before_merge
   supersedes: PR128_stacked_hosted_pending_and_PR127_predecessor_unmerged_statements_only
+  release: V0.1_partial
+  deployment: not_performed
+
+pr128_retargeted_acceptance_and_merge_20261127:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-source-login-observation.md
+  candidate: 5e99f172d6d6e185248b89e4adb12068d6505421
+  base: 971bdd20e14508b5335189b1eb56c4d93ef70cea
+  tested_merge: a86d760aa4c128ce3a856ce38981cfa63915c7c3
+  merged_main: ed8057b2b473911574f97050ce24ac537716118f
+  identical_tree: 18a1d434ac169e5ce8c48b61d5e0eac1d1dc2344
+  candidate_CI: 45918527486
+  workflows: all_six_success_jobs_and_steps_success
+  log_results: Python6814_pass58_intentional_skips_zero_unrun_cleanup_frontend1850_API1
+  python_archive_review: not_repeated_for_retargeted_candidate_logs_only
+  zero_retry_groups: [20, 9, 5, 10]
+  direct_artifact: 15165350518
+  direct_artifact_sha256: bfa79c56734c5d05013be91c642169bc757225efbebe127ac4c475a0e6bea26c
+  aggregate_artifact: 15165367151
+  aggregate_artifact_sha256: 7ca8d2b7048175c0e7709ab5c38cc3d3fdb99b7010e113022c359f2444f08f08
+  independent_archive_review: direct146_aggregate146_retry0_errors0_flaky0_skipped0
+  scoped_archive_cases: inventory17_administration16_source_completion1_each
+  safe_login_observations: nav0_empty_session_response_seen_body_valid_issued_matches_stored_login_complete_not_service_worker
+  main_CI: 45970597364
+  main_workflows_status: all_five_in_progress_at_observation_separate_acceptance_pending
+  main_companions: [45970597296, 45970597215, 45970597189, 45970597329]
+  successor_PR129: retargeted_to_main_ed8057b_separate_exact_source_evidence_required
+  supersedes: PR128_retargeted_candidate_pending_and_unmerged_statements_only
+  historical_administration_and_CDP_causes: unproven_failures_preserved
   release: V0.1_partial
   deployment: not_performed
 
@@ -150,6 +254,7 @@ pr127_stacked_evidence_and_retarget_20261126:
 
 pr127_retargeted_acceptance_and_merge_20261127:
   status: partial
+  later_source_receipt: pr127_exact_main_outcome_20261127
   evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
   candidate: 996f0bb5d55ef5788f557691e3b46169e5dd3778
   base: 5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c
@@ -172,6 +277,33 @@ pr127_retargeted_acceptance_and_merge_20261127:
   main_companions: [45918169473, 45918169443, 45918169517, 45918169384]
   successor_PR128: retargeted_to_main971bdd2_separate_exact_source_evidence_required
   supersedes: PR127_retargeted_candidate_pending_and_unmerged_statements_only
+  release: V0.1_partial
+  deployment: not_performed
+
+pr127_exact_main_outcome_20261127:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+  main: 971bdd20e14508b5335189b1eb56c4d93ef70cea
+  tree: 778accf50baa41221da253e1bbf0881886cdda57
+  CI: 45918169386
+  attempt: 1
+  workflows: all_five_success_jobs_and_steps_success
+  log_results: Python6813_pass58_intentional_skips_zero_unrun_cleanup_frontend1828_API1
+  python_archive_review: not_repeated_for_main_logs_only
+  zero_retry_groups: [20, 9, 5, 10]
+  direct_artifact: 15164467503
+  direct_artifact_sha256: f9f5653b6b5c7a7b94d94903b9f8d409d5c771ef1373b8fabf9e5344626b725b
+  aggregate_artifact: 15165455270
+  aggregate_artifact_sha256: d24fd0f3eb412a666a2f7acc3e6eb7eaf92c8761a05a31d2d101a91986de3ab4
+  direct_browser: 145_passed_one_flaky_administration_identity_retry1_passed
+  aggregate_browser: 146_passed_retry0_errors0_flaky0_skipped0
+  scoped_archive_cases: inventory17_source_completion1_each_retry0
+  direct_failure: administration_spec632_workshop_identity_helper11_expected_workshop_name_received_OCWP_timeout10000ms
+  failed_attempt_duration_ms: 10583
+  passed_retry_duration_ms: 16808
+  identity_cause: unproven_not_fixed_by_later_clean_pass
+  global_retry_free: not_claimed
+  supersedes: PR127_fresh_main_pending_only_preserves_candidate_and_historical_failures
   release: V0.1_partial
   deployment: not_performed
 
@@ -4030,7 +4162,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-source-login-observation.md
+active_plan: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
+historical_source_login_observation_plan: docs/10-spec-development/2026-11-26-source-login-observation.md
 historical_inventory_workshop_scope_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
 historical_inventory_page_retry_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
 historical_inventory_accessible_actions_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
@@ -4049,7 +4182,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: source_login_observation_stacked_hosted_reviewed_retargeted_candidate_pending
+active_plan_status: branding_manual_recovery_stacked_hosted_reviewed_retargeted_candidate_pending
+historical_source_login_observation_plan_status: source_login_observation_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_inventory_workshop_scope_plan_status: inventory_workshop_scope_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_inventory_page_retry_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
 historical_inventory_accessible_actions_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
@@ -4067,7 +4201,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: source_login_observation_20261126
+last_checkpoint: branding_manual_recovery_20261127
+historical_source_login_observation_last_checkpoint: source_login_observation_20261126
 historical_inventory_workshop_scope_last_checkpoint: inventory_workshop_scope_20261126
 historical_inventory_page_retry_last_checkpoint: inventory_page_retry_20261126
 historical_inventory_accessible_actions_last_checkpoint: inventory_accessible_actions_20261126
@@ -4349,14 +4484,17 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify_exact_retargeted_PR128_documentation_successor_before_merge
+  - qualify_exact_retargeted_PR129_documentation_successor_with_hosted_checks_and_review
+  - preserve_local_baseline5acc434_and_documentation_predecessor5e99f17_as_distinct_source_receipts
+  - retain_PR129_stacked147_browser_and_exact_Python_cleanup_evidence_without_prequalifying_later_source
+  - inspect_separate_PR128_main_CI45970597364_and_companions_without_inheriting_candidate_acceptance
   - preserve_native_baseline_failure_and_eight_passing_trials_without_claiming_CDP_root_cause
-  - inspect_separate_PR127_main_CI45918169386_without_inheriting_candidate_acceptance
+  - preserve_PR127_main_direct_administration_identity_flake_and_clean_aggregate_as_separate_outcomes
   - retain_PR127_retargeted_acceptance_separately_from_older_stacked_CDP_failure
   - retain_exact_PR126_main_pass_separately_from_candidate_CDP_failures_and_later_sources
   - preserve_PR126_and_stacked_PR127_source_completion_CDP_failures_and_scoped_inventory_acceptance
   - keep_controlled_branding_refusal_probe_separate_from_unproven_historical_CI_timeout
-  - investigate_source_completion_login_body_CDP_failure_as_separate_bounded_test_only_work
+  - retain_source_login_observer_acceptance_without_claiming_internal_CDP_root_cause
   - retain_PR125_exact_main_pass_separately_from_historical_administration_timeout
   - preserve_known_administration_identity_flake_without_inventing_cause_or_waiving_retry_free_gates
   - preserve exact_PR123_main_pass_and_PR124_initial_Security_failure_as_distinct_source_receipts

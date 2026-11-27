@@ -26,6 +26,7 @@ BRANDING_CASES = (
     "visual-plano",
     "visual-ritmo",
     "visual-noche",
+    "read-fenced-recovery",
 )
 WORKSHOP_GRANTS = {
     "customers.read",

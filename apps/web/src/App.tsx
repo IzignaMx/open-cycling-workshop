@@ -209,6 +209,8 @@ export function App({ runtime }: { runtime: WorkshopController }) {
       sharedBranding={brand.profile}
       brandingCached={brand.cached}
       brandingMessage={brand.message}
+      brandingRefreshSuggested={brand.refreshSuggested}
+      brandingLoading={brand.loading}
       onRefreshBranding={() => void runtime.branding.refresh(true)}
       locationLabel={
         state.locations.find((location) => location.location_id === context.selectedLocationId)
