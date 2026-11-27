@@ -1,5 +1,48 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-27 · PR129 stacked qualification and retarget
+
+- [x] Review exact stacked CI45918812340 and all six workflows for `b49f10b`,
+      tested merge `799acba`, tree `556de26`. Independently inspect Python
+      artifact15163982390: 6,814 passes / 58 intentional skips, disjoint shards,
+      clean source and both cleanup receipts for each shard. Frontend 1,872/API one.
+- [x] Independently inspect direct15164289405 and aggregate15165635222:
+      147/147 each with retry/error/flake/skip zero, including branding 21,
+      inventory 17, administration 16 and source-completion one. Preserve the
+      bounded recovery and login/downstream receipts and their exact digests.
+- [x] Retarget PR129 to merged main `ed8057b`; the clean merge tree retains
+      `556de26`, matching the tested stacked head before this documentation change.
+- [ ] Qualify the exact retargeted documentation successor through hosted checks
+      and review before merge. The [current branding receipt](docs/10-spec-development/2026-11-27-branding-manual-recovery.md#pr129-stacked-evidence-and-retarget-to-main--2026-11-27)
+      supersedes only its tested source's hosted-pending statement. Historical
+      administration/CDP causes and physical, inventory-completion, recovery
+      and deployment gates remain open.
+
+## 2026-11-27 · PR128 retargeted acceptance and merge
+
+- [x] Review `5e99f17` CI45918527486 and all six successful workflows;
+      independently inspect direct15165350518 and aggregate15165367151:
+      146/146 each at retry zero, with inventory 17, administration 16 and
+      source-completion one. Retain the exact-source login equality observations.
+- [x] Integrate as `ed8057b`, with the same candidate/tested-merge tree
+      `18a1d434`. Keep the [merge receipt](docs/10-spec-development/2026-11-26-source-login-observation.md#pr128-retargeted-acceptance-and-merge--2026-11-27)
+      separate from original baseline failures and later branding work.
+- [ ] Inspect fresh-main CI45970597364 and its four companions, observed in
+      progress. Candidate success does not qualify that later source/run.
+
+## 2026-11-27 · PR127 exact-main outcome
+
+- [x] Inspect main `971bdd2` CI45918169386 and all five successful workflows;
+      logs report Python 6,813/58 intentional skips, frontend 1,828/API one.
+- [x] Review direct15164467503 and aggregate15165455270 actual ZIPs. Preserve
+      direct 145 passes plus one administration identity flaky case: expected
+      workshop name, received `OCWP`, 10-second timeout, passing retry 1.
+      Aggregate passes 146 without retries; inventory 17/source-completion one
+      pass at retry zero in both. No global retry-free or cause/fix claim.
+- The [main receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#exact-pr127-main-outcome-observed--2026-11-27)
+  supersedes the earlier main-pending item only; it does not reclassify historical
+  failures or prequalify PR128/PR129 and operational gates.
+
 ## 2026-11-27 · Shared-branding manual recovery
 
 - [x] Reproduce real cache-entry refusals and the missing recovery action on

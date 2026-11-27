@@ -123,3 +123,51 @@ technology, G1–G6, actual installation restore, quote activation/capacity and
 deployment remain separate gates. All inventory FR-INV-001–012 gaps remain in
 their canonical plan. This synthetic verification neither inspects physical
 stock nor qualifies a real workshop installation or a universal branding/CI fix.
+
+## PR129 stacked evidence and retarget to main · 2026-11-27
+
+[PR128's retargeted candidate merged](2026-11-26-source-login-observation.md#pr128-retargeted-acceptance-and-merge--2026-11-27)
+as `ed8057b2b473911574f97050ce24ac537716118f`. This supersedes the earlier
+predecessor-pending statement while preserving the actual local baseline
+`5acc434`, its failure and the documentation-only predecessor `5e99f17`.
+PR128 fresh-main CI45970597364 remains a separate pending receipt.
+
+[PR129](https://github.com/IzignaMx/open-cycling-workshop/pull/129) head
+`b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8`, stacked on
+`5e99f172d6d6e185248b89e4adb12068d6505421`, passed
+[CI45918812340](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45918812340)
+and all five companion workflows. The tested synthetic merge is
+`799acba763ce66899ef1e9d368b24b90d6704709`; it and the head share tree
+`556de26d0de424b71fa7097bc0284347cb421104`.
+
+Independent Python artifact `15163982390` review, SHA-256
+`ac106a241ea7962f250b11bbbce9035ccfafe1b063e200302e8f601832b59871`,
+confirms clean exact-source disjoint shards: **4,413 passes / 11 intentional
+skips** and **2,401 passes / 47 intentional skips**, totaling **6,814 / 58**.
+There are no failed, error, unrun or unexpected-skipped outcomes. Primary and
+independent cleanup receipts verify owned databases absent for both shards.
+Reviewed logs report **1,872 frontend passes** and **1 API-client pass**.
+
+Independent full-ZIP/report review covered direct artifact `15164289405`,
+SHA-256 `24e7e1433f0aab423b55b2934b67b7511152ec7cbd720cc27b9ebabf9b36ce6c`,
+and aggregate artifact `15165635222`, SHA-256
+`c661a1491f655210b3ce6059a6a1e1f0adea8b3ff4ffff0d5e0784e74de3b80a`.
+Each contains **147/147 passes**, with retry zero and no errors, flakes or
+skips, including branding **21**, inventory **17**, administration **16** and
+source-completion **one**. Both new safe branding receipts record
+`fencedDigestCalls: [2, 4]`, `reads: 3` and `recovered: true`. The source-login
+observations retain zero navigation, empty session checked, response seen,
+body validation, issued/stored equality and completed login, with no service
+worker response. Downstream receipts preserve the source journal and confirm
+two server orders. These are actual scoped synthetic journeys, not a diagnosis
+of historical CI failures or physical-workshop acceptance.
+
+PR129 is retargeted to main `ed8057b`. The clean local merge-tree check for that
+base and the unchanged `b49f10b` head retains tree
+`556de26d0de424b71fa7097bc0284347cb421104`. This establishes source compatibility,
+not a fresh CI execution. This documentation reconciliation creates a later
+retargeted candidate that still requires its own exact hosted checks and review
+before merge. Branding remains the current checkpoint. The receipt supersedes
+only the tested stacked source's hosted-pending statement and PR128's earlier
+unmerged status; physical, inventory-completion, installation, recovery and
+deployment gates remain open.

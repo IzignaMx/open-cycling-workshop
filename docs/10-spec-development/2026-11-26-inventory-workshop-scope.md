@@ -236,3 +236,36 @@ PR128 has been retargeted to this new main; its original stacked evidence and
 later documentation successor require separate source-bound reconciliation.
 No clean browser run establishes the CDP cause or closes physical, recovery,
 installation or deployment gates.
+
+## Exact PR127 main outcome observed · 2026-11-27
+
+Fresh-main [CI45918169386](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45918169386)
+completed on `971bdd20e14508b5335189b1eb56c4d93ef70cea`, tree
+`778accf50baa41221da253e1bbf0881886cdda57`, attempt 1. Both CI jobs and every
+step succeeded; the four companion workflows listed above also succeeded on
+that exact main. Logs report **6,813 Python passes / 58 intentional skips**,
+zero unrun cases and verified shard cleanup, **1,828 frontend passes**,
+**1 API-client pass**, and repeat groups **20 / 9 / 5 / 10**. Python counts and
+cleanup here are log evidence; a new Python-archive review is not claimed.
+
+Independent full-ZIP/report review covered direct artifact `15164467503`,
+SHA-256 `f9f5653b6b5c7a7b94d94903b9f8d409d5c771ef1373b8fabf9e5344626b725b`,
+and aggregate artifact `15165455270`, SHA-256
+`d24fd0f3eb412a666a2f7acc3e6eb7eaf92c8761a05a31d2d101a91986de3ab4`.
+Both native reports identify this exact main/run and one worker. Inventory
+passes **17/17** and source-completion **1/1**, each at retry zero in both phases.
+The aggregate passes **146/146**, without flakes, skips or errors.
+
+Direct instead reports **145 passed plus one flaky administration case**.
+At `administration.spec.ts:632`, `expectWorkshopIdentity` in
+`helpers/workshop-identity.mjs:11` expected `["Taller administración A"]` but
+received `["OCWP"]` until the existing **10,000 ms** predicate timeout.
+Attempt 0 failed after **10,583 ms**; retry 1 passed after **16,808 ms**.
+This is another observation of the unresolved identity fallback, not evidence
+of its cause or a new fix. Direct is not classified as retry-free.
+
+This receipt supersedes only the earlier PR127 fresh-main-pending statement.
+It preserves the candidate's separate clean result, older CDP failures and the
+new main administration failure. PR128 and branding recovery require their own
+source-bound receipts; physical, installation, inventory-completion, recovery
+and deployment gates remain open.

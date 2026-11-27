@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-27 · Branding stacked qualification and retarget
+
+- Record PR129's six successful stacked workflows, exact Python/shard/cleanup
+  review and actual direct/aggregate archives: 147 first-attempt passes each,
+  including the 21 branding journeys and bounded manual-recovery receipt.
+- Retarget to merged main `ed8057b` with the unchanged `556de26` tree; keep
+  branding current while requiring fresh qualification of the documentation
+  successor. See the [receipt](docs/10-spec-development/2026-11-27-branding-manual-recovery.md#pr129-stacked-evidence-and-retarget-to-main--2026-11-27).
+
+## 2026-11-27 · Login-observation retargeted candidate integrated
+
+- Record exact PR128 acceptance and merge `ed8057b`: six successful workflows,
+  146 retry-zero cases in each actual browser archive and preserved independent
+  issued/stored token equality. Fresh-main CI45970597364 remains separate.
+- Retain original CDP failures and the pending branding successor in the
+  [merge receipt](docs/10-spec-development/2026-11-26-source-login-observation.md#pr128-retargeted-acceptance-and-merge--2026-11-27).
+
+## 2026-11-27 · PR127 main administration failure preserved
+
+- Record main CI45918169386 and all five workflow successes separately from
+  native direct 145 passes plus one administration identity flake. Preserve the
+  10-second `OCWP` fallback timeout and passing retry; aggregate 146 is clean.
+- Both actual archives retain inventory 17/source-completion one at retry zero;
+  no root-cause or global retry-free claim follows. See the [main receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#exact-pr127-main-outcome-observed--2026-11-27).
+
 ## 2026-11-27 · Explicit recovery for unconfirmed shared branding
 
 - Show a status and **Volver a consultar la marca** action when legitimate cache
