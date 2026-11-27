@@ -141,3 +141,22 @@ Fresh-main repository checks passed **227 tests**. The separate
 is pending at this receipt. Earlier candidate-hosted-pending wording is superseded
 only for PR125's accepted source and scoped results above. V0.1 physical,
 recovery, inventory-completion and deployment gates remain open.
+
+## Exact PR125 main outcome observed · 2026-11-26
+
+The separate [main CI45902761276](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45902761276)
+completed successfully on `c65d54d6adc5e262356a883ef378a0696e7cb363`,
+tree `ccc760190dd26bcc0efb81adedd5f0d1799ce019`; all five main workflows passed. Reviewed logs report **6,813 Python passes / 58
+intentional skips**, **1,806 frontend passes**, **1 API-client pass**, **146 direct
+and 146 aggregate browser passes**, and repeat groups **20 / 9 / 5 / 10**.
+No browser flake was reported in those logs.
+
+The fetched artifact metadata identifies direct archive `15158143057`, SHA-256
+`51974b9abc6a2d24bd736497a218898c667a67d8e0c03a0c2eb1fea33dac24ac`,
+and aggregate archive `15158388021`, SHA-256
+`86fbc4bbe1b4e624f23e0ce59699ef3d203bc10f6ede12907c917a71957f980e`.
+These identifiers/digests are metadata, not a claim of independent archive
+content review for this main run. This receipt supersedes only its earlier
+main-pending statement. The candidate's administration timeout and unproven
+cause remain preserved; a later clean run does not fix or erase them. Later
+inventory changes and operational release gates require their own evidence.

@@ -108,3 +108,42 @@ Physical assistive technology, T1–T8/R01-T035, G1–G6, actual installation re
 quote activation/capacity and deployment remain separate. The unrelated known
 administration identity timeout is preserved; this inventory change neither
 establishes its cause nor fixes it.
+
+## PR126 scoped acceptance and merge · 2026-11-26
+
+[PR126](https://github.com/IzignaMx/open-cycling-workshop/pull/126) merged as
+`5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c`. Candidate
+`a66c581c567a39a3971148e5abfae89d9aa96366`, based on
+`c65d54d6adc5e262356a883ef378a0696e7cb363`, was tested as synthetic merge
+`bedd898c8acbc1706230cad5619d36df0fd7c5b2`. Head, tested merge and resulting
+main share tree `1b5deffe25cec4637458883598ced5d55d57cab0`.
+[CI45903853206](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45903853206)
+and all five companion workflows succeeded. Its reviewed results report
+**6,813 Python passes / 58 intentional skips**, **1,817 frontend passes**,
+**1 API-client pass**, and retry-free repeat groups **20 / 9 / 5 / 10**.
+
+Independent archive review covered direct artifact `15158611290`, SHA-256
+`58dc3a1b2fe7ad53c10c43065204e5b675deb8bcdf7a2f33ebae2f5099262217`,
+and aggregate artifact `15159241997`, SHA-256
+`c09423ee7e74f3a44796a97cc0000ecb56b4e309fb66f7d1adf2b6b5d68c60ce`.
+Both contain **17/17 inventory** and **16/16 administration** cases without retry.
+Both full browser phases instead report **145 passed plus one flaky case**:
+`source-completion-new-work` fails while reading login response JSON through
+CDP `Network.getResponseBody`, then passes retry 1.
+
+The failed safe observations record zero main-frame navigations, empty session
+checked, response seen, response not from a service worker, body not validated
+and login not completed. They do not establish the CDP failure's internal cause.
+This recurrence preserves the earlier login-body defect despite the bounded
+[same-document correction](2026-11-26-source-completion-login-document.md);
+neither full phase is relabeled retry-free. This inventory increment does not
+change that journey, its helpers or the production runtime. Independent review
+accepted the scoped inventory merge, not global V0.1 release acceptance.
+
+This receipt supersedes the earlier candidate-hosted-pending statements only
+for the source above. Fresh-main [CI45912372086](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45912372086)
+and Local runtime `45912372134` are in progress at this observation; Security
+`45912372150`, quote microfixture `45912372021` and presentation preview
+`45912372011` have succeeded. The new main run is not qualified by candidate
+acceptance. PR127's later workshop-scope source and its retargeted successor
+remain separate, as do physical, recovery and deployment gates.

@@ -73,3 +73,23 @@ records native baseline failure and 17 candidate passes with zero retries,
 including Enter/Space recovery, exact request positions, heading focus and narrow
 error-state controls. Exact successor hosted and physical acceptance remain
 separate; the connected-only inventory contract is unchanged.
+
+The [workshop-scope correction](../../../../../docs/10-spec-development/2026-11-26-inventory-workshop-scope.md)
+keeps directory controls specific to eligible account-only reading. An operational
+reader continues to use the selected operational workshop. Directory navigation
+or replacement must invalidate a previous inventory selection and its volatile
+readings before another current-directory choice is admitted; the visible choice
+must not become empty while an earlier location's reading remains displayed.
+An inventory-owned directory read also blocks selection, verification and duplicate
+directory actions until it settles. The final local evidence includes 137 focused
+cases and 17 native inventory journeys, all passing. Hosted qualification remains
+separate. No inventory authority, operational selection, API, local persistence or
+offline contract changes are implied.
+
+The later [PR126 scoped merge receipt](../../../../../docs/10-spec-development/2026-11-26-inventory-page-retry.md#pr126-scoped-acceptance-and-merge--2026-11-26)
+records 17 inventory cases passing once in each hosted browser phase. The
+[PR127 stacked receipt and retarget](../../../../../docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-stacked-evidence-and-retarget-to-main--2026-11-26)
+independently records another 17 single-attempt inventory passes in each phase
+for its own exact source. Full-suite login-body failures remain preserved;
+neither scoped result implies global retry-free acceptance. The retargeted
+documentation successor still needs its own exact hosted qualification.

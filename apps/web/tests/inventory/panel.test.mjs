@@ -66,3 +66,16 @@ test('inventory search shares density-scoped input targets without changing norm
     /\[data-density='workshop'\] \.inventory-panel button,\s*\[data-density='workshop'\] \.inventory-panel input,\s*\[data-density='workshop'\] \.inventory-panel select\s*\{\s*min-height: 56px/,
   )
 })
+
+test('inventory workshop choice follows runtime mode and the current directory revision', () => {
+  const panel = source('features/inventory/InventoryPanel.tsx')
+  assert.match(panel, /const canChoose = state\.canChooseLocation/)
+  assert.match(panel, /location\.directoryVersion === state\.directoryVersion/)
+  assert.match(panel, /directoryVersion: state\.directoryVersion/)
+  assert.match(panel, /\(canChoose && !selected\)/)
+  assert.match(panel, /Selecciona un taller del directorio/)
+  assert.equal((panel.match(/disabled={state\.directoryLoading}/g) ?? []).length, 3)
+  assert.match(panel, /Consultando talleres…/)
+  assert.match(panel, /El inventario se consulta en el taller operativo actual/)
+  assert.doesNotMatch(panel, /Usar el taller operativo seleccionado/)
+})

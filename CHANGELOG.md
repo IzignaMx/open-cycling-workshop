@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-26 · Inventory candidate evidence and retarget reconciliation
+
+- Record exact PR125 main success separately from its earlier administration
+  flake, then scoped PR126 acceptance and merge `5ccb44f` with matching trees.
+  Both PR126 browser phases preserve the login-body CDP failure and passing
+  retry; inventory and administration selections pass without retries.
+- Record stacked PR127's reviewed Python/cleanup and inventory archives, plus
+  direct login-body flake and clean aggregate result. Retarget to main with a
+  clean identical merge tree; the documentation successor still requires exact
+  retargeted CI before merge. See the [receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-stacked-evidence-and-retarget-to-main--2026-11-26).
+- Preserve historical authored statuses, unproven CDP/branding causes and all
+  release/physical/deployment gates. PR126 fresh-main qualification is separate.
+
+## 2026-11-26 · Inventory workshop selection consistency
+
+- Correct directory paging that left an earlier inventory reading visible, and
+  hide ineligible directory controls for the current operational workshop.
+- Retain bounded authority, clear old readings and pending choices, and block
+  directory selection while the inventory-owned request is pending. Source/native
+  RED and final 17 native/1,828 frontend passes are documented in the
+  [checkpoint](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md).
+  Its PR126 base remains unmerged with exact CI pending at authoring.
+- Retain the separate controlled branding-refusal investigation without
+  attributing or claiming to fix the historical administration CI timeout.
+
 ## 2026-11-26 · Explicit inventory page retry
 
 - Add explicit recovery of a failed catalog offset or movement-history boundary

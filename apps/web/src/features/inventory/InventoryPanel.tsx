@@ -6,7 +6,6 @@ import {
   type ChangeEvent,
   type RefObject,
 } from 'react'
-import { hasCapability } from '../../auth/capabilities.js'
 import type { InventoryController, InventoryRead } from './controller.js'
 import type { InventoryErrorCode, InventoryProduct } from './contracts.js'
 import { CatalogPage } from './CatalogPage.js'
@@ -39,7 +38,7 @@ export function InventoryPanel({ controller }: { controller: InventoryController
     controller.getSnapshot,
     controller.getSnapshot,
   )
-  const [location, setLocation] = useState({ generation: -1, id: '' })
+  const [location, setLocation] = useState({ generation: -1, directoryVersion: -1, id: '' })
   const [online, setOnline] = useState(() => navigator.onLine)
   const catalogHeading = useRef<HTMLHeadingElement>(null),
     productHeading = useRef<HTMLHeadingElement>(null),
@@ -63,15 +62,14 @@ export function InventoryPanel({ controller }: { controller: InventoryController
   }
   const ready = online && state.access.phase === 'ready'
   const allowed = ready && !!state.access.context?.capabilities.includes('inventory.read')
+  const canChoose = state.canChooseLocation
   const selected =
+    canChoose &&
     location.generation === state.account.generation &&
+    location.directoryVersion === state.directoryVersion &&
     state.locations.some((row) => row.location_id === location.id)
       ? location.id
       : ''
-  const canChoose =
-    state.account.phase === 'connected' &&
-    state.account.user?.location_id === null &&
-    hasCapability(state.account.user.capabilities, 'locations.read')
   const verifying = state.access.phase === 'verifying' || state.account.phase === 'verifying'
   return (
     <section id="workshop-inventory" className="inventory-panel" aria-label="Inventario conectado">
@@ -101,7 +99,8 @@ export function InventoryPanel({ controller }: { controller: InventoryController
           {state.access.message && <p role="status">{state.access.message}</p>}
           {state.account.phase === 'connected' &&
             state.account.user?.location_id === null &&
-            !hasCapability(state.account.user.capabilities, 'locations.read') && (
+            !state.account.user.capabilities.includes('locations.read') &&
+            state.runtimePhase !== 'ready' && (
               <p role="status">
                 Tu cuenta no tiene acceso al directorio de talleres. Necesitas un taller operativo
                 autorizado o una cuenta asignada a un taller para consultar inventario.
@@ -113,15 +112,17 @@ export function InventoryPanel({ controller }: { controller: InventoryController
                 Taller para inventario
                 <select
                   value={selected}
+                  disabled={state.directoryLoading}
                   onChange={(event: ChangeEvent<HTMLSelectElement>) => {
                     controller.clearSelection()
                     setLocation({
                       generation: state.account.generation,
+                      directoryVersion: state.directoryVersion,
                       id: event.currentTarget.value,
                     })
                   }}
                 >
-                  <option value="">Usar el taller operativo seleccionado</option>
+                  <option value="">Selecciona un taller del directorio</option>
                   {state.locations.map((row) => (
                     <option key={row.location_id} value={row.location_id}>
                       {row.name}
@@ -129,18 +130,31 @@ export function InventoryPanel({ controller }: { controller: InventoryController
                   ))}
                 </select>
               </label>
-              <button type="button" onClick={() => void controller.loadLocations()}>
+              <p>
+                Al consultar otra página de talleres se borra la lectura de inventario. Selecciona
+                un taller y vuelve a verificar.
+              </p>
+              {state.directoryLoading && <p role="status">Consultando talleres…</p>}
+              <button
+                type="button"
+                disabled={state.directoryLoading}
+                onClick={() => void controller.loadLocations()}
+              >
                 Consultar talleres
               </button>
               {state.nextLocation && (
                 <button
                   type="button"
+                  disabled={state.directoryLoading}
                   onClick={() => void controller.loadLocations(state.nextLocation!)}
                 >
                   Más talleres para inventario
                 </button>
               )}
             </div>
+          )}
+          {state.runtimePhase === 'ready' && (
+            <p>El inventario se consulta en el taller operativo actual.</p>
           )}
           {!ready && (
             <p>
@@ -152,7 +166,12 @@ export function InventoryPanel({ controller }: { controller: InventoryController
           <button
             type="button"
             className="inventory-primary"
-            disabled={verifying || state.account.phase === 'suspended'}
+            disabled={
+              verifying ||
+              state.directoryLoading ||
+              state.account.phase === 'suspended' ||
+              (canChoose && !selected)
+            }
             onClick={() => void focusAfter(controller.enter(selected || undefined), catalogHeading)}
           >
             {verifying

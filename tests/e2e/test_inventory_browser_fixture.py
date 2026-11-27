@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from cycling_workshop.identity.models import UserRecord
 from cycling_workshop.inventory.models import InventoryMovementRecord, ProductRecord
-from cycling_workshop.tenancy.models import OrganizationRecord
+from cycling_workshop.tenancy.models import LocationRecord, OrganizationRecord
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
@@ -63,6 +63,18 @@ def test_inventory_seed_keeps_partial_grants_and_immutable_signed_history(
                     organization = session.get(OrganizationRecord, identity(0))
                     assert organization is not None
                     assert organization.minimum_write_protocol == (0 if case == "floor-zero" else 1)
+                    locations = list(
+                        session.scalars(
+                            select(LocationRecord)
+                            .where(LocationRecord.organization_id == identity(0))
+                            .order_by(LocationRecord.id)
+                        )
+                    )
+                    assert [row.id for row in locations[:2]] == [identity(1), identity(2)]
+                    assert len(locations) == (51 if case == "directory" else 2)
+                    if case == "directory":
+                        assert locations[-1].id == identity(58)
+                        assert locations[-1].name == "Taller inventario directorio 58"
                     reader = session.get(UserRecord, identity(3))
                     directory = session.get(UserRecord, identity(5))
                     writer = session.get(UserRecord, identity(6))

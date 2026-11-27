@@ -12,9 +12,14 @@ const deferred = () => {
   })
   return { promise, resolve, reject }
 }
-function setup(overrides = {}, capabilities = ['inventory.read']) {
+function setup(
+  overrides = {},
+  capabilities = ['inventory.read'],
+  { locationId = 'loc', runtimePhase = 'ready' } = {},
+) {
   const listeners = new Set(),
-    accountListeners = new Set()
+    accountListeners = new Set(),
+    runtimeListeners = new Set()
   let generation = 1,
     phase = 'ready',
     context = {
@@ -25,7 +30,7 @@ function setup(overrides = {}, capabilities = ['inventory.read']) {
     account = {
       phase: 'connected',
       generation: 1,
-      user: { user_id: 'actor', organization_id: 'org', location_id: 'loc', capabilities },
+      user: { user_id: 'actor', organization_id: 'org', location_id: locationId, capabilities },
     },
     calls = { catalog: 0, stock: 0, movements: 0, refusal: 0, verify: 0 }
   const access = {
@@ -65,6 +70,7 @@ function setup(overrides = {}, capabilities = ['inventory.read']) {
     },
     clear: () => change('unverified'),
   }
+  let runtimeState = { phase: runtimePhase, user: account.user, locations: [], nextLocation: null }
   const runtime = {
     connectedReads: access,
     getAccountSnapshot: () => account,
@@ -73,8 +79,11 @@ function setup(overrides = {}, capabilities = ['inventory.read']) {
       return () => accountListeners.delete(l)
     },
     verifyAccount: async () => {},
-    getSnapshot: () => ({ user: account.user, locations: [], nextLocation: null }),
-    subscribe: () => () => {},
+    getSnapshot: () => runtimeState,
+    subscribe: (listener) => {
+      runtimeListeners.add(listener)
+      return () => runtimeListeners.delete(listener)
+    },
     loadLocations: async () => {},
   }
   const transport = {
@@ -99,7 +108,11 @@ function setup(overrides = {}, capabilities = ['inventory.read']) {
     generation++
     for (const l of listeners) l()
   }
-  return { controller, calls, change, access, runtime }
+  const changeRuntime = (patch) => {
+    runtimeState = { ...runtimeState, ...patch }
+    for (const listener of runtimeListeners) listener()
+  }
+  return { controller, calls, change, access, runtime, changeRuntime }
 }
 
 test('manual catalog retry repeats only the failed offset without verification or automatic work', async () => {
@@ -473,6 +486,140 @@ test('late context verification cannot start a catalog on a newer context or cle
     pending.resolve()
     await entering
     assert.equal(env.calls.catalog, 0)
+    env.controller.dispose()
+  }
+})
+
+const directoryAccount = { locationId: null, runtimePhase: 'selector' }
+const directoryCapabilities = ['inventory.read', 'locations.read']
+test('inventory directory action clears volatile reads and choice before its request settles', async () => {
+  const env = setup({}, directoryCapabilities, directoryAccount)
+  const directory = deferred()
+  let calls = 0
+  env.runtime.loadLocations = () => {
+    calls++
+    return directory.promise
+  }
+  await env.controller.enter('loc')
+  await env.controller.selectProduct('a')
+  const version = env.controller.getSnapshot().directoryVersion
+  const pending = env.controller.loadLocations('last-location')
+  const snapshot = env.controller.getSnapshot()
+  assert.equal(snapshot.directoryLoading, true)
+  await env.controller.loadLocations('another-page')
+  await env.controller.enter('loc')
+  assert.equal(env.calls.verify, 1, 'loading directory cannot verify its previous page choice')
+  assert.equal(calls, 1)
+  assert.equal(snapshot.access.context, null)
+  assert.equal(snapshot.catalog.value, null)
+  assert.equal(snapshot.stock.value, null)
+  assert.equal(snapshot.history.value, null)
+  assert.ok(snapshot.directoryVersion > version)
+  directory.resolve()
+  await pending
+  assert.equal(env.controller.getSnapshot().directoryLoading, false)
+  assert.equal(env.calls.catalog, 1)
+  assert.equal(env.calls.verify, 1)
+  env.controller.dispose()
+})
+test('external runtime directory replacement clears current account-only reads synchronously', async () => {
+  const env = setup({}, directoryCapabilities, directoryAccount)
+  await env.controller.enter('loc')
+  await env.controller.selectProduct('a')
+  const version = env.controller.getSnapshot().directoryVersion
+  const observed = []
+  const unsubscribe = env.controller.subscribe(() => observed.push(env.controller.getSnapshot()))
+  env.changeRuntime({
+    locations: [{ location_id: 'loc2', name: 'Other workshop' }],
+    nextLocation: 'loc2',
+  })
+  const snapshot = env.controller.getSnapshot()
+  assert.equal(snapshot.access.context, null)
+  assert.equal(snapshot.product, null)
+  assert.equal(snapshot.catalog.value, null)
+  assert.equal(snapshot.stock.value, null)
+  assert.equal(snapshot.history.value, null)
+  assert.ok(snapshot.directoryVersion > version)
+  assert.ok(observed.length > 0)
+  assert.ok(observed.every((state) => state.catalog.value === null))
+  unsubscribe()
+  env.controller.dispose()
+})
+test('external directory replacement fences entry waiting for context verification', async () => {
+  const env = setup({}, directoryCapabilities, directoryAccount)
+  const verify = deferred()
+  const initialVerify = env.access.verify
+  env.access.verify = async () => {
+    await verify.promise
+    await initialVerify()
+  }
+  const pending = env.controller.enter('loc')
+  await turn()
+  env.changeRuntime({ locations: [{ location_id: 'loc2', name: 'Other workshop' }] })
+  verify.resolve()
+  await pending
+  assert.equal(env.calls.catalog, 0)
+  assert.equal(env.controller.getSnapshot().catalog.value, null)
+  env.controller.dispose()
+})
+for (const result of ['success', 401, 403]) {
+  test(`directory replacement rejects late catalog ${result} from the previous choice`, async () => {
+    const response = deferred()
+    const env = setup({ catalog: () => response.promise }, directoryCapabilities, directoryAccount)
+    const pending = env.controller.enter('loc')
+    await turn()
+    env.changeRuntime({ locations: [{ location_id: 'loc2', name: 'Other workshop' }] })
+    if (result === 'success') response.resolve([product('obsolete')])
+    else
+      response.reject(
+        new InventoryHttpError(result === 401 ? 'invalid_session' : 'capability_denied', result),
+      )
+    await pending
+    assert.equal(env.controller.getSnapshot().catalog.value, null)
+    assert.equal(env.controller.getSnapshot().access.context, null)
+    assert.equal(env.calls.refusal, 0)
+    env.controller.dispose()
+  })
+}
+for (const locationId of [null, 'loc']) {
+  test(`operational ${locationId === null ? 'organization-wide' : 'bound'} context ignores inventory directory actions and replacements`, async () => {
+    const env = setup({}, directoryCapabilities, { locationId, runtimePhase: 'ready' })
+    let calls = 0
+    env.runtime.loadLocations = async () => {
+      calls++
+    }
+    await env.controller.enter()
+    const catalog = env.controller.getSnapshot().catalog.value
+    await env.controller.loadLocations()
+    env.changeRuntime({ locations: [{ location_id: 'loc2', name: 'Other workshop' }] })
+    assert.equal(calls, 0)
+    assert.equal(env.controller.getSnapshot().catalog.value, catalog)
+    assert.equal(env.controller.getSnapshot().access.context.selectedLocationId, 'loc')
+    assert.equal(env.controller.getSnapshot().runtimePhase, 'ready')
+    env.controller.dispose()
+  })
+}
+test('runtime phase publications update directory eligibility without another directory page', () => {
+  const env = setup({}, directoryCapabilities, directoryAccount)
+  assert.equal(env.controller.getSnapshot().runtimePhase, 'selector')
+  assert.equal(env.controller.getSnapshot().canChooseLocation, true)
+  env.changeRuntime({ phase: 'ready' })
+  assert.equal(env.controller.getSnapshot().runtimePhase, 'ready')
+  assert.equal(env.controller.getSnapshot().canChooseLocation, false)
+  env.controller.dispose()
+})
+
+test('metadata held recovery uses the runtime literal directory capability without expanding wildcard', async () => {
+  for (const capabilities of [directoryCapabilities, ['*']]) {
+    const env = setup({}, capabilities, { locationId: null, runtimePhase: 'held' })
+    let calls = 0
+    env.runtime.loadLocations = async () => {
+      calls++
+    }
+    const eligible = capabilities.includes('locations.read')
+    assert.equal(env.controller.getSnapshot().canChooseLocation, eligible)
+    await env.controller.loadLocations()
+    assert.equal(calls, Number(eligible))
     env.controller.dispose()
   }
 })

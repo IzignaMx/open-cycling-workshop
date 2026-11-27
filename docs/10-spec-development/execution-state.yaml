@@ -1,8 +1,113 @@
 schema: 1
 
-current_checkpoint: inventory_page_retry_20261126
+current_checkpoint: inventory_workshop_scope_20261126
+inventory_workshop_scope_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+  base_candidate: a66c581c567a39a3971148e5abfae89d9aa96366
+  base_PR126: draft_unmerged_exact_CI_running_five_companions_success_at_authoring
+  later_source_receipt: pr127_stacked_evidence_and_retarget_20261126
+  scope: current_inventory_workshop_choice_directory_and_reading_consistency
+  existing_boundary: operational_workshop_or_current_authorized_account_only_directory
+  behavior: hide_ineligible_controls_clear_previous_selection_and_reads_on_directory_change
+  directory_ownership: volatile_revision_and_current_entry_guard_blocks_own_loading_duplicate_or_entry
+  source_RED: eight_expected_failures_twenty_passing_controls
+  actual_runtime_RED: two_expected_failures
+  native_baseline: one_failed_15_1457s_worker1_retry0_frozen_a66c581
+  native_baseline_scope: directory51_workshops_replaced_empty_selection_old_quantity_remains
+  native_baseline_report: apps/web/test-results/inventory-scope-red-20261126-report.json
+  fixture_guard: four_passed
+  initial_candidate_native: one_pass_5_6s_worker1_retry0
+  loading_native_RED: one_failed_15_8525s_worker1_retry0_selector_remained_enabled
+  focused_GREEN: 137_passed_zero_skips_inventory_and_connected_read
+  actual_runtime_GREEN: two_passed_local_probes
+  frontend_core: 1828_passed_zero_failures_or_skips_35_923s
+  native_candidate: 17_passed_53_0826s_worker1_retry0_flaky0_skipped0
+  native_scope: directory51_central_and_own_paging_held_request_operational_owner_320px_44px
+  native_receipt: artifacts/inventory-scope-20261126/native-local-receipt.json
+  native_receipt_sha256: 387dc2da3822139345c473c62a44dfa460df3dfd3d1ca572cea33ffb4e1a8b1e
+  source_and_build_hashes: unchanged_through_final_native_execution
+  candidate_PWA_build: pinned_Node22_16_pnpm11_17_pass
+  static: E2E_types_touched_ESLint_Ruff_Prettier_diff_pass
+  repository_contracts: 227_passed_verifier_OK
+  local_verification: local_verified_hosted_pending
+  independent_review: no_blocking_findings
+  hosted_candidate: pending
+  test_database_cleanup: owned_container_absence_confirmed
+  separate_branding_probe: three_deliberate_failures_two_controls_pass_synthetic_no_browser
+  branding_probe_receipt: artifacts/inventory-scope-20261126/branding-probe/receipt.json
+  branding_probe_receipt_sha256: 9d3ca3925181bb12978c8d6693dcff8383868e8e172e0f429b1ad1b16feaf95d
+  historical_administration_flake_cause: not_established_by_probe
+  schema_ledger_commands_offline_storage: unchanged
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+pr127_stacked_evidence_and_retarget_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+  candidate: 479f4308520d3663d78cf30c20684813e67a6712
+  stacked_base: a66c581c567a39a3971148e5abfae89d9aa96366
+  tested_merge: 68f4cc6efe970d00d228bc8da54420d19402950d
+  identical_tree: 069a1dde5919dc560dacedbf6dd97150c2558a7b
+  candidate_CI: 45905913295
+  candidate_workflows: all_six_success
+  log_results: frontend1828_API1_Python6813_pass58_intentional_skips
+  python_artifact: 15157784964
+  python_artifact_sha256: 44ee68a0251f761692a3689239c9408bc9f6cc9d9da6dce98a17ade5da6e7172
+  python_archive_review: clean_source_exact_merge_tree_shards4412_11_and2401_47_no_unexpected_outcomes
+  python_cleanup: primary_and_independent_verified_absent_both_shards
+  direct_artifact: 15159602188
+  direct_artifact_sha256: 604e118a7f379a6ac4668a7b07001d14cb0713e3d6faae66addf6c967fb52d67
+  aggregate_artifact: 15159809434
+  aggregate_artifact_sha256: b6c5d6d488ea53618cbbc81dc6060a4df818e68e76acd7d40dbceecc89ffefa4
+  inventory_archive_scope: direct_and_aggregate_each17_single_attempt_directory107_steps_four_themes
+  direct_browser: 145_passed_one_flaky_source_completion_login_body_CDP_retry1_passed
+  aggregate_browser: 146_passed_zero_flaky_or_skipped
+  failed_login_observation: nav0_empty_session_checked_response_seen_not_service_worker_body_unvalidated_login_incomplete
+  CDP_cause: unproven_not_attributed_to_branding
+  global_retry_free: not_claimed
+  retargeted_base: main_5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c
+  retarget_merge_tree: clean_identical_to_479f430_tree_before_documentation_successor
+  retargeted_documentation_successor: exact_CI_and_review_pending_before_merge
+  supersedes: earlier_PR127_stacked_hosted_pending_and_PR126_unmerged_statements_only
+  release: V0.1_partial
+  deployment: not_performed
+
+pr126_scoped_acceptance_and_merge_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-page-retry.md
+  candidate: a66c581c567a39a3971148e5abfae89d9aa96366
+  base: c65d54d6adc5e262356a883ef378a0696e7cb363
+  tested_merge: bedd898c8acbc1706230cad5619d36df0fd7c5b2
+  merged_main: 5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c
+  identical_tree: 1b5deffe25cec4637458883598ced5d55d57cab0
+  candidate_CI: 45903853206
+  candidate_workflows: all_six_success
+  log_results: Python6813_pass58_intentional_skips_frontend1817_API1
+  zero_retry_groups: [20, 9, 5, 10]
+  direct_artifact: 15158611290
+  direct_artifact_sha256: 58dc3a1b2fe7ad53c10c43065204e5b675deb8bcdf7a2f33ebae2f5099262217
+  aggregate_artifact: 15159241997
+  aggregate_artifact_sha256: c09423ee7e74f3a44796a97cc0000ecb56b4e309fb66f7d1adf2b6b5d68c60ce
+  scoped_archive_review: inventory17_and_administration16_single_attempt_in_each_phase
+  browser_phases: each145_passed_one_flaky_source_completion_login_body_CDP_retry1_passed
+  failed_login_observation: nav0_empty_session_checked_response_seen_not_service_worker_body_unvalidated_login_incomplete
+  CDP_cause: unproven_same_document_correction_not_universal_resolution
+  global_retry_free: not_claimed
+  acceptance: scoped_inventory_merge_not_global_V01_release
+  main_CI: 45912372086
+  main_CI_status: in_progress_at_observation
+  main_runtime: 45912372134_in_progress_at_observation
+  main_companion_success: [45912372150, 45912372021, 45912372011]
+  supersedes: PR126_candidate_hosted_pending_only_not_historical_failures_or_later_source
+  release: V0.1_partial
+  deployment: not_performed
+
+historical_inventory_page_retry_checkpoint: inventory_page_retry_20261126
 inventory_page_retry_20261126:
   status: partial
+  later_source_receipt: pr126_scoped_acceptance_and_merge_20261126
   evidence: docs/10-spec-development/2026-11-26-inventory-page-retry.md
   base_main: c65d54d6adc5e262356a883ef378a0696e7cb363
   scope: explicit_current_error_inventory_catalog_offset_and_history_cursor_retry
@@ -97,6 +202,26 @@ pr125_candidate_acceptance_and_merge_20261126:
   postmerge_repository_contracts: 227_passed
   main_CI: 45902761276
   main_CI_status: pending_separate_exact_source_outcome
+  later_source_receipt: pr125_main_outcome_20261126
+  release: V0.1_partial
+  deployment: not_performed
+
+pr125_main_outcome_20261126:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
+  main: c65d54d6adc5e262356a883ef378a0696e7cb363
+  tree: ccc760190dd26bcc0efb81adedd5f0d1799ce019
+  CI: 45902761276
+  workflows: all_five_success
+  log_results: Python6813_pass58_intentional_skips_frontend1806_API1
+  browser_logs: direct146_aggregate146_pass_no_reported_flake
+  zero_retry_groups: [20, 9, 5, 10]
+  direct_artifact_metadata: 15158143057
+  direct_artifact_metadata_sha256: 51974b9abc6a2d24bd736497a218898c667a67d8e0c03a0c2eb1fea33dac24ac
+  aggregate_artifact_metadata: 15158388021
+  aggregate_artifact_metadata_sha256: 86fbc4bbe1b4e624f23e0ce59699ef3d203bc10f6ede12907c917a71957f980e
+  evidence_kind: source_metadata_and_full_logs_archives_not_independently_revalidated
+  supersedes: PR125_main_pending_only_not_candidate_administration_flake
   release: V0.1_partial
   deployment: not_performed
 
@@ -3782,7 +3907,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
+active_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
+historical_inventory_page_retry_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
 historical_inventory_accessible_actions_plan: docs/10-spec-development/2026-11-26-inventory-accessible-actions.md
 historical_REST_create_conflict_plan: docs/10-spec-development/2026-11-26-rest-create-id-conflicts.md
 historical_source_completion_login_plan: docs/10-spec-development/2026-11-26-source-completion-login-document.md
@@ -3799,7 +3925,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
+active_plan_status: inventory_workshop_scope_stacked_hosted_reviewed_retargeted_candidate_pending
+historical_inventory_page_retry_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
 historical_inventory_accessible_actions_plan_status: inventory_accessible_action_names_locally_verified_hosted_pending
 historical_REST_create_conflict_plan_status: REST_candidate_CI_pass_local_scanner_correction_pass_exact_commit_and_hosted_pending
 historical_source_completion_login_plan_status: local_same_document_correction_verified_exact_hosted_pending
@@ -3815,7 +3942,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: inventory_page_retry_20261126
+last_checkpoint: inventory_workshop_scope_20261126
+historical_inventory_page_retry_last_checkpoint: inventory_page_retry_20261126
 historical_inventory_accessible_actions_last_checkpoint: inventory_accessible_actions_20261126
 historical_REST_create_conflict_last_checkpoint: rest_create_id_conflicts_20261126
 historical_source_completion_login_last_checkpoint: source_completion_login_document_20261126
@@ -4095,8 +4223,12 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
-  - qualify_exact_inventory_page_retry_successor_hosted_after_local_native_and_source_review_pass
-  - inspect_separate_PR125_main_CI45902761276_without_inheriting_candidate_acceptance
+  - qualify_exact_retargeted_PR127_documentation_successor_before_merge
+  - inspect_separate_PR126_main_CI45912372086_without_inheriting_candidate_acceptance
+  - preserve_PR126_and_stacked_PR127_source_completion_CDP_failures_and_scoped_inventory_acceptance
+  - keep_controlled_branding_refusal_probe_separate_from_unproven_historical_CI_timeout
+  - investigate_source_completion_login_body_CDP_failure_as_separate_bounded_test_only_work
+  - retain_PR125_exact_main_pass_separately_from_historical_administration_timeout
   - preserve_known_administration_identity_flake_without_inventing_cause_or_waiving_retry_free_gates
   - preserve exact_PR123_main_pass_and_PR124_initial_Security_failure_as_distinct_source_receipts
   - retain PR123_same_document candidate acceptance separately from current_REST_correction qualification

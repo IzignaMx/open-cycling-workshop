@@ -1,5 +1,51 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-26 · PR126 integration and PR127 retarget reconciliation
+
+- [x] Verify PR125 exact-main CI45902761276 and all five workflow successes;
+      retain 146 direct/146 aggregate browser passes as log evidence and archive
+      IDs/digests as metadata. Preserve its earlier candidate administration flake.
+- [x] Verify PR126 CI45903853206 and all six workflows. Independently inspect
+      both browser archives: inventory 17/17 and administration 16/16 without
+      retry; each full phase remains 145 passed plus one flaky login-body case.
+- [x] Integrate PR126 as `5ccb44f`, with the exact candidate/tested-merge tree.
+      Its [receipt](docs/10-spec-development/2026-11-26-inventory-page-retry.md#pr126-scoped-acceptance-and-merge--2026-11-26)
+      supersedes historical candidate-pending and unmerged statements only.
+- [ ] Inspect separate PR126 main CI45912372086 and Local runtime45912372134;
+      both are in progress at this observation. Their candidate result is separate.
+- [x] Review stacked PR127 CI45905913295, all six workflows, the exact Python
+      shards and both cleanups, and both inventory archives (17 single-attempt
+      passes each). Preserve direct 145 plus one flaky source-completion case
+      separately from aggregate 146 passes without flaky/skipped cases.
+- [x] Retarget PR127 to main `5ccb44f`; verify the clean merge tree equals
+      the previously tested `479f430` head tree before documentation changes.
+- [ ] Qualify the exact retargeted documentation successor before merge. The
+      [stacked receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-stacked-evidence-and-retarget-to-main--2026-11-26)
+      does not prequalify a later source or prove a new CI run.
+- Keep login-body CDP diagnosis separate from inventory and the branding probe.
+  Zero observed main-frame navigations do not establish the CDP failure's cause.
+  Historical failures and all physical, recovery and deployment gates remain open.
+
+## 2026-11-26 · Inventory workshop selection consistency
+
+- [x] Reproduce mismatched account-only directory/reading scope and ineligible
+      operational directory controls in isolated source checks; retain native
+      baseline failure with 51 workshops, zero retries and four fixture passes.
+- [x] Complete the bounded correction, focused GREEN and independent review;
+      preserve current authority, immediate invalidation and late-response fences.
+- [x] Verify the exact rebuilt PWA with 1,828 frontend tests and 17 native inventory
+      journeys, all passing without retries/skips; preserve source/build receipts
+      and confirm disposable database cleanup.
+- [x] Verify repository contracts (227 passing) and repository verifier on the
+      current candidate; retain exact hosted qualification separately.
+- [ ] Qualify the exact successor through hosted checks; its base PR126 remains
+      draft with CI pending and is not integrated at this authored checkpoint.
+- Keep the separate branding probe's three deliberate failures and two passing
+  controls distinct from the historical CI timeout: no cause attribution, fence
+  relaxation or automatic retry follows from that investigation.
+  See the [current checkpoint](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md).
+- Full inventory, physical acceptance, recovery and deployment gates remain open.
+
 ## 2026-11-26 · Explicit inventory page retry
 
 - [x] Inspect the missing direct recovery action for failed catalog/history pages;
