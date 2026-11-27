@@ -1,4 +1,5 @@
 import { captureResponseDuring } from './helpers/response-capture.js'
+import { installLoginObserver, observeLogin } from './helpers/login-observation.mjs'
 import { expect, test, type Frame, type Page } from '@playwright/test'
 import {
   apiLogin,
@@ -144,6 +145,7 @@ test('resolve an unsent source capture then author distinct new work at another 
   ).toBe(false)
 
   const destination = await context.newPage()
+  await installLoginObserver(destination, DESTINATION)
   await destination.goto(DESTINATION)
   const loginObservation = {
     mainFrameNavigations: 0,
@@ -151,44 +153,43 @@ test('resolve an unsent source capture then author distinct new work at another 
     responseSeen: false,
     responseFromServiceWorker: null as boolean | null,
     bodyValidated: false,
+    issuedMatchesStored: null as boolean | null,
     loginCompleted: false,
   }
   const observeNavigation = (frame: Frame) => {
     if (frame === destination.mainFrame()) loginObservation.mainFrameNavigations += 1
   }
   destination.on('framenavigated', observeNavigation)
-  let issued: { access_token: string }
+  let issued: { bodyValidated: boolean; issuedMatchesStored: boolean }
   try {
     // Keep even an unexpected preexisting bearer out of assertion output.
     expect(
       await destination.evaluate(() => sessionStorage.getItem('ocwp.session.v2') === null),
     ).toBe(true)
     loginObservation.emptySessionChecked = true
-    const destinationLogin = destination.waitForResponse(
-      (response) =>
-        response.url() === `${DESTINATION}/api/v1/auth/login` &&
-        response.request().method() === 'POST',
-    )
-    issued = await captureResponseDuring(
-      destinationLogin,
-      () => loginOnCurrentPage(destination, identity),
-      async (loginResponse) => {
-        loginObservation.responseSeen = true
-        loginObservation.responseFromServiceWorker = loginResponse.fromServiceWorker()
-        expect(loginResponse.status()).toBe(200)
-        const body: unknown = await loginResponse.json()
-        // Fail closed without including a token or arbitrary body in assertions.
-        const valid =
-          typeof body === 'object' &&
-          body !== null &&
-          'access_token' in body &&
-          typeof body.access_token === 'string' &&
-          body.access_token.trim().length > 0
-        expect(valid).toBe(true)
-        loginObservation.bodyValidated = true
-        return body as { access_token: string }
-      },
-    )
+    issued = await observeLogin(destination, () => {
+      const destinationLogin = destination.waitForResponse(
+        (response) =>
+          response.url() === `${DESTINATION}/api/v1/auth/login` &&
+          response.request().method() === 'POST',
+      )
+      return captureResponseDuring(
+        destinationLogin,
+        () => loginOnCurrentPage(destination, identity),
+        async (loginResponse) => {
+          loginObservation.responseSeen = true
+          loginObservation.responseFromServiceWorker = loginResponse.fromServiceWorker()
+          expect(loginResponse.status()).toBe(200)
+          expect(loginResponse.url()).toBe(`${DESTINATION}/api/v1/auth/login`)
+          expect(loginResponse.request().method()).toBe('POST')
+          expect(loginObservation.responseFromServiceWorker).toBe(false)
+        },
+      )
+    })
+    loginObservation.bodyValidated = issued.bodyValidated
+    loginObservation.issuedMatchesStored = issued.issuedMatchesStored
+    expect(issued.bodyValidated).toBe(true)
+    expect(issued.issuedMatchesStored).toBe(true)
     loginObservation.loginCompleted = true
     expect(loginObservation.mainFrameNavigations).toBe(0)
   } finally {
@@ -201,7 +202,6 @@ test('resolve an unsent source capture then author distinct new work at another 
   }
   const destinationToken = await sessionToken(destination)
   // Only booleans reach assertions/receipt; never print bearer values.
-  expect(destinationToken === issued.access_token).toBe(true)
   expect(destinationToken !== token).toBe(true)
   expect((await sessionToken(source)) === token).toBe(true)
   await assertServerContext(destination, destinationToken)

@@ -147,3 +147,27 @@ and Local runtime `45912372134` are in progress at this observation; Security
 `45912372011` have succeeded. The new main run is not qualified by candidate
 acceptance. PR127's later workshop-scope source and its retargeted successor
 remain separate, as do physical, recovery and deployment gates.
+
+## Exact PR126 main outcome observed · 2026-11-27
+
+The separate [main CI45912372086](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45912372086)
+completed successfully on `5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c`, tree
+`1b5deffe25cec4637458883598ced5d55d57cab0`. All five main workflows succeeded,
+including Local runtime. Reviewed results report **6,813 Python passes / 58
+intentional skips**, shard cleanup, **1,817 frontend passes** and **1 API-client
+pass**.
+
+Independent ZIP metadata and parsed-report inspection covered direct artifact
+`15162126773`, SHA-256
+`9c627ccf485603362c6c850b8f1b2458fcbd17d385b6112abe105d5b17fb917c`,
+and aggregate artifact `15163220776`, SHA-256
+`65dbfbb5ad55b29d62018d931b65f7fed76b564722f46572e7a67aa331373fc6`.
+Each browser phase reports **146 passing cases with retry zero**, including
+**17/17 inventory cases**. This is evidence for that exact main source; it is not
+a new review of every trace or qualification of later PR127/PR128 changes.
+
+This receipt supersedes PR126's historical main-CI/runtime-pending statements.
+The earlier candidate's direct and aggregate login-body CDP failures remain
+preserved. A clean main run does not explain or cure that intermittent defect,
+and no global release, physical-device, actual-installation or deployment gate
+is closed by this receipt.

@@ -170,6 +170,7 @@ try {
     'tests/pwa/current-route-fixture.test.mjs',
     'tests/pwa/reception-measurement.test.mjs',
     'tests/pwa/response-capture.test.mjs',
+    'tests/pwa/login-observation.test.mjs',
     '../../tests/operations/local_runtime_browser_protocol.test.mjs',
     'tests/sync/coordinator.test.mjs',
     'tests/sync/dexie-store.test.mjs',

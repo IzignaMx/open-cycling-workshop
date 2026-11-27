@@ -205,3 +205,34 @@ compatibility, not a new CI execution. The documentation reconciliation creates
 a later candidate that requires its own exact retargeted CI and review before
 merge. These stacked receipts do not prequalify that later commit. The current
 checkpoint remains partial; no production or physical gate is promoted.
+
+## PR127 retargeted acceptance and merge · 2026-11-27
+
+The retargeted documentation candidate
+`996f0bb5d55ef5788f557691e3b46169e5dd3778`, based on main
+`5ccb44fef975cab7cf99af8bd5d5a72f4c1d017c`, was tested as synthetic merge
+`812cc957e9d096d683437718bb86a83df5a670c2`. Candidate, tested merge and merged
+main `971bdd20e14508b5335189b1eb56c4d93ef70cea` share tree
+`778accf50baa41221da253e1bbf0881886cdda57`.
+[CI45912843815](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45912843815)
+and all five companion workflows succeeded. Reviewed logs report **6,813 Python
+passes / 58 intentional skips**, cleanup, **1,828 frontend passes**,
+**1 API-client pass**, and repeat groups **20 / 9 / 5 / 10**.
+
+Independent actual ZIP/report review covered direct artifact `15162082559`,
+SHA-256 `b061e32161c3081022be7449e17cbfc4450a0b8d696f1f4d43f930d76cd50b30`,
+and aggregate artifact `15163246640`, SHA-256
+`8cfd07471da3c973508597919cad4e3145e2f242c95c45227b86a72cdfd544ac`.
+Both report **146 passing cases on their first attempt**, including **17/17
+inventory cases**, with zero flaky, skipped or error cases. This exact retargeted
+receipt supersedes the earlier pending qualification of `996f0bb`, without
+reclassifying the older stacked candidate's source-completion failure.
+
+PR127 is merged. Fresh-main [CI45918169386](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45918169386),
+Local runtime `45918169473`, Security `45918169443`, quote microfixture
+`45918169517` and presentation preview `45918169384` have started and are in
+progress at this observation. Candidate acceptance does not qualify those runs.
+PR128 has been retargeted to this new main; its original stacked evidence and
+later documentation successor require separate source-bound reconciliation.
+No clean browser run establishes the CDP cause or closes physical, recovery,
+installation or deployment gates.
