@@ -1,6 +1,38 @@
 schema: 1
 
-current_checkpoint: branding_manual_recovery_20261127
+current_checkpoint: inventory_shop_workshop_plan_20261127
+inventory_shop_workshop_plan_20261127:
+  status: partial
+  evidence: docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md
+  matrix: docs/10-spec-development/inventory-scope-plan.json
+  base_candidate: a2b8379b9d3980052887dffbf5f36c3987ecc874
+  source_audited: b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8
+  compared_main: ed8057b2b473911574f97050ce24ac537716118f
+  source_scope: inventory_frontend_backend_migrations_API_client_unchanged
+  predecessor_PR129: exact_retargeted_documentation_successor_hosted_pending
+  predecessor_CI: 45971834314
+  predecessor_tested_merge: 22ffe8095e646e6567ea035e72d14e03256fbc92
+  predecessor_workflow_observation: Security_DCO_presentation_microfixture_success_CI_local_runtime_in_progress
+  previous_hosted_CI: 45918812340
+  postgres_artifact: 15163543965
+  postgres_artifact_sha256: d07183ef459c64ba65c2ec63fb43c9413fac34183f8d310ef3e4dad16c92a181
+  existing_postgres: 43_passed_zero_skips_errors
+  existing_native: 17_inventory_cases_each_direct_aggregate_retry0
+  safe_review_receipt: artifacts/inventory-plan-20261127/hosted-inventory-review.json
+  safe_review_receipt_sha256: 95916f73291cb621a0137d0e1e4ef5dce85000ff3bb12f3254e06fed8f012348
+  present: basic_product_catalog_location_bound_SKU_ledger_and_connected_read_UI
+  pending: shared_catalog_per_location_holdings_purchasing_transfer_counts_costs_workshop_consumption_UI_POS_payments_returns
+  coverage: FR_INV_001_012_R03_17_R04_14_four_business_profiles
+  scope: planning_refinement_with_structural_acceptance_guards_no_runtime_API_migration_change
+  planning_tests: 13_RED_then_13_GREEN
+  repository_contracts: 241_passed_verifier_OK
+  physical_stock: not_verified_synthetic_evidence_only
+  hosted_candidate: pending
+  release: V0.1_partial
+  physical_T1_T8_R01_T035_and_G1_G6: open
+  deployment: not_performed
+
+historical_branding_current_checkpoint: branding_manual_recovery_20261127
 branding_manual_recovery_20261127:
   status: partial
   evidence: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
@@ -4162,7 +4194,8 @@ quote_service_candidate_20261016:
 
 project: open-cycling-workshop-platform
 active_release: V0.1
-active_plan: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
+active_plan: docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md
+historical_branding_plan: docs/10-spec-development/2026-11-27-branding-manual-recovery.md
 historical_source_login_observation_plan: docs/10-spec-development/2026-11-26-source-login-observation.md
 historical_inventory_workshop_scope_plan: docs/10-spec-development/2026-11-26-inventory-workshop-scope.md
 historical_inventory_page_retry_plan: docs/10-spec-development/2026-11-26-inventory-page-retry.md
@@ -4182,7 +4215,8 @@ historical_workshop_text_plan: docs/10-spec-development/2026-11-05-workshop-text
 historical_backup_parser_plan: docs/10-spec-development/2026-11-05-backup-manifest-duplicates.md
 historical_location_plan: docs/10-spec-development/2026-11-05-location-create-validation.md
 historical_read_boundary_plan: docs/10-spec-development/2026-11-05-autonomous-read-boundaries.md
-active_plan_status: branding_manual_recovery_stacked_hosted_reviewed_retargeted_candidate_pending
+active_plan_status: inventory_shop_workshop_scope_refined_hosted_candidate_pending
+historical_branding_plan_status: branding_manual_recovery_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_source_login_observation_plan_status: source_login_observation_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_inventory_workshop_scope_plan_status: inventory_workshop_scope_stacked_hosted_reviewed_retargeted_candidate_pending
 historical_inventory_page_retry_plan_status: inventory_manual_page_retry_locally_verified_hosted_pending
@@ -4201,7 +4235,8 @@ previous_capture_visit_plan: docs/superpowers/plans/2026-11-02-capture-visit-con
 historical_bootstrap_plan: docs/superpowers/plans/2026-08-07-v0.1-bootstrap-customer-slice.md
 historical_branch: codex/quote-service-clean-integration
 status: partial
-last_checkpoint: branding_manual_recovery_20261127
+last_checkpoint: inventory_shop_workshop_plan_20261127
+historical_branding_last_checkpoint: branding_manual_recovery_20261127
 historical_source_login_observation_last_checkpoint: source_login_observation_20261126
 historical_inventory_workshop_scope_last_checkpoint: inventory_workshop_scope_20261126
 historical_inventory_page_retry_last_checkpoint: inventory_page_retry_20261126
@@ -4484,7 +4519,10 @@ tier1_protocol:
   runtime_compose_workflows_and_consumed_measurements: unchanged
 
 next_focus:
+  - qualify_exact_inventory_shop_workshop_planning_candidate_with_repository_review_and_hosted_checks
   - qualify_exact_retargeted_PR129_documentation_successor_with_hosted_checks_and_review
+  - retain_all_inventory_requirements_and_canonical_V0.3_V0.4_tasks_without_advancing_active_V0.1
+  - implement_shared_catalog_stock_purchasing_and_POS_in_dependency_order_after_applicable_release_gates
   - preserve_local_baseline5acc434_and_documentation_predecessor5e99f17_as_distinct_source_receipts
   - retain_PR129_stacked147_browser_and_exact_Python_cleanup_evidence_without_prequalifying_later_source
   - inspect_separate_PR128_main_CI45970597364_and_companions_without_inheriting_candidate_acceptance

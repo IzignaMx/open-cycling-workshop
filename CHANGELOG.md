@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-27 · Spare-parts and retail inventory scope
+
+- Audit existing catalog, movement API and connected stock/history UI. Record
+  actual source-bound PostgreSQL 43/43 and inventory browser 17/17 in each
+  hosted lane from the earlier PR129 stacked candidate, not a new plan run.
+- Refine the 17 V0.3 and 14 V0.4 canonical tasks, all 12 inventory requirements
+  and four supported business profiles. One catalog and ledger serve workshop
+  parts/consumables and retail goods; stock by location, counts, purchasing,
+  consumption, sales/returns and non-stock services have distinct acceptance.
+- Link the [scope plan](docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md)
+  and [machine-readable matrix](docs/10-spec-development/inventory-scope-plan.json),
+  including dependency/coverage/fixture guards. No runtime, API, migration,
+  release, physical stock or deployment status changes.
+
 ## 2026-11-27 · Branding stacked qualification and retarget
 
 - Record PR129's six successful stacked workflows, exact Python/shard/cleanup

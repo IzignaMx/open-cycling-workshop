@@ -1,5 +1,24 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-27 · Spare-parts and retail inventory scope
+
+- [x] Audit source and existing hosted receipts: connected inventory is partial;
+      PostgreSQL 43/43 and native inventory 17/17 in each previous stacked
+      candidate lane. No claim of real workshop stock.
+- [x] Integrate the [scope refinement](docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md)
+      and [matrix](docs/10-spec-development/inventory-scope-plan.json) into
+      existing FRs, V0.3/V0.4 tasks and description coverage; preserve V0.1 gates.
+- [ ] Qualify the exact planning candidate and predecessor separately in hosted CI.
+- [ ] Implement and qualify V0.3 catalog, stock by location, purchasing, counts,
+      workshop consumption and applicable connected/offline contracts in canonical order.
+- [ ] Implement and qualify V0.4 independent retail and combined sale/payment/return
+      flows without a second stock issue for parts already consumed in workshop.
+- [ ] Reconcile a real site's authorized opening stock/physical count and evidence
+      actual device, operator and installation acceptance at the respective gates.
+
+This is verified planning coverage, not completed inventory functionality or
+release/deployment approval.
+
 ## 2026-11-27 · PR129 stacked qualification and retarget
 
 - [x] Review exact stacked CI45918812340 and all six workflows for `b49f10b`,

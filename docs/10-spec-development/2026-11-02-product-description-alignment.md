@@ -28,6 +28,14 @@ of every possible helper. The existing `traceability.csv` remains a bounded
 verified/partial evidence ledger; do not fill it with invented test IDs for
 planned modules. AC-009 still requires actual behavior tests for every V1 FR.
 
+**Inventory scope refinement (2026-11-27):** the later [spare-parts and retail
+inventory plan](2026-11-27-spare-parts-retail-inventory-plan.md) and its
+[requirement-level map](inventory-scope-plan.json) make workshop consumption,
+store merchandise, common catalog/ledger, purchasing, physical counts and POS
+dependencies explicit inside V0.3/V0.4. The original source baseline above
+remains historical; the coverage matrix links the newer scoped audit without
+promoting planned functionality or changing the product description.
+
 ## Source-of-truth adjustments
 
 - [Additive Phase 1 supplement](../01-functional-requirements/2026-11-02-product-description-supplement.md)
