@@ -87,5 +87,9 @@ def test_synthetic_branding_seed_keeps_explicit_grants_and_floor_one_per_case(
                         assert set(scoped.capabilities) == LEGACY_WILDCARD_CAPABILITIES
                     elif case == "grants-technical":
                         assert scoped.capabilities == []
+                    elif case == "read-fenced-recovery":
+                        assert set(scoped.capabilities) == branding.WORKSHOP_GRANTS | {
+                            "branding.read"
+                        }
     finally:
         engine.dispose()

@@ -1,5 +1,27 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-27 · Shared-branding manual recovery
+
+- [x] Reproduce real cache-entry refusals and the missing recovery action on
+      pinned baseline `5acc434`; retain native RED and source-composition controls.
+- [x] Verify bounded notice/manual refresh, diagnostic preservation, stale-result
+      refusal and accepted-profile controls. Preserve kernel/cache admission and
+      the finite coalescer; no automatic retry or response publication on refusal.
+- [x] Pass 79 branding cases (31 runtime), five composition and six shell cases;
+      full frontend 1,872 and repository 228 pass, with independent review and
+      relevant static checks. These selections overlap.
+- [x] Pass focused native one and final 21 cases with zero retries/flakes/skips,
+      including real third-GET recovery, context/journal preservation, keyboard,
+      disabled action, narrow targets and retained four-theme journeys. Preserve
+      source/build receipt and confirmed container/synthetic-asset cleanup.
+- [ ] Qualify the exact branding successor through hosted CI. Its final branch
+      base `5e99f17` is a documentation-only successor of the actual local
+      baseline `5acc434`; predecessor CI45918527486 is in progress, and its
+      acceptance remains separate from this branding candidate.
+- The [current checkpoint](docs/10-spec-development/2026-11-27-branding-manual-recovery.md)
+  does not attribute the historical administration timeout or CDP failure.
+  Physical, inventory-completion, recovery and deployment gates remain open.
+
 ## 2026-11-27 · PR128 stacked evidence and retarget
 
 - [x] Verify exact stacked CI45913487074 and all six workflows; independently

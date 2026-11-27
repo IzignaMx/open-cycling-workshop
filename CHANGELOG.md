@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-27 · Explicit recovery for unconfirmed shared branding
+
+- Show a status and **Volver a consultar la marca** action when legitimate cache
+  refusal leaves the current admitted view without an accepted shared profile.
+  Reuse manual refresh; preserve admission fences and the finite request budget.
+- Keep storage diagnostics distinct, disable the pending action and restore
+  keyboard focus without overriding a user's later focus choice. Preserve
+  accepted profiles, operational context and journal.
+- Retain native RED, then 21 native passes without retries/flakes/skips and
+  1,872 frontend/228 repository passes. Exact hosted qualification is pending
+  in the [checkpoint](docs/10-spec-development/2026-11-27-branding-manual-recovery.md).
+  The historical administration timeout and CDP causes remain unproven.
+
 ## 2026-11-27 · Login-observation stacked evidence and retarget
 
 - Record all six successful PR128 workflows, independently reviewed Python

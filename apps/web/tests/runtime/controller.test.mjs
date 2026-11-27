@@ -3670,3 +3670,96 @@ test('late old capture receipt cannot request offline branding in a new login', 
   assert.equal(requests, 0)
   assert.equal(f.runtime.getSnapshot().user.user_id, 'B')
 })
+
+for (const activity of ['checkLease', 'verifyAccount', 'refresh']) {
+  test(
+    `manual branding recovery: second cache write fenced by ${activity}`,
+    { timeout: 10_000 },
+    async (t) => {
+      const { BrandingSnapshotRepository } =
+        await import('../../.tmp-runtime/src/branding/cache.js')
+      const server = brandedApi(['branding.read'])
+      const pending = { wait: Promise.resolve() }
+      waitForSyncResponse(server, pending)
+      const f = setup(t, { server })
+      const barriers = [0, 1].map(() => {
+        let started, release
+        const entered = new Promise((resolve) => {
+          started = resolve
+        })
+        const gate = new Promise((resolve) => {
+          release = resolve
+        })
+        t.after(() => release())
+        return { started, release, entered, gate }
+      })
+      const transactions = f.database.transaction.bind(f.database)
+      let writes = 0
+      t.mock.method(f.database, 'transaction', async (...args) => {
+        if (args[0] === 'rw' && args[1].some((table) => table.name === 'brandingSnapshots')) {
+          const barrier = barriers[writes++]
+          if (barrier) {
+            barrier.started()
+            await barrier.gate
+          }
+        }
+        return transactions(...args)
+      })
+      const repositoryWrite = BrandingSnapshotRepository.prototype.write
+      const records = []
+      t.mock.method(BrandingSnapshotRepository.prototype, 'write', async function (...args) {
+        const enteredAt = args[3]
+        const accepted = await repositoryWrite.apply(this, args)
+        const control = await f.database.deviceControl.get('device')
+        records.push({ enteredAt, observedAt: control.observedAt, accepted })
+        return accepted
+      })
+      pending.wait = barriers[0].entered
+      advancingRuntimeClock(t, f.env)
+      await f.runtime.start()
+      await login(f.runtime)
+      await barriers[0].entered
+      await until(
+        () => f.runtime.getSnapshot().sync === 'synced',
+        'sync must settle before first release',
+      )
+      barriers[0].release()
+      await barriers[1].entered
+      const before = await f.database.deviceControl.get('device')
+      if (activity === 'refresh') await f.runtime.refresh('customer')
+      else await f.runtime[activity]()
+      const after = await f.database.deviceControl.get('device')
+      assert.ok(after.observedAt > before.observedAt)
+      barriers[1].release()
+      await settledBranding(f.runtime)
+      const settled = structuredClone(f.runtime.branding.getSnapshot())
+      const requests = () => server.calls.filter((p) => p.endsWith('/branding')).length
+      assert.equal(requests(), 2)
+      assert.deepEqual(
+        records.map((r) => r.accepted),
+        [false, false],
+      )
+      assert.ok(records.every((r) => r.observedAt > r.enteredAt))
+      assert.equal(await f.database.brandingSnapshots.count(), 0)
+      assert.equal(f.runtime.getSnapshot().phase, 'ready')
+      assert.equal(await f.database.operationJournal.count(), 0)
+      assert.equal(settled.profile, null)
+      assert.equal(settled.refreshSuggested, true)
+      assert.equal(settled.cacheError, false)
+      assert.equal(
+        settled.message,
+        'No se pudo confirmar la marca compartida para esta vista. Puedes volver a consultarla.',
+      )
+      await f.runtime.refresh('customer')
+      await f.runtime.sync()
+      assert.equal(requests(), 2, 'later operational work cannot schedule another branding request')
+      await f.runtime.branding.refresh(true)
+      const recovered = f.runtime.branding.getSnapshot()
+      assert.equal(recovered.profile?.display_name, 'Shared workshop')
+      assert.equal(requests(), 3)
+      assert.equal(recovered.refreshSuggested, false)
+      assert.equal(recovered.message, null)
+      assert.equal(await f.database.operationJournal.count(), 0)
+    },
+  )
+}
