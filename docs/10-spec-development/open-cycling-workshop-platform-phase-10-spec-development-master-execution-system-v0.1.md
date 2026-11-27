@@ -923,9 +923,21 @@ Debe demostrar un taller capaz de recibir y procesar una bicicleta completamente
 
 Debe demostrar que stock es consecuencia verificable del ledger y que workshop consumption/purchasing producen movimientos consistentes incluso bajo reconexión.
 
+Incluye refacciones, mercancía de tienda y consumibles según el perfil habilitado,
+una identidad de SKU con saldos por ubicación, catálogo operable, recepciones y
+conteo físico compensatorio. Taller, tienda antes de POS, operación combinada y
+servicio/cooperativa no requieren módulos ajenos a su perfil. No acredita venta
+minorista transaccional ni la calificación completa FR-BIZ-003 de fases posteriores.
+
 ## 52. V0.4 Checkpoint
 
 Debe demostrar venta, pagos, devoluciones e impacto de inventario sin doble contabilización y con comportamiento offline explícito.
+
+Incluye venta de tienda sin bicicleta/orden obligatoria y cobro de orden sin
+repetir consumo, productos inventariables/no inventariables y servicios; caja
+sólo cuando está habilitada. La competencia real venta/reserva, devoluciones y
+replay deben conservar stock y dinero conforme a la política del perfil, sin
+otorgar autoridad al cambiar de perfil ni imponer POS al taller.
 
 ## 53. V0.5 Checkpoint
 
@@ -1041,44 +1053,44 @@ remain R09-T028/R10-T004 profile acceptance, avoiding a V0.2→V0.4 cycle.
 
 ### V0.3 · Inventory & Purchasing
 
-| ID       | Epic | Tarea                                                                                                              | Depends       | Evidence mínima                |
-| -------- | ---- | ------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------ |
-| R03-T001 | E09  | Modelar Product, SKU, category, brand y variant                                                                    | V0.2          | Catalog tests                  |
-| R03-T002 | E09  | Modelar inventory ledger append only                                                                               | R03-T001      | Ledger invariants              |
-| R03-T003 | E09  | Implementar movimientos PURCHASE, SALE, WORKSHOP_USE, RETURN, ADJUSTMENT, TRANSFER, LOSS, DAMAGE, DONATION y REUSE | R03-T002      | Property tests                 |
-| R03-T004 | E09  | Derivar stock desde ledger y crear materialized projection verificable                                             | R03-T003      | Rebuild equality test          |
-| R03-T005 | E09  | Implementar ubicaciones físicas y stock por location                                                               | R03-T004      | Location tests                 |
-| R03-T006 | E09  | Implementar stock mínimo y alertas low stock                                                                       | R03-T004      | Threshold tests                |
-| R03-T007 | E10  | Modelar Supplier y datos operativos                                                                                | R03-T001      | Supplier tests                 |
-| R03-T008 | E10  | Implementar Purchase Order state machine                                                                           | R03-T007      | PO workflow                    |
-| R03-T009 | E10  | Implementar recepción parcial/completa y movimientos de inventario                                                 | R03-T008      | Transactional tests            |
-| R03-T010 | E10  | Implementar histórico de costo y proveedor                                                                         | R03-T009      | Reporting tests                |
-| R03-T011 | E09  | Integrar consumo de partes desde ServiceOrder como WORKSHOP_USE                                                    | R03-T002,V0.2 | Atomic workshop inventory test |
-| R03-T012 | E09  | Implementar ajustes mediante compensación, no edición destructiva                                                  | R03-T002      | Compensation invariant         |
-| R03-T013 | E19  | Implementar búsqueda y escaneo QR/barcode para productos                                                           | R03-T001      | Scanner E2E                    |
-| R03-T014 | E20  | Implementar vistas densas de inventario con TanStack Table                                                         | R03-T004      | Keyboard/a11y/table tests      |
-| R03-T015 | E03  | Probar ledger offline concurrente en múltiples dispositivos                                                        | R03-T002      | Sync property/chaos tests      |
-| R03-T016 | E22  | Crear reconciliation report stock materializado vs ledger                                                          | R03-T004      | Reconciliation evidence        |
-| R03-T017 | E22  | Ejecutar fixture load con 100k+ movements y performance budget                                                     | R03-T016      | Performance evidence           |
+| ID       | Epic | Tarea                                                                                                                                                                                                       | Depends                                                        | Evidence mínima                                                                    |
+| -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| R03-T001 | E09  | Modelar Product, SKU/EAN, category, brand, variant, unidad y compatibilidad extensible para refacciones, mercancía y consumibles; distinguir inventariables, no inventariables y servicios                  | V0.2                                                           | Catalog tests por variante, código, unidad y comportamiento de stock               |
+| R03-T002 | E09  | Modelar inventory ledger append only preservando historia y semántica de movimientos existentes                                                                                                             | R03-T001                                                       | Ledger invariants y compatibilidad histórica                                       |
+| R03-T003 | E09  | Implementar movimientos PURCHASE, SALE, WORKSHOP_USE, RETURN, ADJUSTMENT, TRANSFER, LOSS, DAMAGE, DONATION y REUSE con motivos, autorización e idempotencia                                                 | R03-T002                                                       | Property tests por movimiento; SALE de dominio no califica POS                     |
+| R03-T004 | E09  | Derivar stock desde ledger y crear materialized projection verificable de existencias, reservas y disponible                                                                                                | R03-T003                                                       | Rebuild equality test, reserva/liberación/consumo sin doble efecto                 |
+| R03-T005 | E09  | Implementar ubicaciones físicas y stock por location sin duplicar identidad de SKU; transferencias correlacionadas entre ubicaciones autorizadas                                                            | R03-T004                                                       | Location tests, aislamiento y conservación por transferencia                       |
+| R03-T006 | E09  | Implementar stock mínimo y alertas low stock por producto/ubicación y política explícita de disponibilidad                                                                                                  | R03-T004,R03-T005                                              | Threshold tests por ubicación y reserva                                            |
+| R03-T007 | E10  | Modelar Supplier y datos operativos vinculables al catálogo de tienda/taller                                                                                                                                | R03-T001                                                       | Supplier tests                                                                     |
+| R03-T008 | E10  | Implementar Purchase Order state machine y UI autorizada de compra con líneas, pendientes y recepciones parciales                                                                                           | R03-T007                                                       | PO workflow                                                                        |
+| R03-T009 | E10  | Implementar recepción parcial/completa mediante UI/comandos autorizados y movimientos atómicos por ubicación, sin duplicar recepción                                                                        | R03-T008,R03-T003,R03-T005                                     | Transactional tests de recepción, duplicados y rollback                            |
+| R03-T010 | E10  | Implementar histórico de costo/proveedor y costo, precio de referencia y margen de inventario con fórmula/versionado explícitos                                                                             | R03-T009                                                       | Reporting/calculation tests; pricing/impuestos de venta en R04-T002                |
+| R03-T011 | E09  | Integrar UI/comandos autorizados de reserva, liberación y consumo de partes desde ServiceOrder como WORKSHOP_USE, sin descontar por cotización/autorización                                                 | R03-T002,R03-T003,R03-T004,R03-T005,V0.2                       | Atomic workshop inventory test por ubicación, repetición y reserva                 |
+| R03-T012 | E09  | Implementar conteo físico, comparación contra referencia declarada, revisión de diferencias y ajustes compensatorios autorizados; no edición destructiva                                                    | R03-T002,R03-T004,R03-T005                                     | Count/reconciliation tests, movimientos concurrentes y compensation invariant      |
+| R03-T013 | E19  | Implementar búsqueda por nombre/SKU/EAN y escaneo QR/barcode con variante inequívoca y alternativa accesible sin escáner                                                                                    | R03-T001                                                       | Search/scanner E2E y rechazo de código ambiguo                                     |
+| R03-T014 | E20  | Implementar UI accesible de catálogo/stock con TanStack Table: crear/editar/archivar artículos, transferir/contar/ajustar mediante comandos autorizados; alcance, costos y estados stale/unknown explícitos | R03-T004,R03-T005,R03-T006,R03-T010,R03-T012,R03-T013          | Operator/keyboard/a11y tests por perfil, permisos y estado; sin edición del ledger |
+| R03-T015 | E03  | Diseñar/admitir mediante ADR el ledger offline antes de exponer mutaciones y probar recepción, consumo y conteo concurrentes en múltiples dispositivos                                                      | R03-T002,R03-T005,R03-T009,R03-T011,R03-T012                   | ADR, sync property/chaos tests, conflictos visibles y recuperación                 |
+| R03-T016 | E22  | Crear reconciliation report de stock materializado vs ledger e integrar compras, consumo, transferencias, conteos y replay offline                                                                          | R03-T004,R03-T005,R03-T009,R03-T010,R03-T011,R03-T012,R03-T015 | Reconciliation evidence por producto/ubicación e idempotencia                      |
+| R03-T017 | E22  | Ejecutar fixture load con 100k+ movements y performance budget                                                                                                                                              | R03-T016                                                       | Performance evidence                                                               |
 
 ### V0.4 · POS & Payments
 
-| ID       | Epic | Tarea                                                                  | Depends       | Evidence mínima               |
-| -------- | ---- | ---------------------------------------------------------------------- | ------------- | ----------------------------- |
-| R04-T001 | E11  | Implementar POS cart y búsqueda rápida de productos/servicios          | V0.3          | POS component/E2E             |
-| R04-T002 | E11  | Implementar pricing, taxes configurables y descuentos auditables       | R04-T001      | Calculation properties        |
-| R04-T003 | E11  | Crear Sale aggregate y líneas de venta                                 | R04-T002      | Domain tests                  |
-| R04-T004 | E11  | Implementar payment records con idempotency key                        | R04-T003      | Payment idempotency           |
-| R04-T005 | E11  | Soportar pagos parciales y múltiples métodos                           | R04-T004      | Payment workflow              |
-| R04-T006 | E11  | Implementar devoluciones con movimientos compensatorios                | R04-T003,V0.3 | Return invariants             |
-| R04-T007 | E11  | Integrar venta con reducción de inventario atómica                     | R04-T003      | Transaction test              |
-| R04-T008 | E11  | Integrar cobro de ServiceOrder en POS                                  | R04-T003,V0.2 | Service payment E2E           |
-| R04-T009 | E11  | Implementar cash session y cierre básico                               | R04-T004      | Cash reconciliation           |
-| R04-T010 | E19  | Generar recibo/ticket imprimible                                       | R04-T003      | Print test                    |
-| R04-T011 | E03  | Definir comportamiento POS offline sin proveedor externo               | R04-T004      | Offline POS E2E               |
-| R04-T012 | E11  | Bloquear promesa de pago externo offline cuando proveedor requiera red | R04-T011      | Degradation UX test           |
-| R04-T013 | E21  | Audit logging de descuentos, devoluciones y ajustes sensibles          | R04-T002      | Audit tests                   |
-| R04-T014 | E22  | Ejecutar invariant suite Sale + Payment + Inventory                    | R04-T007      | Property/integration evidence |
+| ID       | Epic | Tarea                                                                                                                                                            | Depends                                                                          | Evidence mínima                                                 |
+| -------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| R04-T001 | E11  | Implementar POS cart y búsqueda rápida de productos/servicios para venta independiente o vinculada, sin exigir bicicleta/orden al perfil retail-only             | V0.3                                                                             | POS component/E2E por perfil                                    |
+| R04-T002 | E11  | Implementar pricing, taxes configurables y descuentos auditables con precisión y reglas versionadas, sin imponer régimen fiscal o método de costo                | R04-T001                                                                         | Calculation properties y autorización                           |
+| R04-T003 | E11  | Crear Sale aggregate y líneas de venta inventariables, no inventariables y servicios con origen trazable                                                         | R04-T002                                                                         | Domain tests                                                    |
+| R04-T004 | E11  | Implementar payment records con idempotency key                                                                                                                  | R04-T003                                                                         | Payment idempotency                                             |
+| R04-T005 | E11  | Soportar pagos parciales y múltiples métodos                                                                                                                     | R04-T004                                                                         | Payment workflow                                                |
+| R04-T006 | E11  | Implementar devoluciones con movimientos compensatorios y vínculo a venta/pago; distinguir devolución física y reembolso                                         | R04-T003,R04-T004,R04-T007,V0.3                                                  | Return invariants, permisos y repetición sin doble efecto       |
+| R04-T007 | E11  | Integrar venta con reducción de inventario atómica por ubicación; servicios/no inventariables no reducen stock y reserva concurrente no permite doble asignación | R04-T003,R03-T003,R03-T004,R03-T005                                              | Transaction/concurrency tests Sale + Inventory                  |
+| R04-T008 | E11  | Integrar cobro de ServiceOrder en POS sin volver a descontar partes ya consumidas por WORKSHOP_USE                                                               | R04-T003,R04-T004,R04-T007,R03-T011,V0.2                                         | Service payment E2E y no doble deducción                        |
+| R04-T009 | E11  | Implementar cash session y cierre básico cuando el perfil habilite caja                                                                                          | R04-T004                                                                         | Cash reconciliation                                             |
+| R04-T010 | E19  | Generar recibo/ticket imprimible                                                                                                                                 | R04-T003                                                                         | Print test                                                      |
+| R04-T011 | E03  | Definir/admitir comportamiento POS offline sin proveedor externo sobre la política de inventario aprobada, con intención/confirmación y conflictos explícitos    | R04-T004,R04-T007,R03-T015                                                       | Offline POS E2E, idempotencia y reconciliación                  |
+| R04-T012 | E11  | Bloquear promesa de pago externo offline cuando proveedor requiera red                                                                                           | R04-T011                                                                         | Degradation UX test                                             |
+| R04-T013 | E21  | Audit logging de descuentos, devoluciones y ajustes sensibles                                                                                                    | R04-T002                                                                         | Audit tests                                                     |
+| R04-T014 | E22  | Ejecutar invariant suite Sale + Payment + Inventory con devoluciones, cobro de orden, servicios, caja habilitada, recibos, offline y auditoría                   | R04-T005,R04-T006,R04-T007,R04-T008,R04-T009,R04-T010,R04-T012,R04-T013,R03-T016 | Property/integration evidence por perfil; no doble stock/dinero |
 
 ### V0.5 · Communications
 
@@ -1221,6 +1233,56 @@ remain R09-T028/R10-T004 profile acceptance, avoiding a V0.2→V0.4 cycle.
   pretending to be already implemented subtasks. Original task identities and
   historical evidence remain intact. See the linked coverage matrix for sources,
   dependencies, phase order and exact acceptance scenarios.
+
+### Aceptación adicional de inventario de tienda y taller · 2026-11-27
+
+Esta precisión conserva los 17 padres de V0.3 y los 14 de V0.4, todos los IDs
+FR y la secuencia de releases. El [plan de alcance y escenarios](2026-11-27-spare-parts-retail-inventory-plan.md)
+y su [matriz verificable](inventory-scope-plan.json) vinculan FR-INV-001–012,
+FR-POS-001–009 y FR-BIZ-001–003 con las tareas existentes. Son planificación,
+no evidencia de inventario físico, implementación completa ni promoción de V0.1.
+
+- El catálogo incluye refacciones, accesorios/mercancía de venta y consumibles
+  de taller, además de no inventariables y servicios. Son ejemplos no exclusivos,
+  no categorías obligatorias. Taller, tienda sin taller, combinado y servicio/
+  cooperativa conservan módulos opcionales, permisos, datos e historia. El mismo
+  artículo vendido o consumido usa una identidad de SKU y ledger por organización,
+  con saldos por ubicación; compartir almacén no crea dos existencias del artículo.
+- V0.2 cotización/autorización no consume stock. V0.3 entrega catálogo, stock,
+  compras y consumo de taller, también útiles para tienda antes de habilitar POS.
+  R03-T003 prepara la semántica de dominio SALE; la venta minorista transaccional
+  y su competencia con reservas pertenecen a R04-T007/R04-T014 en V0.4.
+  La calificación completa retail-only/combinada mantiene los gates de V0.4 y
+  R09-T028/R10-T004; no se crea una dependencia V0.3→V0.4.
+- R03-T001/R03-T013 distinguen variante, SKU/EAN y unidad, búsqueda inequívoca,
+  compatibilidad extensible y servicio sin stock. R03-T010 cubre costo, precio
+  de referencia y margen; R04-T002 cubre precio/impuesto/descuento de venta.
+  Sus reglas y precisión monetaria requieren diseño/versionado validado, sin
+  fijar aquí impuestos ni método de valuación. Las cantidades actuales son
+  enteras; admitir fracciones requiere ADR y punto fijo validado, sin redondeo
+  silencioso ni reinterpretación de datos previos.
+- R03-T012 exige un flujo de conteo físico y revisión de diferencias, además
+  del comando de ajuste. Debe declarar referencia y tratamiento de movimientos
+  concurrentes; la aprobación produce compensación, nunca sobreescritura del
+  saldo. R03-T016 verifica compras/consumo/conteos/transferencias y reconexión,
+  no sólo una igualdad aislada de dos sumas.
+- Se refuerzan dependencias de recepción y consumo hacia movimientos/ubicación,
+  de conteo hacia proyección/ubicación, de UI hacia catálogo/búsqueda/alertas/
+  costos/conteo y de reconciliación hacia esos flujos y offline. La UI incluye
+  alta/edición/archivo de catálogo, compra/recepción, reserva/consumo, transferencia
+  y conteo/ajuste mediante comandos autorizados, con estados stale/unknown
+  explícitos y sin edición destructiva del ledger. El ADR de
+  admisión/conflictos precede la exposición offline; R03-T015 prueba los flujos
+  online completos antes de admitir su variante offline. En V0.4 devolución,
+  cobro de orden e invariantes dependen explícitamente de venta, pago e inventario.
+  Estos enlaces preservan dependencias previas y forman un grafo acíclico;
+  el orden numérico de las filas no sustituye su campo Depends.
+- El ledger histórico ADJUST/RESERVE/RELEASE/CONSUME y los ADR aceptados no se
+  reescriben para adoptar nombres futuros. Toda evolución exige contratos,
+  migraciones y evidencia de compatibilidad; no se infieren enlaces de CONSUME
+  históricos. UI de escritura, sincronización de stock, compras y POS mantienen
+  sus gates propios. Los escenarios numéricos enlazados son objetivos sintéticos
+  todavía por ejecutar contra cada implementación, no un conteo del negocio.
 
 ## 60. Task Splitting Rule
 

@@ -144,7 +144,20 @@
         "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
         "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
       ],
-      "tasks": ["R02-T023", "R04-T001", "R09-T022", "R09-T028", "R10-T004"],
+      "tasks": [
+        "R02-T023",
+        "R03-T001",
+        "R03-T005",
+        "R03-T009",
+        "R03-T011",
+        "R04-T001",
+        "R04-T007",
+        "R04-T008",
+        "R04-T014",
+        "R09-T022",
+        "R09-T028",
+        "R10-T004"
+      ],
       "stage": "Workshop V0.2; retail/combined V0.4; full profile qualification V0.9/V1",
       "product_status": "planned",
       "evidence_paths": [
@@ -153,9 +166,12 @@
       ],
       "acceptance": [
         "Retail-only fixture completes product sale without a bicycle or service order; workshop fixture operates without mandatory POS.",
-        "Profile switch never deletes records/pending work or grants capabilities; unsupported specialty modules stay visibly unavailable."
+        "Profile switch never deletes records/pending work or grants capabilities; unsupported specialty modules stay visibly unavailable.",
+        "Combined profile shares one product identity across receipt, retail sale and workshop consumption; subsequent order payment does not duplicate stock deduction.",
+        "Service/cooperative profile may leave inventory, POS and workshop flows disabled; qualify its own accessible/private/export/recovery journey while preserving all stored/history/pending data and existing grants."
       ],
-      "remaining": "Full supported-profile journeys not qualified; fleet/rental/ecommerce and fiscal/HR systems remain post-V1 optional scope."
+      "remaining": "Full supported-profile journeys not qualified; fleet/rental/ecommerce and fiscal/HR systems remain post-V1 optional scope.",
+      "scope_refinement": "docs/10-spec-development/inventory-scope-plan.json"
     },
     {
       "id": "customers",
@@ -322,11 +338,22 @@
         "R03-T004",
         "R03-T005",
         "R03-T006",
+        "R03-T007",
+        "R03-T008",
+        "R03-T009",
+        "R03-T010",
         "R03-T011",
         "R03-T012",
+        "R03-T013",
+        "R03-T014",
         "R03-T015",
         "R03-T016",
-        "R03-T017"
+        "R03-T017",
+        "R04-T006",
+        "R04-T007",
+        "R04-T008",
+        "R04-T013",
+        "R04-T014"
       ],
       "stage": "V0.3",
       "product_status": "partial",
@@ -336,9 +363,12 @@
       ],
       "acceptance": [
         "All named movement kinds reconcile stock projection to append-only ledger; adjustments/returns are compensating.",
-        "Concurrent last-unit sale/reservation and two-device offline intents produce explicit policy results without stock or tenant leakage."
+        "Concurrent last-unit sale/reservation and two-device offline intents produce explicit policy results without stock or tenant leakage.",
+        "The same product/SKU can serve workshop consumption and retail resale with scoped location holdings; no duplicated channel balance or second stock debit when POS collects already consumed order parts.",
+        "Qualify physical/reserved/available quantities, nonstock/service policy, partial receipts, physical count compensation and transfer conservation against the linked planned scenarios; current integer units do not imply fractional support."
       ],
-      "remaining": "Existing ledger/reserve/consume and online reads do not implement every movement, offline stock, inventory command UI or capacity qualification."
+      "remaining": "Existing ledger/reserve/consume and online reads do not implement every movement, offline stock, inventory command UI or capacity qualification.",
+      "scope_refinement": "docs/10-spec-development/inventory-scope-plan.json"
     },
     {
       "id": "sales",
@@ -362,10 +392,12 @@
         "R04-T005",
         "R04-T006",
         "R04-T007",
+        "R04-T008",
         "R04-T009",
         "R04-T010",
         "R04-T011",
         "R04-T012",
+        "R04-T013",
         "R04-T014"
       ],
       "stage": "V0.4",
@@ -376,9 +408,12 @@
       ],
       "acceptance": [
         "Independent/service sale with partial/multi-method receipts, tax/discount and return reconciles exact inventory and payment ledgers.",
-        "Duplicate command or crash after effect does not double-account; offline provider-dependent capture is unavailable, local cash record explicitly pending reconciliation."
+        "Duplicate command or crash after effect does not double-account; offline provider-dependent capture is unavailable, local cash record explicitly pending reconciliation.",
+        "POS payment of a ServiceOrder references already consumed parts and never deducts their stock a second time; independent retail/nonstock service sale requires neither bicycle nor order.",
+        "Shared last-unit sale/reservation competition, returns and sensitive discounts have explicit admission, compensation and audit evidence under R04-T007/R04-T013/R04-T014."
       ],
-      "remaining": "No mounted POS/payment/cash module; quote arithmetic is not sales or financial settlement."
+      "remaining": "No mounted POS/payment/cash module; quote arithmetic is not sales or financial settlement.",
+      "scope_refinement": "docs/10-spec-development/inventory-scope-plan.json"
     },
     {
       "id": "purchases",
@@ -397,7 +432,18 @@
         "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-011",
         "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-012"
       ],
-      "tasks": ["R03-T007", "R03-T008", "R03-T009", "R03-T010"],
+      "tasks": [
+        "R03-T001",
+        "R03-T003",
+        "R03-T004",
+        "R03-T005",
+        "R03-T007",
+        "R03-T008",
+        "R03-T009",
+        "R03-T010",
+        "R03-T015",
+        "R03-T016"
+      ],
       "stage": "V0.3",
       "product_status": "planned",
       "evidence_paths": [
@@ -406,9 +452,12 @@
       ],
       "acceptance": [
         "Supplier PO admits partial/full receipts with exact ordered/received balance, cost snapshots and atomic ledger effects.",
-        "Duplicate receipt, cancellation and concurrent receipt cannot add stock twice; returns preserve history and scoped supplier access."
+        "Duplicate receipt, cancellation and concurrent receipt cannot add stock twice; returns preserve history and scoped supplier access.",
+        "Receipt updates the shared product/location ledger for workshop and retail channels; ordered 10 received 4 then 6 yields exactly 10 received and +10 physical stock, including duplicate and concurrent controls.",
+        "Capture scoped supplier/cost lineage and explicit integer units; failed receipt commits neither PO progress nor stock/cost effects, and stock reconciliation distinguishes physical quantity from reservations."
       ],
-      "remaining": "Supplier/PO/receiving workflow absent; ledger infrastructure alone is not purchasing."
+      "remaining": "Supplier/PO/receiving workflow absent; ledger infrastructure alone is not purchasing.",
+      "scope_refinement": "docs/10-spec-development/inventory-scope-plan.json"
     },
     {
       "id": "communication",
@@ -659,5 +708,11 @@
       ],
       "remaining": "No native iOS/Android app promise; Tauri only justified capabilities. Unqualified platforms and physical install/recovery stay unclaimed."
     }
-  ]
+  ],
+  "scope_refinement": {
+    "path": "docs/10-spec-development/inventory-scope-plan.json",
+    "source_commit": "b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8",
+    "coverage_kind": "planning_not_product_completion",
+    "scope": "Inventory requirements, shared workshop/retail stock, purchasing/POS dependencies and four existing business profiles; no runtime or release qualification."
+  }
 }

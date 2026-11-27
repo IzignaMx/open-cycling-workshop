@@ -1,0 +1,1115 @@
+{
+  "schema": 1,
+  "coverage_kind": "planning_not_product_completion",
+  "source_commit": "b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8",
+  "source_refs": {
+    "requirements": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md",
+    "business_profiles": "docs/01-functional-requirements/2026-11-02-product-description-supplement.md",
+    "canonical_tasks": "docs/10-spec-development/open-cycling-workshop-platform-phase-10-spec-development-master-execution-system-v0.1.md",
+    "description_alignment": "docs/10-spec-development/2026-11-02-product-description-alignment.md",
+    "connected_read_adr": "docs/02-technical-architecture/2026-10-15-connected-inventory-read.md",
+    "consumption_adr": "docs/02-technical-architecture/2026-10-13-inventory-command-atomicity.md",
+    "current_audit": "docs/10-spec-development/2026-11-25-project-inventory-audit.md",
+    "scope_refinement": "docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md"
+  },
+  "release_boundary": {
+    "active_release": "V0.1",
+    "active_release_status": "partial",
+    "planned_integration": ["V0.3", "V0.4"],
+    "runtime_changed": false,
+    "release_closed": false,
+    "deployment_qualified": false,
+    "physical_stock_verified": false,
+    "sequence": "Continue current V0.1/V0.2 gates before V0.3 inventory/purchasing and V0.4 transactional POS. Planning coverage does not complete any release, requirement or physical acceptance gate."
+  },
+  "current_contract": {
+    "movement_kinds": ["ADJUST", "RESERVE", "RELEASE", "CONSUME"],
+    "quantity_type": "signed_int32",
+    "fractional_units_supported": false,
+    "fractional_units_prerequisites": [
+      "quantity_precision_adr",
+      "validated_fixed_point",
+      "precision_policy",
+      "unit_conversion_policy",
+      "versioned_contract",
+      "migration"
+    ],
+    "product_location_cardinality": 1,
+    "sku_uniqueness": "organization",
+    "stock_response": "available_quantity_only",
+    "available_quantity_formula": "SUM of signed admitted ledger quantities within organization/product/location scope; this is not a physical count.",
+    "inventory_ui": "connected_read_only",
+    "offline_inventory_commands": false,
+    "consumption_semantics": "RESERVE subtracts availability. RELEASE restores it. CONSUME restores the hold and atomically appends a negative ADJUST physical issue. Preserve existing history and command idempotency; future named kinds require an explicit compatible contract/migration, not relabeling existing rows. Historical standalone CONSUME entries retain their original meaning; do not infer missing links or reconstruct balances from one history page.",
+    "product_roles": "A part consumed in workshop work and the same item sold by a shop are uses of a product. No requirement mandates duplicate catalogs or independent balances by channel. Shared identity across physical locations remains future design; current Product has one required location.",
+    "service_boundary": "Quote LaborLine arithmetic is not a nonstock product catalog, sale, payment or settlement. No mounted supplier/PO/POS/payment/cash workflow exists at the source revision."
+  },
+  "dated_evidence": {
+    "kind": "existing_source_qualification_not_new_plan_execution",
+    "source_commit": "b49f10b1b21240c8682cf3a9ba7ca0f3c9ce4ea8",
+    "pull_request": 129,
+    "ci_run": 45918812340,
+    "inventory_read_artifact": 15163543965,
+    "postgres_read_cases": 43,
+    "postgres_skipped": 0,
+    "postgres_errors": 0,
+    "native_inventory_cases_per_lane": 17,
+    "native_lanes": ["direct", "aggregate"],
+    "scope": "Existing scoped connected-read PostgreSQL and native inventory journeys only; source files were compared to the tested revision. These results do not prove named business movements, physical stock, full offline inventory, POS/purchasing or V0.3 capacity. They do not qualify the new planning commit.",
+    "report_ref": "docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md"
+  },
+  "requirements": [
+    {
+      "id": "FR-INV-001",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-001",
+      "implementation_state": "partial",
+      "current": "Product supports scoped UUID/SKU/name/unit and creation/list reads; SKU is unique per organization and each product belongs to one location.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#uq_product_sku_per_org",
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord",
+        "services/platform/src/cycling_workshop/inventory/schemas.py#class ProductCreate",
+        "services/platform/tests/inventory/test_inventory_api.py#test_create_product_normalizes_and_derives_server_fields"
+      ],
+      "missing": [
+        "Category/brand/variants/EAN and catalog edit lifecycle.",
+        "Shared product identity and per-location holdings usable by workshop and retail; search/scanning and complete inventory command UI."
+      ],
+      "parent_tasks": ["R03-T001", "R03-T005", "R03-T013", "R03-T014"],
+      "acceptance": [
+        "Define a single product/SKU identity usable as workshop part and retail merchandise without duplicating balances by channel; migrate existing location-bound products without losing identity/history.",
+        "Test variants, EAN/scanner lookup, categories and integer unit validation; reject ambiguity and cross-tenant lookup. Fractional units need explicit precision/conversion policy and versioned migration before support.",
+        "Provide accessible authorized catalog create/edit/archive controls; archiving preserves historical references and pending work. Show loading, failed, stale and unknown state explicitly, with no hidden write or destructive ledger editing."
+      ]
+    },
+    {
+      "id": "FR-INV-002",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-002",
+      "implementation_state": "partial",
+      "current": "Reads and commands scope products/balances to a required product location; the model does not expose one shared product at multiple stock locations.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#location_id",
+        "services/platform/src/cycling_workshop/inventory/repository.py#available_quantity",
+        "services/platform/tests/inventory/test_inventory_api.py#test_stock_response_includes_scope_and_empty_ledger_quantity"
+      ],
+      "missing": [
+        "Shared product holdings across locations and authorized transfers.",
+        "Atomic transfer conservation, cancellation/compensation and location-specific read/write admission."
+      ],
+      "parent_tasks": ["R03-T001", "R03-T003", "R03-T005", "R03-T015"],
+      "acceptance": [
+        "The same product identity has separately scoped physical/reserved/available balances per location; a transfer applies paired effects exactly once and conserves organization total.",
+        "Failure or denied source/destination authority changes neither side; cross-location visibility follows current grants, not profile settings."
+      ]
+    },
+    {
+      "id": "FR-INV-003",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-003",
+      "implementation_state": "partial",
+      "current": "Public supported writes append ADJUST/RESERVE/RELEASE/CONSUME movements, with atomic consumption and duplicate-command protection.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/domain.py#class MovementKind",
+        "services/platform/src/cycling_workshop/inventory/service.py#record_movement",
+        "services/platform/tests/inventory/test_inventory_api.py#test_failed_consume_companion_append_rolls_back_both_rows_and_can_retry",
+        "services/platform/tests/inventory/test_inventory_postgres.py#test_concurrent_identical_command_has_one_effect"
+      ],
+      "missing": [
+        "Named PURCHASE/SALE/WORKSHOP_USE/RETURN/ADJUSTMENT/TRANSFER/LOSS/DAMAGE/DONATION/REUSE business contracts and entry points.",
+        "Offline inventory command policy and all-channel transactional effects."
+      ],
+      "parent_tasks": [
+        "R03-T002",
+        "R03-T003",
+        "R03-T009",
+        "R03-T011",
+        "R03-T012",
+        "R03-T015",
+        "R04-T006",
+        "R04-T007",
+        "R04-T008",
+        "R04-T013",
+        "R04-T014"
+      ],
+      "acceptance": [
+        "Every admitted business stock change creates immutable referenced movements with audit context; retries and failures do not create additional effects.",
+        "Keep current CONSUME plus companion ADJUST semantics intact; define compatible future named-kind/version migrations rather than rewriting ledger history. R03 defines the inventory SALE contract; actual POS sale orchestration and sale/reservation competition qualify in R04."
+      ]
+    },
+    {
+      "id": "FR-INV-004",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-004",
+      "implementation_state": "partial",
+      "current": "Available quantity is derived from SUM of signed ledger entries, including reservation/finalization effects; a physical/reserved breakdown is not returned.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/repository.py#available_quantity",
+        "services/platform/src/cycling_workshop/inventory/schemas.py#class StockResponse",
+        "services/platform/tests/inventory/test_inventory_repository.py#test_stock_is_derived_from_the_append_only_ledger",
+        "services/platform/tests/inventory/test_inventory_read_postgres.py#test_large_ledger_and_high_offset_plans_fit_unchanged_budgets"
+      ],
+      "missing": [
+        "Verifiable materialized projection and reconciliation report.",
+        "Separate physical quantity, reservation holds and sellable availability; multi-device offline and capacity qualification."
+      ],
+      "parent_tasks": ["R03-T004", "R03-T015", "R03-T016", "R03-T017", "R04-T007", "R04-T014"],
+      "acceptance": [
+        "Projection rebuild and incremental application agree with the immutable ledger for each product/location, including holds, finalization and compensation.",
+        "Qualify concurrent last-unit intents, reconnect and 100k+ movement budgets against exact source/fixtures; connected-read performance evidence alone does not close full inventory capacity."
+      ]
+    },
+    {
+      "id": "FR-INV-005",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-005",
+      "implementation_state": "planned",
+      "current": "No stock-minimum field, threshold alert or replenishment workflow exists in the current product/read model.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord",
+        "apps/web/src/features/inventory/InventoryPanel.tsx#InventoryPanel"
+      ],
+      "missing": [
+        "Per-product/location threshold policy, authorized low-stock views and alert lifecycle."
+      ],
+      "parent_tasks": ["R03-T006", "R03-T014"],
+      "acceptance": [
+        "Evaluate documented threshold boundaries against defined available/physical quantity, units and location; disabled/zero thresholds and replenishment transitions have deterministic tests.",
+        "Show accessible scoped alerts without widening product visibility or issuing external notifications without an explicit integration contract."
+      ]
+    },
+    {
+      "id": "FR-INV-006",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-006",
+      "implementation_state": "planned",
+      "current": "Product catalog has no cost/price/margin fields. Quote line arithmetic does not establish product valuation or financial settlement.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord",
+        "services/platform/src/cycling_workshop/quotes/domain.py#class LaborLine"
+      ],
+      "missing": [
+        "Cost history/valuation policy, currency-aware pricing and margin with defined discounts/taxes/returns."
+      ],
+      "parent_tasks": ["R03-T010", "R04-T002", "R04-T003", "R04-T013", "R04-T014"],
+      "acceptance": [
+        "Preserve cost/provider snapshots at receipt and price/currency snapshots at sale; define rounding and valuation before deriving margin.",
+        "Unknown cost stays distinct from zero/free cost; partial returns, discounts and taxes reconcile with source movements and payment records without floating-point monetary drift."
+      ]
+    },
+    {
+      "id": "FR-INV-007",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-007",
+      "implementation_state": "planned",
+      "current": "No mounted supplier domain or workflow exists; a ledger reference is not supplier management.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/app.py#app.include_router",
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord"
+      ],
+      "missing": ["Scoped supplier records, operational lifecycle, references and authorization."],
+      "parent_tasks": ["R03-T007", "R03-T008", "R03-T010"],
+      "acceptance": [
+        "Create/read/update authorized suppliers, preserve receipt/PO historical references and deny cross-tenant lookup; archived suppliers retain history."
+      ]
+    },
+    {
+      "id": "FR-INV-008",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-008",
+      "implementation_state": "planned",
+      "current": "No PurchaseOrder or receiving workflow is mounted. ADJUST is a stock primitive, not purchase receipt processing.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/app.py#app.include_router",
+        "services/platform/src/cycling_workshop/inventory/service.py#record_movement"
+      ],
+      "missing": [
+        "PO state transitions, partial/full receiving, supplier/cost snapshots, duplicate/concurrent receipt policy and compensation."
+      ],
+      "parent_tasks": ["R03-T007", "R03-T008", "R03-T009", "R03-T010", "R03-T015", "R03-T016"],
+      "acceptance": [
+        "Ordered 10, received 4 then 6 produces received 10 and physical +10 exactly once; duplicate or concurrent receipt cannot over-receive silently or duplicate stock.",
+        "A failed receipt commits neither order progress nor ledger/cost effects; cancellation/returns follow explicit referenced compensation and preserve history.",
+        "Provide authorized PO creation/status and partial/full receiving actions with accessible pending/error/unknown states; a read-only inventory page does not satisfy this workflow."
+      ]
+    },
+    {
+      "id": "FR-INV-009",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-009",
+      "implementation_state": "planned",
+      "current": "Signed ADJUST can correct quantity, but named return/damage/loss/donation/reuse workflows and policy are absent.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/domain.py#class MovementKind",
+        "services/platform/src/cycling_workshop/inventory/schemas.py#class MovementCreate"
+      ],
+      "missing": [
+        "Explicit business reasons, approval/audit policy, return lineage and compensating workflows."
+      ],
+      "parent_tasks": ["R03-T003", "R03-T012", "R04-T006", "R04-T013", "R04-T014"],
+      "acceptance": [
+        "Each named event records its source/reason, location, disposition and allowed stock effect; duplicate events cannot add/remove stock twice.",
+        "Retail returns reference the original sale and permitted quantity/disposition; refund and restock policy reconcile with payment and inventory ledgers rather than treating every return as reusable stock."
+      ]
+    },
+    {
+      "id": "FR-INV-010",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-010",
+      "implementation_state": "partial",
+      "current": "Signed adjustments and append-only history exist; there is no physical count session or count/reconciliation user journey.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/domain.py#ADJUST",
+        "services/platform/src/cycling_workshop/inventory/repository.py#def record(",
+        "services/platform/tests/inventory/test_inventory_repository.py#test_stock_is_derived_from_the_append_only_ledger"
+      ],
+      "missing": [
+        "Count capture, discrepancy review, authorized compensating adjustment and concurrency/cutoff policy."
+      ],
+      "parent_tasks": ["R03-T005", "R03-T012", "R03-T014", "R03-T016"],
+      "acceptance": [
+        "An observed physical count records its time/scope and compares against a defined physical ledger baseline, not reservation-reduced availability.",
+        "Expected physical 10/reserved 2, count 9 creates a -1 physical compensation, leaving physical 9/reserved 2/available 7; never rewrite earlier movements or treat a synthetic fixture as real stock verification.",
+        "Provide explicit authorized count/review/adjustment controls with stale/unknown handling, actor/reason and recoverable errors; never expose arbitrary edit/delete of ledger history."
+      ]
+    },
+    {
+      "id": "FR-INV-011",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-011",
+      "implementation_state": "planned",
+      "current": "All current products use the stock ledger; no explicit stock-managed/nonstock/service catalog policy exists. LaborLine is quote arithmetic only.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord",
+        "services/platform/src/cycling_workshop/quotes/domain.py#class LaborLine",
+        "services/platform/src/cycling_workshop/quotes/domain.py#class PartLine"
+      ],
+      "missing": [
+        "Explicit stock policy and nonstock/service catalog entries available to supported workshop/retail profiles."
+      ],
+      "parent_tasks": ["R03-T001", "R04-T001", "R04-T002", "R04-T007", "R04-T008", "R04-T014"],
+      "acceptance": [
+        "Sell/bill an admitted nonstock item or service without creating reserve/consume/sale stock effects; unavailable stock is not represented as zero available units for a nonstock service.",
+        "Mixed stocked/nonstock carts and order settlement reconcile monetary totals while only eligible stock-managed lines affect inventory; no bicycle/order is required for independent retail service sale."
+      ]
+    },
+    {
+      "id": "FR-INV-012",
+      "requirement_ref": "docs/01-functional-requirements/open-cycling-workshop-platform-phase-1-functional-requirements-v0.1.md#FR-INV-012",
+      "implementation_state": "planned",
+      "current": "No structured extensible compatibility attributes/rules exist in the current basic product model.",
+      "source_evidence": [
+        "services/platform/src/cycling_workshop/inventory/models.py#class ProductRecord",
+        "docs/10-spec-development/open-cycling-workshop-platform-phase-10-spec-development-master-execution-system-v0.1.md#R07-T004"
+      ],
+      "missing": [
+        "Versioned extensible product compatibility metadata and later structured compatibility assistance."
+      ],
+      "parent_tasks": ["R03-T001", "R07-T004"],
+      "acceptance": [
+        "Define safe versioned catalog metadata/extension boundaries in R03-T001 without coupling them to executable plugins or claiming a compatibility recommendation.",
+        "Qualify structured rules/unknown/incompatible outcomes under existing R07-T004 in V0.7; preserve provenance, authorization and historical product references."
+      ],
+      "later_stage": "V0.7"
+    }
+  ],
+  "task_matrix": [
+    {
+      "id": "R03-T001",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["V0.2"],
+      "acceptance": [
+        "Shared Product/SKU identity, category/brand/variants/EAN/unit and explicit stocked/nonstock/service policy preserve existing IDs/history; basic compatibility metadata remains extensible without claiming the V0.7 assistant.",
+        "Operator create/edit/archive controls preserve source references and pending work; listing alone does not qualify catalog management."
+      ]
+    },
+    {
+      "id": "R03-T002",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T001"],
+      "acceptance": [
+        "Append-only scoped ledger admits no destructive rewrite; each referenced command/effect has explicit idempotency and atomic failure behavior."
+      ]
+    },
+    {
+      "id": "R03-T003",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T002"],
+      "acceptance": [
+        "All named movement kinds have defined physical/reservation/availability effects and compensations; preserve legacy CONSUME semantics. SALE here is an inventory contract, not an implemented POS sale."
+      ]
+    },
+    {
+      "id": "R03-T004",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T003"],
+      "acceptance": [
+        "Incremental materialized stock equals ledger rebuild, separately defining physical quantity, holds and availability across all admitted movement kinds."
+      ]
+    },
+    {
+      "id": "R03-T005",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T004"],
+      "acceptance": [
+        "One product identity supports scoped holdings; paired transfers conserve total stock and require authority on both locations, with rollback on any failure."
+      ]
+    },
+    {
+      "id": "R03-T006",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T004", "R03-T005"],
+      "acceptance": [
+        "Low-stock thresholds are location/unit-aware with deterministic boundaries and scoped accessible replenishment alerts."
+      ]
+    },
+    {
+      "id": "R03-T007",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T001"],
+      "acceptance": [
+        "Supplier lifecycle preserves purchase history and permits only authorized scoped lookup/change."
+      ]
+    },
+    {
+      "id": "R03-T008",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T007"],
+      "acceptance": [
+        "PurchaseOrder transitions preserve ordered/received/cancelled balances and reject invalid or duplicate transitions.",
+        "Accessible authorized PO creation/status UI makes prerequisites and pending/error/unknown states explicit."
+      ]
+    },
+    {
+      "id": "R03-T009",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T008", "R03-T003", "R03-T005"],
+      "acceptance": [
+        "Partial/full receipt atomically updates PO progress, cost snapshots and inventory exactly once; failure, duplicate and concurrent receipt are explicit.",
+        "Authorized operator receiving UI supports explicit partial/full receipt and safe duplicate/failure recovery, not a generic adjustment substitute."
+      ]
+    },
+    {
+      "id": "R03-T010",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T009"],
+      "acceptance": [
+        "Cost and supplier histories retain source receipts/currency; valuation and unknown-cost policy precede margin reporting."
+      ]
+    },
+    {
+      "id": "R03-T011",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T002", "R03-T003", "R03-T004", "R03-T005", "V0.2"],
+      "acceptance": [
+        "Reserve/release/consume a part for an authorized ServiceOrder atomically; completed consumption has one physical effect and traceable lineage for future POS billing.",
+        "Contextual workshop UI exposes authorized reserve/release/consume and current stock/hold state; stale/unknown state cannot silently authorize a stock write."
+      ]
+    },
+    {
+      "id": "R03-T012",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T002", "R03-T004", "R03-T005"],
+      "acceptance": [
+        "Physical count discrepancies and business adjustments create authorized, reasoned compensating movements, preserving history and reservation semantics.",
+        "Explicit authorized physical-count review and adjustment actions record reason/actor and recoverable pending/error states; never provide destructive ledger editing."
+      ]
+    },
+    {
+      "id": "R03-T013",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T001"],
+      "acceptance": [
+        "Authorized search and QR/EAN/barcode scan resolve the correct variant/SKU; ambiguous/unknown input and keyboard fallback are accessible."
+      ]
+    },
+    {
+      "id": "R03-T014",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T004", "R03-T005", "R03-T006", "R03-T010", "R03-T012", "R03-T013"],
+      "acceptance": [
+        "Dense inventory workflows expose catalog, balances, thresholds, receipts/costs and count adjustments with keyboard/a11y coverage, explicit pending/errors and no authority from navigation.",
+        "Operator UI includes create/edit/archive catalog and explicit authorized transfer/count/adjust actions with keyboard navigation, stale/unknown/pending/error states and preserved history; dense read views alone are insufficient."
+      ]
+    },
+    {
+      "id": "R03-T015",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T002", "R03-T005", "R03-T009", "R03-T011", "R03-T012"],
+      "acceptance": [
+        "Multiple devices preserve idempotent receipt/workshop/adjustment intents and explicit conflict/recovery policy on reconnect; no unsupported offline stock guarantee."
+      ]
+    },
+    {
+      "id": "R03-T016",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": [
+        "R03-T004",
+        "R03-T005",
+        "R03-T009",
+        "R03-T010",
+        "R03-T011",
+        "R03-T012",
+        "R03-T015"
+      ],
+      "acceptance": [
+        "Reconciliation explains projection/ledger and physical/held/available differences by location and source event, including receipts, consumption and compensation."
+      ]
+    },
+    {
+      "id": "R03-T017",
+      "release": "V0.3",
+      "status": "planned_acceptance",
+      "depends_on": ["R03-T016"],
+      "acceptance": [
+        "Exact-source reproducible 100k+ movement fixtures meet reviewed budgets for full admitted scope; retain raw evidence and do not infer physical stock from synthetic load."
+      ]
+    },
+    {
+      "id": "R04-T001",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["V0.3"],
+      "acceptance": [
+        "Independent retail and service sale can select admitted products/services without a bicycle/order; workshop POS remains optional."
+      ]
+    },
+    {
+      "id": "R04-T002",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T001"],
+      "acceptance": [
+        "Currency-aware tax/discount/price rounding and audit policy are deterministic, including unknown costs and nonstock/service lines."
+      ]
+    },
+    {
+      "id": "R04-T003",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T002"],
+      "acceptance": [
+        "Sale aggregate snapshots lines/source order/product identities and supports explicit state/idempotency without inventing payment completion."
+      ]
+    },
+    {
+      "id": "R04-T004",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T003"],
+      "acceptance": [
+        "Payment records have stable idempotency keys, audit trail and failure recovery; retries never double-account settlement."
+      ]
+    },
+    {
+      "id": "R04-T005",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T004"],
+      "acceptance": [
+        "Partial and mixed-method payments preserve exact outstanding balance, with currency/provider state explicit."
+      ]
+    },
+    {
+      "id": "R04-T006",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T003", "R04-T004", "R04-T007", "V0.3"],
+      "acceptance": [
+        "Return/refund references original sale/payment and permitted quantity/disposition; compensation cannot duplicate refunds or restock inappropriate items."
+      ]
+    },
+    {
+      "id": "R04-T007",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T003", "R03-T003", "R03-T004", "R03-T005"],
+      "acceptance": [
+        "Retail sale atomically deducts stocked lines using the same product/location ledger as workshop reservations; race for last unit produces one admitted physical claim, not negative silent stock."
+      ]
+    },
+    {
+      "id": "R04-T008",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T003", "R04-T004", "R04-T007", "R03-T011", "V0.2"],
+      "acceptance": [
+        "POS collecting an order links its existing consumed parts and does not deduct them again; retries preserve the same monetary and stock effects."
+      ]
+    },
+    {
+      "id": "R04-T009",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T004"],
+      "acceptance": [
+        "Cash sessions reconcile admitted local payments, returns and adjustments without fabricating external provider confirmation."
+      ]
+    },
+    {
+      "id": "R04-T010",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T003"],
+      "acceptance": [
+        "Accessible printable receipts retain sale/payment/source references and locale/branding; a generic ticket is not a certified fiscal invoice."
+      ]
+    },
+    {
+      "id": "R04-T011",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T004", "R04-T007", "R03-T015"],
+      "acceptance": [
+        "Offline cash/local POS state has declared conflict/reconciliation policy coordinated with inventory; provider-dependent actions remain explicitly unavailable."
+      ]
+    },
+    {
+      "id": "R04-T012",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T011"],
+      "acceptance": [
+        "A disconnected user is never promised externally confirmed payment; clear recovery avoids silent automatic replay."
+      ]
+    },
+    {
+      "id": "R04-T013",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": ["R04-T002"],
+      "acceptance": [
+        "Sensitive discounts, returns and adjustments have scoped actor/reason/audit evidence without exposing protected cross-module data."
+      ]
+    },
+    {
+      "id": "R04-T014",
+      "release": "V0.4",
+      "status": "planned_acceptance",
+      "depends_on": [
+        "R04-T005",
+        "R04-T006",
+        "R04-T007",
+        "R04-T008",
+        "R04-T009",
+        "R04-T010",
+        "R04-T012",
+        "R04-T013",
+        "R03-T016"
+      ],
+      "acceptance": [
+        "Property/integration/profile journeys reconcile Sale+Payment+Inventory, including last-unit competition, partial receipts, returns, duplicate commands and previously consumed order billing."
+      ]
+    }
+  ],
+  "business_profiles": [
+    {
+      "id": "workshop",
+      "status": "planned_acceptance",
+      "requirement_refs": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
+      ],
+      "parent_tasks": ["R02-T023", "R03-T011", "R09-T022", "R09-T028", "R10-T004"],
+      "grants_permissions": false,
+      "discards_data_or_pending_work": false,
+      "requires_pos": false,
+      "acceptance": [
+        "Complete intake/order/part reserve-consume workflow with POS disabled; preserve authorized offline/recovery behavior without implying full profile qualification from current read UI.",
+        "Profile changes only reviewed navigation/defaults; qualify accessibility, privacy, export, offline policy and recovery for this profile without issuing authority or losing data."
+      ]
+    },
+    {
+      "id": "retail-only",
+      "status": "planned_acceptance",
+      "requirement_refs": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
+      ],
+      "parent_tasks": [
+        "R03-T001",
+        "R04-T001",
+        "R04-T007",
+        "R04-T014",
+        "R09-T022",
+        "R09-T028",
+        "R10-T004"
+      ],
+      "grants_permissions": false,
+      "discards_data_or_pending_work": false,
+      "requires_service_order": false,
+      "requires_bicycle": false,
+      "acceptance": [
+        "Receive and sell stocked/nonstock products independently without creating a bicycle or service order; qualify payment/return and explicit offline limits.",
+        "Profile changes only reviewed navigation/defaults; qualify accessibility, privacy, export, offline policy and recovery for this profile without issuing authority or losing data."
+      ]
+    },
+    {
+      "id": "combined",
+      "status": "planned_acceptance",
+      "requirement_refs": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
+      ],
+      "parent_tasks": [
+        "R03-T005",
+        "R03-T009",
+        "R03-T011",
+        "R04-T007",
+        "R04-T008",
+        "R04-T014",
+        "R09-T022",
+        "R09-T028",
+        "R10-T004"
+      ],
+      "grants_permissions": false,
+      "discards_data_or_pending_work": false,
+      "shared_product_identity": true,
+      "acceptance": [
+        "One SKU participates in purchasing, retail sale and workshop consumption; location balances reconcile and later payment of an already consumed order does not deduct stock again.",
+        "Profile changes only reviewed navigation/defaults; qualify accessibility, privacy, export, offline policy and recovery for this profile without issuing authority or losing data."
+      ]
+    },
+    {
+      "id": "service-cooperative",
+      "status": "planned_acceptance",
+      "requirement_refs": [
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-001",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-002",
+        "docs/01-functional-requirements/2026-11-02-product-description-supplement.md#FR-BIZ-003"
+      ],
+      "parent_tasks": ["R02-T023", "R03-T001", "R04-T001", "R09-T022", "R09-T028", "R10-T004"],
+      "grants_permissions": false,
+      "discards_data_or_pending_work": false,
+      "inventory_optional": true,
+      "requires_pos": false,
+      "requires_service_order": false,
+      "requires_bicycle": false,
+      "acceptance": [
+        "Operate the admitted service/cooperative navigation with inventory/POS/workshop modules optional; disabled/unavailable features preserve history and pending data. Qualify a dedicated supported journey before claiming this profile.",
+        "Profile changes only reviewed navigation/defaults; qualify accessibility, privacy, export, offline policy and recovery for this profile without issuing authority or losing data."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "shared_stock_workshop_and_retail",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.4",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T009", "R03-T011", "R04-T007", "R04-T008", "R04-T014"],
+      "shared_product_identity": true,
+      "initial": {
+        "A": {
+          "physical": 0,
+          "reserved": 0,
+          "available": 0
+        }
+      },
+      "steps": [
+        {
+          "event": "receive_stock",
+          "deltas": {
+            "A": {
+              "physical": 10,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 10,
+              "reserved": 0,
+              "available": 10
+            }
+          }
+        },
+        {
+          "event": "reserve_for_order",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 2
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 10,
+              "reserved": 2,
+              "available": 8
+            }
+          }
+        },
+        {
+          "event": "retail_sale_unreserved_units",
+          "deltas": {
+            "A": {
+              "physical": -3,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 7,
+              "reserved": 2,
+              "available": 5
+            }
+          }
+        },
+        {
+          "event": "consume_reserved_order_parts",
+          "deltas": {
+            "A": {
+              "physical": -2,
+              "reserved": -2
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 5,
+              "reserved": 0,
+              "available": 5
+            }
+          }
+        },
+        {
+          "event": "bill_consumed_order",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 5,
+              "reserved": 0,
+              "available": 5
+            }
+          }
+        },
+        {
+          "event": "return_retail_unit_to_reusable_stock",
+          "deltas": {
+            "A": {
+              "physical": 1,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 6,
+              "reserved": 0,
+              "available": 6
+            }
+          }
+        }
+      ],
+      "notes": "Physical and reserved numbers are future business acceptance dimensions, not extra fields currently returned by StockResponse; returned retail unit assumes an explicitly accepted reusable disposition."
+    },
+    {
+      "id": "partial_purchase_receipts",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.3",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T008", "R03-T009", "R03-T010"],
+      "ordered": 10,
+      "initial": {
+        "A": {
+          "physical": 0,
+          "reserved": 0,
+          "available": 0
+        }
+      },
+      "steps": [
+        {
+          "event": "receive_partial",
+          "deltas": {
+            "A": {
+              "physical": 4,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 4,
+              "reserved": 0,
+              "available": 4
+            }
+          },
+          "received_delta": 4,
+          "expected_received": 4
+        },
+        {
+          "event": "duplicate_partial_receipt",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 4,
+              "reserved": 0,
+              "available": 4
+            }
+          },
+          "received_delta": 0,
+          "expected_received": 4
+        },
+        {
+          "event": "receive_remainder",
+          "deltas": {
+            "A": {
+              "physical": 6,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 10,
+              "reserved": 0,
+              "available": 10
+            }
+          },
+          "received_delta": 6,
+          "expected_received": 10
+        },
+        {
+          "event": "duplicate_final_receipt",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 10,
+              "reserved": 0,
+              "available": 10
+            }
+          },
+          "received_delta": 0,
+          "expected_received": 10
+        }
+      ]
+    },
+    {
+      "id": "location_transfer",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.3",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T003", "R03-T005"],
+      "shared_product_identity": true,
+      "conserved_physical": 10,
+      "initial": {
+        "A": {
+          "physical": 10,
+          "reserved": 0,
+          "available": 10
+        },
+        "B": {
+          "physical": 0,
+          "reserved": 0,
+          "available": 0
+        }
+      },
+      "steps": [
+        {
+          "event": "transfer_unreserved_units",
+          "deltas": {
+            "A": {
+              "physical": -3,
+              "reserved": 0
+            },
+            "B": {
+              "physical": 3,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 7,
+              "reserved": 0,
+              "available": 7
+            },
+            "B": {
+              "physical": 3,
+              "reserved": 0,
+              "available": 3
+            }
+          }
+        },
+        {
+          "event": "duplicate_transfer",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            },
+            "B": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 7,
+              "reserved": 0,
+              "available": 7
+            },
+            "B": {
+              "physical": 3,
+              "reserved": 0,
+              "available": 3
+            }
+          }
+        }
+      ],
+      "notes": "A and B are authorized synthetic locations of one organization; transfer of reserved units is not granted by this scenario. Both effects commit or neither does."
+    },
+    {
+      "id": "physical_count",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.3",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T012", "R03-T016"],
+      "counted_physical": 9,
+      "ledger_rewritten": false,
+      "initial": {
+        "A": {
+          "physical": 10,
+          "reserved": 2,
+          "available": 8
+        }
+      },
+      "steps": [
+        {
+          "event": "record_count_without_mutating_stock",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 10,
+              "reserved": 2,
+              "available": 8
+            }
+          }
+        },
+        {
+          "event": "admit_count_compensation",
+          "deltas": {
+            "A": {
+              "physical": -1,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 9,
+              "reserved": 2,
+              "available": 7
+            }
+          }
+        }
+      ],
+      "notes": "Count observes physical stock, not availability; production concurrent movement/cutoff policy must be specified and qualified before this journey ships."
+    },
+    {
+      "id": "nonstock_service",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.4",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T001", "R04-T001", "R04-T007", "R04-T014"],
+      "availability": null,
+      "inventory_movements": 0,
+      "physical_delta": 0,
+      "reservation_delta": 0,
+      "notes": "Bill a deliberately nonstock/service catalog line. N/A availability is not zero stock; normal financial/audit rules still apply."
+    },
+    {
+      "id": "last_unit_competition",
+      "status": "planned_acceptance",
+      "synthetic": true,
+      "release": "V0.4",
+      "runtime_evidence": false,
+      "parent_tasks": ["R03-T011", "R03-T015", "R04-T007", "R04-T014"],
+      "initial": {
+        "A": {
+          "physical": 1,
+          "reserved": 0,
+          "available": 1
+        }
+      },
+      "steps": [
+        {
+          "event": "workshop_reservation_admitted_first",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 1
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 1,
+              "reserved": 1,
+              "available": 0
+            }
+          }
+        },
+        {
+          "event": "competing_retail_sale_rejected",
+          "deltas": {
+            "A": {
+              "physical": 0,
+              "reserved": 0
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 1,
+              "reserved": 1,
+              "available": 0
+            }
+          }
+        },
+        {
+          "event": "consume_reserved_unit",
+          "deltas": {
+            "A": {
+              "physical": -1,
+              "reserved": -1
+            }
+          },
+          "expected": {
+            "A": {
+              "physical": 0,
+              "reserved": 0,
+              "available": 0
+            }
+          }
+        }
+      ],
+      "notes": "This trace selects workshop admission first. The opposite ordering must also be tested: retail physical -1 first, then reservation denied. Offline intents remain provisional until the declared conflict policy resolves them."
+    }
+  ]
+}

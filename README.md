@@ -14,7 +14,7 @@ monolith, explicit permissions and vendor-neutral infrastructure.
 > qualification exists; physical Windows/Android acceptance, manual reviews and
 > real installation gates remain open. The static GitHub Pages presentation was published from
 > source `3c6513d`; it is not an operational workshop deployment. Later repository
-> changes do not imply a redeployment. See the [current source and verification checkpoint](docs/10-spec-development/2026-11-27-branding-manual-recovery.md).
+> changes do not imply a redeployment. See the [current source and verification checkpoint](docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md).
 > The [latest branding evidence](docs/10-spec-development/2026-11-27-branding-manual-recovery.md#pr129-stacked-evidence-and-retarget-to-main--2026-11-27)
 > records the tested changes; the retargeted candidate still needs its own checks.
 
@@ -45,19 +45,24 @@ is not a physical tablet or phone qualification.
 The repository description states the full product destination, not current
 feature availability. See the [20-claim coverage matrix and phased plan](docs/10-spec-development/2026-11-02-product-description-alignment.md)
 for requirements, acceptance criteria and remaining work, including agenda,
-staff operations, retail-only profiles and operational metrics.
+staff operations, retail-only profiles and operational metrics. The [inventory scope plan](docs/10-spec-development/2026-11-27-spare-parts-retail-inventory-plan.md)
+explicitly covers spare parts, consumables and store merchandise in a shared
+catalog and per-location ledger, with purchasing, stock counts and workshop
+consumption in V0.3, and independent retail sales, payments and returns in V0.4.
+The [requirement/task matrix](docs/10-spec-development/inventory-scope-plan.json)
+records implemented boundaries and future acceptance separately.
 
 ## What is available — and what is not
 
-| Area       | Current implemented source                                                                    | Important boundary                                                                                                    |
-| ---------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Workshop   | Customers, bicycles, service orders, local journal, sync and conflict handling                | Offline admission depends on identity/context and previously admitted data; do not assume every screen works offline. |
-| Identity   | Connected account, users, permissions, locations and session administration                   | Server-enforced scoped capabilities; no implicit grants to new features.                                              |
-| Inventory  | Products/ledger domain, mounted product/movement APIs and scoped connected read UI            | Inventory reads are online-only, not a local stock snapshot or inventory command UI.                                  |
-| Appearance | Four themes, personal preferences, local logo and shared workshop branding                    | Personal device presentation differs from shared workshop identity.                                                   |
-| Quotes     | Arithmetic/history, persistence/service prerequisites, authority fences and namespace privacy | No mounted quote API or quote UI; streaming/cancellation/capacity and activation gates remain open.                   |
-| Operations | Compose candidate, diagnostics, backup/restore and source-bound hosted runtime evidence       | Not proof of a real installation, physical ARM device or production release.                                          |
-| Extensions | Explicit source composition and API boundaries; staged compatibility strategy                 | `packages/plugin-sdk` remains a placeholder, not an installable plugin runtime.                                       |
+| Area       | Current implemented source                                                                    | Important boundary                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workshop   | Customers, bicycles, service orders, local journal, sync and conflict handling                | Offline admission depends on identity/context and previously admitted data; do not assume every screen works offline.                         |
+| Identity   | Connected account, users, permissions, locations and session administration                   | Server-enforced scoped capabilities; no implicit grants to new features.                                                                      |
+| Inventory  | Basic SKU/product catalog, scoped connected stock/history UI and mounted movement APIs        | Partial: no complete multi-location catalog, command UI, purchase/count/POS workflow or admitted offline stock. See the V0.3/V0.4 plan above. |
+| Appearance | Four themes, personal preferences, local logo and shared workshop branding                    | Personal device presentation differs from shared workshop identity.                                                                           |
+| Quotes     | Arithmetic/history, persistence/service prerequisites, authority fences and namespace privacy | No mounted quote API or quote UI; streaming/cancellation/capacity and activation gates remain open.                                           |
+| Operations | Compose candidate, diagnostics, backup/restore and source-bound hosted runtime evidence       | Not proof of a real installation, physical ARM device or production release.                                                                  |
+| Extensions | Explicit source composition and API boundaries; staged compatibility strategy                 | `packages/plugin-sdk` remains a placeholder, not an installable plugin runtime.                                                               |
 
 The implemented identity/security baseline includes:
 
