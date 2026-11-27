@@ -131,3 +131,48 @@ T1–T8/R01-T035 and assistive-technology acceptance, G1–G6, actual installati
 restore, quote activation/capacity and deployment gates remain open. The
 independent branding-refusal probe and historical administration identity
 timeout remain separate. No real workshop or stock data is used or qualified.
+
+## PR128 stacked evidence and retarget to main · 2026-11-27
+
+[PR127's retargeted candidate merged](2026-11-26-inventory-workshop-scope.md#pr127-retargeted-acceptance-and-merge--2026-11-27)
+as `971bdd20e14508b5335189b1eb56c4d93ef70cea`. This supersedes the earlier
+authored predecessor-pending/unmerged statement, while preserving the local
+base and baseline failure. PR127's fresh-main CI remains separately pending.
+
+[PR128](https://github.com/IzignaMx/open-cycling-workshop/pull/128) head
+`5acc4342e157b0fe7128cb0c0638b4bb06b897b0`, based on
+`996f0bb5d55ef5788f557691e3b46169e5dd3778`, passed its stacked
+[CI45913487074](https://github.com/IzignaMx/open-cycling-workshop/actions/runs/45913487074)
+and all five companion workflows. The tested synthetic merge is
+`4cc6c295d14ce45285b5c6709eeab1687f0dcd5f`; it and the head share tree
+`36dd5be60ce11987f11a6e7510f770a7435b1c64`.
+
+Independent Python artifact `15161513670` review, SHA-256
+`e50001dab941013e3e7dc6e4fd81332826015b7afce51ec822718e302dce99cb`,
+confirms the clean exact source and two shards: **4,413 passes / 11 intentional
+skips** and **2,401 passes / 47 intentional skips**, totaling **6,814 / 58**.
+There are no failed, error, unrun or unexpected-skipped outcomes. Primary and
+independent cleanup receipts confirm owned databases absent in both shards.
+Reviewed logs also report **1,850 frontend passes** and **1 API-client pass**.
+
+Actual direct archive `15162142929`, SHA-256
+`3a3182a7ef5f585268ecd41dab0f3d5850fb811a286981ffabcca0b0d998b42d`,
+and aggregate archive `15162389214`, SHA-256
+`8b1a29e867dd4a8966efcd28b2d5feaaa46a729202aefbc7b893e2499fbd6759`,
+were independently inspected against the tested source metadata. Both contain
+**146 passing cases**, each on its first attempt with no errors, flakes or skips.
+Each includes **17 inventory cases** and the **one source-completion journey**.
+Both source-completion safe observations report zero main-frame navigations,
+empty session checked, response seen, body validated, issued/stored token equality
+and login completed; the response is not from a service worker. This qualifies
+the actual observed test journey for that source. The prior failures remain
+preserved and the internal CDP cause is still unproven.
+
+PR128 is now retargeted to main `971bdd2`. The clean local merge-tree result for
+that base and unchanged `5acc434` head is the same
+`36dd5be60ce11987f11a6e7510f770a7435b1c64` tree. That check proves source
+compatibility, not a new CI run. This documentation reconciliation creates a
+later candidate requiring its own exact retargeted CI and review before merge.
+The earlier stacked-hosted-pending statement is superseded only for the tested
+source above; the new documentation candidate remains pending. No release,
+physical, installation or deployment gate is promoted.

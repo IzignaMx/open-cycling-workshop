@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-11-27 · Login-observation stacked evidence and retarget
+
+- Record all six successful PR128 workflows, independently reviewed Python
+  source/cleanup evidence and both browser archives: 146 first-attempt passes
+  each, including real login-body validation and issued/stored token equality.
+- Retarget to PR127's merged main `971bdd2` with a clean identical tree; retain
+  earlier CDP failures and require new exact CI for this documentation successor.
+  See the [receipt](docs/10-spec-development/2026-11-26-source-login-observation.md#pr128-stacked-evidence-and-retarget-to-main--2026-11-27).
+
+## 2026-11-27 · Inventory workshop-scope candidate integrated
+
+- Record exact retargeted PR127 acceptance and merge `971bdd2`: all six
+  workflows succeed; independently reviewed direct/aggregate browser archives
+  each contain 146 first-attempt passes, including inventory 17/17.
+- Keep fresh-main CI, retargeted PR128 and historical CDP failures separate in
+  the [merge receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-retargeted-acceptance-and-merge--2026-11-27).
+
+## 2026-11-27 · PR126 exact-main evidence
+
+- Record all five successful workflows for main `5ccb44f` and independent
+  browser report inspection: direct and aggregate each pass 146 cases with
+  retry zero, including 17 inventory cases each.
+- Preserve the earlier candidate's login-body failures and later source gates;
+  the [main receipt](docs/10-spec-development/2026-11-26-inventory-page-retry.md#exact-pr126-main-outcome-observed--2026-11-27)
+  supersedes only the historical PR126 main/runtime-pending statements.
+
 ## 2026-11-26 · Observe the real destination login response
 
 - Preserve the repeated source-completion CDP body-read failures, including a

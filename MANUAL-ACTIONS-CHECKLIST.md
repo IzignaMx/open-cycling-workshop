@@ -1,5 +1,47 @@
 # Open Cycling Workshop Platform · Manual Actions & Blockers Checklist
 
+## 2026-11-27 · PR128 stacked evidence and retarget
+
+- [x] Verify exact stacked CI45913487074 and all six workflows; independently
+      inspect Python source/shard/cleanup receipts and both browser archives.
+      Each browser phase passes 146 cases at retry zero, including inventory 17
+      and source-completion one, with no flaky/skipped/error cases.
+- [x] Verify safe login observations in both phases: zero main-frame navigation,
+      actual response seen, body valid, issued/stored token equality and completed
+      login. Preserve all earlier failures without attributing the CDP cause.
+- [x] Retarget PR128 to main `971bdd2`; verify its clean merge tree matches the
+      previously tested head before documentation changes.
+- [ ] Qualify the exact retargeted documentation successor before merge. The
+      [stacked receipt](docs/10-spec-development/2026-11-26-source-login-observation.md#pr128-stacked-evidence-and-retarget-to-main--2026-11-27)
+      supersedes only the previous source's hosted-pending statement; it does not
+      prequalify a later commit or close operational/physical/deployment gates.
+
+## 2026-11-27 · PR127 retargeted acceptance and merge
+
+- [x] Verify exact `996f0bb` CI45912843815 and all six workflows; independently
+      inspect direct/aggregate archives: 146 first-attempt passes each, including
+      inventory 17/17, with no flaky/skipped/error cases.
+- [x] Merge PR127 as `971bdd2`, with the same candidate/tested-merge tree;
+      retarget PR128 to this new main without inheriting its acceptance.
+- [ ] Inspect fresh-main CI45918169386 and all four companion workflows, which
+      are in progress at this observation. Preserve separate source receipts.
+- The [merge receipt](docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-retargeted-acceptance-and-merge--2026-11-27)
+  supersedes earlier PR127 retargeted-CI-pending/unmerged statements only. The
+  older stacked source-completion failure and all operational gates remain open.
+
+## 2026-11-27 · PR126 exact-main reconciliation
+
+- [x] Verify CI45912372086 and all five main workflows on `5ccb44f`, including
+      Local runtime. Preserve Python 6,813/58 intentional skips and cleanup,
+      frontend 1,817 and API-client one as source-bound results.
+- [x] Independently inspect both browser ZIP metadata and parsed reports:
+      direct 15162126773 and aggregate 15163220776 each report 146 passes with
+      retry zero, including inventory 17/17. Retain their exact digests.
+- The [receipt](docs/10-spec-development/2026-11-26-inventory-page-retry.md#exact-pr126-main-outcome-observed--2026-11-27)
+  supersedes PR126's earlier main/runtime-pending items only. Candidate CDP
+  failures remain historical failures; PR127/PR128 and operational gates need
+  their own evidence and are not qualified by this clean run.
+
 ## 2026-11-26 · Destination login response observation
 
 - [x] Preserve PR126/PR127 failed response-body observations and reproduce the

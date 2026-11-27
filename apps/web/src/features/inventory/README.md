@@ -93,3 +93,9 @@ independently records another 17 single-attempt inventory passes in each phase
 for its own exact source. Full-suite login-body failures remain preserved;
 neither scoped result implies global retry-free acceptance. The retargeted
 documentation successor still needs its own exact hosted qualification.
+
+The [PR127 retargeted acceptance and merge](../../../../../docs/10-spec-development/2026-11-26-inventory-workshop-scope.md#pr127-retargeted-acceptance-and-merge--2026-11-27)
+subsequently qualifies that former documentation successor and records main
+`971bdd2`. Both reviewed browser reports contain 17 first-attempt inventory
+passes within 146 total passes. This supersedes the earlier PR127 retargeted
+pending statement only; fresh-main and later-source evidence remain separate.
